@@ -184,6 +184,7 @@ file. The key `idle` gives 300 seconds by default. See [D-045](04-decisions.md).
 | `memory_open`    | `head` 8 KiB, `all` 16 KiB, 32 parts, 24 KiB                              | The answer continues with `offset` and `next`.                   |
 | Node             | Target 512 bytes, limit 640 bytes, a cut with a flag                      | The p90 miss is 610 bytes.                                       |
 | Input of a merge | Two children, and 1 KiB of `longform` at level 1                          | The input holds no context, so a delete stays derivable.         |
+| Budget           | `here` 17 KiB, `directions` 3 KiB                                        | The profile gives no total budget.                               |
 | Fold             | `high` is the budget of the block, and `low` is its half. The order is `(due↓, level↑, start↑)` | The order gives one answer. |
 | Writer           | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
 | Nudge            | `mode=tools`, 10 calls                                                    | The profile sets it.                                             |
@@ -192,8 +193,6 @@ file. The key `idle` gives 300 seconds by default. See [D-045](04-decisions.md).
 | `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 bytes.                   |
 | `cacheTtl`       | `deepseek/*` 2 hours, `anthropic/*` 5 minutes, another model 1 hour        | An idle time above the TTL gives a new snapshot.                 |
 | Context          | 65 536 tokens at least                                                    | The slice and the reserve fit.                                   |
-
-The budget of the slice is open. See [Q-110](03-open-questions.md).
 
 ## Store
 

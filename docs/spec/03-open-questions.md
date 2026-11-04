@@ -6,7 +6,6 @@ A blocking question stops the current portion of the specification until the cus
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------ |
 | [Q-014](#q-014) | Which surface does the session mode of the console use in the harness?                                                                  | The plugin contract depends on the slot.                                                                                                                                          | REQ-047                                  | customer | open   |
 | [Q-015](#q-015) | Which operations does the index port have?                                                                                              | Two backends must satisfy one interface.                                                                                                                                          | REQ-041                                  | customer | open   |
-| [Q-110](#q-110) | Is the budget of the slice one total of 24 KiB with three parts, or two independent budgets? | S-083 gives three parts and a total, and the closed Q-091 gives two. | REQ-152, REQ-156 | customer | open |
 
 ## Details
 
@@ -16,16 +15,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-
-### Q-110
-
-S-083 gives the slice as 24 KiB with `how-to` 1.2 KiB, `directions` 3 KiB, and `here` 17 KiB. The
-closed Q-091 gives two independent budgets, and REQ-156 gives no total budget. The three numbers sum
-to 21.2 KiB.
-
-- Option A: one budget of 24 KiB with the three parts, and the policy text takes 1.2 KiB.
-- Option B: two budgets, `here` 17 KiB and `directions` 3 KiB. The policy text stays whole, and no
-  key holds a total.
 
 ## Closed questions
 
@@ -137,3 +126,4 @@ to 21.2 KiB.
 | Q-026 | Which retry limit and which length ratio do the writer and the card build use? | A merge makes three attempts at most with a request of 0.75 times the target, and the answer is the shortest. See S-082 and REQ-436. | 2026-11-05 |
 | Q-021 | What is the retelling prompt of the tree, and of the card? | The merge takes the system prompt and the task text of S-082, and the card takes its task text. See 09-prompts.md. | 2026-11-05 |
 | Q-108 | Which two languages join the three of the project? | The eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. See S-082. | 2026-11-05 |
+| Q-110 | Is the budget of the slice one total of 24 KiB with three parts, or two independent budgets? | The profile gives two budgets, `here` and `directions`, and no total. The values are 17 KiB and 3 KiB. See S-084. | 2026-11-05 |
