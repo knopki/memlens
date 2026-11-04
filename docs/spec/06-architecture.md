@@ -158,9 +158,9 @@ A merge is a union of events by id. The projection converges for any order of ar
 
 ## Addressing
 
-A note has the address `#id`. A range of notes has the address `#a-b`. The agent gets one note or one
-range by its address. The address names the `note` event, and it stays the same after an amend. See
-[D-027](04-decisions.md).
+A note has the address `#pos`. A range of notes has the address `#a-b`. The agent gets one note or one
+range by its address. The address is the `pos` of the note event, so it stays the same after an amend.
+See [D-027](04-decisions.md).
 
 ## Tree
 
@@ -176,8 +176,13 @@ the covered notes. See [REQ-131](02-requirements.md).
 
 ## Frontier
 
-The tree has a frontier: levels of fixed width, and one level covers 2^k leaves. The newest level
-holds the detail, and the older levels hold the short form. The frontier renders no empty position.
+The tree has a frontier: levels of fixed width, and one level covers 2^k leaves. One level gives one
+line of the map, and the frontier renders no empty position.
+
+The frontier lists the lines from the oldest to the newest: the coarse lines first and the fresh
+records last. A line holds the address, the range of dates, and the text. The last lines are the
+records that no node covers yet, and the writer can add several. See [D-040](04-decisions.md).
+
 The frontier geometry comes from the prior art. See [D-018](04-decisions.md).
 
 ## Writer

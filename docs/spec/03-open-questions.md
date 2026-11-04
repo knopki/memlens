@@ -28,7 +28,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
 | [Q-041](#q-041) | What makes a pair of nodes overdue?                                                                                                     | The writer takes the most overdue pair first, and the statements give no measure.                                                                                                 | REQ-050                                  | customer | open   |
-| [Q-042](#q-042) | In which order does the frontier render the levels?                                                                                     | The slice is one block, and a reader must find the fresh lines.                                                                                                                   | REQ-017, REQ-020                         | customer | open   |
 
 ## Details
 
@@ -64,14 +63,6 @@ The writer takes the most overdue pair of nodes first. A node holds `built_at` a
 - Option A: the pair whose `built_at` is older than the newest `ts` of its input by the most time.
 - Option B: the pair whose `input_gen` is behind the generation of its input by the most steps.
 
-### Q-042
-
-The frontier has one line for each level. The fresh lines hold the detail and the old lines hold the
-short form.
-
-- Option A: the coarse levels first and the records last.
-- Option B: the records first and the coarse levels last.
-
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -93,3 +84,4 @@ short form.
 | Q-038 | Which required fields of a note does a card carry?                      | None of `review_at`, `proposed`, `turn`, and `preset`. A card is not reviewed and not proposed. See S-024.                               | 2026-11-04 |
 | Q-039 | Do `ts_from`/`ts_to` hold the `ts` values, or the `at` values?          | The `ts` values, the time of the write. See S-026.                                                                                       | 2026-11-04 |
 | Q-040 | Is a level 0 node a separate summary, or the record itself?             | The record itself. The tree holds no node of level 0. See S-028.                                                                         | 2026-11-04 |
+| Q-042 | In which order does the frontier render the levels?                     | From the oldest to the newest: the coarse lines first. See S-029.                                                                        | 2026-11-04 |

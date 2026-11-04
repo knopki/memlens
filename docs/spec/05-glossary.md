@@ -34,7 +34,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | longform         | The full document of a note. The size limit is 16 KiB. It does not enter the tree.                                            | S-013                                        |
 | retelling        | A short text that covers the notes below a node. The tree is a set of retellings.                                             | S-013                                        |
 | tree             | The set of retellings above the notes. It is a cache, not a source of truth.                                                  | S-013                                        |
-| direction        | One line of the map that tells the agent where the detail is.                                                                 | S-013                                        |
+| direction        | One line of the map: the address of a node or of a record, the range of dates, and the text.                                  | S-013, S-029                                 |
 | directions block | The one `<directions>` block of the slice. It holds the registry and the catalog.                                             | S-013                                        |
 | registry         | The part of the directions block that comes from the notes of the profile.                                                    | S-013                                        |
 | catalog          | The level above the notes: a log of cards, with its own tree. It belongs to one profile.                                      | S-013                                        |
