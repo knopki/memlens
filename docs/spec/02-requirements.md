@@ -276,7 +276,6 @@ Status: see [README.md](README.md#status-values).
 | REQ-268 | Two rules may give one key. | FR | draft | S-063 | Two matches give one active scope. |
 | REQ-269 | A profile sees the scopes of its `scopes` list only. | FR | draft | S-063 | `profile.work` gives no line for `global:prefs`. |
 | REQ-270 | A scope that two profiles list is one scope. | FR | draft | S-063 | A note of `project:acme/x` shows in the slice of each profile. |
-| REQ-271 | The store caches the resolution of a workspace as a key of the form `workspace:<id>`. | FR | rejected | S-063 | Refused by S-064: `workspace:<id> → key` is a rule, and no cache exists. |
 | REQ-272 | A rule with the match `workspace` gives its key to the workspace of that id. | FR | draft | S-064 | The workspace `ws_01H…` gives the key `project:dsh/optmem`. |
 | REQ-273 | The tool strips one leading `#` from an address before the parse. | FR | draft | S-064 | `#1024-2047` gives the range `1024-2047`. |
 | REQ-274 | The catalog key is hidden from the agent. | FR | draft | S-064 | No line of the slice and no tool output names the catalog key. |
