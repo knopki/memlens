@@ -79,7 +79,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | idem             | The idempotency key of a write and of an import. A second record with one value adds nothing.                                 | S-018                                        |
 | projection       | The build of the record set from the log, in two passes.                                                                      | S-020                                        |
 | record           | The state of one note after the projection: the copied fields, `recorded_at`, and the flags.                                  | S-020                                        |
-| state            | The lifecycle value of a record: `proposed`, `live`, `hidden`, or `deleted`. The order is open.                               | S-020                                        |
+| state            | The lifecycle value of a record, in the order `live`, `hidden`, `proposed`, `deleted`. Only an `accept` lowers it.            | S-020, S-021                                 |
 | hidden           | The state of a record after a `hide` event. The content stays.                                                                | S-020                                        |
 | recorded_at      | The time of the note event in the log. It is equal to `at`.                                                                   | S-020                                        |
 | content_cleared  | The flag of a redacted record. An `amend` event does not change this record.                                                  | S-020                                        |

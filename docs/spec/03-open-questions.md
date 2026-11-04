@@ -27,8 +27,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-034](#q-034) | Does a `hide` event on a proposed note take the note out of the review queue?                                                           | The statement gives `max(state, hidden)` and no place for `proposed` in the order.                                                                                                | REQ-096, REQ-101                         | customer | open   |
-| [Q-035](#q-035) | Does `dismiss` apply to a note that is not proposed?                                                                                    | S-016 gives `proposed` to `deleted`, and S-020 gives the maximum of the state and `deleted`.                                                                                      | REQ-097                                  | customer | open   |
+| [Q-036](#q-036) | Does a hidden proposed record enter the view after an `accept`?                                                                         | The state becomes `live`, and the hide event stays in the log.                                                                                                                    | REQ-096                                  | customer | open   |
 
 ## Details
 
@@ -56,23 +55,13 @@ The statement stops after the words "the merge rules", and S-017 removes `scrub`
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-### Q-034
+### Q-036
 
-A proposed note waits for an `accept`. A `hide` event sets the state to the maximum of the state and
-`hidden`.
+A proposed record with a `hide` event leaves the view, and the state stays `proposed`. S-021 gives no
+rule for a later `accept`.
 
-- Option A: the state becomes `hidden`, the note leaves the review queue, and a later `accept` does
-  nothing.
-- Option B: the state stays `proposed`, the note leaves the view only, and a later `accept` makes it
-  `live`.
-
-### Q-035
-
-S-016 gives the effect of `dismiss` as `proposed` to `deleted`. S-020 gives the maximum of the state
-and `deleted` for each state.
-
-- Option A: each state. A live note becomes `deleted` after a `dismiss`.
-- Option B: the state `proposed` only. A live note stays `live`.
+- Option A: the record stays out of the view after the `accept`.
+- Option B: the record enters the view again, because the hide acted on the proposed record only.
 
 ## Closed questions
 
@@ -88,3 +77,5 @@ and `deleted` for each state.
 | Q-029 | Does `target` name the `note` event, or the newest event of the note?   | The `note` event. The address of a note does not change after an amend. See S-018.                                                       | 2026-11-04 |
 | Q-033 | Does `sourceId` stay the key of an import, or does `idem` replace it?   | `idem`. The prior-art table gives principles, not field names, and the model holds no `sourceId`. See S-018.                             | 2026-11-04 |
 | Q-031 | Do all events carry `session`, `turn`, and `preset`, or the note only?  | The `note` event only. The agent gives the three fields when it calls the tool. See S-019.                                               | 2026-11-04 |
+| Q-034 | Does a `hide` event on a proposed note remove it from the review queue? | No. The state stays `proposed` and the note leaves the view only. See S-021.                                                             | 2026-11-04 |
+| Q-035 | Does `dismiss` apply to a note that is not proposed?                    | Each state. A live note becomes `deleted` after a `dismiss`. See S-021.                                                                  | 2026-11-04 |
