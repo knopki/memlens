@@ -36,10 +36,10 @@ Run these commands before you commit:
 | `pnpm run typecheck` | Check the types of the three packages. |
 | `pnpm run test` | Run the tests. |
 | `pnpm run lint:docs` | Check the English documents against the STE limits. |
-| `pnpm run plugin:check` | Check the plugin manifest against the DSH rules. |
 
-`plugin:check` and `lint:docs` use the vendored tools in `scripts/vendor/`. Do not point a check at a
-file outside this repository. Do not edit a vendored file. See `scripts/vendor/README.md`.
+`lint:docs` uses the vendored linter in `scripts/vendor/`. See `scripts/vendor/README.md`. Do not point
+a check at a file outside this repository. The test of `packages/dsh-plugin` checks the plugin
+manifest. Run `pnpm run test` for that check.
 
 ## Prohibitions
 

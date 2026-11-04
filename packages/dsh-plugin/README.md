@@ -26,4 +26,4 @@ pnpm run typecheck
 pnpm run test
 ```
 
-Run `pnpm run plugin:check` in the repository root to check the bundle manifest.
+The tests check the bundle manifest. Run `pnpm run test`.

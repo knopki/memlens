@@ -26,4 +26,4 @@ pnpm run typecheck
 pnpm run test
 ```
 
-Для проверки манифеста бандла запусти `pnpm run plugin:check` в корне репозитория.
+Манифест бандла проверяют тесты. Запусти `pnpm run test`.

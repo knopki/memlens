@@ -43,10 +43,10 @@ The plugin writes `lib/index.js` and `lib/index.d.ts`. The other packages write 
 | Build | `pnpm run build` |
 | Type check | `pnpm run typecheck` |
 | Tests | `pnpm run test` |
-| Plugin manifest | `pnpm run plugin:check` |
 | Document language | `pnpm run lint:docs` |
 
-The project keeps the check tools in `scripts/vendor/`. See [D-009](04-decisions.md).
+The project keeps the linter in `scripts/vendor/`. See [D-009](04-decisions.md). The manifest has a
+test. See [D-010](04-decisions.md).
 
 ## Data
 

@@ -12,7 +12,6 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "verify": "pnpm run build && pnpm run typecheck && pnpm run test",
-    "lint:docs": "sh scripts/ste-lint.sh",
-    "plugin:check": "sh scripts/plugin-check.sh"
+    "lint:docs": "sh scripts/ste-lint.sh"
   }
 }

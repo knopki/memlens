@@ -49,7 +49,6 @@ pnpm install
 | `pnpm run build` | 构建三个包。 |
 | `pnpm run typecheck` | 检查类型。 |
 | `pnpm run test` | 运行测试。 |
-| `pnpm run plugin:check` | 检查插件清单。 |
 | `pnpm run lint:docs` | 按 STE 限制检查文档。 |
 
 ## 语言

@@ -25,4 +25,4 @@ pnpm run typecheck
 pnpm run test
 ```
 
-在仓库根目录运行 `pnpm run plugin:check` 以检查打包清单。
+打包清单由测试检查。运行 `pnpm run test`。

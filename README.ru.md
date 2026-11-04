@@ -50,7 +50,6 @@ pnpm install
 | `pnpm run build` | Собрать три пакета. |
 | `pnpm run typecheck` | Проверить типы. |
 | `pnpm run test` | Запустить тесты. |
-| `pnpm run plugin:check` | Проверить манифест плагина. |
 | `pnpm run lint:docs` | Проверить документы по лимитам STE. |
 
 ## Языки

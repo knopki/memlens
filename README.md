@@ -50,7 +50,6 @@ Run the commands in a shell that mise activates, or start each command with `mis
 | `pnpm run build` | Build the three packages. |
 | `pnpm run typecheck` | Check the types. |
 | `pnpm run test` | Run the tests. |
-| `pnpm run plugin:check` | Check the plugin manifest. |
 | `pnpm run lint:docs` | Check the documents against the STE limits. |
 
 ## Languages
