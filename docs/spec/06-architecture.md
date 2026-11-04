@@ -329,9 +329,9 @@ line about the write goes to the report of the parent. A subagent cannot hide a 
 a note.
 
 The nudge is one line at the start of a turn, after the frozen slice, so the cache keeps its prefix.
-A write of a note resets the counter. The modes are `tools`, `turns`, `expensive`, and `off`. The
-`[nudge]` section gives the counts and the text. See [REQ-230](02-requirements.md) to
-[REQ-237](02-requirements.md).
+A write of a note resets the counters. The modes are `tools`, `turns`, `expensive`, and `off`. The
+`[nudge]` section gives the counts and the text. The default text names no unit of the count. See
+[REQ-230](02-requirements.md) to [REQ-237](02-requirements.md) and [D-058](04-decisions.md).
 
 ## Human surface
 

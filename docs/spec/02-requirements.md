@@ -251,6 +251,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-243 | In the mode `expensive`, a turn with more than `expensive` steps demands a write before its end.                                   | FR   | draft    | S-059  | With `expensive` 5, a turn of six steps gives a nudge before its end.                                                          |
 | REQ-244 | A write trims the ends of the `body` and turns each run of spaces into one space.                                                  | FR   | draft    | S-059  | A body of `a  b` becomes `a b`.                                                                                                |
 | REQ-245 | The `reviewIn` of a write is a period in days, and the store adds it to the time of the write.                                     | FR   | draft    | S-059  | A `reviewIn` of 30 gives `review_at` 30 days after `ts`.                                                                       |
+| REQ-246 | The default `text` of the nudge names no unit of the count.                                                                        | FR   | draft    | S-060  | The default text holds neither `tool calls` nor `turns`.                                                                       |
 
 ## Rules for new requirements
 
