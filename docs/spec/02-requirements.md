@@ -426,6 +426,8 @@ Status: see [README.md](README.md#status-values).
 | REQ-420 | `memlens ui` hosts the full console. | FR | draft | S-077 | The command serves each of the seven screens. |
 | REQ-421 | The plugin mounts the console as the tab `Memory` on the session page. | FR | draft | S-077 | The session page shows the tab, and the tab opens the console. |
 | REQ-422 | The tab shows the scopes of one profile. | FR | draft | S-077 | A session of the profile `work` shows the scopes of `work` only. |
+| REQ-423 | The console gives each action on a note: mark reviewed, supersede, forget, and delete. | FR | draft | S-078 | Each of the four actions changes the record as the CLI does. |
+| REQ-424 | The tab has no catalog of profiles. | FR | draft | S-078 | The tab shows no list of profiles. |
 
 ## Rules for new requirements
 
