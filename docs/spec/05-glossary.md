@@ -116,3 +116,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `gen`            | A counter of each block. An event in the range of the block grows it.                                                         | S-051, S-052                                 |
 | `wake`           | The render of the slice at the start of a session. It does not wait for the compaction.                                       | S-051                                        |
 | `ancestor`       | A node above another node in a tree. A change of a child makes each ancestor dirty.                                           | S-054                                        |
+| `compression`    | The reduction of the slice at a render. It works on `<directions>` first, then on `<here>`, and it cuts no `<how-to>`.        | S-056                                        |

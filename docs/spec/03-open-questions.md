@@ -25,6 +25,10 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
+| [Q-071](#q-071) | Which budget does the 1.5 limit of the cut use: each part or the whole slice?                                                           | Q-065 gave each part for the build at the wake, and the cut needs one rule.                                                                                                       | REQ-226                                  | customer | open   |
+| [Q-072](#q-072) | Which lines does the cut take: the oldest lines of `<here>`, or the lines of both blocks in the log order?                              | The marker names one range, and the block decides what disappears.                                                                                                                | REQ-226, REQ-227                         | customer | open   |
+| [Q-073](#q-073) | What input and what output does `memory_open` have?                                                                                     | The agent opens an omitted range, and the tool is new.                                                                                                                            | REQ-228, REQ-229                         | customer | open   |
+| [Q-074](#q-074) | What does the one line of an old scope hold in `<directions>`?                                                                          | The line replaces the detail of the scope, and the card is one line.                                                                                                              | REQ-224                                  | customer | open   |
 
 ## Details
 
@@ -61,6 +65,36 @@ The store of memlens holds no snapshot (D-050). The session history of the harne
 - Option A: the text only. The session history holds it, and nothing else travels.
 - Option B: the nine fields of S-042. The `id`, the `profile`, `parts`, `bytes`, and `reason` serve
   the console and the diagnosis.
+
+### Q-071
+
+The statement gives the limit of 1.5 times the budget for the cut. Q-065 gives each part against its
+own budget for the build at the wake.
+
+- Option A: each part against its own budget, as in Q-065.
+- Option B: the whole slice against the sum of the two budgets.
+
+### Q-072
+
+The cut takes the parts from the beginning. The marker names one range `#<a>-<b>`.
+
+- Option A: the oldest frontier lines of `<here>`. The `<directions>` block keeps its lines.
+- Option B: the oldest lines of both blocks in the log order of their positions.
+
+### Q-073
+
+The tool is new. REQ-049 gives the address `#pos` and the range `#a-b`.
+
+- Option A: the address only. The output is the records in the log order, with the text of each.
+- Option B: the address and a limit. The output is the records with the id, the dates, and the text.
+
+### Q-074
+
+The compression gives an old line of `<directions>` one line. The card of a scope is one line
+`[scope] state`.
+
+- Option A: the newest card of the scope.
+- Option B: a fixed line with the scope and the count of its records.
 
 ## Closed questions
 

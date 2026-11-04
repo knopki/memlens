@@ -187,6 +187,12 @@ The slice is one `<memory>` block with three parts:
 </memory>
 ```
 
+The compression works on `<directions>` first, then on `<here>`, and the `<how-to>` block stays whole.
+An old line of `<directions>` gives one line, and the compression of `<here>` stops at 60 percent of
+the budget. A part above 1.5 times the budget loses its oldest lines, and the line
+`#<a>-<b> omitted (N lines, compacting)` takes their place. The agent opens the range with
+`memory_open`. See [REQ-223](02-requirements.md) to [REQ-229](02-requirements.md).
+
 Only the text travels. The nine fields of S-042 have no record. [Q-055](03-open-questions.md) gives
 the choice. The reason of a trigger is `session-start`, `ttl`, `compaction`, or `redact`. Review data
 does not enter the slice. See [REQ-178](02-requirements.md) to [REQ-181](02-requirements.md).
@@ -310,6 +316,7 @@ a cache over the log: the store rebuilds it from the log after a loss. See
 | write         | main agent | A new note. Outside the profile it is `proposed`.              |
 | hide          | main agent | The note leaves the view.                                      |
 | memory_review | main agent | One short review answer.                                       |
+| memory_open   | main agent | The records of one address or one range.                       |
 
 Each scope of a profile accepts a write. A write to a scope outside the profile gives a `proposed`
 note, and a human decides about it. See [REQ-160](02-requirements.md) and
