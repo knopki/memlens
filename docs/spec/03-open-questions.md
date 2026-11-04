@@ -16,6 +16,36 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
 
+### Q-014
+
+The harness gives typed React slots, and a plugin adds its interface there. A tab of the right sidebar
+takes two registrations: a type in `ctx.sidebarRightTabs` and the body in the slot
+`sidebar.right.pane.tab`. The tab identity is the pair `(kind, address)`, and the page address is
+`sidebar://<kind>`. The styles come from the theme tokens `--dsw-alias-*`, and the plugin imports no
+package of the harness client. See [REQ-426](02-requirements.md).
+
+The proposal: the tab `Memory` takes the slot `sidebar.right.pane.tab` and the kind `memlens`. The
+answer gives the slot, or names another surface.
+
+### Q-015
+
+One port gives the search to two backends: FTS5 in the SQLite store, and the sidecar file `index.db`
+of the JSONL store. See [REQ-041](02-requirements.md) and [REQ-042](02-requirements.md).
+
+The port must cover each query of `memory_find`: the words, the words with the sign `-`, the scopes,
+the kinds, `since` and `until`, the filter `due`, and the limit. It must add a record, clear the rows of
+a `redact`, and rebuild the index from the log. See [REQ-059](02-requirements.md) and
+[REQ-222](02-requirements.md).
+
+The open points:
+
+- Does the port take the words, or does it take the parsed query?
+- Does the port limit by scope, kind, date, and `due`, or does the caller?
+- Does the port give each field of a hit, or does the caller read the record?
+- Does the add of the rows run in the transaction of the log append?
+- Does the port hold the tokenizer that the key `language` selects?
+- Does the port give one order, and does it give a rank?
+
 ## Closed questions
 
 | ID    | Question                                                                      | Answer                                                                                                                                             | Date       |
