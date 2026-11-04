@@ -383,7 +383,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-377 | Each session renders its own snapshot. | FR | draft | S-073 | Two sessions of one store open with their own text. |
 | REQ-378 | An export copies the whole store. | FR | draft | S-073 | The export holds each record of the store. |
 | REQ-379 | An export reads one transaction under an exclusive lock. | FR | draft | S-073 | A write that starts during the export waits for the lock. |
-| REQ-380 | An export holds each card with its source records. | FR | draft | S-073 | Each card of the export resolves its `for_sources` in the same export. |
+| REQ-380 | An export holds each card with its source records. | FR | rejected | S-073, S-074 | Each card of the export resolves its `for_sources` in the same export. |
 | REQ-381 | An import of two events with one `id` and different payloads gives no error. | FR | draft | S-073 | The import succeeds, and the store keeps one version of the record. |
 | REQ-382 | The event with the later `at` wins. | FR | draft | S-073 | The store keeps the `body` of the later event. |
 | REQ-383 | An equal `at` keeps the local event. | FR | draft | S-073 | The store keeps the local `body`. |

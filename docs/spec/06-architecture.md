@@ -191,9 +191,8 @@ scope, the `pos` stays monotonic, and each session renders its own snapshot. See
 [REQ-372](02-requirements.md) to [REQ-377](02-requirements.md).
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
-consistent by construction. It holds each card with its source records. An import unions the events by
-`id`, a payload conflict keeps the later `at`, and the events of a redacted record arrive sanitized.
-See [D-071](04-decisions.md).
+consistent by construction. An import unions the events by `id`, a payload conflict keeps the later
+`at`, and the events of a redacted record arrive sanitized. See [D-071](04-decisions.md).
 
 | Item     | Value                                       |
 | -------- | ------------------------------------------- |
