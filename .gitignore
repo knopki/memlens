@@ -9,8 +9,9 @@ coverage/
 # Packs
 *.tgz
 
-# mise local overrides
+# mise local overrides and generated lockfile
 mise.local.toml
+mise.lock
 .mise/
 
 # Python

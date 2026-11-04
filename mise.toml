@@ -1,7 +1,8 @@
 # Tool versions for this project. Run `mise install` after a clone.
-# The node and pnpm versions agree with the fields in package.json.
+# A version gives a release line. `mise upgrade` takes the newest patch in the line.
+# The pnpm line must agree with `packageManager` in package.json.
 
 [tools]
-node = "24.21.0"
-pnpm = "12.17.0"
-python = "3.14.9"
+node = "24"
+pnpm = "12"
+python = "3.14"
