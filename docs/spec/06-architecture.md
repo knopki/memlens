@@ -191,9 +191,12 @@ The writer is a background compactor. It makes the retellings in batches and in 
 defaults come from the measurements: effort off, 6 nodes in a batch, and up to 8 jobs. See
 [D-019](04-decisions.md).
 
-The writer takes the most overdue pair first. It retries a line that is not shorter than its source,
-and it refuses a line that does not shrink. See [REQ-050](02-requirements.md) and
-[REQ-051](02-requirements.md).
+The writer builds each dirty node. A node is dirty when a source changes or becomes dirty, and an
+import that puts the records in another order makes the tree dirty. The order of the work stays open.
+See [D-041](04-decisions.md) and [Q-043](03-open-questions.md#q-043).
+
+The writer retries a line that is not shorter than its source, and it refuses a line that does not
+shrink. See [REQ-051](02-requirements.md).
 
 ## Freeze and branch
 

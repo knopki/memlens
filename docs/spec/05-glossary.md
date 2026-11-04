@@ -56,7 +56,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | «Линза»          | The human name of the product. The idea of the name is the zoom: look through one layer into the depth.                       | S-013                                        |
 | frontier         | The newest level of the tree. It holds the detail, and the older levels hold the short form.                                  | S-014                                        |
 | level            | One row of the tree. A level has a fixed width, and one level covers 2^k leaves.                                              | S-014                                        |
-| pair             | Two nodes that a retelling joins. The writer takes the most overdue pair first.                                               | S-014                                        |
+| pair             | Two children that the node above joins.                                                                                       | S-014, S-030                                 |
 | ruler            | The size measure of a retelling. The writer retries when the line does not become shorter.                                    | S-014                                        |
 | shrink check     | The rule that a retelling must be shorter than its source.                                                                    | S-014                                        |
 | compactor        | The background task that makes the retellings in batches. The glossary uses this word for the writer.                         | S-014                                        |
@@ -95,3 +95,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | summary          | The text of one node. The target size is 512 bytes and the limit is 640 bytes.                                                | S-025                                        |
 | input_gen        | The version of the input that made the summary.                                                                               | S-025                                        |
 | leaf             | One record at the bottom of the tree. The tree holds no node of level 0.                                                      | S-028                                        |
+| child            | A node or a record below a node. A change of a child makes the parent dirty.                                                  | S-030                                        |
