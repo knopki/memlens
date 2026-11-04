@@ -166,12 +166,25 @@ The store has two backends of equal rank: sqlite and jsonl. One store test runs 
 
 ## View
 
-The view is a deterministic function of the notes, the built nodes, and the store version. The slice
-is a snapshot that the store materializes, with an `id` and a `scopes` field. The `sessions` record holds the
-pointer to the current snapshot.
+The view is a deterministic function of the records, the built nodes, and `storeRev`.
 
-The plugin gives the slice to the harness as `systemPrompt.context`. The slice updates at a new
-session, at a compaction, and after an idle time longer than the model cache TTL.
+The slice is one `<memory>` block with three parts:
+
+```
+<memory>
+<how-to>...</how-to>          the static policy
+<directions>...</directions>  each scope of the profile, aged by activity
+<here scope="...">...</here>  the frontier of the active scope
+</memory>
+```
+
+A snapshot holds `id`, `session`, `profile`, `reason`, `at`, `text`, `bytes`, `parts`, and `scopes`.
+The reason is `session-start`, `ttl`, `compaction`, or `redact`. Review data does not enter the slice.
+See [REQ-178](02-requirements.md) to [REQ-185](02-requirements.md).
+
+The plugin gives the text to the harness as `systemPrompt.context`, and the text stays the same until
+the next snapshot. A new snapshot follows a new session, a compaction, an idle time longer than the
+cache TTL, and a redact. See [REQ-021](02-requirements.md) and [Q-053](03-open-questions.md#q-053).
 
 ## Merge
 

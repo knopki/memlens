@@ -43,7 +43,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | profile          | The unit that ties a set of scopes to one configuration section and one preset.                                               | S-013, S-036                                 |
 | preset           | The second entry point of the plugin. It gives the configuration for an agent preset.                                         | S-013                                        |
 | slice            | The text that the agent gets: one map of directions.                                                                          | S-013                                        |
-| snapshot         | The materialized slice, with an `id` and a `scopes` field.                                                                    | S-013                                        |
+| snapshot         | One materialized slice with an `id`, a `profile`, a `reason`, and the `scopes` of its text.                                   | S-013, S-042                                 |
 | store            | The memory storage. It has a version, one of two backends, and one index port.                                                | S-013                                        |
 | hide             | The op that removes a note from the view. The agent can hide a note.                                                          | S-013, S-016                                 |
 | redact           | The op that removes the content of a note for good. Only the CLI or the GUI can redact.                                       | S-013, S-016                                 |
@@ -107,3 +107,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | epoch            | The cache key of the view: a hash of `storeRev` and the built nodes.                                                          | S-040                                        |
 | storeRev         | The version of the store content. A counter in SQLite and a fingerprint in JSONL.                                             | S-040                                        |
 | fresh            | The state of a node whose `input_gen` matches the input.                                                                      | S-040                                        |
+| cacheTtl         | The idle time after which a new snapshot replaces the text. `deepseek/*` gives 2 hours.                                       | S-042                                        |
+| how-to           | The static policy block of the slice.                                                                                         | S-042                                        |
+| reason           | The cause of a snapshot: `session-start`, `ttl`, `compaction`, or `redact`.                                                   | S-042                                        |
