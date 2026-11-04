@@ -132,6 +132,21 @@ A card with a redacted id in `for_sources` gets the sanitized form: an empty `bo
 and `redacted: true`. A retelling has no phrase to cut, so the card goes as a whole. The placeholder
 `[redacted]` appears in the console and the view only, and no event holds it.
 
+## Configuration
+
+The configuration is a TOML file. The statement [S-036](../statements.md#s-036) gives a part of it. See
+[D-045](04-decisions.md).
+
+| Section           | Keys                                                      |
+| ----------------- | --------------------------------------------------------- |
+| `store`           | `backend` (`sqlite` or `jsonl`), `path`                   |
+| `profile.<name>`  | `scopes`, `budget`, `subagents`                           |
+
+A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file.
+
+A profile lists its scopes as keys, and `*` matches the rest of a key. The budget gives `slice`,
+`here`, and `directions` in bytes. The subagent mode is `propose`, `read`, or `off`.
+
 ## Store
 
 A scope is a key in the events. The store holds no record for a scope, and no event describes one. A

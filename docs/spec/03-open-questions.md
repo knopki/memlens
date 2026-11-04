@@ -9,7 +9,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-006](#q-006) | Does the plugin use the library?                                                                                                        | If yes, the library has one public interface for two frontends. If no, the plugin repeats the work.                                                                               | [06-architecture.md](06-architecture.md) | customer | open   |
 | [Q-007](#q-007) | Which license does the project use?                                                                                                     | npm publication and the plugin manifest need a license value.                                                                                                                     | Publishing                               | customer | open   |
 | [Q-008](#q-008) | Does the plugin package need a README in five languages?                                                                                | The DSH guide recommends five for a published plugin. The project uses three.                                                                                                     | Publishing                               | customer | open   |
-| [Q-009](#q-009) | Where do the visible and the writable scopes of a profile come from?                                                                    | The store holds no record for a scope, and a write needs the permission set.                                                                                                      | REQ-016, REQ-026                         | customer | open   |
+| [Q-009](#q-009) | Where do the writable scopes of a profile come from?                                                                                    | S-036 gives one list of scopes, and a write outside the set gives a proposed note.                                                                                                | REQ-026                                  | customer | open   |
 | [Q-010](#q-010) | What is the form of the map of directions, and what is its size limit?                                                                  | The slice goes into the system prompt, so its size is a cost.                                                                                                                     | REQ-017, REQ-020                         | customer | open   |
 | [Q-011](#q-011) | Which fields does a snapshot hold? The statement gives `id` and `scopes`.                                                               | Storage and the merge need the full record.                                                                                                                                       | REQ-018                                  | customer | open   |
 | [Q-012](#q-012) | Which keys and which default does the nudge have?                                                                                       | The agent behavior depends on the default.                                                                                                                                        | REQ-031                                  | customer | open   |
@@ -19,7 +19,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-017](#q-017) | Who sets `review_at`, and what is the review queue?                                                                                     | The human workflow depends on it.                                                                                                                                                 | REQ-037                                  | customer | open   |
 | [Q-018](#q-018) | Where does the model cache TTL come from?                                                                                               | The update rule uses the value.                                                                                                                                                   | REQ-021                                  | customer | open   |
 | [Q-019](#q-019) | What is the export and import format, and how does `redact` block a restore?                                                            | The transfer between machines uses it.                                                                                                                                            | REQ-025                                  | customer | open   |
-| [Q-020](#q-020) | Which keys does the preset configuration give, and which one wins in a merge?                                                           | Two entry points share one configuration.                                                                                                                                         | REQ-028, REQ-029                         | customer | open   |
+| [Q-020](#q-020) | Which value wins in the merge of the main configuration and the preset?                                                                 | Two entry points share `scopes`, `budget`, and `subagents`.                                                                                                                       | REQ-029                                  | customer | open   |
 | [Q-021](#q-021) | What is the retelling prompt of the tree?                                                                                               | The statements give the node geometry, the depth, and the size. The prompt stays open.                                                                                            | REQ-009, REQ-032                         | customer | open   |
 | [Q-022](#q-022) | What is the form of the line about a subagent write in the parent report?                                                               | The parent must see the write, and the line costs tokens.                                                                                                                         | REQ-035                                  | customer | open   |
 | [Q-023](#q-023) | Is `longform` available by address, in the slice, or in both?                                                                           | The size limit says what the tree does not hold.                                                                                                                                  | REQ-010, REQ-013                         | customer | open   |
@@ -27,6 +27,8 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-047](#q-047) | What does the `here` budget cover, and is `slice` the sum of the parts?                                                                 | The three numbers are 24576, 17408, and 3072, and a slice needs one limit.                                                                                                        | REQ-152                                  | customer | open   |
+| [Q-048](#q-048) | What does each subagent mode allow?                                                                                                     | S-013 gives the `propose` behavior, and `read` and `off` are new.                                                                                                                 | REQ-153                                  | customer | open   |
 
 ## Details
 
@@ -54,6 +56,22 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+
+### Q-047
+
+A slice needs one limit for the model, and the configuration gives three numbers.
+
+- Option A: `slice` is the total, and `here` and `directions` are parts of it. 17408 and 3072 leave
+  4096 bytes for the other parts.
+- Option B: the three numbers are separate limits, and the slice has no total.
+
+### Q-048
+
+A subagent has no separate tool. S-013 gives the `propose` rule.
+
+- Option A: `propose` writes new notes as proposed, `read` reads only, and `off` gives the subagent no
+  memory access and the parent no line.
+- Option B: the modes form a ladder: `read` also writes proposed notes, and `off` reads only.
 
 ## Closed questions
 

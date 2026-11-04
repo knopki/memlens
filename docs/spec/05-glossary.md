@@ -40,7 +40,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | catalog          | The level above the notes: a log of cards, with its own tree. It belongs to one profile.                                      | S-013                                        |
 | card             | The catalog entry in the form `[scope] state`. A `note` event with `kind: "card"` records it, and it holds no review field.   | S-013, S-016                                 |
 | scope            | The unit of visibility and of write permission. A scope is a key in the events, and the store holds no record for it.         | S-013, S-033                                 |
-| profile          | The unit that ties a set of scopes to one configuration and one preset.                                                       | S-013                                        |
+| profile          | The unit that ties a set of scopes to one configuration section and one preset.                                               | S-013, S-036                                 |
 | preset           | The second entry point of the plugin. It gives the configuration for an agent preset.                                         | S-013                                        |
 | slice            | The text that the agent gets: one map of directions.                                                                          | S-013                                        |
 | snapshot         | The materialized slice, with an `id` and a `scopes` field.                                                                    | S-013                                        |
@@ -96,3 +96,5 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | input_gen        | The version of the input that made the summary.                                                                               | S-025                                        |
 | leaf             | One record at the bottom of the tree. The tree holds no node of level 0.                                                      | S-028                                        |
 | child            | A node or a record below a node. A change of a child makes the parent dirty.                                                  | S-030                                        |
+| budget           | The size limits of one profile in bytes: `slice`, `here`, and `directions`. The part of `here` is open.                       | S-036                                        |
+| subagent mode    | The rule for a subagent: `propose`, `read`, or `off`.                                                                         | S-036                                        |
