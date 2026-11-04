@@ -38,7 +38,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | directions block | The one `<directions>` block of the slice. It holds the registry and the catalog.                                             | S-013                                        |
 | registry         | The part of the directions block that comes from the notes of the profile.                                                    | S-013                                        |
 | catalog          | The level above the notes: a log of cards, with its own tree. It belongs to one profile.                                      | S-013                                        |
-| card             | The catalog entry in the form `[scope] state`. The `note` event with `kind: "card"` records it.                               | S-013, S-016                                 |
+| card             | The catalog entry in the form `[scope] state`. A `note` event with `kind: "card"` records it, and it holds no review field.   | S-013, S-016                                 |
 | scope            | The unit of visibility and of write permission for the notes.                                                                 | S-013                                        |
 | profile          | The unit that ties a set of scopes to one configuration and one preset.                                                       | S-013                                        |
 | preset           | The second entry point of the plugin. It gives the configuration for an agent preset.                                         | S-013                                        |

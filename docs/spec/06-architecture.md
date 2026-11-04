@@ -72,9 +72,8 @@ A `supersedes` stays inside one scope. The store refuses a cross-scope `supersed
 `CrossScopeSupersede`.
 
 A redacted event keeps its `id` and gets `redacted: true`, an empty `body`, and a null `longform`. A
-`redact` event gives this form, and so does an import of a redacted record. See
-[Q-030](03-open-questions.md#q-030) for the merge rule and [Q-037](03-open-questions.md#q-037) for
-the `scrub` step.
+`redact` event gives this form, and so does an import of a redacted record. The model has no `scrub`
+step. See [D-036](04-decisions.md) and [Q-030](03-open-questions.md#q-030) for the merge rule.
 
 ## Projection
 
@@ -114,7 +113,9 @@ with `redacted: true` gives no content. See [D-030](04-decisions.md).
 ## Catalog
 
 The catalog has one scope for each profile: `__catalog__:<profile>`. A card is a `note` event in this
-scope with `kind: "card"`, `for_scope`, and `for_sources`. See [D-034](04-decisions.md).
+scope with `kind: "card"`, `for_scope`, and `for_sources`. A card carries `body`, `kind`, `ts`,
+`session`, `for_scope`, and `for_sources`, and it carries no `review_at`, `proposed`, `turn`, or
+`preset`. See [D-034](04-decisions.md) and [D-037](04-decisions.md).
 
 One card covers one scope and one session. Its input is the `body` of each live record of that scope
 and session. A record with the state `proposed`, `hidden`, or `deleted` does not enter the card.
@@ -128,8 +129,7 @@ builds the card again from the live records that stay. See [D-035](04-decisions.
 
 A card with a redacted id in `for_sources` gets the sanitized form: an empty `body`, a null `longform`,
 and `redacted: true`. A retelling has no phrase to cut, so the card goes as a whole. The placeholder
-`[redacted]` appears in the console and the view only. See [Q-037](03-open-questions.md#q-037) for the
-`scrub` step.
+`[redacted]` appears in the console and the view only, and no event holds it.
 
 ## Store
 
