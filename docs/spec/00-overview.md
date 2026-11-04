@@ -1,24 +1,27 @@
-# Обзор
+# Overview
 
-## Проблема
+## Problem
 
-TBD — первое утверждение о том, какую боль снимаем.
+TBD. The first statement about the problem will go here.
 
-## Пользователи
+## Users
 
-| Роль | Что делает | Что для неё ценно |
+| Role | Action | Value |
 |---|---|---|
 | TBD | TBD | TBD |
 
-## Ценность
+## Value
 
-TBD — что меняется у пользователя после появления memlens.
+TBD. This section will tell what changes for the user after memlens exists.
 
-## Как выглядит успех
+## Success criteria
 
-TBD — проверяемые признаки: что пользователь делает быстрее/надёжнее/вообще впервые.
+TBD. This section will give testable signs of success.
 
-## Что известно
+## Known facts
 
-- Директория проекта: `memlens`, git-репозиторий без коммитов на момент старта.
-- Код ещё не начат, стек не выбран.
+- memlens has three parts: a headless library, a CLI frontend, and a DSH plugin.
+- The stack is not selected.
+- The repository has no code.
+- All documents and code comments use ASD-STE100 Simplified Technical English.
+- The README has an English, a Russian, and a Chinese version.

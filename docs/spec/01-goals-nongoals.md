@@ -1,23 +1,26 @@
-# Цели и не-цели
+# Goals and non-goals
 
-## Цели
+## Goals
 
-| ID | Цель | Приоритет | Источник |
+| ID | Goal | Priority | Source |
 |---|---|---|---|
 | G-001 | TBD | TBD | — |
 
-## Не-цели
+## Non-goals
 
-Явно вычеркнуто, чтобы не превратилось в скрытое требование.
+Explicitly excluded items. A non-goal must not become a hidden requirement.
 
-| ID | Не-цель | Причина | Источник |
+| ID | Non-goal | Reason | Source |
 |---|---|---|---|
 | NG-001 | TBD | TBD | — |
 
-## Ограничения
+## Constraints
 
-Заданы снаружи, не обсуждаются, влияют на решения.
+Given from the outside. These items are not open for discussion and they limit the decisions.
 
-| ID | Ограничение | Источник |
+| ID | Constraint | Source |
 |---|---|---|
-| C-001 | Работа ведётся только внутри директории проекта | устно |
+| C-001 | Work stays inside this repository. | S-001 |
+| C-002 | Documents and code comments use ASD-STE100 Simplified Technical English. | S-003 |
+| C-003 | The README has an English, a Russian, and a Chinese version. | S-003 |
+| C-004 | The specification is a set of markdown files in this repository. | S-004 |

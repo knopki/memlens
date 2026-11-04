@@ -1,17 +1,36 @@
 # memlens
 
-Одна строка о продукте — будет заполнена, когда придёт первое утверждение о том, что это.
+memlens is a headless library with a CLI frontend and a DSH plugin.
 
-**Статус:** фаза спецификации, кода нет.
+**Status:** specification phase. There is no code.
 
-## Где что лежит
+## Parts
 
-- [docs/spec/README.md](docs/spec/README.md) — индекс спецификации и правила её ведения.
-- [docs/statements.md](docs/statements.md) — журнал исходных утверждений, дословно со слов заказчика.
-- [docs/adr/](docs/adr/) — архитектурные решения с последствиями (ADR).
+| Part | Function |
+|---|---|
+| Headless library | Does the work. Has no user interface. |
+| CLI frontend | Gives access from a terminal. |
+| DSH plugin | Gives access from DeepSeek Harness. |
 
-## Правило проекта
+## Documents
 
-Спецификация — единственный источник истины по требованиям. Утверждения из чата попадают
-сначала дословно в журнал, потом раскладываются по требованиям, решениям и открытым вопросам.
-Ничего не придумывается: неизвестное помечается как TBD или открытый вопрос.
+| File | Content |
+|---|---|
+| [docs/spec/README.md](docs/spec/README.md) | Specification index and rules. |
+| [docs/spec/02-requirements.md](docs/spec/02-requirements.md) | Requirements with identifiers and status. |
+| [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Open questions that block work. |
+| [docs/statements.md](docs/statements.md) | Customer statements, word for word. |
+| [AGENTS.md](AGENTS.md) | Work rules for agents. |
+
+## Languages
+
+| Item | Language |
+|---|---|
+| Documents | Simplified Technical English, ASD-STE100. |
+| Code comments | Simplified Technical English, ASD-STE100. |
+| README | English, Russian ([README.ru.md](README.ru.md)), Chinese ([README.zh.md](README.zh.md)) |
+| Product localization | Russian and Chinese. |
+
+## Current limit
+
+The stack is not selected. See [Q-001](docs/spec/03-open-questions.md#q-001).

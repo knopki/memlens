@@ -1,38 +1,42 @@
-# Спецификация memlens
+# Specification for memlens
 
-## Назначение
+## Purpose
 
-Единый источник истины по тому, что мы строим: зачем, для кого, что внутри, чего внутри нет.
-Утверждения заказчика приходят порциями в чат, здесь они превращаются в проверяемые требования.
+This directory is the only authority for requirements. It tells what memlens does, for whom, and
+what memlens does not do. Statements come in portions. Each statement becomes a testable
+requirement.
 
-## Состав
+## Files
 
-| Файл | Что внутри | Статус |
+| File | Content | Status |
 |---|---|---|
-| [00-overview.md](00-overview.md) | проблема, пользователи, ценность, критерии успеха | черновик |
-| [01-goals-nongoals.md](01-goals-nongoals.md) | цели и явные не-цели | черновик |
-| [02-requirements.md](02-requirements.md) | требования с ID, статусами и источником | черновик |
-| [03-open-questions.md](03-open-questions.md) | что не решено и кто решает | живой |
-| [04-decisions.md](04-decisions.md) | журнал решений с альтернативами | живой |
-| [05-glossary.md](05-glossary.md) | доменные термины, чтобы слова значили одно | живой |
-| [06-architecture.md](06-architecture.md) | структура, границы, интерфейсы, данные | не начат |
-| [../adr/](../adr/) | развёрнутые ADR для решений с последствиями | по запросу |
+| [00-overview.md](00-overview.md) | Problem, users, value, success criteria. | draft |
+| [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints. | draft |
+| [02-requirements.md](02-requirements.md) | Requirements with identifiers and status. | draft |
+| [03-open-questions.md](03-open-questions.md) | Open and closed questions. | live |
+| [04-decisions.md](04-decisions.md) | Decisions with alternatives and consequences. | live |
+| [05-glossary.md](05-glossary.md) | Terms with one meaning each. | live |
+| [06-architecture.md](06-architecture.md) | Parts, interfaces, data, limits. | not started |
+| [../adr/](../adr/) | Long decisions, one file for each. | as necessary |
 
-## Правила ведения
+## Rules
 
-1. **Дословность.** Входящее утверждение сначала попадает в [../statements.md](../statements.md)
-   как есть, со своим ID `S-nnn`. Трактовка живёт в спеке, а не в журнале.
-2. **Один ID — одно требование.** У каждого требования есть источник (`S-nnn`) и статус:
-   `draft` → `accepted` / `deferred` / `rejected`. Переход в `accepted` = это требование
-   можно проверять.
-3. **Проверяемость.** Формулировка требования отвечает на вопрос «как убедиться, что выполнено».
-   Не отвечает — это открытый вопрос, а не требование.
-4. **Конфликт не замалчивается.** Новое утверждение противоречит старому → в `03-open-questions.md`
-   ставится вопрос с двумя вариантами, старое требование получает статус `disputed`.
-5. **Не-цели явные.** Всё, что вы за скобками, фиксируется в `01-goals-nongoals.md`, чтобы не
-   всплыло как неожиданная дырка.
-6. **Решения с последствиями — в журнал.** Выбран вариант, который потом дорого менять
-   (стек, формат данных, границы модулей) → `04-decisions.md` или отдельный ADR.
-7. **Riesgo не пишется в код.** Пока требование в `draft`, реализация начинается только
-   по явному запросу.
-8. **Спека ревьюится диффом.** Markdown + git: изменение спеки — это коммит с понятным сообщением.
+1. Record each statement in [../statements.md](../statements.md) with an identifier.
+2. One identifier is one requirement. Each requirement has a source and a status.
+3. A requirement must have a test method. If there is no test method, the item is an open
+   question, not a requirement.
+4. A contradiction becomes an open question with two options. Do not overwrite silently.
+5. Record each non-goal. A non-goal must not become a hidden requirement.
+6. Record each choice with consequences in [04-decisions.md](04-decisions.md) or in an ADR.
+7. Do not start the code while the requirement is `draft`, unless the customer asks for it.
+8. Change the specification with small commits.
+
+## Status values
+
+| Status | Meaning |
+|---|---|
+| `draft` | Written as understood. Not confirmed. |
+| `accepted` | Confirmed. The requirement is testable. |
+| `disputed` | Contradicts another statement. See the open question. |
+| `deferred` | Postponed on purpose. |
+| `rejected` | Refused on purpose. |
