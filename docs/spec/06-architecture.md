@@ -208,9 +208,10 @@ The frontier geometry comes from the prior art. See [D-018](04-decisions.md).
 
 ## Fold
 
-The view is a tiling of `[0, total)` with non-overlapping blocks. The fold merges pairs while the
-view is above `high` and stops at `low = high/2`. See [REQ-161](02-requirements.md) and
-[REQ-167](02-requirements.md).
+The view is a tiling of `[0, total)` with non-overlapping blocks. The fold merges built pairs while
+the view is above `high` and stops at `low = high/2`. The budget of the part gives `high`. The fold
+builds nothing. See [REQ-161](02-requirements.md), [REQ-167](02-requirements.md), and
+[REQ-177](02-requirements.md).
 
 A merge needs two neighbors of one level, a `start` that is a multiple of `2^(level+1)`, and a built
 parent with a fresh input. The pair takes the priority `due = (total - (start + 2^(level+1) - 1)) /
@@ -231,7 +232,7 @@ defaults come from the measurements: effort off, 6 nodes in a batch, and up to 8
 
 The writer builds each dirty node. A node is dirty when a source changes or becomes dirty, and an
 import that puts the records in another order makes the tree dirty. The writer takes the node with the
-oldest `built_at` first, and a node waits for its children. See [D-041](04-decisions.md).
+highest `due` first, and a node waits for its children. See [D-041](04-decisions.md).
 
 The writer retries a line that is not shorter than its source, and it refuses a line that does not
 shrink. See [REQ-051](02-requirements.md).
