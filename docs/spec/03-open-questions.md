@@ -27,6 +27,8 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-044](#q-044) | Where does the description of a scope live: the configuration or the first card?                                                        | The description seeds the card, and one home must hold it.                                                                                                                        | REQ-141                                  | customer | open   |
+| [Q-045](#q-045) | Does an alias put the records of the old key into one scope with the new key?                                                           | A rename leaves the old key in the events, and the catalog must not split in two.                                                                                                 | REQ-016                                  | customer | open   |
 
 ## Details
 
@@ -54,6 +56,22 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+
+### Q-044
+
+The old design keeps the description as an event of a registry. S-032 asks for the simple form.
+
+- Option A: the configuration. The catalog build reads the field `scopes.<key>.description`, and a
+  missing field gives a card without a seed.
+- Option B: the first card of the scope. The chain supersedes it, so the description costs one leaf
+  and the store carries it to another machine.
+
+### Q-045
+
+A rename leaves the old key in every event that it wrote. S-032 gives the alias for the name.
+
+- Option A: the alias makes one scope. The view and the catalog read the records of both keys.
+- Option B: the alias changes the name only. The catalog keeps one card chain for each key.
 
 ## Closed questions
 
