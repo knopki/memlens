@@ -20,6 +20,13 @@ work yet. The specification in `docs/spec/` is the only authority for requiremen
    requirement silently.
 4. Make a commit with the message `spec: <change>`.
 
+## Setup
+
+1. Run `mise install` to install the tools from `mise.toml`.
+2. Run `pnpm install` to install the packages.
+
+Do not write a tool version in another file. Change `mise.toml` instead.
+
 ## Checks
 
 Run these commands before you commit:

@@ -30,7 +30,18 @@ memlens 是一个无头库（headless library），带一个 CLI 前端和一个
 | [docs/statements.md](docs/statements.md) | 客户的原始陈述。 |
 | [AGENTS.md](AGENTS.md) | 代理工作规则。 |
 
+## 安装
+
+```sh
+mise install
+pnpm install
+```
+
+[mise.toml](mise.toml) 固定工具版本。[mise.lock](mise.lock) 固定校验和。
+
 ## 命令
+
+在由 mise 激活的 shell 中运行命令，或以 `mise exec --` 开头运行单条命令。
 
 | 命令 | 作用 |
 |---|---|

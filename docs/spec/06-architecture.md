@@ -5,7 +5,7 @@ Status: draft. The scaffold builds and the tests pass. No part does work yet.
 ## Stack
 
 TypeScript on Node.js. pnpm workspaces. `tsc` builds the library and the CLI. `tsdown` builds the
-plugin. See [D-005](04-decisions.md).
+plugin. See [D-005](04-decisions.md). The tool versions come from `mise.toml`. See [D-008](04-decisions.md).
 
 ## Layout
 

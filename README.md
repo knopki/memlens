@@ -30,7 +30,19 @@ memlens is a headless library with a CLI frontend and a DSH plugin.
 | [docs/statements.md](docs/statements.md) | Customer statements, word for word. |
 | [AGENTS.md](AGENTS.md) | Work rules for agents. |
 
+## Setup
+
+```sh
+mise install
+pnpm install
+```
+
+The file [mise.toml](mise.toml) pins the tool versions. The file [mise.lock](mise.lock) pins the
+checksums.
+
 ## Commands
+
+Run the commands in a shell that mise activates, or start each command with `mise exec --`.
 
 | Command | Action |
 |---|---|
