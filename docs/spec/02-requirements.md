@@ -90,6 +90,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-082 | The store writes the sanitized form after a `redact` event.                                                                        | FR   | draft    | S-017  | The event of a redacted note has `redacted: true` and no content.                                                              |
 | REQ-083 | A `target` field names the `note` event.                                                                                           | FR   | draft    | S-018  | An amend after an amend finds the note by one target.                                                                          |
 | REQ-084 | The address of a note stays the same after an amend.                                                                               | FR   | draft    | S-018  | Two amends by one address change the same note.                                                                                |
+| REQ-085 | No event except `note` carries `session`, `turn`, or `preset`.                                                                     | FR   | draft    | S-019  | The payload of each other op holds none of the three fields.                                                                   |
 
 ## Rules for new requirements
 

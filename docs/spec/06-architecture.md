@@ -62,6 +62,9 @@ A card is a `note` event with `kind: "card"`, `for_scope`, and `for_sources`. Th
 An event has two times. `at` is the time of the log, and `ts` is the time of the write of a note. See
 [D-024](04-decisions.md).
 
+Only the `note` event carries `session`, `turn`, and `preset`. The agent gives them when it calls the
+tool. See [REQ-085](02-requirements.md).
+
 `pos` is not a field of an event. It is the ordinal of the creating event in the log of one store. The
 first `note` has `pos` 0. A `pos` is local to one store, and an export holds no `pos`.
 

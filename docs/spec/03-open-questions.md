@@ -27,7 +27,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-031](#q-031) | Do all events carry `session`, `turn`, and `preset`, or only the `note` event?                                                          | The S-016 example gives the three fields on a `note` event only.                                                                                                                  | REQ-079                                  | customer | open   |
 
 ## Details
 
@@ -55,13 +54,6 @@ The statement stops after the words "the merge rules", and S-017 removes `scrub`
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-
-### Q-031
-
-S-017 gives the three fields as payload. The example gives them on a `note` event.
-
-- Option A: each event carries `session`, `turn`, and `preset`.
-- Option B: only the `note` event carries them.
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -75,3 +67,4 @@ S-017 gives the three fields as payload. The example gives them on a `note` even
 | Q-032 | What does `ts` hold, and how does it differ from `at`?                  | `at` gives the time of the log, and `ts` gives the time of the write. See S-017.                                                         | 2026-11-04 |
 | Q-029 | Does `target` name the `note` event, or the newest event of the note?   | The `note` event. The address of a note does not change after an amend. See S-018.                                                       | 2026-11-04 |
 | Q-033 | Does `sourceId` stay the key of an import, or does `idem` replace it?   | `idem`. The prior-art table gives principles, not field names, and the model holds no `sourceId`. See S-018.                             | 2026-11-04 |
+| Q-031 | Do all events carry `session`, `turn`, and `preset`, or the note only?  | The `note` event only. The agent gives the three fields when it calls the tool. See S-019.                                               | 2026-11-04 |
