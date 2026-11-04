@@ -143,8 +143,9 @@ and `redacted: true`. A retelling has no phrase to cut, so the card goes as a wh
 ## Configuration
 
 The CLI reads a TOML file. The harness reads the plugin config in `cordis.patch.yml` and the agent
-preset. The plugin merges three layers: the TOML file, the profile patch, and the preset patch. The
-preset wins. An array replaces an array. See [D-065](04-decisions.md).
+preset. The plugin merges three layers: the TOML file, the profile patch, and the preset patch. The patch
+wins over the TOML, and the preset wins over the profile. An array replaces an array. See
+[D-065](04-decisions.md).
 
 | Layer        | File                       | Keys                                                                 |
 | ------------ | -------------------------- | -------------------------------------------------------------------- |
@@ -152,10 +153,12 @@ preset wins. An array replaces an array. See [D-065](04-decisions.md).
 | Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `language`, `cacheTtl` |
 | Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
 
-The `store` key of the patch gives the data path as a string. The `writer` section gives `provider`,
+The `store` key of the patch sets the same store as the TOML `store` section and `MEMLENS_STORE`. The
+patch overrides the TOML value. The flag and the environment win over the patch. The `writer` section gives `provider`,
 `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. The `mode` is `parallel`, `batch`, or `auto`,
 and the default is `auto`. The `cacheTtl` map gives a duration for a model glob. The most specific glob
-wins. The `language` key gives the language of the memory text. See [S-067](../statements.md#s-067).
+wins. The `language` key gives the language that the prompt recommends for the notes. The default is
+`en`, because the FTS support is better. See [S-067](../statements.md#s-067) and [S-068](../statements.md#s-068).
 
 The `nudge` section gives `mode` and `tool_calls` in the patch. The TOML file gives the other nudge keys.
 The `[scope_default]` section gives the scope rules and the fallback key. The rules go in order, and the
@@ -164,9 +167,8 @@ See [REQ-262](02-requirements.md), [REQ-263](02-requirements.md), [REQ-272](02-r
 [D-060](04-decisions.md).
 
 A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget gives
-`slice`, `here`, and `directions` in bytes. The role of `slice` waits for
-[Q-091](03-open-questions.md#q-091). The subagent mode is `propose`, `read`, or `off`. See
-[D-046](04-decisions.md) and [D-047](04-decisions.md).
+`here` and `directions` in bytes, and it gives no `slice` key. The two budgets are independent. The
+subagent mode is `propose`, `read`, or `off`. See [D-046](04-decisions.md) and [D-047](04-decisions.md).
 
 A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file. The key
 `idle` gives 300 seconds by default. See [D-045](04-decisions.md).
@@ -318,7 +320,8 @@ The compaction starts after a write, at a wake, at the command `memlens compact`
 timer. The wake gives the view when the queue is not empty. A position with no built parent gives
 its raw records. When a part of the view at the wake is above 1.5 times its budget, the store builds
 the unbuilt nodes. The deadline of the build is 10 seconds, and the render gives the view at the
-deadline. The `store` section gives the idle time of the compaction and the form of the compactor.
+deadline. The `store` section gives the idle time of the compaction. The `writer` section gives the mode
+of the compactor.
 See [REQ-214](02-requirements.md) and [REQ-216](02-requirements.md).
 
 The writer builds each dirty node. A node is dirty when a source changes or becomes dirty, and an
@@ -417,6 +420,5 @@ test. See [D-010](04-decisions.md).
 
 ## Open points
 
-The role of `budget.slice`, the archived line of `<directions>`, the retelling prompt, the index port,
-and the review queue are open. The input and output of `memory_review` are open. See
-[03-open-questions.md](03-open-questions.md).
+The retelling prompt, the index port, and the review queue are open. The input and output of
+`memory_review` are open. See [03-open-questions.md](03-open-questions.md).
