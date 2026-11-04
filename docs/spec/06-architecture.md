@@ -165,7 +165,7 @@ range by its address. The address names the `note` event, and it stays the same 
 ## Tree
 
 A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
-`start` is a multiple of `2^L`. The tree needs no dense prefix: a position with no live record is
+`start` is a multiple of `2^L`. The tree has no depth limit. The tree needs no dense prefix: a position with no live record is
 empty, and the hole stays in the geometry. See [D-038](04-decisions.md).
 
 A node holds `summary`, `ts_from`, `ts_to`, `bytes`, `input_gen`, `state`, `built_at`, and

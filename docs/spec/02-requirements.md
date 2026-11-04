@@ -137,6 +137,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-129 | The state of a node is `built` or `dirty`.                                                                                         | FR   | draft    | S-025  | The state is `dirty` after a change of the input.                                                                              |
 | REQ-130 | The tree needs no dense prefix.                                                                                                    | FR   | draft    | S-025  | A hidden note in a range leaves a hole, and the geometry stays.                                                                |
 | REQ-131 | The node takes `ts_from` and `ts_to` from the `ts` values of the notes that it covers.                                             | FR   | draft    | S-026  | A note with an `at` outside the range changes no limit of the node.                                                            |
+| REQ-132 | The tree has no depth limit.                                                                                                       | FR   | draft    | S-027  | The store builds a node above any other level when the range covers it.                                                        |
 
 ## Rules for new requirements
 
