@@ -1,0 +1,18 @@
+{
+  "name": "memlens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.17.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "verify": "pnpm run build && pnpm run typecheck && pnpm run test",
+    "lint:docs": "sh scripts/ste-lint.sh",
+    "plugin:check": "sh scripts/plugin-check.sh"
+  }
+}

@@ -1,15 +1,18 @@
 # Node
 node_modules/
 dist/
+lib/
 build/
 coverage/
 *.tsbuildinfo
+
+# Packs
+*.tgz
 
 # Python
 __pycache__/
 *.py[cod]
 .venv/
-uv.lock
 
 # Env / secrets
 .env

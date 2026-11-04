@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+
+# Allow the build script of esbuild. Vite and vitest use it for the tests.
+allowBuilds:
+  esbuild: true

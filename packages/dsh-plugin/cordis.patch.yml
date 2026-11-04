@@ -1,0 +1,12 @@
+# The dsh-memlens bundle layer. The manifest points to this file with
+# package.json#dsh.bundle.patch.
+#
+# The layer is a YAML array of row verbs. `insert` adds one plugin row to the
+# composed configuration.
+#
+# `id` is the row identifier. A later layer uses the id to override this row.
+# `name` is the module specifier that the loader imports. It must resolve to
+# this package entry.
+- insert:
+    - id: dsh-memlens
+      name: '@memlens/dsh-plugin'
