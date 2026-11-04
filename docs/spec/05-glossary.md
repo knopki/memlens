@@ -82,7 +82,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | state            | The lifecycle value of a record, in the order `live`, `hidden`, `proposed`, `deleted`. Only an `accept` lowers it.            | S-020, S-021                                 |
 | hidden           | The state of a record after a `hide` event. The content stays.                                                                | S-020                                        |
 | recorded_at      | The time of the note event in the log. It is equal to `at`.                                                                   | S-020                                        |
-| content_cleared  | The flag of a redacted record. An `amend` event does not change this record.                                                  | S-020                                        |
+| content_cleared  | The flag of a redacted record. An `amend` event changes no content of this record, and it still changes the scope.            | S-020, S-035                                 |
 | superseded_by    | The field of a record that names the note that superseded it.                                                                 | S-020                                        |
 | pass             | One walk over the ordered events in the projection.                                                                           | S-020                                        |
 | catalog scope    | The scope `__catalog__:<profile>`. It holds the cards of one profile.                                                         | S-023                                        |

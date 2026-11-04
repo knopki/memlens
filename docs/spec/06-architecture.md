@@ -107,7 +107,7 @@ A `hide` event takes a record out of the view, the search, and the compression. 
 keeps the state `proposed` and stays in the review queue. An `accept` event clears the effect of an
 earlier `hide` event, and the record enters the view again. See [D-032](04-decisions.md).
 
-A `redact` event clears `body` and `longform` for good, and a later `amend` does not apply. An event
+A `redact` event clears `body` and `longform` for good, and a later `amend` changes no content. An event
 with `redacted: true` gives no content. See [D-030](04-decisions.md).
 
 ## Catalog
