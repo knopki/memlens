@@ -26,14 +26,17 @@ work yet. The specification in `docs/spec/` is the only authority for requiremen
 2. Run `pnpm install` to install the packages.
 3. Run `prek install` to install the git hooks.
 
-Do not write a tool version in another file. Change `mise.toml` instead. Do not commit `mise.lock`.
+Do not write a tool version in two files. Do not commit `mise.lock`.
 
 ## Toolchain
+
+mise holds the tools that npm does not distribute: node, pnpm, python, and prek. Every other tool
+is a dev dependency.
 
 | Task                          | Tool                                                    |
 | ----------------------------- | ------------------------------------------------------- |
 | Type check and declarations   | TypeScript 7, the native compiler. The binary is `tsc`. |
-| Lint and format               | biome                                                   |
+| Lint and format               | biome, a root dev dependency                            |
 | Test                          | vitest                                                  |
 | Bundle the CLI and the plugin | esbuild                                                 |
 | Git hooks                     | prek                                                    |
