@@ -118,3 +118,14 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `ancestor`       | A node above another node in a tree. A change of a child makes each ancestor dirty.                                           | S-054                                        |
 | `compression`    | The reduction of the slice at a render. It works on `<directions>` first, then on `<here>`, and it cuts no `<how-to>`.        | S-056                                        |
 | `form`           | The shape of a run of the compactor: `parallel`, `batch`, or `auto`.                                                          | S-052, S-061                                 |
+| scope key        | The key of a scope in the form `kind:name`.                                                                                   | S-063                                        |
+| scope kind       | The first part of a scope key: `project`, `global`, `agent`, `user`, `topic`, `task`, or `import`.                            | S-063                                        |
+| scope name       | The second part of a scope key: lowercase letters, digits, the period, the underscore, the slash, and the hyphen.             | S-063                                        |
+| address          | The pointer to one note or one range: `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`.                                      | S-063                                        |
+| active scope     | The scope of the current workspace, from the rules of `[scope_default]`.                                                      | S-063                                        |
+| active profile   | The profile of the session, named by `active_profile`.                                                                        | S-063                                        |
+| scope rule       | One entry of `rules`: a match type, a glob or an id, and a key.                                                               | S-063                                        |
+| scope default    | The section `[scope_default]`: the active profile, the rules, and the fallback key.                                           | S-063                                        |
+| placeholder      | The part `{repo}` of a rule key. The resolver replaces it with a part of the match.                                           | S-063                                        |
+| resolve cache    | The stored map from a workspace id to a scope key.                                                                            | S-063                                        |
+| workspace id     | The identifier of a workspace in the harness, in the form `ws_01H…`.                                                          | S-063                                        |

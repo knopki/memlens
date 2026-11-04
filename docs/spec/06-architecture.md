@@ -148,6 +148,7 @@ The configuration is a TOML file. The statement [S-036](../statements.md#s-036) 
 | ----------------- | --------------------------------------------------------- |
 | `store`           | `backend` (`sqlite` or `jsonl`), `path`, `idle`, `form`   |
 | `profile.<name>`  | `scopes`, `budget`, `subagents`                           |
+| `scope_default`   | `active_profile`, `rules`, `default`                      |
 | `nudge`           | `mode`, `tool_calls`, `turns`, `expensive`, `text`        |
 | `writer`          | `maxCallsPerHour`                                         |
 
@@ -159,10 +160,16 @@ A profile lists its scopes as keys, and `*` matches the rest of a key. The budge
 `directions` limits the tree of the catalog. The subagent mode is `propose`, `read`, or `off`. See
 [D-046](04-decisions.md) and [D-047](04-decisions.md).
 
+The `[scope_default]` section gives the active profile, the scope rules, and the fallback key. The
+rules go in order, and the first match gives the active scope. The rules match the repository remote,
+the path, or the workspace id. See [REQ-262](02-requirements.md), [REQ-263](02-requirements.md), and
+[D-060](04-decisions.md).
+
 ## Store
 
-A scope is a key in the events. The store holds no record for a scope, and no event describes one. A
-scope exists because a record names its key. See [D-042](04-decisions.md).
+A scope is a key in the events. The key has the form `kind:name`. The store holds no record for a
+scope, and no event describes one. A scope exists because a record names its key. See
+[D-042](04-decisions.md) and [REQ-255](02-requirements.md).
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both. The
 store keeps the queue of the compaction jobs. See [D-054](04-decisions.md).
@@ -216,9 +223,11 @@ A merge is a union of events by id. The projection converges for any order of ar
 
 ## Addressing
 
-A note has the address `#pos`. A range of notes has the address `#a-b`. The agent gets one note or one
-range by its address. The address is the `pos` of the note event, so it stays the same after an amend.
-See [D-027](04-decisions.md).
+An address is `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. An address with no scope names the
+active scope, and an address with a scope names a record of that scope. The `pos` stays the same after
+an amend. See [D-027](04-decisions.md), [REQ-259](02-requirements.md) to
+[REQ-261](02-requirements.md), and [Q-082](03-open-questions.md) and
+[Q-089](03-open-questions.md).
 
 ## Tree
 
@@ -381,5 +390,5 @@ test. See [D-010](04-decisions.md).
 ## Open points
 
 The form of the direction map, the index port, and the merge of the configuration are open. The
-retelling prompt, the snapshot fields, and the tool surfaces are open. See
-[03-open-questions.md](03-open-questions.md).
+retelling prompt, the snapshot fields, and the tool surfaces are open. The catalog key, the meaning of
+`pos`, and the resolve cache are open too. See [03-open-questions.md](03-open-questions.md).
