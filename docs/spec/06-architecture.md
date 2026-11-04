@@ -47,15 +47,15 @@ external, because the harness gives them at run time.
 The log holds immutable events. An event has `id` (ULID), `at`, `op`, and `scope`. The payload belongs
 to the op.
 
-| Op        | Payload                                                                                                                     | Effect                                                     |
-| --------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes`, `for_scope`, `for_sources` | It writes a note.                                          |
-| `amend`   | `target`, and one or more of `body`, `longform`, and `scope`                                                                | It changes the content or the scope. Only the CLI or the GUI. |
-| `hide`    | `target`, `reason`                                                                                                          | The note leaves the view. The content stays.               |
-| `redact`  | `target`, `reason`                                                                                                          | The content of the note becomes empty. Only the CLI or the GUI. |
-| `review`  | `target`, `review_at`                                                                                                       | It gives the new review date.                              |
-| `accept`  | `target`                                                                                                                    | A proposed note becomes `live`.                            |
-| `dismiss` | `target`, `reason`                                                                                                          | A proposed note becomes `deleted`.                         |
+| Op        | Payload                                                                                                                                                   | Effect                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes`, `for_scope`, `for_sources` | It writes a note.                                               |
+| `amend`   | `target`, and one or more of `body`, `longform`, and `scope`                                                                                              | It changes the content or the scope. Only the CLI or the GUI.   |
+| `hide`    | `target`, `reason`                                                                                                                                        | The note leaves the view. The content stays.                    |
+| `redact`  | `target`, `reason`                                                                                                                                        | The content of the note becomes empty. Only the CLI or the GUI. |
+| `review`  | `target`, `review_at`                                                                                                                                     | It gives the new review date.                                   |
+| `accept`  | `target`                                                                                                                                                  | A proposed note becomes `live`.                                 |
+| `dismiss` | `target`, `reason`                                                                                                                                        | A proposed note becomes `deleted`.                              |
 
 A card is a `note` event with `kind: "card"`, `for_scope`, and `for_sources`. The log has no card op.
 
@@ -86,15 +86,15 @@ sets `recorded_at = at`. The state is `proposed` for a proposed note and `live` 
 
 Pass 2 applies the operations in the same order.
 
-| Event     | Effect                                                                                  |
-| --------- | --------------------------------------------------------------------------------------- |
-| `note`    | With the state `live`, it applies its `supersedes`.                                     |
-| `accept`  | It makes `proposed` to `live` at an actual transition, and it applies the `supersedes`. |
-| `hide`    | The state becomes the maximum of the state and `hidden`.                                |
-| `dismiss` | The state becomes the maximum of the state and `deleted`.                               |
-| `redact`  | The state becomes `deleted`, and `content_cleared` becomes true.                        |
+| Event     | Effect                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `note`    | With the state `live`, it applies its `supersedes`.                                                                |
+| `accept`  | It makes `proposed` to `live` at an actual transition, and it applies the `supersedes`.                            |
+| `hide`    | The state becomes the maximum of the state and `hidden`.                                                           |
+| `dismiss` | The state becomes the maximum of the state and `deleted`.                                                          |
+| `redact`  | The state becomes `deleted`, and `content_cleared` becomes true.                                                   |
 | `amend`   | It patches `body` or `longform` while `content_cleared` is not set, and it moves the record to the key in `scope`. |
-| `review`  | It sets `review_at`, and `reviewed_at` becomes its `at`.                                |
+| `review`  | It sets `review_at`, and `reviewed_at` becomes its `at`.                                                           |
 
 A `supersedes` acts one time, at the first `live` state of the note. For each target, the state
 becomes the maximum of the state and `hidden`, and `superseded_by` gets the id of the note, if the
@@ -142,30 +142,34 @@ and `redacted: true`. A retelling has no phrase to cut, so the card goes as a wh
 
 ## Configuration
 
-The configuration is a TOML file. The statement [S-036](../statements.md#s-036) gives a part of it. See
-[D-045](04-decisions.md).
+The CLI reads a TOML file. The harness reads the plugin config in `cordis.patch.yml` and the agent
+preset. The plugin merges three layers: the TOML file, the profile patch, and the preset patch. The
+preset wins. An array replaces an array. See [D-065](04-decisions.md).
 
-| Section           | Keys                                                      |
-| ----------------- | --------------------------------------------------------- |
-| `store`           | `backend` (`sqlite` or `jsonl`), `path`, `idle`, `form`   |
-| `profile.<name>`  | `scopes`, `budget`, `subagents`                           |
-| `scope_default`   | `rules`, `default`                                        |
-| `nudge`           | `mode`, `tool_calls`, `turns`, `expensive`, `text`        |
-| `writer`          | `maxCallsPerHour`                                         |
+| Layer        | File                       | Keys                                                                 |
+| ------------ | -------------------------- | -------------------------------------------------------------------- |
+| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `profile.<name>`, `scope_default`, `nudge`, `writer`        |
+| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `language`, `cacheTtl` |
+| Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
 
-A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file. The key
-`idle` gives 300 seconds by default, and the key `form` gives `batch` by default.
+The `store` key of the patch gives the data path as a string. The `writer` section gives `provider`,
+`model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. The `mode` is `parallel`, `batch`, or `auto`,
+and the default is `auto`. The `cacheTtl` map gives a duration for a model glob. The most specific glob
+wins. The `language` key gives the language of the memory text. See [S-067](../statements.md#s-067).
 
-A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget gives `here` and
-`directions` in bytes, and the two are independent: `here` limits the tree of the current project and
-`directions` limits the tree of the catalog. The subagent mode is `propose`, `read`, or `off`. See
+The `nudge` section gives `mode` and `tool_calls` in the patch. The TOML file gives the other nudge keys.
+The `[scope_default]` section gives the scope rules and the fallback key. The rules go in order, and the
+first match gives the active scope. The rules match the repository remote, the path, or the workspace.
+See [REQ-262](02-requirements.md), [REQ-263](02-requirements.md), [REQ-272](02-requirements.md), and
+[D-060](04-decisions.md).
+
+A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget gives
+`slice`, `here`, and `directions` in bytes. The role of `slice` waits for
+[Q-091](03-open-questions.md#q-091). The subagent mode is `propose`, `read`, or `off`. See
 [D-046](04-decisions.md) and [D-047](04-decisions.md).
 
-The `[scope_default]` section gives the scope rules and the fallback key. The
-rules go in order, and the first match gives the active scope. The rules match the repository remote,
-the path, or the workspace. A rule with the match `workspace` gives the key for the workspace. See
-[REQ-262](02-requirements.md), [REQ-263](02-requirements.md), [REQ-272](02-requirements.md), and
-[D-060](04-decisions.md).
+A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file. The key
+`idle` gives 300 seconds by default. See [D-045](04-decisions.md).
 
 ## Store
 
@@ -189,36 +193,37 @@ store keeps the queue of the compaction jobs. See [D-054](04-decisions.md).
 
 The view is a deterministic function of the records, the built nodes, and `storeRev`.
 
-The slice is one `<memory>` block with three parts:
+The slice is one `<memory>` block:
 
 ```
 <memory>
-<how-to>...</how-to>          the static policy
-<directions>...</directions>  each scope of the profile, aged by activity
-<here scope="...">...</here>  the frontier of the active scope
+... the policy text ...
+<directions>...</directions>
+<here scope="...">...</here>
 </memory>
 ```
 
-The compression works on `<directions>` first, then on `<here>`, and the `<how-to>` block stays whole.
-An old line of `<directions>` gives one line, and the compression of `<here>` stops at 60 percent of
-the budget. A part above 1.5 times its budget loses the oldest `<here>` lines, and the line
+The policy text stays whole. A direction line gives `[scope] <age|active> · <N> notes · <text>`. A fresh
+scope can add detail lines. A line of `<here>` is a leaf `#<pos> <date> <body>`, a node
+`#<a>-<b> <start>..<end> <summary>`, or a card `#<pos> <date> [scope] <text>`. See
+[REQ-297](02-requirements.md) and [REQ-298](02-requirements.md).
+
+The frontier tiles its range with no gap and no overlap. A nested block does not render. The agent opens a
+node with `memory_open`, and the tool gives the two child lines. See [REQ-299](02-requirements.md).
+
+The compression works on `<directions>` first, then on `<here>`, and the policy text stays whole. An old
+line of `<directions>` gives one line, and the compression of `<here>` stops at 60 percent of the budget.
+A part above 1.5 times its budget loses the oldest `<here>` lines, and the line
 `#<a>-<b> omitted (N lines, compacting)` takes their place. The `<directions>` block keeps its lines.
 The agent opens the range with `memory_open`. See [REQ-223](02-requirements.md) to
 [REQ-229](02-requirements.md).
 
-Only the text travels. The nine fields of S-042 have no record. [Q-055](03-open-questions.md) gives
-the choice. The reason of a trigger is `session-start`, `ttl`, `compaction`, or `redact`. Review data
-does not enter the slice. See [REQ-178](02-requirements.md) to [REQ-181](02-requirements.md).
+The text travels in `systemPrompt.context`. The session history keeps it. The plugin reads the last
+context message and gives that text until the next trigger. A trigger is a fresh session, a compaction
+after success, and an idle time above the TTL. A process restart gives the same text. See
+[REQ-021](02-requirements.md), [REQ-188](02-requirements.md), and [D-064](04-decisions.md).
 
-The plugin gives the text to the harness as `systemPrompt.context`, and the text stays the same until
-the next snapshot. A new snapshot follows a new session, a compaction, an idle time longer than the
-cache TTL, and a redact. See [REQ-021](02-requirements.md).
-
-The store of memlens holds no snapshot. The plugin renders the text from the store at a trigger, and
-the session history of the harness keeps the copy. On each later assembly the plugin reads the last
-snapshot from the history and gives that text again. A `redact` cleans the store, and the next trigger
-renders the text again. The copy in the session history stays. See [D-050](04-decisions.md),
-[D-051](04-decisions.md), and [D-052](04-decisions.md).
+A `redact` cleans the store. The copy in the session history stays. See [D-052](04-decisions.md).
 
 ## Merge
 
@@ -333,14 +338,33 @@ An import and a merge are idempotent by `idem`. A note can supersede an earlier 
 a cache over the log: the store rebuilds it from the log after a loss. See
 [REQ-057](02-requirements.md), [REQ-058](02-requirements.md), and [REQ-059](02-requirements.md).
 
+## Harness surface
+
+The plugin registers the slice as `systemPrompt.context`. It does not use a system prompt section: a
+change of the section invalidates the whole cached prefix. See [D-064](04-decisions.md).
+
+The plugin registers one context for each agent at `agent/created`. The event gives the agent scope. The
+context has `required: true` and the order 220. The registration reads `agent.session.id`,
+`agent.session.meta.agentPreset`, and `agent.session.meta.cwd`. The preset selects the profile, and the
+cwd selects the active scope.
+
+The harness writes the context as a user-role message after the saved history. The message survives a
+restart. The harness writes a new message only when the text changes. A compaction deletes the message,
+and the plugin renders a new snapshot after the compaction succeeds. See [REQ-280](02-requirements.md) to
+[REQ-285](02-requirements.md).
+
+The host gives no `getContextOrder` name for a plugin. The registry names seven built-in contexts, and
+the plugin uses the number 220.
+
 ## Agent surface
 
-| Tool          | Who        | Effect                                                         |
-| ------------- | ---------- | -------------------------------------------------------------- |
-| write         | main agent | A new note, or the live note with the same four fields.        |
-| hide          | main agent | The note leaves the view.                                      |
-| memory_review | main agent | One short review answer.                                       |
-| memory_open   | main agent | The records of one address or one range.                       |
+| Tool          | Who        | Effect                                                       |
+| ------------- | ---------- | ------------------------------------------------------------ |
+| memory_note   | main agent | A new note, or the live note with the same four fields.      |
+| memory_forget | main agent | The note leaves the view.                                    |
+| memory_find   | main agent | The notes with a matching word.                              |
+| memory_open   | main agent | A note and its `longform`, or the two child lines of a node. |
+| memory_review | main agent | One short review answer.                                     |
 
 Each scope of a profile accepts a write. A write to a scope outside the profile gives a `proposed`
 note, and a human decides about it. See [REQ-160](02-requirements.md) and
@@ -393,5 +417,6 @@ test. See [D-010](04-decisions.md).
 
 ## Open points
 
-The form of the direction map, the index port, and the merge of the configuration are open. The
-retelling prompt, the snapshot fields, and the tool surfaces are open. See [03-open-questions.md](03-open-questions.md).
+The role of `budget.slice`, the archived line of `<directions>`, the retelling prompt, the index port,
+and the review queue are open. The input and output of `memory_review` are open. See
+[03-open-questions.md](03-open-questions.md).
