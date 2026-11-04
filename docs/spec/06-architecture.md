@@ -121,9 +121,11 @@ One card covers one scope and one session. A session end and a compaction build 
 with records of the session. Its input is the `body` of each live record of that scope and session. A
 record with the state `proposed`, `hidden`, or `deleted` does not enter the input.
 
-The model writes the body of the card from the input, and the body is 512 bytes maximum. Without a
-model answer, the store joins the three last bodies with `; `, and cuts the text to 512 bytes. See
-[REQ-190](02-requirements.md) to [REQ-194](02-requirements.md).
+The model writes the body of the card from the input, and the body is 512 bytes maximum. The build
+retries the model when the answer holds no text or more than 512 bytes. Without a model answer, the
+store joins the three last bodies, ordered by `ts`, with `; `, and cuts the text at a word boundary
+to 512 bytes. A scope with no live record gives no card. See [REQ-190](02-requirements.md) to
+[REQ-199](02-requirements.md).
 
 A rebuild writes a new card with the old card in `supersedes`. The projection hides the old card, and
 the catalog tree marks the ancestors of the old card dirty. The text of the old card stays. See

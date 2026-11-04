@@ -21,15 +21,10 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-022](#q-022) | What is the form of the line about a subagent write in the parent report?                                                               | The parent must see the write, and the line costs tokens.                                                                                                                         | REQ-035                                  | customer | open   |
 | [Q-023](#q-023) | Is `longform` available by address, in the slice, or in both?                                                                           | The size limit says what the tree does not hold.                                                                                                                                  | REQ-010, REQ-013                         | customer | open   |
 | [Q-024](#q-024) | Does the console live in the CLI package or in its own package, and which stack does it use?                                            | C-012 splits client and backend code, and the console is client code.                                                                                                             | REQ-046                                  | customer | open   |
-| [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
+| [Q-026](#q-026) | Which retry limit and which length ratio do the writer and the card build use?                                                          | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051, REQ-197                         | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
-| [Q-058](#q-058) | Does the model write the card at each build, or only when the live bodies do not fit in 512 bytes?                                      | A model call at each build costs, and a join of the bodies is reproducible.                                                                                                       | REQ-111, REQ-192                         | customer | open   |
-| [Q-059](#q-059) | Which order gives the three last records of the fallback: `ts` or `at`?                                                                 | The order decides which bodies the card keeps.                                                                                                                                    | REQ-194                                  | customer | open   |
-| [Q-060](#q-060) | Where does the cut of the fallback fall: at a word boundary, at a character boundary, or at the byte?                                   | A cut inside a character corrupts the text of the card.                                                                                                                           | REQ-194                                  | customer | open   |
-| [Q-061](#q-061) | How does the build treat a body above 512 bytes or a model with no answer: a retry, a cut, or the fallback?                             | The answer decides the text of the card when the model fails.                                                                                                                     | REQ-192, REQ-194                         | customer | open   |
-| [Q-062](#q-062) | What does the build give when the scope holds no live record of the session?                                                            | A proposed write leaves no live record, and an empty card hides the scope.                                                                                                        | REQ-190                                  | customer | open   |
 
 ## Details
 
@@ -66,47 +61,6 @@ The store of memlens holds no snapshot (D-050). The session history of the harne
 - Option A: the text only. The session history holds it, and nothing else travels.
 - Option B: the nine fields of S-042. The `id`, the `profile`, `parts`, `bytes`, and `reason` serve
   the console and the diagnosis.
-
-### Q-058
-
-The statement gives the model text and the fallback for a missing model. It does not say when the
-model runs.
-
-- Option A: each build calls the model, and the fallback covers a missing model only.
-- Option B: a build calls the model only when the join of the bodies and the prefix is above
-  512 bytes.
-
-### Q-059
-
-The fallback takes the three last records. The statement gives no order key.
-
-- Option A: `ts`, the time of the write. See Q-039.
-- Option B: `at`, the time of the log.
-
-### Q-060
-
-The fallback cuts the text at 512 bytes. One byte cut can split one character.
-
-- Option A: at a word boundary. The body loses the tail of a word.
-- Option B: at a character boundary. The body keeps a part of a word.
-- Option C: at the byte. The body can end inside one character.
-
-### Q-061
-
-The statement gives the fallback for a model that is unavailable. It gives no check for a body above
-512 bytes. [REQ-051](02-requirements.md) retries a retelling that is not shorter than its source.
-
-- Option A: a retry of the model, then the fallback.
-- Option B: a cut of the body to 512 bytes.
-- Option C: the fallback at once.
-
-### Q-062
-
-The trigger needs records in the scope. A write outside the profile gives a record in the state
-`proposed`, and that record gives no live text.
-
-- Option A: no card. The scope keeps its earlier card.
-- Option B: a card with the empty text.
 
 ## Closed questions
 
@@ -148,3 +102,8 @@ The trigger needs records in the scope. A write outside the profile gives a reco
 | Q-047 | What does the `here` budget cover, and is `slice` the sum?              | The `slice` budget leaves. `here` limits the tree of the current project and `directions` the catalog tree. See S-037.                   | 2026-11-04 |
 | Q-048 | What does each subagent mode allow?                                     | `propose` writes and reports, `read` reads only, `off` gives no tool and no slice. See S-037.                                            | 2026-11-04 |
 | Q-041 | What makes a pair of nodes overdue?                                     | No measure. A node is dirty when a source changes, and the writer works on dirty nodes. See S-030.                                       | 2026-11-04 |
+| Q-058 | When does the model write the card?                                     | Each build calls the model, and the fallback covers a missing model only. See S-050.                                                     | 2026-11-04 |
+| Q-059 | Which order gives the three last records of the fallback?               | `ts`, the time of the write. See S-050.                                                                                                  | 2026-11-04 |
+| Q-060 | Where does the cut of the fallback fall?                                | At a word boundary, then at a character boundary for a word above 512 bytes. See S-050.                                                  | 2026-11-04 |
+| Q-061 | What does the build do when the model fails or overflows?               | A retry, then the fallback. The retry limit is open. See Q-026 and S-050.                                                                | 2026-11-04 |
+| Q-062 | What does the build give with no live record of the session?            | No card. The scope keeps its earlier card. See S-050.                                                                                    | 2026-11-04 |
