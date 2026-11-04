@@ -37,8 +37,8 @@ mise install
 pnpm install
 ```
 
-The file [mise.toml](mise.toml) pins the tool versions. The file [mise.lock](mise.lock) pins the
-checksums.
+The file [mise.toml](mise.toml) sets the tool version lines. `mise install` gives a version inside each
+line, and `mise upgrade` moves to the newest patch.
 
 ## Commands
 

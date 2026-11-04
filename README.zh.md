@@ -37,7 +37,7 @@ mise install
 pnpm install
 ```
 
-[mise.toml](mise.toml) 固定工具版本。[mise.lock](mise.lock) 固定校验和。
+[mise.toml](mise.toml) 设定工具的版本线：`mise install` 在每条线中安装一个版本，`mise upgrade` 升级到最新的补丁版本。
 
 ## 命令
 

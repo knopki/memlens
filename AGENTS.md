@@ -25,7 +25,7 @@ work yet. The specification in `docs/spec/` is the only authority for requiremen
 1. Run `mise install` to install the tools from `mise.toml`.
 2. Run `pnpm install` to install the packages.
 
-Do not write a tool version in another file. Change `mise.toml` instead.
+Do not write a tool version in another file. Change `mise.toml` instead. Do not commit `mise.lock`.
 
 ## Checks
 

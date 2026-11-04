@@ -37,8 +37,8 @@ mise install
 pnpm install
 ```
 
-Файл [mise.toml](mise.toml) фиксирует версии инструментов. Файл [mise.lock](mise.lock) фиксирует
-контрольные суммы.
+Файл [mise.toml](mise.toml) задаёт линии версий инструментов. `mise install` ставит версию внутри каждой
+линии, а `mise upgrade` поднимает до свежего патча.
 
 ## Команды
 
