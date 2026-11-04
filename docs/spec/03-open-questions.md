@@ -26,6 +26,9 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
 | [Q-073](#q-073) | What input and what output does `memory_open` have?                                                                                     | The agent opens an omitted range, and the tool is new.                                                                                                                            | REQ-228, REQ-229                         | customer | open   |
 | [Q-074](#q-074) | What does the one line of an old scope hold in `<directions>`?                                                                          | The line replaces the detail of the scope, and the card is one line.                                                                                                              | REQ-224                                  | customer | open   |
+| [Q-078](#q-078) | Which signal tells the form `auto` that a cache serves the prefix?                                                                      | The cache depends on the model, and `cacheTtl` gives the family.                                                                                                                  | REQ-247                                  | customer | open   |
+| [Q-079](#q-079) | What is the one reseed of a broken batch answer?                                                                                        | The phrase is short, and the retry costs six nodes of the debt.                                                                                                                   | REQ-250                                  | customer | open   |
+| [Q-080](#q-080) | Which scope and which effect does `maxCallsPerHour` have?                                                                               | The limit can cover one store, one profile, or one worker.                                                                                                                        | REQ-252                                  | customer | open   |
 
 ## Details
 
@@ -81,6 +84,28 @@ The compression gives an old line of `<directions>` one line. The card of a scop
 - Option B: a fixed line with the scope and the count of its records.
 
 The customer answers this point later. See S-057.
+
+### Q-078
+
+The statement gives `auto` as `batch` without a cache and `parallel` with a cache. The slice has
+`cacheTtl` for a family of models.
+
+- Option A: the model family. A model in `cacheTtl` gives `parallel`, and another model gives `batch`.
+- Option B: the run itself. The first call warms the cache, and the run takes `parallel` after it.
+
+### Q-079
+
+The statement gives one reseed and then the fallback to `parallel`. It gives no rule for the reseed.
+
+- Option A: the same call again with the same input.
+- Option B: the same call with a new order of the lines in the answer.
+
+### Q-080
+
+The statement gives the key and the value 120. It gives no scope and no action at the limit.
+
+- Option A: one store. A call above the limit waits, and the job returns to the queue.
+- Option B: one worker process. A call above the limit fails, and the job takes the backoff.
 
 ## Closed questions
 
