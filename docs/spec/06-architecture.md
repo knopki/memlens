@@ -161,7 +161,8 @@ A profile lists its scopes as keys, and `*` matches the rest of a key. The budge
 A scope is a key in the events. The store holds no record for a scope, and no event describes one. A
 scope exists because a record names its key. See [D-042](04-decisions.md).
 
-The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.
+The store has two backends of equal rank: sqlite and jsonl. One store test runs against both. The
+store keeps the queue of the compaction jobs. See [D-054](04-decisions.md).
 
 | Item     | Value                                       |
 | -------- | ------------------------------------------- |
@@ -252,9 +253,19 @@ Each batch extends the prefix of the view, so the prompt cache of the model surv
 
 ## Writer
 
-The writer is a background compactor. It makes the retellings in batches and in parallel jobs. The
-defaults come from the measurements: effort off, 6 nodes in a batch, and up to 8 jobs. See
-[D-019](04-decisions.md).
+The writer is a background compactor. It runs outside the agent loop, from a queue of jobs in the
+store. The defaults come from the measurements: effort off, 6 lines in a call, and 6 calls at one
+time. See [D-019](04-decisions.md) and [D-054](04-decisions.md).
+
+A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300
+seconds. A job records the `input_gen` of its children, and the store accepts the result only when
+`gen` matches that record.
+
+The compaction starts after a write, at a wake, at the command `memlens compact`, and at the idle
+timer. The wake gives the view when the queue is not empty. A position with no built parent gives
+its raw records. When the view at the wake is above 1.5 times the budget, the store builds the
+unbuilt nodes. The deadline of the build is 10 seconds, and the render gives the view at the
+deadline.
 
 The writer builds each dirty node. A node is dirty when a source changes or becomes dirty, and an
 import that puts the records in another order makes the tree dirty. The writer takes the node with the

@@ -110,3 +110,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | cacheTtl         | The idle time after which a new snapshot replaces the text. `deepseek/*` gives 2 hours.                                       | S-042                                        |
 | how-to           | The static policy block of the slice.                                                                                         | S-042                                        |
 | reason           | The cause of a snapshot: `session-start`, `ttl`, `compaction`, or `redact`.                                                   | S-042                                        |
+| `job`            | One unit of the queue of the compaction. It names the node, its `input_gen`, and the lease.                                   | S-051                                        |
+| `lease`          | The time that a worker holds a job: 120 seconds. After the time, another worker takes the job.                                | S-051                                        |
+| `backoff`        | The wait after a failed job: 10 seconds, then 60 seconds, then 300 seconds.                                                   | S-051                                        |
+| `gen`            | The version of the input at a block. The accept check compares it.                                                            | S-051                                        |
+| `wake`           | The render of the slice at the start of a session. It does not wait for the compaction.                                       | S-051                                        |
