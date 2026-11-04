@@ -7,8 +7,8 @@ TBD. The first statement about the problem will go here.
 ## Users
 
 | Role | Action | Value |
-|---|---|---|
-| TBD | TBD | TBD |
+| ---- | ------ | ----- |
+| TBD  | TBD    | TBD   |
 
 ## Value
 

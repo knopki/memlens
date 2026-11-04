@@ -8,16 +8,16 @@ requirement.
 
 ## Files
 
-| File | Content | Status |
-|---|---|---|
-| [00-overview.md](00-overview.md) | Problem, users, value, success criteria. | draft |
-| [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints. | draft |
-| [02-requirements.md](02-requirements.md) | Requirements with identifiers and status. | draft |
-| [03-open-questions.md](03-open-questions.md) | Open and closed questions. | live |
-| [04-decisions.md](04-decisions.md) | Decisions with alternatives and consequences. | live |
-| [05-glossary.md](05-glossary.md) | Terms with one meaning each. | live |
-| [06-architecture.md](06-architecture.md) | Parts, interfaces, data, limits. | not started |
-| [../adr/](../adr/) | Long decisions, one file for each. | as necessary |
+| File                                         | Content                                       | Status       |
+| -------------------------------------------- | --------------------------------------------- | ------------ |
+| [00-overview.md](00-overview.md)             | Problem, users, value, success criteria.      | draft        |
+| [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints.                | draft        |
+| [02-requirements.md](02-requirements.md)     | Requirements with identifiers and status.     | draft        |
+| [03-open-questions.md](03-open-questions.md) | Open and closed questions.                    | live         |
+| [04-decisions.md](04-decisions.md)           | Decisions with alternatives and consequences. | live         |
+| [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                  | live         |
+| [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.              | not started  |
+| [../adr/](../adr/)                           | Long decisions, one file for each.            | as necessary |
 
 ## Rules
 
@@ -33,10 +33,10 @@ requirement.
 
 ## Status values
 
-| Status | Meaning |
-|---|---|
-| `draft` | Written as understood. Not confirmed. |
-| `accepted` | Confirmed. The requirement is testable. |
+| Status     | Meaning                                               |
+| ---------- | ----------------------------------------------------- |
+| `draft`    | Written as understood. Not confirmed.                 |
+| `accepted` | Confirmed. The requirement is testable.               |
 | `disputed` | Contradicts another statement. See the open question. |
-| `deferred` | Postponed on purpose. |
-| `rejected` | Refused on purpose. |
+| `deferred` | Postponed on purpose.                                 |
+| `rejected` | Refused on purpose.                                   |

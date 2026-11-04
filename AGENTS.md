@@ -24,22 +24,51 @@ work yet. The specification in `docs/spec/` is the only authority for requiremen
 
 1. Run `mise install` to install the tools from `mise.toml`.
 2. Run `pnpm install` to install the packages.
+3. Run `prek install` to install the git hooks.
 
 Do not write a tool version in another file. Change `mise.toml` instead. Do not commit `mise.lock`.
 
+## Toolchain
+
+| Task                          | Tool                                                    |
+| ----------------------------- | ------------------------------------------------------- |
+| Type check and declarations   | TypeScript 7, the native compiler. The binary is `tsc`. |
+| Lint and format               | biome                                                   |
+| Test                          | vitest                                                  |
+| Bundle the CLI and the plugin | esbuild                                                 |
+| Git hooks                     | prek                                                    |
+
 ## Checks
 
-Run these commands before you commit:
-
-| Command | Action |
-|---|---|
-| `pnpm run typecheck` | Check the types of the three packages. |
-| `pnpm run test` | Run the tests. |
+| Command              | Action                                              |
+| -------------------- | --------------------------------------------------- |
+| `pnpm run typecheck` | Check the types of the three packages.              |
+| `pnpm run test`      | Run the tests.                                      |
+| `pnpm run lint`      | Check the code and the format with biome.           |
+| `pnpm run format`    | Apply the biome changes and the format.             |
 | `pnpm run lint:docs` | Check the English documents against the STE limits. |
+| `pnpm run verify`    | Run the build and all checks.                       |
 
-`lint:docs` uses the vendored linter in `scripts/vendor/`. See `scripts/vendor/README.md`. Do not point
-a check at a file outside this repository. The test of `packages/dsh-plugin` checks the plugin
-manifest. Run `pnpm run test` for that check.
+The hooks run biome and the document check before a commit. They run the type check and the tests
+before a push. `lint:docs` uses the vendored linter in `scripts/vendor/`. See
+`scripts/vendor/README.md`. Do not point a check at a file outside this repository.
+
+## Code rules
+
+- Use the GRACE-lite markup in each new source file. Write one `#region moduleContract` block at the
+  top, before all code.
+- Add a `FUNC_`, `CLASS_`, `METHOD_`, or `COMPONENT_` region for each public or non-trivial entity.
+  Leave trivial code unmarked.
+- Write the contract fields as JSDoc tags. Each contract needs `@purpose`. `@scope`, `@invariants`,
+  `@usecases`, `@dependencies`, `@rationale`, and `@keywords` are optional.
+- Do not make up a purpose. If the intent is not clear, ask the customer.
+- Use log driven development. Write short debug messages with key-value data. In Node.js, use
+  `debuglog` from `node:util`.
+- The library imports no CLI, plugin, harness, or user interface package. The test
+  `packages/core/tests/isolation.test.ts` enforces this rule.
+- Keep client code and backend code in separate modules. Do not mix them in one file.
+- Do not write a `§` reference. Do not refer to an identifier that the project does not contain.
+- Do not format code by hand. Run `pnpm run format`.
 
 ## Prohibitions
 
@@ -52,12 +81,12 @@ manifest. Run `pnpm run test` for that check.
 
 Use ASD-STE100 Simplified Technical English in all documents and in all code comments.
 
-| Item | Limit |
-|---|---|
-| Sentence length, instruction | 20 words maximum |
-| Sentence length, description | 25 words maximum |
-| Paragraph length | 6 sentences maximum |
-| Words in a noun group | 3 maximum |
+| Item                         | Limit               |
+| ---------------------------- | ------------------- |
+| Sentence length, instruction | 20 words maximum    |
+| Sentence length, description | 25 words maximum    |
+| Paragraph length             | 6 sentences maximum |
+| Words in a noun group        | 3 maximum           |
 
 - Use the imperative form for instructions. Write: "Run the test."
 - Use the active voice.

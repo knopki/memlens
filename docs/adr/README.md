@@ -33,6 +33,6 @@ What becomes easy. What becomes difficult. What a reader must know.
 
 ## Index
 
-| ID | Title | Status |
-|---|---|---|
-| — | — | — |
+| ID  | Title | Status |
+| --- | ----- | ------ |
+| —   | —     | —      |
