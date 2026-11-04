@@ -2,17 +2,7 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-| ID              | Question                                                                                                                                | Why it matters                                                                                                                                                                    | Blocks                                   | Owner    | Status |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------ |
-
-## Details
-
-### Q-030
-
-The statement stops after the words "the merge rules". The model has no `scrub` step (S-024).
-
-- Option A: a sanitized event wins over a full event with one `id`, in each order.
-- Option B: the event with the later `at` wins, and the store keeps that content.
+No question is open.
 
 ## Closed questions
 
