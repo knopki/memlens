@@ -112,10 +112,11 @@ with `redacted: true` gives no content. See [D-030](04-decisions.md).
 
 ## Catalog
 
-The catalog has one scope for each profile: `__catalog__:<profile>`. A card is a `note` event in this
-scope with `kind: "card"`, `for_scope`, and `for_sources`. A card carries `body`, `kind`, `ts`,
-`session`, `for_scope`, and `for_sources`, and it carries no `review_at`, `proposed`, `turn`, or
-`preset`. See [D-034](04-decisions.md) and [D-037](04-decisions.md).
+The catalog has one scope for each profile: `__catalog__:<profile>`. The key is hidden from the
+agent. See [REQ-274](02-requirements.md). A card is a `note` event in this scope with `kind: "card"`,
+`for_scope`, and `for_sources`. A card carries `body`, `kind`, `ts`, `session`, `for_scope`, and
+`for_sources`, and it carries no `review_at`, `proposed`, `turn`, or `preset`. See
+[D-034](04-decisions.md) and [D-037](04-decisions.md).
 
 One card covers one scope and one session. A session end and a compaction build the card of each scope
 with records of the session. Its input is the `body` of each live record of that scope and session. A
@@ -162,14 +163,16 @@ A profile lists its scopes as keys, and `*` matches the rest of a key. The budge
 
 The `[scope_default]` section gives the active profile, the scope rules, and the fallback key. The
 rules go in order, and the first match gives the active scope. The rules match the repository remote,
-the path, or the workspace id. See [REQ-262](02-requirements.md), [REQ-263](02-requirements.md), and
+the path, or the workspace id. A rule with the match `workspace` gives the key for a workspace id. See
+[REQ-262](02-requirements.md), [REQ-263](02-requirements.md), [REQ-272](02-requirements.md), and
 [D-060](04-decisions.md).
 
 ## Store
 
-A scope is a key in the events. The key has the form `kind:name`. The store holds no record for a
-scope, and no event describes one. A scope exists because a record names its key. See
-[D-042](04-decisions.md) and [REQ-255](02-requirements.md).
+A scope is a key in the events. The key has the form `kind:name`, and the grammar covers the keys that
+the agent sees. The store holds no record for a scope, and no event describes one. A scope exists
+because a record names its key. See [D-042](04-decisions.md), [D-061](04-decisions.md), and
+[REQ-255](02-requirements.md).
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both. The
 store keeps the queue of the compaction jobs. See [D-054](04-decisions.md).
@@ -225,9 +228,10 @@ A merge is a union of events by id. The projection converges for any order of ar
 
 An address is `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. An address with no scope names the
 active scope, and an address with a scope names a record of that scope. The `pos` stays the same after
-an amend. See [D-027](04-decisions.md), [REQ-259](02-requirements.md) to
-[REQ-261](02-requirements.md), and [Q-082](03-open-questions.md) and
-[Q-089](03-open-questions.md).
+an amend. The input holds no `#`, and the tool strips one leading `#` from a copy of the slice. See
+[D-027](04-decisions.md), [REQ-259](02-requirements.md) to [REQ-261](02-requirements.md), and
+[REQ-273](02-requirements.md) to [REQ-275](02-requirements.md). The meaning of `pos` stays open. See
+[Q-082](03-open-questions.md).
 
 ## Tree
 
@@ -390,5 +394,5 @@ test. See [D-010](04-decisions.md).
 ## Open points
 
 The form of the direction map, the index port, and the merge of the configuration are open. The
-retelling prompt, the snapshot fields, and the tool surfaces are open. The catalog key, the meaning of
-`pos`, and the resolve cache are open too. See [03-open-questions.md](03-open-questions.md).
+retelling prompt, the snapshot fields, and the tool surfaces are open. The meaning of `pos` is open
+too. See [03-open-questions.md](03-open-questions.md).

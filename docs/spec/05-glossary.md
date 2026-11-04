@@ -127,5 +127,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | scope rule       | One entry of `rules`: a match type, a glob or an id, and a key.                                                               | S-063                                        |
 | scope default    | The section `[scope_default]`: the active profile, the rules, and the fallback key.                                           | S-063                                        |
 | placeholder      | The part `{repo}` of a rule key. The resolver replaces it with a part of the match.                                           | S-063                                        |
-| resolve cache    | The stored map from a workspace id to a scope key.                                                                            | S-063                                        |
+| render form      | The address with a leading `#`. The renderer writes it, and the tool strips it.                                               | S-064                                        |
+| hidden key       | A technical key of the store that the agent does not see. The catalog key is hidden.                                          | S-064                                        |
 | workspace id     | The identifier of a workspace in the harness, in the form `ws_01H…`.                                                          | S-063                                        |

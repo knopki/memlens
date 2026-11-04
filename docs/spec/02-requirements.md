@@ -54,7 +54,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-046 | `memlens ui` is a standalone console.                                                                                              | FR   | draft    | S-013  | The command starts outside the harness.                                                                                        |
 | REQ-047 | In the harness the console runs in a session mode on the same view models.                                                         | FR   | draft    | S-013  | TBD. The mount point is open. See Q-014.                                                                                       |
 | REQ-048 | The tree has a frontier: levels of fixed width, and one level covers 2^k leaves.                                                   | FR   | draft    | S-014  | Two builds give the same levels for the same notes.                                                                            |
-| REQ-049 | A note has the address `#pos`, and a range of notes has the address `#a-b`. | FR | disputed | S-029 | S-063 gives the address `2107` with no `#`. See Q-089. |
+| REQ-049 | A note has the address `pos`, and a range of notes has the address `pos-pos`. | FR | draft | S-029, S-064 | `2107` names one note, and `1024-2047` names a range. |
 | REQ-050 | The rebuild of a dirty node takes the order of the fold.                                                                           | FR   | draft    | S-041  | A dirty node with a higher `due` goes first.                                                                                   |
 | REQ-051 | The writer retries a retelling that is not shorter than its source.                                                                | FR   | draft    | S-014  | A retry gives a shorter line, or the node stays at its level.                                                                  |
 | REQ-052 | A background compactor makes the retellings in parallel jobs.                                                                      | FR   | draft    | S-014  | A batch of nodes gets its retellings without a session.                                                                        |
@@ -113,7 +113,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-105 | An event with `redacted: true` gives no content.                                                                                   | FR   | draft    | S-020  | The record of this event has an empty `body` and a null `longform`.                                                            |
 | REQ-106 | A `supersedes` applies even when its target has a later `(at, id)` position.                                                       | FR   | draft    | S-020  | A target later in the order is still hidden.                                                                                   |
 | REQ-107 | An `accept` event returns a hidden proposed record to the view.                                                                    | FR   | draft    | S-022  | After a hide and an accept, the record is in the view with the state `live`.                                                   |
-| REQ-108 | The catalog scope of a profile is `__catalog__:<profile>`. | FR | disputed | S-023 | The key `__catalog__:default` has no kind of the grammar of S-063. See Q-081. |
+| REQ-108 | The catalog scope of a profile is `__catalog__:<profile>`. | FR | draft | S-023 | The key is hidden, and the grammar of S-063 covers no hidden key. |
 | REQ-109 | A card lives in the catalog scope of its profile.                                                                                  | FR   | draft    | S-023  | A card event has the scope `__catalog__:<profile>`.                                                                            |
 | REQ-110 | The catalog holds one card in the state `live` for one scope and one session.                                                      | FR   | draft    | S-023  | A rebuild leaves one live card for one scope and one session.                                                                  |
 | REQ-111 | A card takes the `body` of each live record of its scope and its session.                                                          | FR   | rejected | S-023  | Refused by S-050: the model writes the body of the card.                                                                       |
@@ -276,7 +276,11 @@ Status: see [README.md](README.md#status-values).
 | REQ-268 | Two rules may give one key. | FR | draft | S-063 | Two matches give one active scope. |
 | REQ-269 | A profile sees the scopes of its `scopes` list only. | FR | draft | S-063 | `profile.work` gives no line for `global:prefs`. |
 | REQ-270 | A scope that two profiles list is one scope. | FR | draft | S-063 | A note of `project:acme/x` shows in the slice of each profile. |
-| REQ-271 | The store caches the resolution of a workspace as a key of the form `workspace:<id>`. | FR | draft | S-063 | A second call with one workspace id gives the key of the first call. See Q-084. |
+| REQ-271 | The store caches the resolution of a workspace as a key of the form `workspace:<id>`. | FR | rejected | S-063 | Refused by S-064: `workspace:<id> → key` is a rule, and no cache exists. |
+| REQ-272 | A rule with the match `workspace` gives its key to the workspace of that id. | FR | draft | S-064 | The workspace `ws_01H…` gives the key `project:dsh/optmem`. |
+| REQ-273 | The tool strips one leading `#` from an address before the parse. | FR | draft | S-064 | `#1024-2047` gives the range `1024-2047`. |
+| REQ-274 | The catalog key is hidden from the agent. | FR | draft | S-064 | No line of the slice and no tool output names the catalog key. |
+| REQ-275 | The render form of an address holds a leading `#`. | FR | draft | S-064 | A slice line for record 2107 shows `#2107`. |
 
 ## Rules for new requirements
 

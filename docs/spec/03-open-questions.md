@@ -26,16 +26,13 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
 | [Q-073](#q-073) | What input and what output does `memory_open` have?                                                                                     | The agent opens an omitted range, and the tool is new.                                                                                                                            | REQ-228, REQ-229                         | customer | open   |
 | [Q-074](#q-074) | What does the one line of an old scope hold in `<directions>`?                                                                          | The line replaces the detail of the scope, and the card is one line.                                                                                                              | REQ-224                                  | customer | open   |
-| [Q-081](#q-081) | Which key does the catalog scope have under the new grammar? | The key `__catalog__:<profile>` has no kind of the seven, so two parts of the specification disagree. | REQ-108 | customer | open |
 | [Q-082](#q-082) | Is `pos` the ordinal in the store, or the ordinal in the scope? | The qualified address can count for one scope, and the bare address can count for the store. | REQ-049, REQ-259, REQ-261 | customer | open |
-| [Q-083](#q-083) | Do the new items take the words `registry`, `kind`, and `workspace`, or do the old items? | The glossary has one meaning for each word, and S-063 uses three words twice. | 05-glossary.md | customer | open |
-| [Q-084](#q-084) | Is `workspace:<id>` a scope key or a row of the cache? | S-063 caches the resolution, and the kind list has no `workspace`. | REQ-271 | customer | open |
+| [Q-083](#q-083) | Do the items take the words `kind` and `workspace`, or do the old items? | The glossary has one meaning for each word, and S-063 uses two words twice. | 05-glossary.md | customer | open |
 | [Q-085](#q-085) | Which part of the match does `{repo}` take? | The rule `github.com/knopki/*` gives one key for each reading. | REQ-265 | customer | open |
 | [Q-086](#q-086) | Does a scope kind change the behavior? | Seven kinds without a rule are labels, and a label costs a field. | REQ-256 | customer | open |
 | [Q-087](#q-087) | Does `active_profile` choose the profile, or does the preset of the harness? | The plugin has a preset entry point, and one profile must win. | REQ-267 | customer | open |
 | [Q-088](#q-088) | Does `*` match a part of the name, or a whole kind? | A profile can need each global scope, and the form `*:prefs` decides it. | REQ-269 | customer | open |
-| [Q-089](#q-089) | Does the agent type `#2107` or `2107`? | The slice shows `#<a>-<b>`, and the grammar gives a bare number. | REQ-049, REQ-259 | customer | open |
-| [Q-090](#q-090) | What does the store do with a key outside the grammar? | A typo must not make a hidden scope. | REQ-255, REQ-256, REQ-258 | customer | open |
+| [Q-090](#q-090) | What does the store do with a key outside the grammar? | A typo must not make a scope that no profile lists. | REQ-255, REQ-256, REQ-258 | customer | open |
 
 ## Details
 
@@ -75,7 +72,7 @@ The store of memlens holds no snapshot (D-050). The session history of the harne
 
 ### Q-073
 
-The tool is new. REQ-049 gives the address `#pos` and the range `#a-b`.
+The tool is new. REQ-049 gives the address `pos` and the range `pos-pos`.
 
 - Option A: the address only. The output is the records in the log order, with the text of each.
 - Option B: the address and a limit. The output is the records with the id, the dates, and the text.
@@ -92,17 +89,6 @@ The compression gives an old line of `<directions>` one line. The card of a scop
 
 The customer answers this point later. See S-057.
 
-### Q-081
-
-D-034 and REQ-108 give the catalog key `__catalog__:<profile>`. The new grammar gives seven kinds,
-and the name holds lowercase letters, digits, `.`, `_`, `/`, and `-` only. The key has no kind of the
-list.
-
-- Option A: The catalog key stays outside the grammar. The grammar covers the scopes of a profile
-  only.
-- Option B: The catalog key takes a kind, for example `agent:catalog-<profile>`, and REQ-108
-  changes.
-
 ### Q-082
 
 D-027 and REQ-049 give `pos` as the ordinal in one store. S-063 adds a scope to the address. A
@@ -114,22 +100,12 @@ number can then count in the scope or in the store.
 
 ### Q-083
 
-The glossary gives `registry` to the notes part of `<directions>`, `kind` to the class of a note, and
-`workspace` to the pnpm unit. S-063 uses the three words for other items. The glossary rule is one
-word for one meaning.
+The glossary gives `kind` to the class of a note and `workspace` to the pnpm unit. S-063 uses the two
+words for the scope kind and for the workspace of the harness. The glossary rule is one word for one
+meaning.
 
-- Option A: The new terms take a qualifier: `resolve cache`, `scope kind`, and `workspace id`.
-- Option B: The old terms take a qualifier: `directions registry`, `note kind`, and `pnpm
-  workspace`.
-
-### Q-084
-
-S-063 caches the resolution of a workspace as `workspace:<id> → key`. D-042 refused the scope
-registry of S-032: an append-only `scopes.jsonl` with five ops. A cache of the rules is no such log,
-so the cache contradicts nothing.
-
-- Option A: The entry is a row of the cache, and the kind list keeps seven kinds.
-- Option B: `workspace` joins the kind list, and the entry is a scope key.
+- Option A: The new terms take a qualifier: `scope kind` and `workspace id`.
+- Option B: The old terms take a qualifier: `note kind` and `pnpm workspace`.
 
 ### Q-085
 
@@ -162,14 +138,6 @@ can match a part of the name or a whole kind.
 
 - Option A: `*` matches the rest of the name only. `project:dsh/*` works, and `*:prefs` does not.
 - Option B: `*` matches a whole kind too. `*:prefs` works.
-
-### Q-089
-
-REQ-049 gives the address `#pos`, and the slice shows `#<a>-<b>`. S-063 gives the bare address
-`2107`. One form must reach the tool.
-
-- Option A: The agent types `#2107`, and the reader accepts the form with no `#` too.
-- Option B: The agent types `2107`, and REQ-049 changes.
 
 ### Q-090
 
@@ -240,3 +208,6 @@ The grammar defines a valid key. S-063 gives no behavior for a key outside the g
 | Q-078 | Which signal tells the form `auto` that a cache serves the prefix?      | The family of the model. A model in `cacheTtl` gives `parallel`, and another model gives `batch`. See S-062.                             | 2026-11-04 |
 | Q-079 | What is the one reseed of a broken batch answer?                        | The retry tells the model the error. The size is the likely error. See S-062.                                                            | 2026-11-04 |
 | Q-080 | Which scope and which effect does `maxCallsPerHour` have?               | One store. A call above the limit waits, and the job returns to the queue. See S-062.                                                    | 2026-11-04 |
+| Q-081 | Which key does the catalog scope have under the new grammar?            | A hidden technical key. The grammar covers the keys that the agent sees, and `__catalog__` stays outside it. See S-064.                 | 2026-11-04 |
+| Q-084 | Is `workspace:<id>` a scope key or a row of the cache?                  | No cache. `workspace:<id> → key` is a rule for the scope, and `workspace` stays out of the kind list. See S-064.                        | 2026-11-04 |
+| Q-089 | Does the agent type `#2107` or `2107`?                                  | `2107`. The `#` belongs to the render form, and the tool strips it. See S-064.                                                          | 2026-11-04 |
