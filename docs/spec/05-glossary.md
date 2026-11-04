@@ -29,7 +29,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | GRACE-lite       | The project standard for code markup: one module contract for each file and one region for each public or non-trivial entity. | S-011                                        |
 | LDD              | Log driven development. The code writes short debug messages with key-value data. The messages act as observable contracts.   | S-011                                        |
 | native compiler  | TypeScript 7. The binary is `tsc`. The preview name was `tsgo`.                                                               | D-011                                        |
-| note             | One curated fact in the log. It has a `body` and a `longform` document.                                                       | S-013                                        |
+| note             | One curated fact in the log. The `note` event records it with a `body` and a `longform`.                                      | S-013, S-016                                 |
 | body             | The short text of a note. It becomes a leaf of the tree. The target size is 384 bytes.                                        | S-013                                        |
 | longform         | The full document of a note. The size limit is 16 KiB. It does not enter the tree.                                            | S-013                                        |
 | retelling        | A short text that covers the notes below a node. The tree is a set of retellings.                                             | S-013                                        |
@@ -38,20 +38,20 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | directions block | The one `<directions>` block of the slice. It holds the registry and the catalog.                                             | S-013                                        |
 | registry         | The part of the directions block that comes from the notes of the profile.                                                    | S-013                                        |
 | catalog          | The level above the notes: a log of cards, with its own tree. It belongs to one profile.                                      | S-013                                        |
-| card             | One catalog entry in the form `[scope] state`.                                                                                | S-013                                        |
+| card             | The catalog entry in the form `[scope] state`. The `note` event with `kind: "card"` records it.                               | S-013, S-016                                 |
 | scope            | The unit of visibility and of write permission for the notes.                                                                 | S-013                                        |
 | profile          | The unit that ties a set of scopes to one configuration and one preset.                                                       | S-013                                        |
 | preset           | The second entry point of the plugin. It gives the configuration for an agent preset.                                         | S-013                                        |
 | slice            | The text that the agent gets: one map of directions.                                                                          | S-013                                        |
 | snapshot         | The materialized slice, with an `id` and a `scopes` field.                                                                    | S-013                                        |
 | store            | The memory storage. It has a version, one of two backends, and one index port.                                                | S-013                                        |
-| hide             | A mark that removes a note from the view. The agent can hide.                                                                 | S-013                                        |
-| redact           | A mark that removes the content of a note for good. Only the CLI or the GUI can redact.                                       | S-013                                        |
-| amend            | A change to the content of a note. Only the CLI or the GUI can amend.                                                         | S-013                                        |
+| hide             | The op that removes a note from the view. The agent can hide a note.                                                          | S-013, S-016                                 |
+| redact           | The op that removes the content of a note for good. Only the CLI or the GUI can redact.                                       | S-013, S-016                                 |
+| amend            | The op that changes the content of a note. Only the CLI or the GUI can amend.                                                 | S-013, S-016                                 |
 | proposed         | The state of a note that an agent wrote into a scope without write permission, or wrote as a subagent.                        | S-013                                        |
 | nudge            | The reminder that the harness gives the agent to write a note. The settings are open.                                         | S-013                                        |
 | writer           | The background task that makes the retellings in batches.                                                                     | S-013                                        |
-| review           | The check of a note by a human. It uses `review_at` and `reviewed_at` and stays out of the slice.                             | S-013                                        |
+| review           | The check of a note by a human. The `review` event records it. Review data stays out of the slice. See Q-028.                 | S-013, S-016                                 |
 | index port       | The interface for the search. The implementation uses FTS5.                                                                   | S-013                                        |
 | «Линза»          | The human name of the product. The idea of the name is the zoom: look through one layer into the depth.                       | S-013                                        |
 | frontier         | The newest level of the tree. It holds the detail, and the older levels hold the short form.                                  | S-014                                        |
@@ -64,4 +64,14 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | branch           | The state of one session or one machine of a profile. A branch merges into the trunk at close and at idle.                    | S-014                                        |
 | freeze           | The rule that the slice of a session stays the same for the whole session.                                                    | S-014                                        |
 | sourceId         | The identifier of the source record of an import. A second import of one source adds no record.                               | S-014                                        |
-| supersede        | The rule that a newer note can replace an older note in the view.                                                             | S-014                                        |
+| supersede        | The rule that a newer note can replace an older note in the view. It stays inside one scope.                                  | S-014, S-016                                 |
+| event            | One immutable fact in the log. It has `id`, `at`, `op`, and `scope`, and a payload for the op.                                | S-016                                        |
+| op               | The field of an event that names the change: `note`, `amend`, `hide`, `redact`, `review`, `accept`, or `dismiss`.             | S-016                                        |
+| payload          | The fields of an event that belong to the op.                                                                                 | S-016                                        |
+| ULID             | The identifier format of an event. It is unique and it sorts by time.                                                         | S-016                                        |
+| pos              | The ordinal of the creating event in the log of one store. It is not a field of the event.                                    | S-016                                        |
+| target           | The field of an op that names the note for a change.                                                                          | S-016                                        |
+| kind             | The class of a note: `decision`, `preference`, `fact`, `task`, `note`, or `card`.                                             | S-016                                        |
+| `live`           | The state of a note after an `accept` event.                                                                                  | S-016                                        |
+| `deleted`        | The state of a note after a `dismiss` event.                                                                                  | S-016                                        |
+| sanitized form   | The form of a redacted event. It keeps the `id` and has `redacted: true`, an empty `body`, and a null `longform`.             | S-016                                        |

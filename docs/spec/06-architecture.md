@@ -42,6 +42,33 @@ makes the bundles. prek runs the git hooks. See [D-011](04-decisions.md). The to
 `pnpm build` runs the builds in the dependency order of the workspace. The plugin keeps the packages
 external, because the harness gives them at run time.
 
+## Event log
+
+The log holds immutable events. An event has `id` (ULID), `at`, `op`, and `scope`. The payload belongs
+to the op.
+
+| Op        | Payload                                                                                                                     | Effect                                                     |
+| --------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `note`    | `body`, `kind`, `ts`, `proposed`, and the optional `longform`, `review_at`, `refs`, `supersedes`, `for_scope`, `for_sources` | It writes a note.                                          |
+| `amend`   | `target`, and `body` or `longform`                                                                                          | It changes the content. Only the CLI or the GUI.           |
+| `hide`    | `target`, `reason`                                                                                                          | The note leaves the view. The content stays.               |
+| `redact`  | `target`, `reason`                                                                                                          | The content of the note becomes empty. Only the CLI or the GUI. |
+| `review`  | `target`, `review_at`                                                                                                       | It gives the new review date.                              |
+| `accept`  | `target`                                                                                                                    | A proposed note becomes `live`.                            |
+| `dismiss` | `target`, `reason`                                                                                                          | A proposed note becomes `deleted`.                         |
+
+A card is a `note` event with `kind: "card"`, `for_scope`, and `for_sources`. The log has no card op.
+
+`pos` is not a field of an event. It is the ordinal of the creating event in the log of one store. The
+first `note` has `pos` 0. A `pos` is local to one store, and an export holds no `pos`.
+
+A `supersedes` stays inside one scope. The store refuses a cross-scope `supersedes` with the error
+`CrossScopeSupersede`.
+
+A redacted event keeps its `id` and gets `redacted: true`, an empty `body`, and a null `longform`. The
+statement names `scrub` as the producer of this form and stops before the merge rules. See
+[Q-030](03-open-questions.md#q-030).
+
 ## Store
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.
@@ -112,7 +139,8 @@ goes to the report of the parent. A subagent cannot hide a note and cannot revie
 ## Human surface
 
 Only the CLI or the GUI can redact and amend. A redacted note stays redacted, and an import does not
-give the content back. Review uses `review_at` and `reviewed_at` and stays out of the slice.
+give the content back. Review uses the `review` event and stays out of the slice. See
+[Q-028](03-open-questions.md#q-028) for `reviewed_at`.
 
 The console `memlens ui` works alone. In the harness the console runs in a session mode on the same
 view models.
@@ -146,5 +174,5 @@ test. See [D-010](04-decisions.md).
 
 ## Open points
 
-The shape of a scope, the form of the map, the snapshot fields, the event types, and the tree rules
-are open. See [03-open-questions.md](03-open-questions.md), from Q-009 to Q-023.
+The shape of a scope, the form of the map, the snapshot fields, and the tree rules are open. See
+[03-open-questions.md](03-open-questions.md), from Q-009 to Q-032.
