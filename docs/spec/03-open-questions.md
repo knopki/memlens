@@ -4,8 +4,6 @@ A blocking question stops the current portion of the specification until the cus
 
 | ID              | Question                                                                                                                                | Why it matters                                                                                                                                                                    | Blocks                                   | Owner    | Status |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------ |
-| [Q-014](#q-014) | Which surface does the session mode of the console use in the harness?                                                                  | The plugin contract depends on the slot.                                                                                                                                          | REQ-047                                  | customer | open   |
-| [Q-015](#q-015) | Which operations does the index port have?                                                                                              | Two backends must satisfy one interface.                                                                                                                                          | REQ-041                                  | customer | open   |
 
 ## Details
 
@@ -15,36 +13,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-
-### Q-014
-
-The harness gives typed React slots, and a plugin adds its interface there. A tab of the right sidebar
-takes two registrations: a type in `ctx.sidebarRightTabs` and the body in the slot
-`sidebar.right.pane.tab`. The tab identity is the pair `(kind, address)`, and the page address is
-`sidebar://<kind>`. The styles come from the theme tokens `--dsw-alias-*`, and the plugin imports no
-package of the harness client. See [REQ-426](02-requirements.md).
-
-The proposal: the tab `Memory` takes the slot `sidebar.right.pane.tab` and the kind `memlens`. The
-answer gives the slot, or names another surface.
-
-### Q-015
-
-One port gives the search to two backends: FTS5 in the SQLite store, and the sidecar file `index.db`
-of the JSONL store. See [REQ-041](02-requirements.md) and [REQ-042](02-requirements.md).
-
-The port must cover each query of `memory_find`: the words, the words with the sign `-`, the scopes,
-the kinds, `since` and `until`, the filter `due`, and the limit. It must add a record, clear the rows of
-a `redact`, and rebuild the index from the log. See [REQ-059](02-requirements.md) and
-[REQ-222](02-requirements.md).
-
-The open points:
-
-- Does the port take the words, or does it take the parsed query?
-- Does the port limit by scope, kind, date, and `due`, or does the caller?
-- Does the port give each field of a hit, or does the caller read the record?
-- Does the add of the rows run in the transaction of the log append?
-- Does the port hold the tokenizer that the key `language` selects?
-- Does the port give one order, and does it give a rank?
 
 ## Closed questions
 
@@ -157,3 +125,5 @@ The open points:
 | Q-021 | What is the retelling prompt of the tree, and of the card? | The merge takes the system prompt and the task text of S-082, and the card takes its task text. See 09-prompts.md. | 2026-11-05 |
 | Q-108 | Which two languages join the three of the project? | The eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. See S-082. | 2026-11-05 |
 | Q-110 | Is the budget of the slice one total of 24 KiB with three parts, or two independent budgets? | The profile gives two budgets, `here` and `directions`, and no total. The values are 17 KiB and 3 KiB. See S-084. | 2026-11-05 |
+| Q-014 | Which surface does the session mode of the console use in the harness? | The tab mounts in the slot `conversation.session.header`, and the kind is `memlens`. See S-085 and REQ-446. | 2026-11-05 |
+| Q-015 | Which operations does the index port have? | The port gives the `pos` and the line of each hit. The index shares no transaction with the log. The tokenizer follows `language`. The rest is in D-072. See S-085. | 2026-11-05 |

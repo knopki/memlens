@@ -449,6 +449,11 @@ Status: see [README.md](README.md#status-values).
 | REQ-443 | The default budget `here` is 17 KiB. | FR | draft | S-083 | A profile with no budget value gives 17 KiB for `here`. |
 | REQ-444 | The default budget `directions` is 3 KiB. | FR | draft | S-083 | A profile with no budget value gives 3 KiB for `directions`. |
 | REQ-445 | The model of a session has a context of 65 536 tokens at least. | C | draft | S-083 | A model below the value gives an error at the start of the session. |
+| REQ-446 | The tab `Memory` mounts in the slot `conversation.session.header`. | FR | draft | S-085 | The session page shows the tab in that slot. |
+| REQ-447 | The kind of the tab is `memlens`. | FR | draft | S-085 | The registration of the tab names the kind `memlens`. |
+| REQ-448 | The index port gives each hit with the `pos` and the line of the record. | FR | draft | S-085 | The answer holds the `pos` and the line, and it holds no full record. |
+| REQ-449 | The index and the log share no transaction. | FR | draft | S-085 | A crash between the append and the index add leaves the index behind, and a rebuild covers it. |
+| REQ-450 | The tokenizer of the index follows the key `language`. | FR | draft | S-085 | A profile with `language` of `ru` gives the Russian tokenizer. |
 
 ## Rules for new requirements
 
