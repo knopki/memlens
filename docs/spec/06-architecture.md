@@ -412,8 +412,9 @@ give the content back. Review uses the `review` event and stays out of the slice
 `review_at` only, the date of the next review. See [D-025](04-decisions.md).
 
 The console `memlens ui` works alone. In the harness the console runs in a session mode on the same
-view models. The UI core is in the library, and it holds no DOM and no transport. The plugin mounts
-the tab `Memory` on the session page and narrows it to one profile. See [08-ui.md](08-ui.md).
+view models. The UI core is in the library, and it holds no DOM, no transport, and no style. The
+console gives its own styles, and the plugin uses the components of the harness UI. The plugin
+mounts the tab `Memory` on the session page and narrows it to one profile. See [08-ui.md](08-ui.md).
 
 ## CLI
 

@@ -421,13 +421,15 @@ Status: see [README.md](README.md#status-values).
 | REQ-415 | An export with no `--scope` writes one file for each scope. | FR | draft | S-076 | A store of two scopes gives two files, and each file holds one scope. |
 | REQ-416 | An export with `--scope` writes that scope only. | FR | draft | S-076 | A store of two scopes gives one file, and the other scope is absent. |
 | REQ-417 | The UI core is in the core library. | FR | draft | S-077 | The core package exports the view models of the console. |
-| REQ-418 | The UI core holds no DOM and no transport. | NFR | draft | S-077 | No file of the UI core imports a DOM or a socket. |
+| REQ-418 | The UI core holds no DOM, no transport, and no style. | NFR | draft | S-077 | No file of the UI core imports a DOM, a socket, or a style sheet. |
 | REQ-419 | The UI core reads the store through one port. | FR | draft | S-077 | Each view model imports the port, and no view model opens a file. |
 | REQ-420 | `memlens ui` hosts the full console. | FR | draft | S-077 | The command serves each of the seven screens. |
 | REQ-421 | The plugin mounts the console as the tab `Memory` on the session page. | FR | draft | S-077 | The session page shows the tab, and the tab opens the console. |
 | REQ-422 | The tab shows the scopes of one profile. | FR | draft | S-077 | A session of the profile `work` shows the scopes of `work` only. |
-| REQ-423 | The console gives each action on a note: mark reviewed, supersede, forget, and delete. | FR | draft | S-078 | Each of the four actions changes the record as the CLI does. |
-| REQ-424 | The tab has no catalog of profiles. | FR | draft | S-078 | The tab shows no list of profiles. |
+| REQ-423 | The console gives each action on a note: mark reviewed, amend, supersede, forget, and delete. | FR | draft | S-078 | Each of the five actions changes the record as the CLI does. |
+| REQ-424 | The tab gives no choice of the profile, because the session sets it. | FR | draft | S-078 | The tab shows no list of profiles, and the profile comes from the session. |
+| REQ-425 | `memlens ui` gives its own styles. | FR | draft | S-080 | The console shows the styles of the CLI package. |
+| REQ-426 | The plugin renders the tab with the components of the harness UI. | FR | draft | S-080 | The tab shows the components of the harness, and no style of memlens. |
 
 ## Rules for new requirements
 
