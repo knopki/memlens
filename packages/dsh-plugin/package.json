@@ -1,49 +1,49 @@
 {
-  "name": "@memlens/dsh-plugin",
-  "version": "0.0.0",
-  "description": "The DeepSeek Harness plugin of memlens.",
-  "type": "module",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "exports": {
-    ".": "./lib/index.js",
-    "./locale/*.json": "./locale/*.json",
-    "./icon": "./icon.svg"
-  },
-  "files": [
-    "lib",
-    "cordis.patch.yml",
-    "locale/*.json",
-    "icon.svg"
-  ],
-  "scripts": {
-    "build": "tsdown",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "prepare": "tsdown"
-  },
-  "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-tools": ">=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0 || >=0.2.0-0 <0.3.0 || >=0.2.1-0 <0.3.0",
-    "@deepseek-ai/schemastery": "^3.18.2",
-    "@types/node": "^22.20.1",
-    "tsdown": "^0.22.14",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.7",
-    "yaml": "^2.9.1"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-tools": ">=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0 || >=0.2.0-0 <0.3.0 || >=0.2.1-0 <0.3.0",
-    "@deepseek-ai/schemastery": "^3.18.2"
-  },
-  "dsh": {
-    "manifestVersion": 1,
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
-  },
-  "engines": {
-    "node": "^22.19.0 || >=24.0.0"
-  }
+	"name": "@memlens/dsh-plugin",
+	"version": "0.0.0",
+	"description": "The DeepSeek Harness plugin of memlens.",
+	"type": "module",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"exports": {
+		".": "./lib/index.js",
+		"./locale/*.json": "./locale/*.json",
+		"./icon": "./icon.svg"
+	},
+	"files": [
+		"lib",
+		"cordis.patch.yml",
+		"locale/*.json",
+		"icon.svg"
+	],
+	"scripts": {
+		"build": "rm -rf lib && node build.mjs && tsc -p tsconfig.build.json",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "node build.mjs && vitest run",
+		"prepare": "node build.mjs && tsc -p tsconfig.build.json"
+	},
+	"devDependencies": {
+		"@deepseek-ai/cordis": "^4.0.2",
+		"@deepseek-ai/dsh-tools": ">=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0 || >=0.2.0-0 <0.3.0 || >=0.2.1-0 <0.3.0",
+		"@deepseek-ai/schemastery": "^3.18.2",
+		"@types/node": "^22.20.1",
+		"esbuild": "^0.28.2",
+		"typescript": "^7.0.2",
+		"vitest": "^3.2.7",
+		"yaml": "^2.9.1"
+	},
+	"peerDependencies": {
+		"@deepseek-ai/cordis": "^4.0.2",
+		"@deepseek-ai/dsh-tools": ">=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0 || >=0.2.0-0 <0.3.0 || >=0.2.1-0 <0.3.0",
+		"@deepseek-ai/schemastery": "^3.18.2"
+	},
+	"dsh": {
+		"manifestVersion": 1,
+		"bundle": {
+			"patch": "./cordis.patch.yml"
+		}
+	},
+	"engines": {
+		"node": "^22.19.0 || >=24.0.0"
+	}
 }

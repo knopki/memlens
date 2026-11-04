@@ -8,15 +8,15 @@
 
 ## Контракт
 
-| Пункт | Значение |
-|---|---|
-| Пакет | `@memlens/dsh-plugin` |
-| Идентификатор плагина | `dsh-memlens` |
-| Экспорт модуля | `name`, `apply` |
-| Патч бандла | [cordis.patch.yml](cordis.patch.yml) |
-| Метаданные показа | [locale/en.json](locale/en.json), [locale/ru.json](locale/ru.json), [locale/zh.json](locale/zh.json), [icon.svg](icon.svg) |
-| Harness | DeepSeek Harness 0.2.1-rc.5 |
-| Node | `^22.19.0 || >=24.0.0` |
+| Пункт                 | Значение                                                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Пакет                 | `@memlens/dsh-plugin`                                                                                                      |
+| Идентификатор плагина | `dsh-memlens`                                                                                                              |
+| Экспорт модуля        | `name`, `apply`                                                                                                            |
+| Патч бандла           | [cordis.patch.yml](cordis.patch.yml)                                                                                       |
+| Метаданные показа     | [locale/en.json](locale/en.json), [locale/ru.json](locale/ru.json), [locale/zh.json](locale/zh.json), [icon.svg](icon.svg) |
+| Harness               | DeepSeek Harness 0.2.1-rc.5                                                                                                |
+| Node                  | `^22.19.0                                                                                                                  |     | >=24.0.0` |
 
 ## Сборка и тесты
 

@@ -1,0 +1,34 @@
+# Hooks for prek. Run `prek install` after a clone.
+# prek reads this file in the pre-commit config format.
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: local
+    hooks:
+      - id: biome
+        name: biome check
+        # Check only. A write conflicts with the stash that prek keeps for unstaged files.
+        entry: biome check --no-errors-on-unmatched
+        language: system
+        types_or: [ts, tsx, json]
+
+      - id: ste-lint
+        name: ste lint
+        entry: pnpm run lint:docs
+        language: system
+        files: \.md$
+        pass_filenames: false
+
+      - id: typecheck
+        name: typecheck
+        entry: pnpm run typecheck
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: test
+        name: test
+        entry: pnpm run test
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

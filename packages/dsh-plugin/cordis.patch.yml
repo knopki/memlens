@@ -9,4 +9,4 @@
 # this package entry.
 - insert:
     - id: dsh-memlens
-      name: '@memlens/dsh-plugin'
+      name: "@memlens/dsh-plugin"

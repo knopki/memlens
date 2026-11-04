@@ -1,28 +1,29 @@
 {
-  "name": "@memlens/cli",
-  "version": "0.0.0",
-  "description": "The CLI frontend of memlens.",
-  "type": "module",
-  "bin": {
-    "memlens": "./dist/cli.js"
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "@memlens/core": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "^22.20.1",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.7"
-  },
-  "engines": {
-    "node": "^22.19.0 || >=24.0.0"
-  }
+	"name": "@memlens/cli",
+	"version": "0.0.0",
+	"description": "The CLI frontend of memlens.",
+	"type": "module",
+	"bin": {
+		"memlens": "./dist/cli.js"
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "rm -rf dist && node build.mjs",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@memlens/core": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.20.1",
+		"esbuild": "^0.28.2",
+		"typescript": "^7.0.2",
+		"vitest": "^3.2.7"
+	},
+	"engines": {
+		"node": "^22.19.0 || >=24.0.0"
+	}
 }

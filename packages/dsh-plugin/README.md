@@ -8,15 +8,15 @@ comes after the customer accepts a requirement. See
 
 ## Contract
 
-| Item | Value |
-|---|---|
-| Package | `@memlens/dsh-plugin` |
-| Plugin identifier | `dsh-memlens` |
-| Module exports | `name`, `apply` |
-| Bundle patch | [cordis.patch.yml](cordis.patch.yml) |
-| Display metadata | [locale/en.json](locale/en.json), [locale/ru.json](locale/ru.json), [locale/zh.json](locale/zh.json), [icon.svg](icon.svg) |
-| Harness | DeepSeek Harness 0.2.1-rc.5 |
-| Node | `^22.19.0 || >=24.0.0` |
+| Item              | Value                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Package           | `@memlens/dsh-plugin`                                                                                                      |
+| Plugin identifier | `dsh-memlens`                                                                                                              |
+| Module exports    | `name`, `apply`                                                                                                            |
+| Bundle patch      | [cordis.patch.yml](cordis.patch.yml)                                                                                       |
+| Display metadata  | [locale/en.json](locale/en.json), [locale/ru.json](locale/ru.json), [locale/zh.json](locale/zh.json), [icon.svg](icon.svg) |
+| Harness           | DeepSeek Harness 0.2.1-rc.5                                                                                                |
+| Node              | `^22.19.0                                                                                                                  |     | >=24.0.0` |
 
 ## Build and test
 

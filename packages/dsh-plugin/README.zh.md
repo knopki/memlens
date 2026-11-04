@@ -7,15 +7,15 @@ memlens 的 DeepSeek Harness 插件。
 
 ## 契约
 
-| 项目 | 值 |
-|---|---|
-| 包名 | `@memlens/dsh-plugin` |
-| 插件标识符 | `dsh-memlens` |
-| 模块导出 | `name`、`apply` |
-| 打包补丁 | [cordis.patch.yml](cordis.patch.yml) |
+| 项目       | 值                                                                                                                         |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 包名       | `@memlens/dsh-plugin`                                                                                                      |
+| 插件标识符 | `dsh-memlens`                                                                                                              |
+| 模块导出   | `name`、`apply`                                                                                                            |
+| 打包补丁   | [cordis.patch.yml](cordis.patch.yml)                                                                                       |
 | 展示元数据 | [locale/en.json](locale/en.json)、[locale/ru.json](locale/ru.json)、[locale/zh.json](locale/zh.json)、[icon.svg](icon.svg) |
-| Harness | DeepSeek Harness 0.2.1-rc.5 |
-| Node | `^22.19.0 || >=24.0.0` |
+| Harness    | DeepSeek Harness 0.2.1-rc.5                                                                                                |
+| Node       | `^22.19.0                                                                                                                  |     | >=24.0.0` |
 
 ## 构建与测试
 

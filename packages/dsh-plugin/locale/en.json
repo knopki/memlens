@@ -1,6 +1,6 @@
 {
-  "meta": {
-    "title": "memlens",
-    "description": "The headless library of memlens, its CLI frontend, and its DeepSeek Harness plugin."
-  }
+	"meta": {
+		"title": "memlens",
+		"description": "The headless library of memlens, its CLI frontend, and its DeepSeek Harness plugin."
+	}
 }

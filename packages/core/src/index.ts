@@ -1,10 +1,19 @@
 /**
- * The headless library of memlens.
+ * Core module of memlens.
  *
- * This file holds the public interface of the library. The interface is empty
- * until the customer gives the function of the product. See
- * docs/spec/03-open-questions.md, question Q-002.
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Give the frontends one value for the library name, so a rename does not touch each
+ * frontend.
+ * @scope
+ *  - The public value of the library.
+ *  - NOT: the CLI, the plugin, the harness, and the user interface.
+ * @invariants
+ *  - The module imports no package.
+ *  - The library does not know the CLI, the plugin, or the user interface.
+ * @keywords memlens, library, name
+ * #endregion moduleContract
  */
 
 /** The product name. The CLI frontend and the plugin use this value. */
-export const NAME = 'memlens'
+export const NAME = "memlens";

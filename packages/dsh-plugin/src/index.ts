@@ -1,21 +1,36 @@
 /**
- * The DeepSeek Harness plugin of memlens.
+ * DeepSeek Harness plugin of memlens.
  *
- * The harness loads this module and calls `apply` with the plugin context.
- * The plugin registers nothing yet: the first registration comes after the
- * customer accepts a requirement. See docs/spec/03-open-questions.md, Q-002.
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Let the harness start the library function and show it to the agent.
+ * @scope
+ *  - The plugin contract: the name and the registration of contributions.
+ *  - NOT: the library logic and the CLI.
+ * @invariants
+ *  - The module exports name and apply.
+ *  - Each registration is an effect of the plugin context.
+ * @dependencies USES API: @deepseek-ai/cordis
+ * @keywords dsh, plugin, harness, memlens
+ * #endregion moduleContract
  */
-import type { Context } from '@deepseek-ai/cordis'
+import { debuglog } from "node:util";
+import type { Context } from "@deepseek-ai/cordis";
+
+const debug = debuglog("memlens:plugin");
 
 /** The plugin identifier. The bundle row in cordis.patch.yml uses this name. */
-export const name = 'dsh-memlens'
+export const name = "dsh-memlens";
 
+// #region FUNC_apply
 /**
  * Register the contributions of the plugin.
  *
- * Every registration must be an effect of the context. The harness then
- * removes the contributions when it unloads the plugin.
+ * @purpose Give the harness one entry that adds and removes the plugin contributions.
+ * @param _ctx - The plugin context. A registration uses it as an effect.
  */
 export function apply(_ctx: Context): void {
-  // No contribution yet.
+	// No contribution yet. The first registration comes with an accepted requirement.
+	debug("Plugin loaded", { event: "start", name });
 }
+// #endregion FUNC_apply
