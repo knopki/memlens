@@ -26,3 +26,4 @@ Given from the outside. These items are not open for discussion and they limit t
 | C-004 | The specification is a set of markdown files in this repository. | S-004 |
 | C-005 | The stack is TypeScript on Node.js with pnpm workspaces. | S-005 |
 | C-006 | The project tools come from `mise.toml`. | S-007 |
+| C-007 | A project check uses a file in this repository only. | S-009 |

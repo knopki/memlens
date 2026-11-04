@@ -46,6 +46,8 @@ The plugin writes `lib/index.js` and `lib/index.d.ts`. The other packages write 
 | Plugin manifest | `pnpm run plugin:check` |
 | Document language | `pnpm run lint:docs` |
 
+The project keeps the check tools in `scripts/vendor/`. See [D-009](04-decisions.md).
+
 ## Data
 
 TBD. No statement about storage, format, or volume yet.

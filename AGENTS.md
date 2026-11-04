@@ -38,8 +38,8 @@ Run these commands before you commit:
 | `pnpm run lint:docs` | Check the English documents against the STE limits. |
 | `pnpm run plugin:check` | Check the plugin manifest against the DSH rules. |
 
-`plugin:check` and `lint:docs` use tools from the installed skills. Set `DSH_PLUGIN_DEV` and
-`STE_LINT` to use other copies. The scripts are in `scripts/`.
+`plugin:check` and `lint:docs` use the vendored tools in `scripts/vendor/`. Do not point a check at a
+file outside this repository. Do not edit a vendored file. See `scripts/vendor/README.md`.
 
 ## Prohibitions
 
