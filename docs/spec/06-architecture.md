@@ -187,8 +187,10 @@ the next snapshot. A new snapshot follows a new session, a compaction, an idle t
 cache TTL, and a redact. See [REQ-021](02-requirements.md).
 
 The store of memlens holds no snapshot. The plugin renders the text from the store at a trigger, and
-the session history of the harness keeps the copy. A `redact` cleans the store, and the next trigger
-renders the text again. See [D-050](04-decisions.md) and [D-051](04-decisions.md).
+the session history of the harness keeps the copy. On each later assembly the plugin reads the last
+snapshot from the history and gives that text again. A `redact` cleans the store, and the next trigger
+renders the text again. The copy in the session history stays. See [D-050](04-decisions.md),
+[D-051](04-decisions.md), and [D-052](04-decisions.md).
 
 ## Merge
 

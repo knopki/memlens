@@ -193,6 +193,8 @@ Status: see [README.md](README.md#status-values).
 | REQ-185 | The `scopes` field lists each scope in the text of the snapshot.                                                                   | FR   | draft    | S-042  | A scope absent from the text is absent from the field.                                                                         |
 | REQ-186 | A `redact` of a scope affects each snapshot that lists the scope in `scopes`.                                                      | FR   | draft    | S-042  | A snapshot of another scope stays.                                                                                             |
 | REQ-187 | The cache TTL is 2 hours for `deepseek/*`, 5 minutes for `anthropic/*`, and 1 hour for another model.                              | FR   | draft    | S-042  | A model name selects its line of `cacheTtl`.                                                                                   |
+| REQ-188 | The plugin reads the text of the last snapshot from the session history.                                                           | FR   | draft    | S-047  | A second assembly gives the text of the first snapshot.                                                                        |
+| REQ-189 | A `redact` changes no snapshot in the history of a session.                                                                        | FR   | draft    | S-047  | After a redact the history holds the earlier text.                                                                             |
 
 ## Rules for new requirements
 
