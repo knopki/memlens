@@ -26,9 +26,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
 | [Q-073](#q-073) | What input and what output does `memory_open` have?                                                                                     | The agent opens an omitted range, and the tool is new.                                                                                                                            | REQ-228, REQ-229                         | customer | open   |
 | [Q-074](#q-074) | What does the one line of an old scope hold in `<directions>`?                                                                          | The line replaces the detail of the scope, and the card is one line.                                                                                                              | REQ-224                                  | customer | open   |
-| [Q-075](#q-075) | What does each mode of the nudge count, and which count does `{n}` hold?                                                                | The modes `tools`, `turns`, and `expensive` need one rule each.                                                                                                                   | REQ-231, REQ-237                         | customer | open   |
-| [Q-076](#q-076) | Which normalization does the dedup apply to `body` and `longform`?                                                                      | A space or a case change decides a new record or none.                                                                                                                            | REQ-239                                  | customer | open   |
-| [Q-077](#q-077) | How does `reviewIn` of the write become `review_at` of the record?                                                                      | The dedup compares them, and Q-017 gives no rule for the field.                                                                                                                   | REQ-239                                  | customer | open   |
 
 ## Details
 
@@ -84,29 +81,6 @@ The compression gives an old line of `<directions>` one line. The card of a scop
 - Option B: a fixed line with the scope and the count of its records.
 
 The customer answers this point later. See S-057.
-
-### Q-075
-
-The statement gives four modes and three counts. It gives no rule for each mode.
-
-- Option A: each mode counts one thing: `tools` the tool calls, `turns` the turns, and `expensive`
-  the calls above a cost limit. `{n}` holds the count of the active mode.
-- Option B: the three counts run together, and the nudge comes at the first count that reaches its
-  value. `{n}` holds the largest count.
-
-### Q-076
-
-The dedup compares the normalized `body` and `longform`. The statement gives no normalization.
-
-- Option A: the trim of the ends and the collapse of each run of spaces into one.
-- Option B: the trim, the collapse of spaces, and one case.
-
-### Q-077
-
-The write call gives `reviewIn`, and the record holds `review_at`. Q-017 asks who sets `review_at`.
-
-- Option A: `reviewIn` is a period in days, and the store adds it to the time of the write.
-- Option B: `reviewIn` is a date in the same form as `review_at`, and the two are equal.
 
 ## Closed questions
 
@@ -164,3 +138,6 @@ The write call gives `reviewIn`, and the record holds `review_at`. Q-017 asks wh
 | Q-071 | Which budget does the 1.5 limit of the cut use?                         | Each part against its own budget, as Q-065. See S-057.                                                                                   | 2026-11-04 |
 | Q-072 | Which lines does the cut take?                                          | The oldest lines of `<here>`. The `<directions>` block keeps its lines. See S-057.                                                       | 2026-11-04 |
 | Q-012 | Which keys and which default does the nudge have?                       | The `[nudge]` section: `mode` `tools`, `tool_calls` 10, `turns` 10, `expensive` 5, and the text. See S-058.                              | 2026-11-04 |
+| Q-075 | What does each mode of the nudge count?                                 | `tool_calls` and `turns` are counters that run in parallel. `expensive` marks a long turn that demands a write. See S-059.               | 2026-11-04 |
+| Q-076 | Which normalization does the dedup apply?                               | The trim and the runs of spaces, as at any other write. See S-059.                                                                       | 2026-11-04 |
+| Q-077 | How does `reviewIn` become `review_at`?                                 | A period in days, added to the time of the write. See S-059.                                                                             | 2026-11-04 |
