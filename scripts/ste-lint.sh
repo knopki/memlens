@@ -3,16 +3,10 @@
 # The linter is vendored. See scripts/vendor/README.md.
 set -eu
 
+# A glob picks up each new document. The statement journal stays out: it keeps the words as given.
 exec python3 scripts/vendor/ste-lint.py \
   README.md \
   AGENTS.md \
-  docs/spec/00-overview.md \
-  docs/spec/01-goals-nongoals.md \
-  docs/spec/02-requirements.md \
-  docs/spec/03-open-questions.md \
-  docs/spec/04-decisions.md \
-  docs/spec/05-glossary.md \
-  docs/spec/06-architecture.md \
-  docs/spec/README.md \
-  docs/adr/README.md \
+  docs/spec/*.md \
+  docs/adr/*.md \
   "$@"
