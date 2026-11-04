@@ -276,7 +276,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-268 | Two rules may give one key. | FR | draft | S-063 | Two matches give one active scope. |
 | REQ-269 | A profile sees the scopes of its `scopes` list only. | FR | draft | S-063 | `profile.work` gives no line for `global:prefs`. |
 | REQ-270 | A scope that two profiles list is one scope. | FR | draft | S-063 | A note of `project:acme/x` shows in the slice of each profile. |
-| REQ-271 | The store caches the resolution of a workspace as a key of the form `workspace:<id>`. | FR | disputed | S-063 | A second call gives the key with no rule match. See Q-084 and D-042. |
+| REQ-271 | The store caches the resolution of a workspace as a key of the form `workspace:<id>`. | FR | draft | S-063 | A second call with one workspace id gives the key of the first call. See Q-084. |
 
 ## Rules for new requirements
 

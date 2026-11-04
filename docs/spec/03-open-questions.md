@@ -29,7 +29,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-081](#q-081) | Which key does the catalog scope have under the new grammar? | The key `__catalog__:<profile>` has no kind of the seven, so two parts of the specification disagree. | REQ-108 | customer | open |
 | [Q-082](#q-082) | Is `pos` the ordinal in the store, or the ordinal in the scope? | The qualified address can count for one scope, and the bare address can count for the store. | REQ-049, REQ-259, REQ-261 | customer | open |
 | [Q-083](#q-083) | Do the new items take the words `registry`, `kind`, and `workspace`, or do the old items? | The glossary has one meaning for each word, and S-063 uses three words twice. | 05-glossary.md | customer | open |
-| [Q-084](#q-084) | Does the resolve cache exist, and is `workspace:<id>` a scope key? | D-042 refuses the scope registry, and S-063 caches the resolution. | REQ-271 | customer | open |
+| [Q-084](#q-084) | Is `workspace:<id>` a scope key or a row of the cache? | S-063 caches the resolution, and the kind list has no `workspace`. | REQ-271 | customer | open |
 | [Q-085](#q-085) | Which part of the match does `{repo}` take? | The rule `github.com/knopki/*` gives one key for each reading. | REQ-265 | customer | open |
 | [Q-086](#q-086) | Does a scope kind change the behavior? | Seven kinds without a rule are labels, and a label costs a field. | REQ-256 | customer | open |
 | [Q-087](#q-087) | Does `active_profile` choose the profile, or does the preset of the harness? | The plugin has a preset entry point, and one profile must win. | REQ-267 | customer | open |
@@ -124,12 +124,12 @@ word for one meaning.
 
 ### Q-084
 
-D-042 refuses the scope registry and gives no label to a scope. S-063 caches the resolution as
-`workspace:<id> → key`. The kind list has no `workspace`.
+S-063 caches the resolution of a workspace as `workspace:<id> → key`. D-042 refused the scope
+registry of S-032: an append-only `scopes.jsonl` with five ops. A cache of the rules is no such log,
+so the cache contradicts nothing.
 
-- Option A: The cache exists. `workspace` joins the kind list, and the list has eight kinds.
-- Option B: The cache exists. The entry is no scope key, and the kind list keeps seven kinds.
-- Option C: There is no cache. Each call runs the rules, and D-042 stays.
+- Option A: The entry is a row of the cache, and the kind list keeps seven kinds.
+- Option B: `workspace` joins the kind list, and the entry is a scope key.
 
 ### Q-085
 
