@@ -63,7 +63,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | trunk            | The merged state of a profile, above its branches.                                                                            | S-014                                        |
 | branch           | The state of one session or one machine of a profile. A branch merges into the trunk at close and at idle.                    | S-014                                        |
 | freeze           | The rule that the slice of a session stays the same for the whole session.                                                    | S-014                                        |
-| supersede        | The rule that a newer note can replace an older note in the view. It stays inside one scope.                                  | S-014, S-016                                 |
+| supersede        | A newer note replaces an older note in the view. It applies one time, at the first `live` state, and in one scope.            | S-014, S-016                                 |
 | event            | One immutable fact in the log. It has `id`, `at`, `op`, and `scope`, and a payload for the op.                                | S-016                                        |
 | op               | The field of an event that names the change: `note`, `amend`, `hide`, `redact`, `review`, `accept`, or `dismiss`.             | S-016                                        |
 | payload          | The fields of an event that belong to the op.                                                                                 | S-016                                        |
@@ -77,3 +77,11 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | at               | The time of an event in the log.                                                                                              | S-017                                        |
 | ts               | The time of the write of a note.                                                                                              | S-017                                        |
 | idem             | The idempotency key of a write and of an import. A second record with one value adds nothing.                                 | S-018                                        |
+| projection       | The build of the record set from the log, in two passes.                                                                      | S-020                                        |
+| record           | The state of one note after the projection: the copied fields, `recorded_at`, and the flags.                                  | S-020                                        |
+| state            | The lifecycle value of a record: `proposed`, `live`, `hidden`, or `deleted`. The order is open.                               | S-020                                        |
+| hidden           | The state of a record after a `hide` event. The content stays.                                                                | S-020                                        |
+| recorded_at      | The time of the note event in the log. It is equal to `at`.                                                                   | S-020                                        |
+| content_cleared  | The flag of a redacted record. An `amend` event does not change this record.                                                  | S-020                                        |
+| superseded_by    | The field of a record that names the note that superseded it.                                                                 | S-020                                        |
+| pass             | One walk over the ordered events in the projection.                                                                           | S-020                                        |

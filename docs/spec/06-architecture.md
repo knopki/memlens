@@ -75,6 +75,34 @@ A redacted event keeps its `id` and gets `redacted: true`, an empty `body`, and 
 `redact` event gives this form, and so does an import of a redacted record. The model has no `scrub`.
 See [Q-030](03-open-questions.md#q-030) for the merge rule.
 
+## Projection
+
+The projection builds the set of records from the log in two passes. It is deterministic, and it
+orders the events by `(at, id)`. The order of arrival and a local `pos` change nothing. See
+[D-028](04-decisions.md).
+
+Pass 1 makes one record for each `note` event. The record copies each payload field of the event and
+sets `recorded_at = at`. The state is `proposed` for a proposed note and `live` for another note.
+
+Pass 2 applies the operations in the same order.
+
+| Event     | Effect                                                                                  |
+| --------- | --------------------------------------------------------------------------------------- |
+| `note`    | With the state `live`, it applies its `supersedes`.                                     |
+| `accept`  | It makes `proposed` to `live` at an actual transition, and it applies the `supersedes`. |
+| `hide`    | The state becomes the maximum of the state and `hidden`.                                |
+| `dismiss` | The state becomes the maximum of the state and `deleted`.                               |
+| `redact`  | The state becomes `deleted`, and `content_cleared` becomes true.                        |
+| `amend`   | It patches `body` or `longform`, while `content_cleared` is not set.                    |
+| `review`  | It sets `review_at`, and `reviewed_at` becomes its `at`.                                |
+
+A `supersedes` acts one time, at the first `live` state of the note. For each target, the state
+becomes the maximum of the state and `hidden`, and `superseded_by` gets the id of the note, if the
+field is empty. A later hide or delete of this note cancels nothing. See [D-029](04-decisions.md).
+
+A `redact` event clears `body` and `longform` for good, and a later `amend` does not apply. An event
+with `redacted: true` gives no content. See [D-030](04-decisions.md).
+
 ## Store
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.

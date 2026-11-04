@@ -27,6 +27,8 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-034](#q-034) | Does a `hide` event on a proposed note take the note out of the review queue?                                                           | The statement gives `max(state, hidden)` and no place for `proposed` in the order.                                                                                                | REQ-096, REQ-101                         | customer | open   |
+| [Q-035](#q-035) | Does `dismiss` apply to a note that is not proposed?                                                                                    | S-016 gives `proposed` to `deleted`, and S-020 gives the maximum of the state and `deleted`.                                                                                      | REQ-097                                  | customer | open   |
 
 ## Details
 
@@ -54,6 +56,24 @@ The statement stops after the words "the merge rules", and S-017 removes `scrub`
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+### Q-034
+
+A proposed note waits for an `accept`. A `hide` event sets the state to the maximum of the state and
+`hidden`.
+
+- Option A: the state becomes `hidden`, the note leaves the review queue, and a later `accept` does
+  nothing.
+- Option B: the state stays `proposed`, the note leaves the view only, and a later `accept` makes it
+  `live`.
+
+### Q-035
+
+S-016 gives the effect of `dismiss` as `proposed` to `deleted`. S-020 gives the maximum of the state
+and `deleted` for each state.
+
+- Option A: each state. A live note becomes `deleted` after a `dismiss`.
+- Option B: the state `proposed` only. A live note stays `live`.
+
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
