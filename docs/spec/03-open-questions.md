@@ -10,7 +10,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-007](#q-007) | Which license does the project use?                                                                                                     | npm publication and the plugin manifest need a license value.                                                                                                                     | Publishing                               | customer | open   |
 | [Q-008](#q-008) | Does the plugin package need a README in five languages?                                                                                | The DSH guide recommends five for a published plugin. The project uses three.                                                                                                     | Publishing                               | customer | open   |
 | [Q-010](#q-010) | What is the form of the map of directions, and what is its size limit?                                                                  | The slice goes into the system prompt, so its size is a cost.                                                                                                                     | REQ-017, REQ-020                         | customer | open   |
-| [Q-012](#q-012) | Which keys and which default does the nudge have?                                                                                       | The agent behavior depends on the default.                                                                                                                                        | REQ-031                                  | customer | open   |
 | [Q-013](#q-013) | What input and what output does `memory_review` have?                                                                                   | The tool is short on purpose, so its shape matters.                                                                                                                               | REQ-039                                  | customer | open   |
 | [Q-014](#q-014) | Which surface does the session mode of the console use in the harness?                                                                  | The plugin contract depends on the slot.                                                                                                                                          | REQ-047                                  | customer | open   |
 | [Q-015](#q-015) | Which operations does the index port have?                                                                                              | Two backends must satisfy one interface.                                                                                                                                          | REQ-041                                  | customer | open   |
@@ -27,6 +26,9 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
 | [Q-073](#q-073) | What input and what output does `memory_open` have?                                                                                     | The agent opens an omitted range, and the tool is new.                                                                                                                            | REQ-228, REQ-229                         | customer | open   |
 | [Q-074](#q-074) | What does the one line of an old scope hold in `<directions>`?                                                                          | The line replaces the detail of the scope, and the card is one line.                                                                                                              | REQ-224                                  | customer | open   |
+| [Q-075](#q-075) | What does each mode of the nudge count, and which count does `{n}` hold?                                                                | The modes `tools`, `turns`, and `expensive` need one rule each.                                                                                                                   | REQ-231, REQ-237                         | customer | open   |
+| [Q-076](#q-076) | Which normalization does the dedup apply to `body` and `longform`?                                                                      | A space or a case change decides a new record or none.                                                                                                                            | REQ-239                                  | customer | open   |
+| [Q-077](#q-077) | How does `reviewIn` of the write become `review_at` of the record?                                                                      | The dedup compares them, and Q-017 gives no rule for the field.                                                                                                                   | REQ-239                                  | customer | open   |
 
 ## Details
 
@@ -83,6 +85,29 @@ The compression gives an old line of `<directions>` one line. The card of a scop
 
 The customer answers this point later. See S-057.
 
+### Q-075
+
+The statement gives four modes and three counts. It gives no rule for each mode.
+
+- Option A: each mode counts one thing: `tools` the tool calls, `turns` the turns, and `expensive`
+  the calls above a cost limit. `{n}` holds the count of the active mode.
+- Option B: the three counts run together, and the nudge comes at the first count that reaches its
+  value. `{n}` holds the largest count.
+
+### Q-076
+
+The dedup compares the normalized `body` and `longform`. The statement gives no normalization.
+
+- Option A: the trim of the ends and the collapse of each run of spaces into one.
+- Option B: the trim, the collapse of spaces, and one case.
+
+### Q-077
+
+The write call gives `reviewIn`, and the record holds `review_at`. Q-017 asks who sets `review_at`.
+
+- Option A: `reviewIn` is a period in days, and the store adds it to the time of the write.
+- Option B: `reviewIn` is a date in the same form as `review_at`, and the two are equal.
+
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -138,3 +163,4 @@ The customer answers this point later. See S-057.
 | Q-070 | Does a `redact` remove the rendered text of the slice?                  | No. The copy in the session history stays, and step 4 of S-054 has no object. See S-055.                                                 | 2026-11-04 |
 | Q-071 | Which budget does the 1.5 limit of the cut use?                         | Each part against its own budget, as Q-065. See S-057.                                                                                   | 2026-11-04 |
 | Q-072 | Which lines does the cut take?                                          | The oldest lines of `<here>`. The `<directions>` block keeps its lines. See S-057.                                                       | 2026-11-04 |
+| Q-012 | Which keys and which default does the nudge have?                       | The `[nudge]` section: `mode` `tools`, `tool_calls` 10, `turns` 10, `expensive` 5, and the text. See S-058.                              | 2026-11-04 |

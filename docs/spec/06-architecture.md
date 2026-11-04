@@ -146,8 +146,9 @@ The configuration is a TOML file. The statement [S-036](../statements.md#s-036) 
 
 | Section           | Keys                                                      |
 | ----------------- | --------------------------------------------------------- |
-| `store`           | `backend` (`sqlite` or `jsonl`), `path`, `idle`, `form`    |
+| `store`           | `backend` (`sqlite` or `jsonl`), `path`, `idle`, `form`   |
 | `profile.<name>`  | `scopes`, `budget`, `subagents`                           |
+| `nudge`           | `mode`, `tool_calls`, `turns`, `expensive`, `text`        |
 
 A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file. The key
 `idle` gives 300 seconds by default, and the key `form` gives `batch` by default.
@@ -314,7 +315,7 @@ a cache over the log: the store rebuilds it from the log after a loss. See
 
 | Tool          | Who        | Effect                                                         |
 | ------------- | ---------- | -------------------------------------------------------------- |
-| write         | main agent | A new note. Outside the profile it is `proposed`.              |
+| write         | main agent | A new note, or the live note with the same four fields.        |
 | hide          | main agent | The note leaves the view.                                      |
 | memory_review | main agent | One short review answer.                                       |
 | memory_open   | main agent | The records of one address or one range.                       |
@@ -326,6 +327,11 @@ note, and a human decides about it. See [REQ-160](02-requirements.md) and
 A subagent has no separate tool. In the mode `propose` it writes only new notes as `proposed`, and a
 line about the write goes to the report of the parent. A subagent cannot hide a note and cannot review
 a note.
+
+The nudge is one line at the start of a turn, after the frozen slice, so the cache keeps its prefix.
+A write of a note resets the counter. The modes are `tools`, `turns`, `expensive`, and `off`. The
+`[nudge]` section gives the counts and the text. See [REQ-230](02-requirements.md) to
+[REQ-237](02-requirements.md).
 
 ## Human surface
 

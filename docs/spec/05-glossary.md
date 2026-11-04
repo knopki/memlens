@@ -49,7 +49,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | redact           | The op that removes the content of a note for good. Only the CLI or the GUI can redact.                                       | S-013, S-016                                 |
 | amend            | The op that changes the content or the scope of a note. Only the CLI or the GUI can amend.                                    | S-013, S-034                                 |
 | proposed         | The state of a note that waits for a human decision. A subagent write and a write outside the profile give it.                | S-013, S-039                                 |
-| nudge            | The reminder that the harness gives the agent to write a note. The settings are open.                                         | S-013                                        |
+| nudge            | The reminder that the harness gives the agent to write a note. The `[nudge]` section gives the mode and the counts.           | S-013, S-058                                 |
 | writer           | The background task that makes the retellings in batches.                                                                     | S-013                                        |
 | review           | The check of a note by a human. The `review` event records it, and `review_at` gives the date of the next check.              | S-013, S-016                                 |
 | index port       | The interface for the search. The implementation uses FTS5.                                                                   | S-013                                        |
