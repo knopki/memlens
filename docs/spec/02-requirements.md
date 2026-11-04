@@ -146,7 +146,8 @@ Status: see [README.md](README.md#status-values).
 | REQ-138 | The sources of a node are its two children.                                                                                        | FR   | draft    | S-030  | A level-2 node takes the two level-1 nodes below.                                                                              |
 | REQ-139 | An import that puts the records in another order makes the tree dirty.                                                             | FR   | draft    | S-030  | Such an import marks the nodes dirty.                                                                                          |
 | REQ-140 | A node waits for its two children.                                                                                                 | FR   | draft    | S-031  | A node with a dirty child waits.                                                                                               |
-| REQ-141 | The card of a scope starts from the description of that scope.                                                                     | FR   | draft    | S-032  | The first card of a scope holds the text of the description.                                                                   |
+| REQ-141 | The card of a scope starts from the description of that scope.                                                                     | FR   | rejected | S-032  | Refused by S-033: the first note of a scope gives the text.                                                                    |
+| REQ-142 | A scope exists when a record names its key.                                                                                        | FR   | draft    | S-033  | A write to a new key makes the scope.                                                                                          |
 
 ## Rules for new requirements
 

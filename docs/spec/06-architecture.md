@@ -133,6 +133,9 @@ and `redacted: true`. A retelling has no phrase to cut, so the card goes as a wh
 
 ## Store
 
+A scope is a key in the events. The store holds no record for a scope, and no event describes one. A
+scope exists because a record names its key. See [D-042](04-decisions.md).
+
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.
 
 | Item     | Value                                       |
