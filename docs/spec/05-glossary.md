@@ -47,7 +47,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | store            | The memory storage. It has a version, one of two backends, and one index port.                                                | S-013                                        |
 | hide             | The op that removes a note from the view. The agent can hide a note.                                                          | S-013, S-016                                 |
 | redact           | The op that removes the content of a note for good. Only the CLI or the GUI can redact.                                       | S-013, S-016                                 |
-| amend            | The op that changes the content of a note. Only the CLI or the GUI can amend.                                                 | S-013, S-016                                 |
+| amend            | The op that changes the content or the scope of a note. Only the CLI or the GUI can amend.                                    | S-013, S-034                                 |
 | proposed         | The state of a note that an agent wrote into a scope without write permission, or wrote as a subagent.                        | S-013                                        |
 | nudge            | The reminder that the harness gives the agent to write a note. The settings are open.                                         | S-013                                        |
 | writer           | The background task that makes the retellings in batches.                                                                     | S-013                                        |

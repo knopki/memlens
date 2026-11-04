@@ -50,7 +50,7 @@ to the op.
 | Op        | Payload                                                                                                                     | Effect                                                     |
 | --------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes`, `for_scope`, `for_sources` | It writes a note.                                          |
-| `amend`   | `target`, and `body` or `longform`                                                                                          | It changes the content. Only the CLI or the GUI.           |
+| `amend`   | `target`, and one or more of `body`, `longform`, and `scope`                                                                | It changes the content or the scope. Only the CLI or the GUI. |
 | `hide`    | `target`, `reason`                                                                                                          | The note leaves the view. The content stays.               |
 | `redact`  | `target`, `reason`                                                                                                          | The content of the note becomes empty. Only the CLI or the GUI. |
 | `review`  | `target`, `review_at`                                                                                                       | It gives the new review date.                              |
@@ -93,7 +93,7 @@ Pass 2 applies the operations in the same order.
 | `hide`    | The state becomes the maximum of the state and `hidden`.                                |
 | `dismiss` | The state becomes the maximum of the state and `deleted`.                               |
 | `redact`  | The state becomes `deleted`, and `content_cleared` becomes true.                        |
-| `amend`   | It patches `body` or `longform`, while `content_cleared` is not set.                    |
+| `amend`   | It patches `body` or `longform` while `content_cleared` is not set, and it moves the record to the key in `scope`. |
 | `review`  | It sets `review_at`, and `reviewed_at` becomes its `at`.                                |
 
 A `supersedes` acts one time, at the first `live` state of the note. For each target, the state
@@ -124,7 +124,8 @@ A rebuild writes a new card with the old card in `supersedes`. The projection hi
 the catalog tree marks the ancestors of the old card dirty. The text of the old card stays. See
 [D-033](04-decisions.md).
 
-A `hide`, `redact`, `amend`, or supersede of a source marks each card of that source dirty. The store
+A `hide`, `redact`, `amend`, or supersede of a source marks each card of that source dirty. An `amend`
+with a `scope` field marks the card of the old scope and the card of the new scope dirty. The store
 builds the card again from the live records that stay. See [D-035](04-decisions.md).
 
 A card with a redacted id in `for_sources` gets the sanitized form: an empty `body`, a null `longform`,
