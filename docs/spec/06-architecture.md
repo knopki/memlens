@@ -188,7 +188,8 @@ cache TTL, and a redact. See [REQ-021](02-requirements.md).
 
 The store keeps the text of the current snapshot of each session, so a restart of the process returns
 the same text. A new snapshot replaces the old one, and a `redact` drops the snapshot of each session
-that holds the scope. See [D-050](04-decisions.md) and [Q-054](03-open-questions.md#q-054).
+that holds the scope. The snapshot is a cache of the plugin: the harness receives the text through
+`systemPrompt.context` only. See [D-050](04-decisions.md) and [D-051](04-decisions.md).
 
 ## Merge
 
