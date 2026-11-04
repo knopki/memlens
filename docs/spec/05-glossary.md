@@ -100,3 +100,10 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | subagent mode    | The access of a subagent: `propose` writes and reports, `read` reads only, `off` has no tool and no slice.                    | S-036, S-037                                 |
 | here             | The tree slice of the current project. The budget `here` limits this part.                                                    | S-037                                        |
 | directions       | The tree slice of the catalog. The budget `directions` limits this part.                                                      | S-037                                        |
+| view             | The tiling of the frontier that the agent reads. Its cache key is `epoch`.                                                    | S-040                                        |
+| fold             | The pass that merges pairs until the view fits under `high`.                                                                  | S-040                                        |
+| tile             | One block of the view. A tile is a node or a record.                                                                          | S-040                                        |
+| due              | The priority of a pair: `(total - (start + 2^(level+1) - 1)) / 2^level`.                                                      | S-040                                        |
+| epoch            | The cache key of the view: a hash of `storeRev` and the built nodes.                                                          | S-040                                        |
+| storeRev         | The version of the store content. A counter in SQLite and a fingerprint in JSONL.                                             | S-040                                        |
+| fresh            | The state of a node whose `input_gen` matches the input.                                                                      | S-040                                        |

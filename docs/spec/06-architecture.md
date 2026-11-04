@@ -206,6 +206,23 @@ records that no node covers yet, and the writer can add several. See [D-040](04-
 
 The frontier geometry comes from the prior art. See [D-018](04-decisions.md).
 
+## Fold
+
+The view is a tiling of `[0, total)` with non-overlapping blocks. The fold merges pairs while the
+view is above `high` and stops at `low = high/2`. See [REQ-161](02-requirements.md) and
+[REQ-167](02-requirements.md).
+
+A merge needs two neighbors of one level, a `start` that is a multiple of `2^(level+1)`, and a built
+parent with a fresh input. The pair takes the priority `due = (total - (start + 2^(level+1) - 1)) /
+2^level`, and the choice goes by `due`, then `level`, then `start`. See [D-048](04-decisions.md).
+
+The fold calls no model for two empty children or for one empty child. It takes an empty block or the
+line of the other child. The model works only on two non-empty children, and the shrink check applies
+to that merge only.
+
+Each batch extends the prefix of the view, so the prompt cache of the model survives. The cache key is
+`epoch = hash(storeRev, sorted built nodes)`. See [D-049](04-decisions.md).
+
 ## Writer
 
 The writer is a background compactor. It makes the retellings in batches and in parallel jobs. The

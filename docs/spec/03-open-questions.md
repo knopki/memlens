@@ -26,6 +26,9 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-050](#q-050) | Which order does the fold take: the oldest `built_at` or the highest `due`?                                                             | S-031 gave `built_at` for the work of the writer, and S-040 gives `due` for the pair.                                                                                             | REQ-050                                  | customer | open   |
+| [Q-051](#q-051) | Where do `high` and `low` come from?                                                                                                    | The fold needs two size limits in bytes, and the budget gives `here` and `directions`.                                                                                            | REQ-167                                  | customer | open   |
+| [Q-052](#q-052) | Does the fold build the parent, or does it wait for a built parent?                                                                     | The merge needs a built and fresh parent, and the base cases describe a merge without a model.                                                                                    | REQ-165, REQ-171                         | customer | open   |
 
 ## Details
 
@@ -53,6 +56,30 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+
+### Q-050
+
+S-031 gives the oldest `built_at` first. S-040 gives `due` for the choice of a pair.
+
+- Option A: `due` orders the fold that shrinks the view, and `built_at` orders the background rebuild
+  of a dirty node.
+- Option B: `due` is the only order, and the `built_at` rule leaves.
+
+### Q-051
+
+The fold runs while the view is above `high` and stops at `low = high/2`. A profile sets `here` and
+`directions` in bytes.
+
+- Option A: `high` is the budget of the part, `here` or `directions`, and `low` is its half.
+- Option B: the profile holds `high` and `low` as separate settings.
+
+### Q-052
+
+A merge needs a built and fresh parent. The base cases give a merge without a model call.
+
+- Option A: the fold builds the parent when it is missing or not fresh. The condition then gives a
+  cheap reuse of a parent that is ready.
+- Option B: the fold combines built parents only, and the writer builds each parent.
 
 ## Closed questions
 
