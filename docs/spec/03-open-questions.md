@@ -24,6 +24,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-055](#q-055) | Which fields does the store keep for a snapshot?                                                                                        | The frozen text needs `session`, `at`, `text`, and `scopes`. The other five fields of S-042 serve diagnostics.                                                                    | REQ-018, REQ-182                         | customer | open   |
 
 ## Details
 
@@ -51,6 +52,16 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+
+### Q-055
+
+The plugin freezes the text and reads it again after a restart. A `redact` finds the sessions by the
+`scopes` of their text.
+
+- Option A: `session`, `at`, `text`, and `scopes`. These four give the freeze, the restart, and the
+  `redact`.
+- Option B: the nine fields of S-042. The `id`, the `profile`, the `parts`, the `bytes`, and the reason
+  serve the console and the diagnosis.
 
 ## Closed questions
 
