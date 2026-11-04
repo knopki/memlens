@@ -26,8 +26,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
 | [Q-073](#q-073) | What input and what output does `memory_open` have?                                                                                     | The agent opens an omitted range, and the tool is new.                                                                                                                            | REQ-228, REQ-229                         | customer | open   |
 | [Q-074](#q-074) | What does the one line of an old scope hold in `<directions>`?                                                                          | The line replaces the detail of the scope, and the card is one line.                                                                                                              | REQ-224                                  | customer | open   |
-| [Q-088](#q-088) | Does `*` also stand for the kind, as in `*:prefs`? | The grammar has two parts, and a profile can list a whole kind or one name. | REQ-269 | customer | open |
-| [Q-090](#q-090) | What does the store do with `project:Dsh`, a key outside the grammar? | The name grammar is lowercase, and a typo must not make a second scope. | REQ-255, REQ-258 | customer | open |
+
 
 ## Details
 
@@ -92,22 +91,6 @@ The compression gives an old line of `<directions>` one line. The card of a scop
 
 The customer answers this point later. See S-057.
 
-### Q-088
-
-REQ-151 gives `*` in a key, and it matches the rest of the key. The grammar has two parts, so `*` has
-two places.
-
-- Option A: `*` stands in the name only. `project:dsh/*` matches `project:dsh/optmem`, and `*:prefs`
-  matches no scope.
-- Option B: `*` stands for the kind too. `*:prefs` matches `global:prefs` and `user:prefs`.
-
-### Q-090
-
-The grammar allows lowercase letters in the name. An agent can send `project:Dsh` or `Project:dsh`.
-S-063 gives no behavior for a key outside the grammar.
-
-- Option A: The store refuses the write with an error that names the key.
-- Option B: The store lowercases the name and accepts the key.
 
 ## Closed questions
 
@@ -179,3 +162,5 @@ S-063 gives no behavior for a key outside the grammar.
 | Q-085 | Which part of the match does `{repo}` take?                             | The repository name from the remote. See S-065.                                                                                         | 2026-11-04 |
 | Q-086 | Does a scope kind change the behavior?                                  | No. A kind is a label. See S-065.                                                                                                       | 2026-11-04 |
 | Q-087 | Does `active_profile` choose the profile, or does the preset of the harness? | The key leaves `[scope_default]`. The source of the profile stays open. See Q-020 and S-065.                                        | 2026-11-04 |
+| Q-088 | Does `*` also stand for the kind, as in `*:prefs`?                      | Both places. `*` matches any kind and any text of the name, and the key `*` matches each scope. See S-066.                              | 2026-11-04 |
+| Q-090 | What does the store do with `project:Dsh`, a key outside the grammar?   | The store lowercases the key and writes it. See S-066.                                                                                  | 2026-11-04 |

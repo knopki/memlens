@@ -156,7 +156,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-148 | The `backend` value is `sqlite` or `jsonl`.                                                                                        | FR   | draft    | S-036  | The store refuses another value.                                                                                               |
 | REQ-149 | The store path comes from `--store` first, then `MEMLENS_STORE`, then the configuration.                                           | FR   | draft    | S-036  | Each source wins over the next one.                                                                                            |
 | REQ-150 | Each profile has the section `[profile.<name>]`.                                                                                   | FR   | draft    | S-036  | A file with two profile sections gives two profiles.                                                                           |
-| REQ-151 | A profile lists its scopes, and `*` in a key matches the rest of the key.                                                          | FR   | draft    | S-036  | `project:dsh/*` matches `project:dsh/optmem`.                                                                                  |
+| REQ-151 | A profile lists its scopes, and `*` in a key matches any text of the kind or of the name. | FR | draft | S-036, S-066 | `project:dsh/*` matches `project:dsh/optmem`, and `*:prefs` matches `global:prefs`. |
 | REQ-152 | The profile budget gives `here` and `directions` in bytes.                                                                         | FR   | draft    | S-036  | The store reads the two numbers.                                                                                               |
 | REQ-153 | The profile gives the subagent mode `propose`, `read`, or `off`.                                                                   | FR   | draft    | S-036  | The plugin refuses another value.                                                                                              |
 | REQ-154 | The `here` budget limits the tree of the current project.                                                                          | FR   | draft    | S-037  | The slice of the current project has this size limit.                                                                          |
@@ -283,6 +283,8 @@ Status: see [README.md](README.md#status-values).
 | REQ-275 | The render form of an address holds a leading `#`. | FR | draft | S-064 | A slice line for record 2107 shows `#2107`. |
 | REQ-276 | The `pos` of an address is the ordinal in the store, and the scope narrows the count to that scope. | FR | draft | S-065 | The record at `pos` 2107 of `project:dsh/optmem` has the address `project:dsh/optmem#2107`. |
 | REQ-277 | A kind is a label, and it changes no behavior. | FR | draft | S-065 | A `global:` scope and a `user:` scope with one record give the same view. |
+| REQ-278 | The store lowercases a scope key before the write. | FR | draft | S-066 | `Project:Dsh` and `project:Dsh` both give `project:dsh`. |
+| REQ-279 | The key `*` in `scopes` matches each scope. | FR | draft | S-066 | A profile with `*` gives each scope in the slice. |
 
 ## Rules for new requirements
 

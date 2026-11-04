@@ -120,6 +120,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `form`           | The shape of a run of the compactor: `parallel`, `batch`, or `auto`.                                                          | S-052, S-061                                 |
 | scope key        | The key of a scope in the form `kind:name`.                                                                                   | S-063                                        |
 | scope name       | The second part of a scope key: lowercase letters, digits, the period, the underscore, the slash, and the hyphen.             | S-063                                        |
+| wildcard         | The part `*` of a scope key. It matches any text of the kind or of the name.                                                   | S-066                                        |
 | address          | The pointer to one note or one range: `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`.                                      | S-063                                        |
 | active scope     | The scope of the current workspace, from the rules of `[scope_default]`.                                                      | S-063                                        |
 | scope rule       | One entry of `rules`: a match type, a glob or an id, and a key.                                                               | S-063                                        |

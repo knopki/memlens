@@ -156,7 +156,7 @@ The configuration is a TOML file. The statement [S-036](../statements.md#s-036) 
 A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file. The key
 `idle` gives 300 seconds by default, and the key `form` gives `batch` by default.
 
-A profile lists its scopes as keys, and `*` matches the rest of a key. The budget gives `here` and
+A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget gives `here` and
 `directions` in bytes, and the two are independent: `here` limits the tree of the current project and
 `directions` limits the tree of the catalog. The subagent mode is `propose`, `read`, or `off`. See
 [D-046](04-decisions.md) and [D-047](04-decisions.md).
@@ -170,7 +170,7 @@ the path, or the workspace. A rule with the match `workspace` gives the key for 
 ## Store
 
 A scope is a key in the events. The key has the form `kind:name`, and the grammar covers the keys that
-the agent sees. The store holds no record for a scope, and no event describes one. A scope exists
+the agent sees. The store lowercases a key before the write. See [REQ-278](02-requirements.md). The store holds no record for a scope, and no event describes one. A scope exists
 because a record names its key. See [D-042](04-decisions.md), [D-061](04-decisions.md), and
 [REQ-255](02-requirements.md).
 
