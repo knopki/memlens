@@ -185,6 +185,16 @@ because a record names its key. See [D-042](04-decisions.md), [D-061](04-decisio
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both. The
 store keeps the queue of the compaction jobs. See [D-054](04-decisions.md).
 
+Each append to the sqlite backend is one transaction, and the backend uses write-ahead logging. The
+jsonl backend takes a lock on each append. Several processes write one store. Two sessions write one
+scope, the `pos` stays monotonic, and each session renders its own snapshot. See
+[REQ-372](02-requirements.md) to [REQ-377](02-requirements.md).
+
+An export copies the whole store under an exclusive lock and one read transaction, so the copy is
+consistent by construction. It holds each card with its source records. An import unions the events by
+`id`, a payload conflict keeps the later `at`, and the events of a redacted record arrive sanitized.
+See [D-071](04-decisions.md).
+
 | Item     | Value                                       |
 | -------- | ------------------------------------------- |
 | Config   | `$XDG_CONFIG_HOME/memlens`                  |
