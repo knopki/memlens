@@ -25,6 +25,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
+| [Q-070](#q-070) | Does a `redact` remove the rendered text of the slice?                                                                                  | S-047 keeps the copy in the session history, and step 4 removes the snapshot.                                                                                                     | REQ-189                                  | customer | open   |
 
 ## Details
 
@@ -61,6 +62,16 @@ The store of memlens holds no snapshot (D-050). The session history of the harne
 - Option A: the text only. The session history holds it, and nothing else travels.
 - Option B: the nine fields of S-042. The `id`, the `profile`, `parts`, `bytes`, and `reason` serve
   the console and the diagnosis.
+
+### Q-070
+
+Step 4 of the statement removes the snapshots that list the affected scope and rewrites the session
+pointers. The store of memlens holds no snapshot (D-050), and the session history of the harness holds
+the text (D-052). S-047 kept that copy after a `redact`.
+
+- Option A: the copy in the session history stays, and step 4 has no object.
+- Option B: the store keeps the rendered text again per S-042, and a `redact` removes it, then
+  rewrites the pointer.
 
 ## Closed questions
 

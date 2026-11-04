@@ -88,7 +88,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | catalog scope    | The scope `__catalog__:<profile>`. It holds the cards of one profile.                                                         | S-023                                        |
 | for_scope        | The field of a card that names the scope that the card describes.                                                             | S-023                                        |
 | for_sources      | The field of a card that lists the ids of the records that the card covers.                                                   | S-023                                        |
-| dirty            | The mark of a card that needs a rebuild after a change of a source.                                                           | S-023                                        |
+| dirty            | The mark of a node or a card that needs a rebuild after a change of a source.                                                 | S-023                                        |
 | [redacted]       | The placeholder of the console and the view for a sanitized record. An event holds no such text.                              | S-023                                        |
 | node             | One summary of the tree. It covers `2^level` positions for a level of 1 or more.                                              | S-025                                        |
 | position         | One `pos` value in the geometry of the tree. A position with no live record is empty.                                         | S-025                                        |
@@ -115,3 +115,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `backoff`        | The wait after a failed job: 10 seconds, then 60 seconds, then 300 seconds.                                                   | S-051                                        |
 | `gen`            | A counter of each block. An event in the range of the block grows it.                                                         | S-051, S-052                                 |
 | `wake`           | The render of the slice at the start of a session. It does not wait for the compaction.                                       | S-051                                        |
+| `ancestor`       | A node above another node in a tree. A change of a child makes each ancestor dirty.                                           | S-054                                        |

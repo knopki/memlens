@@ -234,6 +234,23 @@ records that no node covers yet, and the writer can add several. See [D-040](04-
 
 The frontier geometry comes from the prior art. See [D-018](04-decisions.md).
 
+## Erasure
+
+A `hide`, `amend`, or `accept` makes the ancestors of the position dirty. A dirty node does not render,
+and its children take its place down to a clean node or a record. The rebuild goes bottom-up, and one
+change costs `log2(N)+1` model calls at most. See [REQ-217](02-requirements.md) and
+[REQ-218](02-requirements.md).
+
+A `redact` runs in one transaction. It writes the sanitized form into the target, deletes the nodes
+that cover the position and their ancestors, and deletes the FTS rows. Each card with the id in
+`for_sources` gets the sanitized form, and its catalog nodes and ancestors go. See
+[REQ-219](02-requirements.md) to [REQ-222](02-requirements.md).
+
+The guarantee has four parts. The projection gives no content at once, and the rebuild gives new
+retellings. The transaction covers the disk. A prompt that the model already received stays out of
+reach. No other derivative holds the text, because the summarizer sees two children and a card sees
+`for_sources` only. See [D-055](04-decisions.md).
+
 ## Fold
 
 The view is a tiling of `[0, total)` with non-overlapping blocks. The fold merges built pairs while
