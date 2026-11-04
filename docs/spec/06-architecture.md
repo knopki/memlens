@@ -144,8 +144,10 @@ The configuration is a TOML file. The statement [S-036](../statements.md#s-036) 
 
 A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file.
 
-A profile lists its scopes as keys, and `*` matches the rest of a key. The budget gives `slice`,
-`here`, and `directions` in bytes. The subagent mode is `propose`, `read`, or `off`.
+A profile lists its scopes as keys, and `*` matches the rest of a key. The budget gives `here` and
+`directions` in bytes, and the two are independent: `here` limits the tree of the current project and
+`directions` limits the tree of the catalog. The subagent mode is `propose`, `read`, or `off`. See
+[D-046](04-decisions.md) and [D-047](04-decisions.md).
 
 ## Store
 

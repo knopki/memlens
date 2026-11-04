@@ -27,8 +27,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-047](#q-047) | What does the `here` budget cover, and is `slice` the sum of the parts?                                                                 | The three numbers are 24576, 17408, and 3072, and a slice needs one limit.                                                                                                        | REQ-152                                  | customer | open   |
-| [Q-048](#q-048) | What does each subagent mode allow?                                                                                                     | S-013 gives the `propose` behavior, and `read` and `off` are new.                                                                                                                 | REQ-153                                  | customer | open   |
 
 ## Details
 
@@ -57,22 +55,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
 
-### Q-047
-
-A slice needs one limit for the model, and the configuration gives three numbers.
-
-- Option A: `slice` is the total, and `here` and `directions` are parts of it. 17408 and 3072 leave
-  4096 bytes for the other parts.
-- Option B: the three numbers are separate limits, and the slice has no total.
-
-### Q-048
-
-A subagent has no separate tool. S-013 gives the `propose` rule.
-
-- Option A: `propose` writes new notes as proposed, `read` reads only, and `off` gives the subagent no
-  memory access and the parent no line.
-- Option B: the modes form a ladder: `read` also writes proposed notes, and `off` reads only.
-
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -99,4 +81,6 @@ A subagent has no separate tool. S-013 gives the `propose` rule.
 | Q-044 | Where does the description of a scope live?                             | Nowhere. The model holds no description field, and the first note gives the text. See S-033.                                             | 2026-11-04 |
 | Q-045 | Does an alias join the records of the old key to the new key?           | No alias. A wrong key changes by an amend of the record. See S-033.                                                                      | 2026-11-04 |
 | Q-046 | Does `amend` change the scope of a note, or does a new op do it?        | The optional `scope` field of `amend`. A record with `content_cleared` moves too. See S-034.                                             | 2026-11-04 |
+| Q-047 | What does the `here` budget cover, and is `slice` the sum?              | The `slice` budget leaves. `here` limits the tree of the current project and `directions` the catalog tree. See S-037.                   | 2026-11-04 |
+| Q-048 | What does each subagent mode allow?                                     | `propose` writes and reports, `read` reads only, `off` gives no tool and no slice. See S-037.                                            | 2026-11-04 |
 | Q-041 | What makes a pair of nodes overdue?                                     | No measure. A node is dirty when a source changes, and the writer works on dirty nodes. See S-030.                                       | 2026-11-04 |
