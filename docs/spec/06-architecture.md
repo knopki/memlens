@@ -154,7 +154,9 @@ wins over the TOML, and the preset wins over the profile. An array replaces an a
 | Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
 
 The `store` key of the patch sets the same store as the TOML `store` section and `MEMLENS_STORE`. The
-patch overrides the TOML value. The flag and the environment win over the patch. The `writer` section gives `provider`,
+plugin takes the patch first, then `MEMLENS_STORE`, then the TOML file. The CLI takes `--store` first,
+then `MEMLENS_STORE`, then the TOML file. The flag and the patch belong to different programs. The
+`writer` section gives `provider`,
 `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. The `mode` is `parallel`, `batch`, or `auto`,
 and the default is `auto`. The `cacheTtl` map gives a duration for a model glob. The most specific glob
 wins. The `language` key gives the language that the prompt recommends for the notes. The default is
@@ -167,11 +169,11 @@ See [REQ-262](02-requirements.md), [REQ-263](02-requirements.md), [REQ-272](02-r
 [D-060](04-decisions.md).
 
 A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget gives
-`here` and `directions` in bytes, and it gives no `slice` key. The two budgets are independent. The
+`here` and `directions` in bytes. The two budgets are independent. The
 subagent mode is `propose`, `read`, or `off`. See [D-046](04-decisions.md) and [D-047](04-decisions.md).
 
-A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file. The key
-`idle` gives 300 seconds by default. See [D-045](04-decisions.md).
+For the CLI, a `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the TOML
+file. The key `idle` gives 300 seconds by default. See [D-045](04-decisions.md).
 
 ## Store
 
