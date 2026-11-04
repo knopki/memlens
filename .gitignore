@@ -6,6 +6,10 @@ build/
 coverage/
 *.tsbuildinfo
 
+# The vendored checker keeps its build output
+!scripts/vendor/dsh-plugin-guide/dist/
+!scripts/vendor/dsh-plugin-guide/dist/**
+
 # Packs
 *.tgz
 

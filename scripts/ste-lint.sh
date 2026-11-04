@@ -1,31 +1,9 @@
 #!/usr/bin/env sh
 # Check the English documents against the ASD-STE100 limits.
-# The linter comes from the asd-ste100 skill. Set STE_LINT to use another copy.
+# The linter is vendored. See scripts/vendor/README.md.
 set -eu
 
-: "${HOME:?HOME is not set}"
-
-LINTER=${STE_LINT:-}
-
-if [ -z "$LINTER" ]; then
-  for path in \
-    "$HOME/.agents/skills/asd-ste100/scripts/ste-lint.py" \
-    "$HOME"/.dsh/profiles/*/node_modules/asd-ste100/scripts/ste-lint.py \
-    "$HOME"/.claude/skills/asd-ste100/scripts/ste-lint.py
-  do
-    if [ -f "$path" ]; then
-      LINTER=$path
-      break
-    fi
-  done
-fi
-
-if [ -z "$LINTER" ]; then
-  echo "ste-lint: the linter is not found. Set STE_LINT to its path." >&2
-  exit 127
-fi
-
-python3 "$LINTER" \
+exec python3 scripts/vendor/ste-lint.py \
   README.md \
   AGENTS.md \
   docs/spec/00-overview.md \
