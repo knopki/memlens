@@ -25,11 +25,8 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
-| [Q-063](#q-063) | Do the two forms of the parallelism apply at one time, or does one form exclude the other?                                              | The two forms give a different load on the model provider.                                                                                                                        | REQ-203                                  | customer | open   |
-| [Q-064](#q-064) | Is `gen` the `storeRev` of D-049, or a counter of each block?                                                                           | The accept check reads the counter that the events grow.                                                                                                                          | REQ-210, REQ-211                         | customer | open   |
-| [Q-065](#q-065) | Which budget does the 1.5 check use: `here`, `directions`, or the sum of the two?                                                       | A part over its budget makes the slice cost more, even when the sum fits.                                                                                                         | REQ-206                                  | customer | open   |
-| [Q-066](#q-066) | What does a failed job do after the third wait: wait 300 seconds again, or leave the queue?                                             | A job that stays with no limit costs a call at each backoff.                                                                                                                      | REQ-202                                  | customer | open   |
-| [Q-067](#q-067) | Which idle time starts the compaction: the `cacheTtl` of the model, or a new setting?                                                   | REQ-021 already uses an idle time longer than the TTL for the slice.                                                                                                              | REQ-204                                  | customer | open   |
+| [Q-068](#q-068) | Which section, key, and default does the idle time of the compaction have?                                                              | The value comes from the configuration file, and the file needs a name.                                                                                                           | REQ-204, REQ-214                         | customer | open   |
+| [Q-069](#q-069) | What decides the form of the compactor: a configuration key or the model?                                                               | A run takes one form only, and the choice needs a source.                                                                                                                         | REQ-203                                  | customer | open   |
 
 ## Details
 
@@ -67,49 +64,21 @@ The store of memlens holds no snapshot (D-050). The session history of the harne
 - Option B: the nine fields of S-042. The `id`, the `profile`, `parts`, `bytes`, and `reason` serve
   the console and the diagnosis.
 
-### Q-063
+### Q-068
 
-The statement gives 6 calls in the form `parallel` and 6 lines in the form `batch`. The two forms can
-run at one time, or one form can exclude the other.
+The answer to Q-067 gives the configuration file as the source of the idle time. The file has a
+`store` section and a `profile.<name>` section. The section, the key, and the default stay open.
 
-- Option A: both at one time. The compactor makes 6 calls, and each call takes 6 lines.
-- Option B: one form for one run. The form `parallel` gives 6 calls of one line, and the form `batch`
-  gives one call of 6 lines.
+- Option A: a key of `[profile.<name>]` with a default for each profile.
+- Option B: a key of the `store` section with one default for the store.
 
-### Q-064
+### Q-069
 
-The statement gives `gen` as the value of the accept check. D-049 gives `storeRev` as the version of
-the store content, and S-025 gives `input_gen` as the version of the input of a node.
+A run takes one form only. The statement gives no selector for the form.
 
-- Option A: `gen` is `storeRev`. One counter of the store grows on each event, and an event outside
-  the range of the block also refuses the result.
-- Option B: `gen` is a counter of each block. Only an event in the range of the block grows it, and a
-  write outside the range keeps the result.
-
-### Q-065
-
-The slice holds two parts with two budgets. The statement gives one limit of 1.5 times the budget.
-
-- Option A: each part against its budget. The `here` part has its check, and the `directions` part has
-  its own check.
-- Option B: the sum of the two budgets against the whole text. One part can pass its budget and keep
-  the total under the limit.
-
-### Q-066
-
-The statement gives three waits: 10 seconds, 60 seconds, and 300 seconds. It gives no rule after the
-third wait.
-
-- Option A: the job waits 300 seconds after each later failure, and it stays in the queue.
-- Option B: the job leaves the queue after the third failure, and the next trigger queues it again.
-
-### Q-067
-
-The statement gives an idle timer with no interval. [REQ-021](02-requirements.md) gives an idle time
-longer than the `cacheTtl` for the slice.
-
-- Option A: the `cacheTtl` of the model: 2 hours, 5 minutes, or 1 hour.
-- Option B: a new setting of the profile with its own default.
+- Option A: a configuration key with the value `parallel` or `batch`.
+- Option B: the model of the profile. A model with parallel calls gives `parallel`, and another
+  model gives `batch`.
 
 ## Closed questions
 
@@ -156,3 +125,8 @@ longer than the `cacheTtl` for the slice.
 | Q-060 | Where does the cut of the fallback fall?                                | At a word boundary, then at a character boundary for a word above 512 bytes. See S-050.                                                  | 2026-11-04 |
 | Q-061 | What does the build do when the model fails or overflows?               | A retry, then the fallback. The retry limit is open. See Q-026 and S-050.                                                                | 2026-11-04 |
 | Q-062 | What does the build give with no live record of the session?            | No card. The scope keeps its earlier card. See S-050.                                                                                    | 2026-11-04 |
+| Q-063 | Do the two forms of the parallelism apply at one time?                  | One form for one run. The form `parallel` gives 6 calls of one line, and the form `batch` gives one call of 6 lines. See S-052.          | 2026-11-04 |
+| Q-064 | Is `gen` the `storeRev` or a counter of each block?                     | A counter of each block. An event in the range of the block grows it. See S-052.                                                         | 2026-11-04 |
+| Q-065 | Which budget does the 1.5 check use?                                    | Each part against its own budget: `here` and `directions`. See S-052.                                                                    | 2026-11-04 |
+| Q-066 | What does a failed job do after the third wait?                         | It waits 300 seconds after each later failure and stays in the queue. See S-052.                                                         | 2026-11-04 |
+| Q-067 | Which idle time starts the compaction?                                  | A setting of the configuration file. The section, the key, and the default are open. See Q-068 and S-052.                                | 2026-11-04 |
