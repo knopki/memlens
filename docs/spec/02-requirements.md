@@ -62,7 +62,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-054 | The writer takes 6 nodes in one batch by default.                                                                                                                                     | FR   | draft    | S-014               | A default run takes 6 nodes in one batch.                                                                                      |
 | REQ-055 | A session is a branch of a profile. The branch merges into the trunk at close and at idle.                                                                                            | FR   | draft    | S-014               | Two branches of one profile give one trunk after the merge.                                                                    |
 | REQ-056 | The slice is frozen for the length of a session.                                                                                                                                      | FR   | draft    | S-014               | A note that arrives during a session does not change the slice of that session.                                                |
-| REQ-057 | An import and a merge are idempotent by `idem`. | FR | disputed | S-018 | A second import of one source adds no record. |
+| REQ-057 | An import and a merge are idempotent by `idem`. | FR | draft | S-018, S-073 | A second import of one source adds no record. |
 | REQ-058 | A note can supersede an earlier note.                                                                                                                                                 | FR   | draft    | S-014               | The newer note replaces the older note in the view.                                                                            |
 | REQ-059 | The index is rebuildable from the log. The log is the only truth.                                                                                                                     | NFR  | draft    | S-014               | A deleted index comes back from the log.                                                                                       |
 | REQ-060 | An event is immutable. A write adds one event and changes no earlier event.                                                                                                           | FR   | draft    | S-016               | After two writes, the first record in the log stays the same.                                                                  |
@@ -381,7 +381,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-375 | Two sessions write to one scope with no error. | FR | draft | S-073 | Two sessions write one scope, and the store holds both records. |
 | REQ-376 | The `pos` of a new record is greater than each earlier `pos`. | FR | draft | S-073 | Two writes from two sessions give two `pos` values in one order. |
 | REQ-377 | Each session renders its own snapshot. | FR | draft | S-073 | Two sessions of one store open with their own text. |
-| REQ-378 | An export copies the whole store. | FR | draft | S-073 | The export holds each record of the store. |
+| REQ-378 | An export with no `scope` copies the whole store. | FR | draft | S-073 | The export of a store with two scopes holds both scopes. |
 | REQ-379 | An export reads one transaction under an exclusive lock. | FR | draft | S-073 | A write that starts during the export waits for the lock. |
 | REQ-380 | An export holds each card with its source records. | FR | rejected | S-073, S-074 | Each card of the export resolves its `for_sources` in the same export. |
 | REQ-381 | An import of two events with one `id` and different payloads gives no error. | FR | draft | S-073 | The import succeeds, and the store keeps one version of the record. |
@@ -406,8 +406,8 @@ Status: see [README.md](README.md#status-values).
 | REQ-400 | `memlens repair` fixes the store, and the flag `--dry-run` lists the changes only. | FR | draft | S-075 | The flag `--dry-run` changes no byte of the store. |
 | REQ-401 | The `--format` of `memlens export` is `md` or `jsonl`. | FR | draft | S-075 | Each of the two values gives an export in that format. |
 | REQ-402 | `memlens import` takes the flags `--in`, `--as`, and `--dry-run`. | FR | draft | S-075 | The flag `--as` puts the imported records in the named scope. |
-| REQ-403 | `memlens import --from dsh-sessions` reads a directory of harness sessions, and it takes the flags `--since` and `--dry-run`. | FR | draft | S-075 | The command accepts the directory and the two flags. |
-| REQ-404 | `memlens merge` takes two stores and the flag `--into`, with `--dry-run`. | FR | draft | S-075 | The command accepts two stores and the flag `--into`. |
+| REQ-403 | `memlens import --from dsh-sessions` reads a directory of harness sessions, and it takes the flags `--since` and `--dry-run`. | FR | draft | S-075, S-076 | The command accepts the directory and the two flags. |
+| REQ-404 | `memlens merge` takes two stores and the flag `--into`, with `--dry-run`. | FR | rejected | S-075, S-076 | The command accepts two stores and the flag `--into`. |
 | REQ-405 | `memlens config` has the actions `get` and `set`. | FR | draft | S-075 | The action `get` gives the value of a key, and `set` writes it. |
 | REQ-406 | `memlens ui` starts the console, and it takes the flags `--port` and `--allow-delete`. | FR | draft | S-075 | The default port is 7788, and a delete needs `--allow-delete`. |
 | REQ-407 | The exit code 0 marks a success. | FR | draft | S-075 | A successful command gives 0. |
@@ -416,6 +416,10 @@ Status: see [README.md](README.md#status-values).
 | REQ-410 | The exit code 3 marks a refusal by a policy. | FR | draft | S-075 | A redact of a record outside `scopes` gives 3. |
 | REQ-411 | `memlens redact` deletes the content from the disk. | FR | draft | S-075 | The file of the store holds no byte of the body after the command. |
 | REQ-412 | `memlens redact` asks for a confirmation, and the flag `--yes` skips it. | FR | draft | S-075 | A call with no `--yes` waits for the answer, and `--yes` starts the work. |
+| REQ-413 | The import from the sessions writes new notes of each session into the store. | FR | draft | S-076 | A session with a decision gives a note after the import, and the writer makes the text. |
+| REQ-414 | `memlens export` takes the optional flag `--scope`. | FR | draft | S-076 | The command accepts the flag with a scope key. |
+| REQ-415 | An export with no `--scope` writes one file for each scope. | FR | draft | S-076 | A store of two scopes gives two files, and each file holds one scope. |
+| REQ-416 | An export with `--scope` writes that scope only. | FR | draft | S-076 | A store of two scopes gives one file, and the other scope is absent. |
 
 ## Rules for new requirements
 

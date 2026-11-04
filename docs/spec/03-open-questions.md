@@ -14,11 +14,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-021](#q-021) | What is the retelling prompt of the tree, and of the card?                                                                              | The statements give the node geometry, the depth, and the size. The prompt stays open.                                                                                            | REQ-009, REQ-032, REQ-192                | customer | open   |
 | [Q-024](#q-024) | Does the console live in the CLI package or in its own package, and which stack does it use?                                            | C-012 splits client and backend code, and the console is client code.                                                                                                             | REQ-046                                  | customer | open   |
 | [Q-026](#q-026) | Which retry limit and which length ratio do the writer and the card build use?                                                          | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051, REQ-197                         | customer | open   |
-| [Q-101](#q-101) | Is an import joined by `id` or by `idem`? | The closed Q-033 gives `idem`, and S-073 gives `id`. | REQ-057, REQ-381 | customer | open |
-| [Q-102](#q-102) | What does `memlens import --from dsh-sessions` read, and what records does it write? | The command has a source in the harness, and S-075 gives no effect. | REQ-403 | customer | open |
-| [Q-103](#q-103) | Does the text of `memlens describe` set the `title` or the `description`? | The tool `memory_scope` has two fields, and the command has one text. | REQ-348 | customer | open |
-| [Q-104](#q-104) | Must the target of `--into` be one of the two stores of `memlens merge`? | The example repeats the second store, and a third store is possible. | REQ-404 | customer | open |
-| [Q-105](#q-105) | What does the directory of `--out` hold for each format? | The export takes a directory, and the layout of the two formats is open. | REQ-401 | customer | open |
 
 ## Details
 
@@ -46,42 +41,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-
-### Q-101
-
-The closed Q-033 gives `idem` as the key of an import. S-073 gives the union by `id`, and REQ-057 keeps
-`idem`.
-
-- Option A: the union joins by `id`. The key `idem` guards a repeated write only.
-- Option B: the union joins two records with one `idem`, and by `id` otherwise.
-
-### Q-102
-
-The command reads a directory of harness sessions. The target store holds the notes.
-
-- Option A: the writer reads each session and writes new notes into the store.
-- Option B: the import takes the notes of the memlens plugin in the session and writes them again.
-
-### Q-103
-
-`memory_scope` changes a `title` and a `description`. The command takes one text.
-
-- Option A: the text is the `description`, and the `title` stays as it is.
-- Option B: the text is the `title`, and the `description` stays as it is.
-
-### Q-104
-
-The example is `memlens merge <store-a> <store-b> --into <store-b>`.
-
-- Option A: the target is one of the two sources, and the command joins it with the other.
-- Option B: the target is a third store, and the two sources stay as they are.
-
-### Q-105
-
-The export writes into a directory, and the format is `md` or `jsonl`.
-
-- Option A: one file for each scope, with the scope in the name.
-- Option B: one file for the store, with the scope inside each record.
 
 ## Closed questions
 
@@ -177,3 +136,8 @@ The export writes into a directory, and the format is `md` or `jsonl`.
 | Q-097 | Which field of the `memory_forget` answer holds a proposal? | The answer gives `hidden: 0`. The proposal stays invisible to the agent. See S-072. | 2026-11-05 |
 | Q-030 | How does a merge join a sanitized event and a full event with one `id`? | The events of a record with a `redact` go in the sanitized form, in each order. See S-073 and REQ-384. | 2026-11-05 |
 | Q-019 | What is the export and import format, and how does `redact` block a restore? | Two formats, `md` and `jsonl`, into a directory. The export is always the whole store. See S-075. | 2026-11-05 |
+| Q-102 | What does `memlens import --from dsh-sessions` read, and what records does it write? | The writer reads each session and writes new notes into the store. See S-076 and REQ-413. | 2026-11-05 |
+| Q-103 | Does the text of `memlens describe` set the `title` or the `description`? | The CLI has no `describe` command. The tool `memory_scope` keeps its action. See S-076. | 2026-11-05 |
+| Q-104 | Must the target of `--into` be one of the two stores of `memlens merge`? | The CLI has no `merge` command. The import makes the merge. See S-076. | 2026-11-05 |
+| Q-105 | What does the directory of `--out` hold for each format? | An export takes the optional `--scope`. With no flag it writes one file for each scope, and with the flag one scope. See S-076. | 2026-11-05 |
+| Q-101 | Is an import joined by `id` or by `idem`? | The import and the merge join by `id`, and the key `idem` guards a repeated write. The two rules hold together. See S-073 and S-076. | 2026-11-05 |

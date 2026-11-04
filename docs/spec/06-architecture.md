@@ -421,9 +421,9 @@ of the data. The code 2 marks an error of the usage, and 3 marks a refusal by a 
 [REQ-385](02-requirements.md) to [REQ-412](02-requirements.md).
 
 The commands `note`, `find`, `open`, `forget`, `review`, `redact`, and `amend` act on a record. The
-commands `scopes` and `describe` act on a scope. The commands `slice`, `compact`, `status`, `check`,
-and `repair` act on the view and the store. The commands `export`, `import`, and `merge` move the
-store. The commands `config` and `ui` set the configuration and start the console.
+command `scopes` acts on a scope. The commands `slice`, `compact`, `status`, `check`, and `repair`
+act on the view and the store. The commands `export` and `import` move the store. The commands
+`config` and `ui` set the configuration and start the console.
 
 ## Code markup
 
