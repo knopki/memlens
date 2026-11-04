@@ -27,7 +27,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-039](#q-039) | Do `ts_from` and `ts_to` hold the `ts` values of the notes, or their `at` values?                                                       | A note has two times, and the tree uses one of them for its range.                                                                                                                | REQ-128                                  | customer | open   |
 
 ## Details
 
@@ -55,13 +54,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-### Q-039
-
-A note has `at`, the time of the log, and `ts`, the time of the write. The node keeps a range of time
-for the notes that it covers.
-
-- Option A: the `ts` values. The range follows the order of the writes.
-- Option B: the `at` values. The range follows the order of the log.
 
 ## Closed questions
 
@@ -82,3 +74,4 @@ for the notes that it covers.
 | Q-036 | Does a hidden proposed record enter the view after an `accept`?         | Yes. The `accept` clears the effect of the earlier `hide` event. See S-022.                                                              | 2026-11-04 |
 | Q-037 | Does `scrub` come back, or does the model keep no such step?            | No `scrub`. A `redact` event gives the sanitized form, and the store extends it to each card. See S-024.                                 | 2026-11-04 |
 | Q-038 | Which required fields of a note does a card carry?                      | None of `review_at`, `proposed`, `turn`, and `preset`. A card is not reviewed and not proposed. See S-024.                               | 2026-11-04 |
+| Q-039 | Do `ts_from`/`ts_to` hold the `ts` values, or the `at` values?          | The `ts` values, the time of the write. See S-026.                                                                                       | 2026-11-04 |

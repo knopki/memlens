@@ -136,6 +136,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-128 | A node holds `summary`, `ts_from`, `ts_to`, `bytes`, `input_gen`, `state`, `built_at`, and `truncated`.                            | FR   | draft    | S-025  | The store returns these eight fields for each node.                                                                            |
 | REQ-129 | The state of a node is `built` or `dirty`.                                                                                         | FR   | draft    | S-025  | The state is `dirty` after a change of the input.                                                                              |
 | REQ-130 | The tree needs no dense prefix.                                                                                                    | FR   | draft    | S-025  | A hidden note in a range leaves a hole, and the geometry stays.                                                                |
+| REQ-131 | The node takes `ts_from` and `ts_to` from the `ts` values of the notes that it covers.                                             | FR   | draft    | S-026  | A note with an `at` outside the range changes no limit of the node.                                                            |
 
 ## Rules for new requirements
 

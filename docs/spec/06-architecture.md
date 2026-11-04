@@ -170,7 +170,8 @@ empty, and the hole stays in the geometry. See [D-038](04-decisions.md).
 
 A node holds `summary`, `ts_from`, `ts_to`, `bytes`, `input_gen`, `state`, `built_at`, and
 `truncated`. The state is `built` or `dirty`. A summary line targets 512 bytes and has a limit of
-640 bytes. See [D-039](04-decisions.md).
+640 bytes. See [D-039](04-decisions.md). The fields `ts_from` and `ts_to` come from the `ts` values of
+the covered notes. See [REQ-131](02-requirements.md).
 
 ## Frontier
 
