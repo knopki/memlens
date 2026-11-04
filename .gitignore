@@ -9,6 +9,10 @@ coverage/
 # Packs
 *.tgz
 
+# mise local overrides
+mise.local.toml
+.mise/
+
 # Python
 __pycache__/
 *.py[cod]
