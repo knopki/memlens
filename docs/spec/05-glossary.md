@@ -54,3 +54,14 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | review           | The check of a note by a human. It uses `review_at` and `reviewed_at` and stays out of the slice.                             | S-013                                        |
 | index port       | The interface for the search. The implementation uses FTS5.                                                                   | S-013                                        |
 | «Линза»          | The human name of the product. The idea of the name is the zoom: look through one layer into the depth.                       | S-013                                        |
+| frontier         | The newest level of the tree. It holds the detail, and the older levels hold the short form.                                  | S-014                                        |
+| level            | One row of the tree. A level has a fixed width, and one level covers 2^k leaves.                                              | S-014                                        |
+| pair             | Two nodes that a retelling joins. The writer takes the most overdue pair first.                                               | S-014                                        |
+| ruler            | The size measure of a retelling. The writer retries when the line does not become shorter.                                    | S-014                                        |
+| shrink check     | The rule that a retelling must be shorter than its source.                                                                    | S-014                                        |
+| compactor        | The background task that makes the retellings in batches. The glossary uses this word for the writer.                         | S-014                                        |
+| trunk            | The merged state of a profile, above its branches.                                                                            | S-014                                        |
+| branch           | The state of one session or one machine of a profile. A branch merges into the trunk at close and at idle.                    | S-014                                        |
+| freeze           | The rule that the slice of a session stays the same for the whole session.                                                    | S-014                                        |
+| sourceId         | The identifier of the source record of an import. A second import of one source adds no record.                               | S-014                                        |
+| supersede        | The rule that a newer note can replace an older note in the view.                                                             | S-014                                        |

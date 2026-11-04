@@ -60,3 +60,15 @@ Status: see [README.md](README.md#status-values).
   | REQ-045 | `MEMLENS_STORE` gives another data path. | FR | draft | S-013 | With the variable set, the data goes to the given path. |
   | REQ-046 | `memlens ui` is a standalone console. | FR | draft | S-013 | The command starts outside the harness. |
   | REQ-047 | In the harness the console runs in a session mode on the same view models. | FR | draft | S-013 | TBD. The mount point is open. See Q-014. |
+  | REQ-048 | The tree has a frontier: levels of fixed width, and one level covers 2^k leaves. | FR | draft | S-014 | Two builds give the same levels for the same notes. |
+  | REQ-049 | A note has the address `#id`. A range of notes has the address `#a-b`. | FR | draft | S-014 | The agent gets one note and one range by these addresses. |
+  | REQ-050 | The writer takes the most overdue pair of nodes first. | FR | draft | S-014 | A run takes the older pair before the newer pair. |
+  | REQ-051 | The writer retries a retelling that is not shorter than its source. | FR | draft | S-014 | A retry gives a shorter line, or the node stays at its level. |
+  | REQ-052 | A background compactor makes the retellings in parallel jobs. | FR | draft | S-014 | A batch of nodes gets its retellings without a session. |
+  | REQ-053 | The writer effort setting is off by default. | FR | draft | S-014 | The default configuration has the writer effort at off. |
+  | REQ-054 | The writer takes 6 nodes in one batch by default. | FR | draft | S-014 | A default run takes 6 nodes in one batch. |
+  | REQ-055 | A session is a branch of a profile. The branch merges into the trunk at close and at idle. | FR | draft | S-014 | Two branches of one profile give one trunk after the merge. |
+  | REQ-056 | The slice is frozen for the length of a session. | FR | draft | S-014 | A note that arrives during a session does not change the slice of that session. |
+  | REQ-057 | An import and a merge are idempotent by `sourceId`. | FR | draft | S-014 | A second import of one source adds no record. |
+  | REQ-058 | A note can supersede an earlier note. | FR | draft | S-014 | The newer note replaces the older note in the view. |
+  | REQ-059 | The index is rebuildable from the log. The log is the only truth. | NFR | draft | S-014 | A deleted index comes back from the log. |

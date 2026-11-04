@@ -67,6 +67,37 @@ session, at a compaction, and after an idle time longer than the model cache TTL
 
 A merge is a union of events by id. The projection converges for any order of arrival.
 
+## Addressing
+
+A note has the address `#id`. A range of notes has the address `#a-b`. The agent gets one note or one
+range by its address.
+
+## Frontier
+
+The tree has a frontier: levels of fixed width, and one level covers 2^k leaves. The newest level
+holds the detail, and the older levels hold the short form. The frontier geometry comes from the
+prior art. See [D-018](04-decisions.md).
+
+## Writer
+
+The writer is a background compactor. It makes the retellings in batches and in parallel jobs. The
+defaults come from the measurements: effort off, 6 nodes in a batch, and up to 8 jobs. See
+[D-019](04-decisions.md).
+
+The writer takes the most overdue pair first. It retries a line that is not shorter than its source,
+and it refuses a line that does not shrink. See [REQ-050](02-requirements.md) and
+[REQ-051](02-requirements.md).
+
+## Freeze and branch
+
+The slice stays the same for the whole session. A session is a branch of a profile, and the branch
+merges into the trunk at close and at idle. The merge of a branch serves several machines, not one
+machine.
+
+An import and a merge are idempotent by `sourceId`. A note can supersede an earlier note. The index is
+a cache over the log: the store rebuilds it from the log after a loss. See
+[REQ-057](02-requirements.md), [REQ-058](02-requirements.md), and [REQ-059](02-requirements.md).
+
 ## Agent surface
 
 | Tool          | Who        | Effect                                                         |
