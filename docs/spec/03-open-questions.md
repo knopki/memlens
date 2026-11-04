@@ -14,6 +14,8 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-021](#q-021) | What is the retelling prompt of the tree, and of the card?                                                                              | The statements give the node geometry, the depth, and the size. The prompt stays open.                                                                                            | REQ-009, REQ-032, REQ-192                | customer | open   |
 | [Q-024](#q-024) | Does the console live in the CLI package or in its own package, and which stack does it use?                                            | C-012 splits client and backend code, and the console is client code.                                                                                                             | REQ-046                                  | customer | open   |
 | [Q-026](#q-026) | Which retry limit and which length ratio do the writer and the card build use?                                                          | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051, REQ-197                         | customer | open   |
+| [Q-106](#q-106) | Which screens does the tab `Memory` hold? | The tab is the simplified console, and the part is open. | REQ-421 | customer | open |
+| [Q-107](#q-107) | Does the tab write, or does it read only? | A human accepts a proposal in the console, and the tab can give the same action. | REQ-361, REQ-421 | customer | open |
 
 ## Details
 
@@ -41,6 +43,20 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+
+### Q-106
+
+The full console gives seven screens. The tab holds a part of them.
+
+- Option A: four screens: directions, tree, search, and proposals.
+- Option B: three screens: directions, tree, and proposals.
+
+### Q-107
+
+The tab is the console of one profile. A proposal waits for a human.
+
+- Option A: the tab reads only. A human accepts a proposal in `memlens ui`.
+- Option B: the tab writes. A human accepts or dismisses a proposal in the tab.
 
 ## Closed questions
 

@@ -18,6 +18,7 @@ requirement.
 | [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                       | live         |
 | [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.                   | draft        |
 | [07-prior-art.md](07-prior-art.md)           | Each claim of the customer table against the code. | live         |
+| [08-ui.md](08-ui.md)                         | The console, the seven screens, and the two hosts. | draft        |
 | [../adr/](../adr/)                           | Long decisions, one file for each.                 | as necessary |
 
 ## Rules

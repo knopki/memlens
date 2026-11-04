@@ -420,6 +420,12 @@ Status: see [README.md](README.md#status-values).
 | REQ-414 | `memlens export` takes the optional flag `--scope`. | FR | draft | S-076 | The command accepts the flag with a scope key. |
 | REQ-415 | An export with no `--scope` writes one file for each scope. | FR | draft | S-076 | A store of two scopes gives two files, and each file holds one scope. |
 | REQ-416 | An export with `--scope` writes that scope only. | FR | draft | S-076 | A store of two scopes gives one file, and the other scope is absent. |
+| REQ-417 | The UI core is in the core library. | FR | draft | S-077 | The core package exports the view models of the console. |
+| REQ-418 | The UI core holds no DOM and no transport. | NFR | draft | S-077 | No file of the UI core imports a DOM or a socket. |
+| REQ-419 | The UI core reads the store through one port. | FR | draft | S-077 | Each view model imports the port, and no view model opens a file. |
+| REQ-420 | `memlens ui` hosts the full console. | FR | draft | S-077 | The command serves each of the seven screens. |
+| REQ-421 | The plugin mounts the console as the tab `Memory` on the session page. | FR | draft | S-077 | The session page shows the tab, and the tab opens the console. |
+| REQ-422 | The tab shows the scopes of one profile. | FR | draft | S-077 | A session of the profile `work` shows the scopes of `work` only. |
 
 ## Rules for new requirements
 
