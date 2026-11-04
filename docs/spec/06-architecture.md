@@ -283,12 +283,14 @@ Each batch extends the prefix of the view, so the prompt cache of the model surv
 The writer is a background compactor. It runs outside the agent loop, from a queue of jobs in the
 store. The effort is off by default. A run takes one form. `parallel` makes 6 calls of one line with
 one prefix of the context. `batch` makes one call of up to 6 lines in the form `#a-b: line`, and a
-broken answer gives one retry, then `parallel`. `auto` follows the cache: `batch` without it, and
-`parallel` with it. See [D-054](04-decisions.md) and [D-059](04-decisions.md).
+broken answer gives one retry with the error, then `parallel`. `auto` follows the family of the model:
+`batch` without a cache, and `parallel` with one. See [D-054](04-decisions.md) and
+[D-059](04-decisions.md).
 
 A merge gives the model the two children only, and no context around them. The `writer` section sets
-the limit of the calls: 120 in one hour by default. See [REQ-248](02-requirements.md) and
-[REQ-252](02-requirements.md).
+the limit of the calls on the store: 120 in one hour by default. A call above the limit waits, and the
+job returns to the queue. See [REQ-248](02-requirements.md), [REQ-252](02-requirements.md), and
+[REQ-254](02-requirements.md).
 
 A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300
 seconds. A job records the `input_gen` of its children, and the store accepts the result only when
