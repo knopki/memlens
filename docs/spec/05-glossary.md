@@ -101,9 +101,9 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | here             | The tree slice of the current project. The budget `here` limits this part.                                                    | S-037                                        |
 | directions       | The tree slice of the catalog. The budget `directions` limits this part.                                                      | S-037                                        |
 | view             | The tiling of the frontier that the agent reads. Its cache key is `epoch`.                                                    | S-040                                        |
-| fold             | The pass that merges pairs until the view fits under `high`.                                                                  | S-040                                        |
+| fold             | The pass that merges built pairs until the view fits under `high`. It builds no node.                                         | S-040, S-041                                 |
 | tile             | One block of the view. A tile is a node or a record.                                                                          | S-040                                        |
-| due              | The priority of a pair: `(total - (start + 2^(level+1) - 1)) / 2^level`.                                                      | S-040                                        |
+| due              | The priority of a pair: `(total - (start + 2^(level+1) - 1)) / 2^level`. The fold and the rebuild use it.                     | S-040, S-041                                 |
 | epoch            | The cache key of the view: a hash of `storeRev` and the built nodes.                                                          | S-040                                        |
 | storeRev         | The version of the store content. A counter in SQLite and a fingerprint in JSONL.                                             | S-040                                        |
 | fresh            | The state of a node whose `input_gen` matches the input.                                                                      | S-040                                        |
