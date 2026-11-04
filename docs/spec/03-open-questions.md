@@ -6,6 +6,7 @@ A blocking question stops the current portion of the specification until the cus
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------ |
 | [Q-014](#q-014) | Which surface does the session mode of the console use in the harness?                                                                  | The plugin contract depends on the slot.                                                                                                                                          | REQ-047                                  | customer | open   |
 | [Q-015](#q-015) | Which operations does the index port have?                                                                                              | Two backends must satisfy one interface.                                                                                                                                          | REQ-041                                  | customer | open   |
+| [Q-110](#q-110) | Is the budget of the slice one total of 24 KiB with three parts, or two independent budgets? | S-083 gives three parts and a total, and the closed Q-091 gives two. | REQ-152, REQ-156 | customer | open |
 
 ## Details
 
@@ -15,6 +16,16 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+
+### Q-110
+
+S-083 gives the slice as 24 KiB with `how-to` 1.2 KiB, `directions` 3 KiB, and `here` 17 KiB. The
+closed Q-091 gives two independent budgets, and REQ-156 gives no total budget. The three numbers sum
+to 21.2 KiB.
+
+- Option A: one budget of 24 KiB with the three parts, and the policy text takes 1.2 KiB.
+- Option B: two budgets, `here` 17 KiB and `directions` 3 KiB. The policy text stays whole, and no
+  key holds a total.
 
 ## Closed questions
 
