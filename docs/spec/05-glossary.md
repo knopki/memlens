@@ -90,7 +90,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | for_sources      | The field of a card that lists the ids of the records that the card covers.                                                   | S-023                                        |
 | dirty            | The mark of a card that needs a rebuild after a change of a source.                                                           | S-023                                        |
 | [redacted]       | The placeholder of the console and the view for a sanitized record. An event holds no such text.                              | S-023                                        |
-| node             | One summary of the tree. It covers `2^level` positions and has the state `built` or `dirty`.                                  | S-025                                        |
+| node             | One summary of the tree. It covers `2^level` positions for a level of 1 or more.                                              | S-025                                        |
 | position         | One `pos` value in the geometry of the tree. A position with no live record is empty.                                         | S-025                                        |
 | summary          | The text of one node. The target size is 512 bytes and the limit is 640 bytes.                                                | S-025                                        |
 | input_gen        | The version of the input that made the summary.                                                                               | S-025                                        |
+| leaf             | One record at the bottom of the tree. The tree holds no node of level 0.                                                      | S-028                                        |
