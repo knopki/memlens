@@ -27,7 +27,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-036](#q-036) | Does a hidden proposed record enter the view after an `accept`?                                                                         | The state becomes `live`, and the hide event stays in the log.                                                                                                                    | REQ-096                                  | customer | open   |
 
 ## Details
 
@@ -55,14 +54,6 @@ The statement stops after the words "the merge rules", and S-017 removes `scrub`
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-### Q-036
-
-A proposed record with a `hide` event leaves the view, and the state stays `proposed`. S-021 gives no
-rule for a later `accept`.
-
-- Option A: the record stays out of the view after the `accept`.
-- Option B: the record enters the view again, because the hide acted on the proposed record only.
-
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -79,3 +70,4 @@ rule for a later `accept`.
 | Q-031 | Do all events carry `session`, `turn`, and `preset`, or the note only?  | The `note` event only. The agent gives the three fields when it calls the tool. See S-019.                                               | 2026-11-04 |
 | Q-034 | Does a `hide` event on a proposed note remove it from the review queue? | No. The state stays `proposed` and the note leaves the view only. See S-021.                                                             | 2026-11-04 |
 | Q-035 | Does `dismiss` apply to a note that is not proposed?                    | Each state. A live note becomes `deleted` after a `dismiss`. See S-021.                                                                  | 2026-11-04 |
+| Q-036 | Does a hidden proposed record enter the view after an `accept`?         | Yes. The `accept` clears the effect of the earlier `hide` event. See S-022.                                                              | 2026-11-04 |

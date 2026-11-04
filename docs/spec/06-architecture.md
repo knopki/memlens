@@ -104,8 +104,8 @@ The state order is `live`, `hidden`, `proposed`, `deleted`. The ops `hide` and `
 value, and only an `accept` lowers it. See [D-031](04-decisions.md).
 
 A `hide` event takes a record out of the view, the search, and the compression. A proposed record
-keeps the state `proposed` and stays in the review queue. See [Q-036](03-open-questions.md#q-036) for
-the view after an `accept`.
+keeps the state `proposed` and stays in the review queue. An `accept` event clears the effect of an
+earlier `hide` event, and the record enters the view again. See [D-032](04-decisions.md).
 
 A `redact` event clears `body` and `longform` for good, and a later `amend` does not apply. An event
 with `redacted: true` gives no content. See [D-030](04-decisions.md).

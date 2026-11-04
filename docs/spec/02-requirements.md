@@ -112,6 +112,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-104 | A later hide or delete of the note that supersedes does not cancel the supersede.                                                  | FR   | draft    | S-020  | The target stays hidden after the other note hides.                                                                            |
 | REQ-105 | An event with `redacted: true` gives no content.                                                                                   | FR   | draft    | S-020  | The record of this event has an empty `body` and a null `longform`.                                                            |
 | REQ-106 | A `supersedes` applies even when its target has a later `(at, id)` position.                                                       | FR   | draft    | S-020  | A target later in the order is still hidden.                                                                                   |
+| REQ-107 | An `accept` event returns a hidden proposed record to the view.                                                                    | FR   | draft    | S-022  | After a hide and an accept, the record is in the view with the state `live`.                                                   |
 
 ## Rules for new requirements
 
