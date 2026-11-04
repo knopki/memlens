@@ -23,7 +23,7 @@ Status: see [README.md](README.md#status-values).
   | REQ-008 | The memory keeps a log of curated notes. | FR | draft | S-013 | A note stays in the store after a write, and a later session reads it. |
   | REQ-009 | The memory keeps a tree of retellings above the notes. | FR | draft | S-013 | The view shows one root node and the retellings below it. |
   | REQ-010 | A note has a `body` and a `longform` document. | FR | draft | S-013 | The store refuses a write without a body. The store accepts a write with a body and a longform. |
-  | REQ-011 | The system accepts a `body` of 512 bytes maximum. The target size is 384 bytes. | FR | draft | S-013 | The store refuses a body of 513 bytes. The store accepts a body of 384 bytes. |
+  | REQ-011 | The `body` has 512 bytes maximum and the declared size is 384 bytes. Text above the body limit moves into the `longform` document. | FR | draft | S-015 | The store accepts a body of 512 bytes. A body of 513 bytes keeps the limit in the body and moves the rest into the `longform`. |
   | REQ-012 | A `longform` document is 16 KiB maximum. | FR | draft | S-013 | The store refuses a longform of 16 KiB and one byte. |
   | REQ-013 | A `longform` document does not enter the tree. | FR | draft | S-013 | No tree node holds longform text. |
   | REQ-014 | The memory has two levels on one engine: the notes are the leaves, and a catalog of cards is above them. | FR | draft | S-013 | The store keeps note records and catalog records, and one build path makes both trees. |
