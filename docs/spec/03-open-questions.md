@@ -25,8 +25,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
-| [Q-068](#q-068) | Which section, key, and default does the idle time of the compaction have?                                                              | The value comes from the configuration file, and the file needs a name.                                                                                                           | REQ-204, REQ-214                         | customer | open   |
-| [Q-069](#q-069) | What decides the form of the compactor: a configuration key or the model?                                                               | A run takes one form only, and the choice needs a source.                                                                                                                         | REQ-203                                  | customer | open   |
 
 ## Details
 
@@ -63,22 +61,6 @@ The store of memlens holds no snapshot (D-050). The session history of the harne
 - Option A: the text only. The session history holds it, and nothing else travels.
 - Option B: the nine fields of S-042. The `id`, the `profile`, `parts`, `bytes`, and `reason` serve
   the console and the diagnosis.
-
-### Q-068
-
-The answer to Q-067 gives the configuration file as the source of the idle time. The file has a
-`store` section and a `profile.<name>` section. The section, the key, and the default stay open.
-
-- Option A: a key of `[profile.<name>]` with a default for each profile.
-- Option B: a key of the `store` section with one default for the store.
-
-### Q-069
-
-A run takes one form only. The statement gives no selector for the form.
-
-- Option A: a configuration key with the value `parallel` or `batch`.
-- Option B: the model of the profile. A model with parallel calls gives `parallel`, and another
-  model gives `batch`.
 
 ## Closed questions
 
@@ -130,3 +112,5 @@ A run takes one form only. The statement gives no selector for the form.
 | Q-065 | Which budget does the 1.5 check use?                                    | Each part against its own budget: `here` and `directions`. See S-052.                                                                    | 2026-11-04 |
 | Q-066 | What does a failed job do after the third wait?                         | It waits 300 seconds after each later failure and stays in the queue. See S-052.                                                         | 2026-11-04 |
 | Q-067 | Which idle time starts the compaction?                                  | A setting of the configuration file. The section, the key, and the default are open. See Q-068 and S-052.                                | 2026-11-04 |
+| Q-068 | Which section, key, and default does the idle time have?                | The key `idle` of the `store` section, and 300 seconds by default. See S-053.                                                            | 2026-11-04 |
+| Q-069 | What decides the form of the compactor?                                 | The key `form` of the `store` section, and `batch` by default. See S-053.                                                                | 2026-11-04 |

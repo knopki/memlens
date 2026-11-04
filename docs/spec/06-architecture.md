@@ -146,10 +146,11 @@ The configuration is a TOML file. The statement [S-036](../statements.md#s-036) 
 
 | Section           | Keys                                                      |
 | ----------------- | --------------------------------------------------------- |
-| `store`           | `backend` (`sqlite` or `jsonl`), `path`                   |
+| `store`           | `backend` (`sqlite` or `jsonl`), `path`, `idle`, `form`    |
 | `profile.<name>`  | `scopes`, `budget`, `subagents`                           |
 
-A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file.
+A `path` from `--store` wins over `MEMLENS_STORE`, and the environment wins over the file. The key
+`idle` gives 300 seconds by default, and the key `form` gives `batch` by default.
 
 A profile lists its scopes as keys, and `*` matches the rest of a key. The budget gives `here` and
 `directions` in bytes, and the two are independent: `here` limits the tree of the current project and
@@ -265,9 +266,8 @@ The compaction starts after a write, at a wake, at the command `memlens compact`
 timer. The wake gives the view when the queue is not empty. A position with no built parent gives
 its raw records. When a part of the view at the wake is above 1.5 times its budget, the store builds
 the unbuilt nodes. The deadline of the build is 10 seconds, and the render gives the view at the
-deadline. The profile sets the idle time of the compaction in the configuration. The source of the
-form, the section, and the key are open. See [Q-068](03-open-questions.md) and
-[Q-069](03-open-questions.md).
+deadline. The `store` section gives the idle time of the compaction and the form of the compactor.
+See [REQ-214](02-requirements.md) and [REQ-216](02-requirements.md).
 
 The writer builds each dirty node. A node is dirty when a source changes or becomes dirty, and an
 import that puts the records in another order makes the tree dirty. The writer takes the node with the
