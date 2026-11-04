@@ -13,7 +13,7 @@
 		"test": "pnpm -r run test",
 		"lint": "biome check .",
 		"format": "biome check --write .",
-		"lint:docs": "sh scripts/ste-lint.sh",
+		"lint:docs": "sh scripts/ste-lint.sh && node scripts/check-tables.mjs",
 		"verify": "pnpm run build && pnpm run typecheck && pnpm run test && pnpm run lint && pnpm run lint:docs"
 	},
 	"devDependencies": {
