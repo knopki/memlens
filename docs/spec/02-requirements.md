@@ -430,11 +430,22 @@ Status: see [README.md](README.md#status-values).
 | REQ-424 | The tab gives no choice of the profile, because the session sets it. | FR | draft | S-078 | The tab shows no list of profiles, and the profile comes from the session. |
 | REQ-425 | `memlens ui` gives its own styles. | FR | draft | S-080 | The console shows the styles of the CLI package. |
 | REQ-426 | The plugin renders the tab with the components of the harness UI. | FR | draft | S-080 | The tab shows the components of the harness, and no style of memlens. |
-| REQ-427 | The plugin supports DeepSeek Harness 0.2.1 and later. | C | draft | S-081 | The manifest gives the version 0.2.1, and the plugin loads in the installed host. |
+| REQ-427 | The plugin supports DeepSeek Harness 0.2.1 and later, and it counts a prerelease and an alpha version. | C | draft | S-081 | The plugin loads in `0.2.1-rc.5`. |
 | REQ-428 | The plugin uses the functions of the core library. | FR | draft | S-081 | The manifest names `@memlens/core`, and each source file imports that package. |
 | REQ-429 | The license of the project is MIT. | C | draft | S-081 | The file `LICENSE` holds MIT, and each manifest gives `MIT`. |
-| REQ-430 | The README of the plugin package has five languages. | FR | draft | S-081 | The package holds five README files, and the content agrees. |
+| REQ-430 | The README of the plugin package has eight languages: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. | FR | draft | S-081 | The package holds eight README files, and the content agrees. |
 | REQ-431 | The localization covers the product interface, the READMEs, and the installation and usage instructions. | FR | draft | S-081 | The interface, each README, and each guide have a Russian and a Chinese version. |
+| REQ-432 | The merge call sends the system prompt and the task text of [09-prompts.md](09-prompts.md). | FR | draft | S-082 | The call holds the two texts, without a change. |
+| REQ-433 | The merge input holds the two children only, and no frontier and no context. | FR | draft | S-082 | The request holds `<input>` with the two lines only. |
+| REQ-434 | A merge at level 1 adds the preview of the `longform` of each child, 1 KiB at most. | FR | draft | S-082 | Each child of a level 1 merge carries its preview. |
+| REQ-435 | A merge accepts an answer of 640 bytes at most with no retry. | FR | draft | S-082 | An answer of 600 bytes gives no retry, and 641 bytes gives a retry. |
+| REQ-436 | A retry asks for 0.75 times the target. | FR | draft | S-082 | The retry of a target of 512 bytes asks for 384 bytes. |
+| REQ-437 | A merge makes 3 attempts at most, and the answer is the shortest of them. | FR | draft | S-082 | Three bad answers give three calls and the shortest line. |
+| REQ-438 | A line above 640 bytes after the attempts cuts at a word boundary, and the node takes `truncated: true`. | FR | draft | S-082 | A line of 700 bytes gives 640 bytes at most and `truncated: true`. |
+| REQ-439 | The card call sends the task text of [09-prompts.md](09-prompts.md). | FR | draft | S-082 | The call holds the text with the notes and the scope. |
+| REQ-440 | The line of the card starts with `[<key>] `. | FR | draft | S-082 | Each card line starts with the key in brackets. |
+| REQ-441 | A subagent gets the prompt of [09-prompts.md](09-prompts.md). | FR | draft | S-082 | The child session holds the prompt text. |
+| REQ-442 | The field `bytes` of a node holds the byte count of its line. | FR | draft | S-082 | A line of 400 bytes gives `bytes: 400`. |
 
 ## Rules for new requirements
 

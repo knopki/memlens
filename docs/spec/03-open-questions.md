@@ -6,8 +6,6 @@ A blocking question stops the current portion of the specification until the cus
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------ |
 | [Q-014](#q-014) | Which surface does the session mode of the console use in the harness?                                                                  | The plugin contract depends on the slot.                                                                                                                                          | REQ-047                                  | customer | open   |
 | [Q-015](#q-015) | Which operations does the index port have?                                                                                              | Two backends must satisfy one interface.                                                                                                                                          | REQ-041                                  | customer | open   |
-| [Q-021](#q-021) | What is the retelling prompt of the tree, and of the card?                                                                              | The statements give the node geometry, the depth, and the size. The prompt stays open.                                                                                            | REQ-009, REQ-032, REQ-192                | customer | open   |
-| [Q-108](#q-108) | Which two languages join the three of the project? | The README of the plugin package takes five languages, and the project has three. | REQ-430 | customer | open |
 
 ## Details
 
@@ -17,13 +15,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-
-### Q-108
-
-The project keeps English, Russian, and Chinese. The plugin package takes five.
-
-- Option A: the three of the project, and Spanish and Portuguese join them.
-- Option B: the set of the DSH guide: English, Chinese, Spanish, Portuguese, and Hindi.
 
 ## Closed questions
 
@@ -130,6 +121,8 @@ The project keeps English, Russian, and Chinese. The plugin package takes five.
 | Q-005 | Which DSH version does the plugin support? | DeepSeek Harness 0.2.1 and later. See S-081. | 2026-11-05 |
 | Q-006 | Does the plugin use the library? | The plugin uses the functions of the core library. See S-081. | 2026-11-05 |
 | Q-007 | Which license does the project use? | MIT. See S-081. | 2026-11-05 |
-| Q-008 | Does the plugin package need a README in five languages? | The README of the plugin package takes five languages. See S-081 and Q-108. | 2026-11-05 |
+| Q-008 | Does the plugin package need a README in five languages? | The README of the plugin package takes the eight languages of the DSH set. See Q-108 and S-082. | 2026-11-05 |
 | Q-024 | Does the console live in the CLI package or in its own package, and which stack does it use? | The UI core is in the core library, and the CLI package hosts the full console. The plugin uses the components of the harness UI, and no package stands alone. See S-077, S-080, and S-081. | 2026-11-05 |
-| Q-026 | Which retry limit and which length ratio do the writer and the card build use? | The writer retries one time, and it keeps the answer only when the retelling is shorter than the source. The build retries one time, and a second bad answer takes the form parallel. See REQ-051, REQ-197, and REQ-250. | 2026-11-05 |
+| Q-026 | Which retry limit and which length ratio do the writer and the card build use? | A merge makes three attempts at most with a request of 0.75 times the target, and the answer is the shortest. See S-082 and REQ-436. | 2026-11-05 |
+| Q-021 | What is the retelling prompt of the tree, and of the card? | The merge takes the system prompt and the task text of S-082, and the card takes its task text. See 09-prompts.md. | 2026-11-05 |
+| Q-108 | Which two languages join the three of the project? | The eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. See S-082. | 2026-11-05 |

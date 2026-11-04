@@ -342,6 +342,11 @@ highest `due` first, and a node waits for its children. See [D-041](04-decisions
 The writer retries a line that is not shorter than its source, and it refuses a line that does not
 shrink. See [REQ-051](02-requirements.md).
 
+The four texts of the calls are in [09-prompts.md](09-prompts.md). A merge accepts a line up to 640
+bytes with no retry. A retry asks for 0.75 times the target, and a merge makes three attempts. The
+shortest line stays. A line above 640 bytes cuts at a word boundary, and the node takes
+`truncated: true`. See [REQ-432](02-requirements.md) to [REQ-438](02-requirements.md).
+
 ## Freeze and branch
 
 The slice stays the same for the whole session. A session is a branch of a profile, and the branch
