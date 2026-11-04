@@ -320,7 +320,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-314 | The filter `due` gives the records with a review date today or earlier. | FR | draft | S-070 | A record with a review date of yesterday is in the answer. A record of tomorrow is absent. |
 | REQ-315 | `limit` is 10 by default. | FR | draft | S-070 | A query with 20 matches gives 10 hits. |
 | REQ-316 | `limit` is 50 maximum for each scope. | FR | draft | S-070 | The value 100 gives 50 hits for one scope. |
-| REQ-317 | A hit gives the `addr`, the `scope`, the `pos`, the `id`, the `ts`, the `kind`, the `body`, the `longformBytes`, and the `review_at`. | FR | draft | S-070 | Each hit holds the nine fields. |
+| REQ-317 | A hit gives the `addr`, the `pos`, and the line of the record. | FR | draft | S-070 | A hit holds the three fields, and the line follows the form of `<here>`. |
 | REQ-318 | Each hit carries the `addr`, because a `pos` of another scope is ambiguous. | FR | draft | S-070 | Two scopes with one `pos` give two different `addr` values. |
 | REQ-319 | `memory_find` gives no record with the state `hidden`, `deleted`, or `proposed`. | FR | draft | S-070 | Three records, one in each state, are absent from each answer. |
 | REQ-320 | The `target` of `memory_open` is an `addr`, a `pos` of the active scope, or a range `a-b`. | FR | draft | S-070 | Each of the three forms opens a record or a range. |
@@ -451,7 +451,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-445 | The model of a session has a context of 65 536 tokens at least. | C | draft | S-083 | A model below the value gives an error at the start of the session. |
 | REQ-446 | The tab `Memory` mounts in the slot `conversation.session.header`. | FR | draft | S-085 | The session page shows the tab in that slot. |
 | REQ-447 | The kind of the tab is `memlens`. | FR | draft | S-085 | The registration of the tab names the kind `memlens`. |
-| REQ-448 | The index port gives each hit with the `pos` and the line of the record. | FR | draft | S-085 | The answer holds the `pos` and the line, and it holds no full record. |
+| REQ-448 | The index port gives each hit with the full set of its fields. | FR | draft | S-085 | The answer of the port holds each field of a hit, and the caller reads no record. |
 | REQ-449 | The index and the log share no transaction. | FR | draft | S-085 | A crash between the append and the index add leaves the index behind, and a rebuild covers it. |
 | REQ-450 | The tokenizer of the index follows the key `language`. | FR | draft | S-085 | A profile with `language` of `ru` gives the Russian tokenizer. |
 
