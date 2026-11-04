@@ -15,9 +15,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-021](#q-021) | What is the retelling prompt of the tree, and of the card?                                                                              | The statements give the node geometry, the depth, and the size. The prompt stays open.                                                                                            | REQ-009, REQ-032, REQ-192                | customer | open   |
 | [Q-024](#q-024) | Does the console live in the CLI package or in its own package, and which stack does it use?                                            | C-012 splits client and backend code, and the console is client code.                                                                                                             | REQ-046                                  | customer | open   |
 | [Q-026](#q-026) | Which retry limit and which length ratio do the writer and the card build use?                                                          | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051, REQ-197                         | customer | open   |
-| [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-097](#q-097) | Which field of the `memory_forget` answer holds a proposal? | The answer holds three counts, and a forget of an invisible scope gives a proposal. | REQ-339, REQ-349 | customer | open |
 
 ## Details
 
@@ -45,15 +43,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
-
-### Q-097
-
-The table of S-070 gives `proposed` for a `forget` in a scope outside `scopes`. The answer of
-`memory_forget` holds three counts, and none of them is a proposal. The agent cannot tell a new
-proposal from nothing.
-
-- Option A: the answer gives `hidden: 0`, and the proposal stays invisible to the agent.
-- Option B: the answer adds a `proposed` count, and the agent knows that a proposal exists.
 
 ## Closed questions
 
@@ -145,3 +134,5 @@ proposal from nothing.
 | Q-098 | Does `memory_note` take `idem`, or does the store set it? | The tool call makes `idem`. The agent gives no value. See S-071. | 2026-11-05 |
 | Q-099 | Is the default write scope the active scope or the `default` key of `[scope_default]`? | The active scope of the session. See S-071. | 2026-11-05 |
 | Q-100 | Does the filter of `memory_find` keep the name `due`? | The filter keeps `due`. It has no relation to the priority of the fold. See S-071. | 2026-11-05 |
+| Q-027 | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The write mechanism cuts the text mechanically at a word boundary and moves the rest into the `longform`. See S-072. | 2026-11-05 |
+| Q-097 | Which field of the `memory_forget` answer holds a proposal? | The answer gives `hidden: 0`. The proposal stays invisible to the agent. See S-072. | 2026-11-05 |

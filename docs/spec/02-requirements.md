@@ -372,6 +372,9 @@ Status: see [README.md](README.md#status-values).
 | REQ-366 | A write of the kind `fact` without `reviewIn` gives a review date of 180 days. | FR | draft | S-071 | The `review_at` is 180 days after the write. |
 | REQ-367 | A write of the kind `task` without `reviewIn` gives a review date of 7 days. | FR | draft | S-071 | The `review_at` is 7 days after the write. |
 | REQ-368 | The tool call sets the `idem` of a write. | FR | draft | S-071 | The event holds an `idem`, and the agent gives no value. |
+| REQ-369 | The write mechanism moves the text above 512 bytes into the `longform`. | FR | draft | S-072 | A body above the limit gives a `longform` with the rest of the text. |
+| REQ-370 | The move cuts the text at a word boundary. | FR | draft | S-072 | The body of the record ends on a whole word. |
+| REQ-371 | The answer of a `forget` to a record of a scope outside `scopes` gives `hidden: 0`. | FR | draft | S-072 | The record stays in the view, and the count `hidden` is 0. |
 
 ## Rules for new requirements
 

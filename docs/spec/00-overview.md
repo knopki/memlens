@@ -2,8 +2,8 @@
 
 ## Product
 
-memlens is the long-term memory of an agent. The product name is «Линза» (Lens). The name gives the
-idea: look through one layer into the depth.
+memlens is the long-term memory of an agent. The name joins memory and lens, and the lens gives the
+zoom into the tree.
 
 The memory holds profiles and scopes. It works in DeepSeek Harness and in a terminal.
 
