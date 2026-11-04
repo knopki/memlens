@@ -1,7 +1,7 @@
 # Glossary
 
 One term has one meaning in all documents and in all code. This file is also the terminology base
-for ASD-STE100 rule 1.8: a technical noun that is in this table is approved for the project.
+for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 
 | Term | Meaning | Source |
 |---|---|---|
@@ -17,8 +17,12 @@ for ASD-STE100 rule 1.8: a technical noun that is in this table is approved for 
 | library | The package with the main function. It has no terminal interface and no plugin interface. | REQ-001 |
 | frontend | The part that gives access to the library for a user or for a program. The project has a CLI frontend and a plugin frontend. | S-002 |
 | CLI | Command line interface. The user starts the function from a terminal. | S-002 |
-| DSH | DeepSeek Harness, the agent harness that starts the plugin. | S-002 |
-| plugin | The package that DSH loads. The plugin gives access to the library from DSH. | REQ-003 |
+| harness | DeepSeek Harness (DSH), the agent harness that loads the plugin. | S-002 |
+| plugin | The package that the harness loads. The plugin gives access to the library from the harness. | REQ-003 |
+| bundle | The installable set of plugin rows for the harness. This package has one row. | D-007 |
+| bundle patch | The file `cordis.patch.yml`. It adds the plugin row to the harness configuration. | D-007 |
+| row | One plugin entry in the harness configuration. A row has an identifier and a module name. | D-007 |
+| workspace | The pnpm unit that holds the packages of this repository. | D-005 |
 | localization | The translation of the product text for one language. The scope of the term is open. | Q-004 |
 | STE | ASD-STE100 Simplified Technical English, the writing standard of this project. | S-003 |
 | TBD | To be determined. The item has no value yet. The item is not a requirement. | — |

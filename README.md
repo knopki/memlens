@@ -2,7 +2,7 @@
 
 memlens is a headless library with a CLI frontend and a DSH plugin.
 
-**Status:** specification phase. There is no code.
+**Status:** specification phase. The scaffold builds and the tests pass. No part does work yet.
 
 ## Parts
 
@@ -11,6 +11,14 @@ memlens is a headless library with a CLI frontend and a DSH plugin.
 | Headless library | Does the work. Has no user interface. |
 | CLI frontend | Gives access from a terminal. |
 | DSH plugin | Gives access from DeepSeek Harness. |
+
+## Layout
+
+| Path | Package | Role |
+|---|---|---|
+| [packages/core](packages/core) | `@memlens/core` | The headless library. |
+| [packages/cli](packages/cli) | `@memlens/cli` | The CLI frontend. Binary `memlens`. |
+| [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | The DSH plugin. Identifier `dsh-memlens`. |
 
 ## Documents
 
@@ -22,6 +30,17 @@ memlens is a headless library with a CLI frontend and a DSH plugin.
 | [docs/statements.md](docs/statements.md) | Customer statements, word for word. |
 | [AGENTS.md](AGENTS.md) | Work rules for agents. |
 
+## Commands
+
+| Command | Action |
+|---|---|
+| `pnpm install` | Install the workspace. |
+| `pnpm run build` | Build the three packages. |
+| `pnpm run typecheck` | Check the types. |
+| `pnpm run test` | Run the tests. |
+| `pnpm run plugin:check` | Check the plugin manifest. |
+| `pnpm run lint:docs` | Check the documents against the STE limits. |
+
 ## Languages
 
 | Item | Language |
@@ -31,6 +50,6 @@ memlens is a headless library with a CLI frontend and a DSH plugin.
 | README | English, Russian ([README.ru.md](README.ru.md)), Chinese ([README.zh.md](README.zh.md)) |
 | Product localization | Russian and Chinese. |
 
-## Current limit
+## Next step
 
-The stack is not selected. See [Q-001](docs/spec/03-open-questions.md#q-001).
+The product function is open. See [Q-002](docs/spec/03-open-questions.md#q-002).

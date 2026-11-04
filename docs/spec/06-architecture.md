@@ -1,19 +1,50 @@
 # Architecture
 
-Status: draft. There is no code. The stack is not selected. See [Q-001](03-open-questions.md#q-001).
+Status: draft. The scaffold builds and the tests pass. No part does work yet.
 
-## Parts
+## Stack
 
-| Part | Interface | Function |
+TypeScript on Node.js. pnpm workspaces. `tsc` builds the library and the CLI. `tsdown` builds the
+plugin. See [D-005](04-decisions.md).
+
+## Layout
+
+| Path | Package | Role |
 |---|---|---|
-| Headless library | Public function interface, TBD | TBD. See [Q-002](03-open-questions.md#q-002). |
-| CLI frontend | Terminal command, TBD | Gives the library functions to a user in a terminal. |
-| DSH plugin | DSH tool and command surface, TBD | Gives the library functions to DSH. |
+| `packages/core` | `@memlens/core` | The headless library. |
+| `packages/cli` | `@memlens/cli` | The CLI frontend. Binary `memlens`. |
+| `packages/dsh-plugin` | `@memlens/dsh-plugin` | The DSH plugin. Identifier `dsh-memlens`. |
 
-## Access direction
+## Dependency direction
 
-Assumption: the CLI frontend and the DSH plugin use the headless library. The library does not use
-the frontend. See [Q-006](03-open-questions.md#q-006).
+The CLI depends on the library. The plugin depends on no package yet. The library depends on nothing.
+
+Assumption: the plugin will use the library functions. See [Q-006](03-open-questions.md#q-006).
+
+## Interfaces
+
+| Part | Interface | State |
+|---|---|---|
+| Library | `NAME` | A constant only. No function yet. |
+| CLI | `main(argv)` | Gives the usage text and the exit codes. |
+| Plugin | `name`, `apply(ctx)` | Registers no contribution. |
+
+## Build
+
+`pnpm build` runs `tsc` in the library and the CLI, and `tsdown` in the plugin. The command `pnpm -r`
+follows the dependency order of the workspace.
+
+The plugin writes `lib/index.js` and `lib/index.d.ts`. The other packages write `dist/`.
+
+## Checks
+
+| Check | Command |
+|---|---|
+| Build | `pnpm run build` |
+| Type check | `pnpm run typecheck` |
+| Tests | `pnpm run test` |
+| Plugin manifest | `pnpm run plugin:check` |
+| Document language | `pnpm run lint:docs` |
 
 ## Data
 

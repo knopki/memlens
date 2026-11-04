@@ -1,7 +1,7 @@
 # Work rules for agents
 
-This repository is in the specification phase. There is no code. The specification in
-`docs/spec/` is the only authority for requirements.
+This repository is in the specification phase. A scaffold of the three packages exists. No part does
+work yet. The specification in `docs/spec/` is the only authority for requirements.
 
 ## Order of work
 
@@ -19,6 +19,20 @@ This repository is in the specification phase. There is no code. The specificati
    requirement to `disputed` and add an open question with two options. Do not overwrite the
    requirement silently.
 4. Make a commit with the message `spec: <change>`.
+
+## Checks
+
+Run these commands before you commit:
+
+| Command | Action |
+|---|---|
+| `pnpm run typecheck` | Check the types of the three packages. |
+| `pnpm run test` | Run the tests. |
+| `pnpm run lint:docs` | Check the English documents against the STE limits. |
+| `pnpm run plugin:check` | Check the plugin manifest against the DSH rules. |
+
+`plugin:check` and `lint:docs` use tools from the installed skills. Set `DSH_PLUGIN_DEV` and
+`STE_LINT` to use other copies. The scripts are in `scripts/`.
 
 ## Prohibitions
 
