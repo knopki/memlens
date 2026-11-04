@@ -9,7 +9,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-006](#q-006) | Does the plugin use the library?                                                                                                        | If yes, the library has one public interface for two frontends. If no, the plugin repeats the work.                                                                               | [06-architecture.md](06-architecture.md) | customer | open   |
 | [Q-007](#q-007) | Which license does the project use?                                                                                                     | npm publication and the plugin manifest need a license value.                                                                                                                     | Publishing                               | customer | open   |
 | [Q-008](#q-008) | Does the plugin package need a README in five languages?                                                                                | The DSH guide recommends five for a published plugin. The project uses three.                                                                                                     | Publishing                               | customer | open   |
-| [Q-009](#q-009) | Where do the writable scopes of a profile come from?                                                                                    | S-036 gives one list of scopes, and a write outside the set gives a proposed note.                                                                                                | REQ-026                                  | customer | open   |
 | [Q-010](#q-010) | What is the form of the map of directions, and what is its size limit?                                                                  | The slice goes into the system prompt, so its size is a cost.                                                                                                                     | REQ-017, REQ-020                         | customer | open   |
 | [Q-011](#q-011) | Which fields does a snapshot hold? The statement gives `id` and `scopes`.                                                               | Storage and the merge need the full record.                                                                                                                                       | REQ-018                                  | customer | open   |
 | [Q-012](#q-012) | Which keys and which default does the nudge have?                                                                                       | The agent behavior depends on the default.                                                                                                                                        | REQ-031                                  | customer | open   |
@@ -27,6 +26,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-049](#q-049) | What does a write do in a scope outside the profile?                                                                                    | S-038 removes the read-only set, and S-013 gave `proposed` for a scope without a write right.                                                                                     | REQ-026                                  | customer | open   |
 
 ## Details
 
@@ -55,6 +55,14 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
 
+### Q-049
+
+S-013 gives `proposed` for a note outside a write scope. S-038 gives every scope of the profile a
+write right, so the rule needs one home.
+
+- Option A: the store refuses the write with an error, and the profile list is the whole access.
+- Option B: the note becomes `proposed`, and a human decides about it in the console.
+
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -81,6 +89,7 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 | Q-044 | Where does the description of a scope live?                             | Nowhere. The model holds no description field, and the first note gives the text. See S-033.                                             | 2026-11-04 |
 | Q-045 | Does an alias join the records of the old key to the new key?           | No alias. A wrong key changes by an amend of the record. See S-033.                                                                      | 2026-11-04 |
 | Q-046 | Does `amend` change the scope of a note, or does a new op do it?        | The optional `scope` field of `amend`. A record with `content_cleared` moves too. See S-034.                                             | 2026-11-04 |
+| Q-009 | Where do the writable scopes of a profile come from?                    | Each scope of the profile is writable. No read-only set. See S-038.                                                                      | 2026-11-04 |
 | Q-047 | What does the `here` budget cover, and is `slice` the sum?              | The `slice` budget leaves. `here` limits the tree of the current project and `directions` the catalog tree. See S-037.                   | 2026-11-04 |
 | Q-048 | What does each subagent mode allow?                                     | `propose` writes and reports, `read` reads only, `off` gives no tool and no slice. See S-037.                                            | 2026-11-04 |
 | Q-041 | What makes a pair of nodes overdue?                                     | No measure. A node is dirty when a source changes, and the writer works on dirty nodes. See S-030.                                       | 2026-11-04 |

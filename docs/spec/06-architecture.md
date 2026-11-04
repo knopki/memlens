@@ -233,12 +233,16 @@ a cache over the log: the store rebuilds it from the log after a loss. See
 
 | Tool          | Who        | Effect                                                         |
 | ------------- | ---------- | -------------------------------------------------------------- |
-| write         | main agent | A new note. Outside a write scope the note becomes `proposed`. |
+| write         | main agent | A new note in a scope of the profile.                          |
 | hide          | main agent | The note leaves the view.                                      |
 | memory_review | main agent | One short review answer.                                       |
 
-A subagent has no separate tool. It writes only new notes as `proposed`, and a line about the write
-goes to the report of the parent. A subagent cannot hide a note and cannot review a note.
+Each scope of a profile accepts a write, and the profile list is the whole access. See
+[REQ-160](02-requirements.md) and [Q-049](03-open-questions.md#q-049).
+
+A subagent has no separate tool. In the mode `propose` it writes only new notes as `proposed`, and a
+line about the write goes to the report of the parent. A subagent cannot hide a note and cannot review
+a note.
 
 ## Human surface
 

@@ -48,7 +48,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | hide             | The op that removes a note from the view. The agent can hide a note.                                                          | S-013, S-016                                 |
 | redact           | The op that removes the content of a note for good. Only the CLI or the GUI can redact.                                       | S-013, S-016                                 |
 | amend            | The op that changes the content or the scope of a note. Only the CLI or the GUI can amend.                                    | S-013, S-034                                 |
-| proposed         | The state of a note that an agent wrote into a scope without write permission, or wrote as a subagent.                        | S-013                                        |
+| proposed         | The state of a note that waits for a human decision. A subagent write gives this state.                                       | S-013, S-038                                 |
 | nudge            | The reminder that the harness gives the agent to write a note. The settings are open.                                         | S-013                                        |
 | writer           | The background task that makes the retellings in batches.                                                                     | S-013                                        |
 | review           | The check of a note by a human. The `review` event records it, and `review_at` gives the date of the next check.              | S-013, S-016                                 |
