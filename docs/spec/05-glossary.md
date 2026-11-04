@@ -43,7 +43,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | profile          | The unit that ties a set of scopes to one configuration section and one preset.                                               | S-013, S-036                                 |
 | preset           | The second entry point of the plugin. It gives the configuration for an agent preset.                                         | S-013                                        |
 | slice            | The text that the agent gets: one map of directions.                                                                          | S-013                                        |
-| snapshot         | One materialized slice in the store of memlens. The store keeps one for each session.                                         | S-013, S-044                                 |
+| snapshot         | One render of the slice from the store. The session history of the harness keeps its text.                                    | S-013, S-046                                 |
 | store            | The memory storage. It has a version, one of two backends, and one index port.                                                | S-013                                        |
 | hide             | The op that removes a note from the view. The agent can hide a note.                                                          | S-013, S-016                                 |
 | redact           | The op that removes the content of a note for good. Only the CLI or the GUI can redact.                                       | S-013, S-016                                 |

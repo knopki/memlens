@@ -25,6 +25,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
 | [Q-055](#q-055) | Which fields does the store keep for a snapshot?                                                                                        | The frozen text needs `session`, `at`, `text`, and `scopes`. The other five fields of S-042 serve diagnostics.                                                                    | REQ-018, REQ-182                         | customer | open   |
+| [Q-056](#q-056) | What gives one text at each assembly between the triggers?                                                                              | DSH calls the provider at each assembly, and it writes the snapshot into the history only at a change.                                                                            | REQ-019                                  | customer | open   |
 
 ## Details
 
@@ -63,6 +64,15 @@ The plugin freezes the text and reads it again after a restart. A `redact` finds
 - Option B: the nine fields of S-042. The `id`, the `profile`, the `parts`, the `bytes`, and the reason
   serve the console and the diagnosis.
 
+### Q-056
+
+The DSH documentation says that the agent-loop writes the context snapshot into the session history
+only when the text changes or a compaction removed it. The provider still runs at each assembly.
+
+- Option A: the plugin reads its last snapshot from the session history and gives that text again.
+- Option B: the plugin holds the text in memory for the session and renders again at a trigger. A
+  restart then gives a new text, and the harness writes a second snapshot.
+
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -94,8 +104,8 @@ The plugin freezes the text and reads it again after a restart. A `redact` finds
 | Q-050 | Which order does the fold take: `built_at` or `due`?                    | `due` only. The fold and the rebuild use one order. See S-041.                                                                           | 2026-11-04 |
 | Q-051 | Where do `high` and `low` come from?                                    | `high` is the budget of the part, and `low` is its half. See S-041.                                                                      | 2026-11-04 |
 | Q-052 | Does the fold build the parent, or does it wait for a built parent?     | The fold builds nothing. The writer builds each node. See S-041.                                                                         | 2026-11-04 |
-| Q-053 | Does the store keep the text of a snapshot on disk?                     | Yes. A restart returns the same text, and the store holds it. See S-043.                                                                 | 2026-11-04 |
-| Q-054 | Does the store keep the history of snapshots or the current one only?   | The current one only. A snapshot is a cache in the store of the plugin. See S-044.                                                       | 2026-11-04 |
+| Q-053 | Does the store of memlens keep the text of a snapshot?                  | No. The plugin renders the text and the harness keeps the copy. See S-046.                                                               | 2026-11-04 |
+| Q-054 | Does the store keep the history of snapshots?                           | No record at all. The store of memlens holds no snapshot. See S-046.                                                                     | 2026-11-04 |
 | Q-011 | Which fields does a snapshot hold?                                      | `id`, `session`, `profile`, `reason`, `at`, `text`, `bytes`, `parts`, and `scopes`. See S-042.                                           | 2026-11-04 |
 | Q-018 | Where does the model cache TTL come from?                               | `cacheTtl`: 2 hours for `deepseek/*`, 5 minutes for `anthropic/*`, 1 hour for another model. See S-042.                                  | 2026-11-04 |
 | Q-047 | What does the `here` budget cover, and is `slice` the sum?              | The `slice` budget leaves. `here` limits the tree of the current project and `directions` the catalog tree. See S-037.                   | 2026-11-04 |

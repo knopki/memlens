@@ -186,10 +186,9 @@ The plugin gives the text to the harness as `systemPrompt.context`, and the text
 the next snapshot. A new snapshot follows a new session, a compaction, an idle time longer than the
 cache TTL, and a redact. See [REQ-021](02-requirements.md).
 
-The store keeps the text of the current snapshot of each session, so a restart of the process returns
-the same text. A new snapshot replaces the old one, and a `redact` drops the snapshot of each session
-that holds the scope. The snapshot is a cache of the plugin: the harness receives the text through
-`systemPrompt.context` only. See [D-050](04-decisions.md) and [D-051](04-decisions.md).
+The store of memlens holds no snapshot. The plugin renders the text from the store at a trigger, and
+the session history of the harness keeps the copy. A `redact` cleans the store, and the next trigger
+renders the text again. See [D-050](04-decisions.md) and [D-051](04-decisions.md).
 
 ## Merge
 
