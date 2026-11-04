@@ -1,7 +1,7 @@
 # memlens
 
 memlens is the long-term memory of an agent: a log of curated notes with a tree of retellings
-above them. The product name is «Линза» (Lens).
+above them.
 
 **Status:** specification phase. The scaffold builds and the tests pass. No part does work yet.
 
