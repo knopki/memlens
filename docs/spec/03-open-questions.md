@@ -24,7 +24,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store keeps no copy, so the fields serve the console and the wake view.                                                                                                       | REQ-182                                  | customer | open   |
+| [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
 
 ## Details
 
@@ -55,12 +55,12 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 ### Q-055
 
-The plugin freezes the text and reads it again after a restart. A `redact` finds the sessions by the
-`scopes` of their text.
+The store of memlens holds no snapshot (D-050). The session history of the harness holds the text
+(D-052). The text travels alone, or the store keeps the fields in a record without the text.
 
-- Option A: `text` only. The session history holds it, and nothing else travels.
-- Option B: the nine fields of S-042. The `id`, the `profile`, the `parts`, the `bytes`, and the reason
-  serve the console and the diagnosis.
+- Option A: the text only. The session history holds it, and nothing else travels.
+- Option B: the nine fields of S-042. The `id`, the `profile`, `parts`, `bytes`, and `reason` serve
+  the console and the diagnosis.
 
 ## Closed questions
 

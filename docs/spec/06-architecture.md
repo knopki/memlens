@@ -178,9 +178,9 @@ The slice is one `<memory>` block with three parts:
 </memory>
 ```
 
-A snapshot holds `id`, `session`, `profile`, `reason`, `at`, `text`, `bytes`, `parts`, and `scopes`.
-The reason is `session-start`, `ttl`, `compaction`, or `redact`. Review data does not enter the slice.
-See [REQ-178](02-requirements.md) to [REQ-185](02-requirements.md).
+Only the text travels. The nine fields of S-042 have no record. [Q-055](03-open-questions.md) gives
+the choice. The reason of a trigger is `session-start`, `ttl`, `compaction`, or `redact`. Review data
+does not enter the slice. See [REQ-178](02-requirements.md) to [REQ-181](02-requirements.md).
 
 The plugin gives the text to the harness as `systemPrompt.context`, and the text stays the same until
 the next snapshot. A new snapshot follows a new session, a compaction, an idle time longer than the
@@ -320,5 +320,6 @@ test. See [D-010](04-decisions.md).
 
 ## Open points
 
-The shape of a scope, the form of the map, the snapshot fields, and the tree rules are open. See
-[03-open-questions.md](03-open-questions.md), from Q-009 to Q-033.
+The form of the direction map, the index port, and the merge of the configuration are open. The
+retelling prompt, the snapshot fields, and the tool surfaces are open. See
+[03-open-questions.md](03-open-questions.md).
