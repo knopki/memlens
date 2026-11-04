@@ -27,7 +27,6 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-043](#q-043) | In which order does the writer take the dirty nodes?                                                                                    | The dirty rule gives the work and no order, and a parent needs its children.                                                                                                      | REQ-050, REQ-137                         | customer | open   |
 
 ## Details
 
@@ -56,14 +55,6 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
 
-### Q-043
-
-The tree is a cache, so the order of the work changes the freshness and not the result. A parent needs
-its children.
-
-- Option A: from the leaves up, so a node waits for its children.
-- Option B: the node with the oldest `built_at` first.
-
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |
@@ -86,4 +77,5 @@ its children.
 | Q-039 | Do `ts_from`/`ts_to` hold the `ts` values, or the `at` values?          | The `ts` values, the time of the write. See S-026.                                                                                       | 2026-11-04 |
 | Q-040 | Is a level 0 node a separate summary, or the record itself?             | The record itself. The tree holds no node of level 0. See S-028.                                                                         | 2026-11-04 |
 | Q-042 | In which order does the frontier render the levels?                     | From the oldest to the newest: the coarse lines first. See S-029.                                                                        | 2026-11-04 |
+| Q-043 | In which order does the writer take the dirty nodes?                    | The node with the oldest `built_at` first, and a node waits for its children. See S-031.                                                 | 2026-11-04 |
 | Q-041 | What makes a pair of nodes overdue?                                     | No measure. A node is dirty when a source changes, and the writer works on dirty nodes. See S-030.                                       | 2026-11-04 |

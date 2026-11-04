@@ -192,8 +192,8 @@ defaults come from the measurements: effort off, 6 nodes in a batch, and up to 8
 [D-019](04-decisions.md).
 
 The writer builds each dirty node. A node is dirty when a source changes or becomes dirty, and an
-import that puts the records in another order makes the tree dirty. The order of the work stays open.
-See [D-041](04-decisions.md) and [Q-043](03-open-questions.md#q-043).
+import that puts the records in another order makes the tree dirty. The writer takes the node with the
+oldest `built_at` first, and a node waits for its children. See [D-041](04-decisions.md).
 
 The writer retries a line that is not shorter than its source, and it refuses a line that does not
 shrink. See [REQ-051](02-requirements.md).
