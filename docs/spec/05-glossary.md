@@ -51,7 +51,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | proposed         | The state of a note that an agent wrote into a scope without write permission, or wrote as a subagent.                        | S-013                                        |
 | nudge            | The reminder that the harness gives the agent to write a note. The settings are open.                                         | S-013                                        |
 | writer           | The background task that makes the retellings in batches.                                                                     | S-013                                        |
-| review           | The check of a note by a human. The `review` event records it. Review data stays out of the slice. See Q-028.                 | S-013, S-016                                 |
+| review           | The check of a note by a human. The `review` event records it, and `review_at` gives the date of the next check.              | S-013, S-016                                 |
 | index port       | The interface for the search. The implementation uses FTS5.                                                                   | S-013                                        |
 | «Линза»          | The human name of the product. The idea of the name is the zoom: look through one layer into the depth.                       | S-013                                        |
 | frontier         | The newest level of the tree. It holds the detail, and the older levels hold the short form.                                  | S-014                                        |
@@ -75,3 +75,5 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `live`           | The state of a note after an `accept` event.                                                                                  | S-016                                        |
 | `deleted`        | The state of a note after a `dismiss` event.                                                                                  | S-016                                        |
 | sanitized form   | The form of a redacted event. It keeps the `id` and has `redacted: true`, an empty `body`, and a null `longform`.             | S-016                                        |
+| at               | The time of an event in the log.                                                                                              | S-017                                        |
+| ts               | The time of the write of a note.                                                                                              | S-017                                        |

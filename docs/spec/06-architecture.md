@@ -49,7 +49,7 @@ to the op.
 
 | Op        | Payload                                                                                                                     | Effect                                                     |
 | --------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `note`    | `body`, `kind`, `ts`, `proposed`, and the optional `longform`, `review_at`, `refs`, `supersedes`, `for_scope`, `for_sources` | It writes a note.                                          |
+| `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes`, `for_scope`, `for_sources` | It writes a note.                                          |
 | `amend`   | `target`, and `body` or `longform`                                                                                          | It changes the content. Only the CLI or the GUI.           |
 | `hide`    | `target`, `reason`                                                                                                          | The note leaves the view. The content stays.               |
 | `redact`  | `target`, `reason`                                                                                                          | The content of the note becomes empty. Only the CLI or the GUI. |
@@ -59,15 +59,18 @@ to the op.
 
 A card is a `note` event with `kind: "card"`, `for_scope`, and `for_sources`. The log has no card op.
 
+An event has two times. `at` is the time of the log, and `ts` is the time of the write of a note. See
+[D-024](04-decisions.md).
+
 `pos` is not a field of an event. It is the ordinal of the creating event in the log of one store. The
 first `note` has `pos` 0. A `pos` is local to one store, and an export holds no `pos`.
 
 A `supersedes` stays inside one scope. The store refuses a cross-scope `supersedes` with the error
 `CrossScopeSupersede`.
 
-A redacted event keeps its `id` and gets `redacted: true`, an empty `body`, and a null `longform`. The
-statement names `scrub` as the producer of this form and stops before the merge rules. See
-[Q-030](03-open-questions.md#q-030).
+A redacted event keeps its `id` and gets `redacted: true`, an empty `body`, and a null `longform`. A
+`redact` event gives this form, and so does an import of a redacted record. The model has no `scrub`.
+See [Q-030](03-open-questions.md#q-030) for the merge rule.
 
 ## Store
 
@@ -139,8 +142,8 @@ goes to the report of the parent. A subagent cannot hide a note and cannot revie
 ## Human surface
 
 Only the CLI or the GUI can redact and amend. A redacted note stays redacted, and an import does not
-give the content back. Review uses the `review` event and stays out of the slice. See
-[Q-028](03-open-questions.md#q-028) for `reviewed_at`.
+give the content back. Review uses the `review` event and stays out of the slice. The record keeps
+`review_at` only, the date of the next review. See [D-025](04-decisions.md).
 
 The console `memlens ui` works alone. In the harness the console runs in a session mode on the same
 view models.
@@ -175,4 +178,4 @@ test. See [D-010](04-decisions.md).
 ## Open points
 
 The shape of a scope, the form of the map, the snapshot fields, and the tree rules are open. See
-[03-open-questions.md](03-open-questions.md), from Q-009 to Q-032.
+[03-open-questions.md](03-open-questions.md), from Q-009 to Q-033.

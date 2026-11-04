@@ -16,7 +16,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-013](#q-013) | What input and what output does `memory_review` have?                                                                                   | The tool is short on purpose, so its shape matters.                                                                                                                               | REQ-039                                  | customer | open   |
 | [Q-014](#q-014) | Which surface does the session mode of the console use in the harness?                                                                  | The plugin contract depends on the slot.                                                                                                                                          | REQ-047                                  | customer | open   |
 | [Q-015](#q-015) | Which operations does the index port have?                                                                                              | Two backends must satisfy one interface.                                                                                                                                          | REQ-041                                  | customer | open   |
-| [Q-017](#q-017) | Who sets `review_at` and `reviewed_at`, and what is the review queue?                                                                   | The human workflow depends on it.                                                                                                                                                 | REQ-037                                  | customer | open   |
+| [Q-017](#q-017) | Who sets `review_at`, and what is the review queue?                                                                                     | The human workflow depends on it.                                                                                                                                                 | REQ-037                                  | customer | open   |
 | [Q-018](#q-018) | Where does the model cache TTL come from?                                                                                               | The update rule uses the value.                                                                                                                                                   | REQ-021                                  | customer | open   |
 | [Q-019](#q-019) | What is the export and import format, and how does `redact` block a restore?                                                            | The transfer between machines uses it.                                                                                                                                            | REQ-025                                  | customer | open   |
 | [Q-020](#q-020) | Which keys does the preset configuration give, and which one wins in a merge?                                                           | Two entry points share one configuration.                                                                                                                                         | REQ-028, REQ-029                         | customer | open   |
@@ -26,11 +26,10 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-024](#q-024) | Does the console live in the CLI package or in its own package, and which stack does it use?                                            | C-012 splits client and backend code, and the console is client code.                                                                                                             | REQ-046                                  | customer | open   |
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
-| Q-028           | Does the record of a note keep `reviewed_at`?                                                                                           | S-013 gives the two fields `review_at` and `reviewed_at`. S-016 gives `review_at` only.                                                                                           | REQ-037                                  | customer | open   |
-| Q-029           | Does `target` name the `note` event, or the newest event of the note?                                                                   | Each op with a target must find the note after an amend.                                                                                                                          | REQ-066 to REQ-071                       | customer | open   |
-| Q-030           | Which op makes the sanitized form, and how does a merge join it to a full event?                                                        | S-016 names `scrub`, and the op table does not list it. The last sentence of the statement is incomplete.                                                                         | REQ-078                                  | customer | open   |
-| Q-031           | Which events carry `session`, `turn`, `preset`, and `idem`?                                                                             | The example event gives these fields, and the payload table gives none. REQ-057 uses `sourceId`.                                                                                  | REQ-057, REQ-065                         | customer | open   |
-| Q-032           | What does `ts` hold, and how does it differ from `at`?                                                                                  | The example gives two different values. The tree and the review need one time for each note.                                                                                      | REQ-064                                  | customer | open   |
+| [Q-029](#q-029) | Does `target` name the `note` event, or the newest event of the note?                                                                   | Each op with a target must find the note after an amend.                                                                                                                          | REQ-066 to REQ-071                       | customer | open   |
+| [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-031](#q-031) | Do all events carry `session`, `turn`, and `preset`, or only the `note` event?                                                          | The S-016 example gives the three fields on a `note` event only.                                                                                                                  | REQ-079                                  | customer | open   |
+| [Q-033](#q-033) | Does the model keep `sourceId` as the key of an import, or does `idem` replace it?                                                      | S-014 takes `sourceId` from the prior art, and the S-016 example gives `idem`.                                                                                                    | REQ-057                                  | customer | open   |
 
 ## Details
 
@@ -53,13 +52,6 @@ No license value in the manifests. The file set has no `LICENSE`.
 The project rule is three languages. See [D-006](04-decisions.md). The DSH guide recommends five for
 a published plugin.
 
-### Q-028
-
-S-013 gives two fields. S-016 gives one field and a `review` event.
-
-- Option A: the note keeps `review_at` only, and the time of the `review` event gives the date.
-- Option B: the note keeps `reviewed_at` too, and the `review` payload gets both dates.
-
 ### Q-029
 
 Each op with a `target` must find the note after an `amend` event.
@@ -69,24 +61,24 @@ Each op with a `target` must find the note after an `amend` event.
 
 ### Q-030
 
-The statement names `scrub` and gives no op for it. The last sentence stops after "the merge rules".
+The statement stops after the words "the merge rules", and S-017 removes `scrub`.
 
-- Option A: `scrub` is a separate op, and a sanitized event wins over a full event with one `id`.
-- Option B: `redact` makes the form, and the merge keeps the sanitized form in each order.
+- Option A: a sanitized event wins over a full event with one `id`, in each order.
+- Option B: the event with the later `at` wins, and the store keeps that content.
 
 ### Q-031
 
-The example event gives `session`, `turn`, `preset`, and `idem`. The payload table gives none of them.
+S-017 gives the three fields as payload. The example gives them on a `note` event.
 
-- Option A: `idem` is the key of one write call, and `sourceId` stays the key of an import.
-- Option B: `idem` replaces `sourceId`, and an import uses the event `id` only.
+- Option A: each event carries `session`, `turn`, and `preset`.
+- Option B: only the `note` event carries them.
 
-### Q-032
+### Q-033
 
-The example gives `at` with the offset `Z` and `ts` with the offset `+03:00`.
+S-014 takes the idempotency by `sourceId` from the prior art. The S-016 example gives `idem`.
 
-- Option A: `at` is the time of the event, and `ts` is the time of the source fact.
-- Option B: `ts` is the time of the event in the local time zone, and the store derives it.
+- Option A: `idem` is the key of a write and of an import, and the model holds no `sourceId`.
+- Option B: `sourceId` stays the key of an import, and the model does not hold `idem`.
 
 ## Closed questions
 
@@ -97,3 +89,5 @@ The example gives `at` with the offset `Z` and `ts` with the offset `+03:00`.
 | Q-025 | Does the 512-byte cap hold, or does the system accept a tolerance?      | The declared size is 384 bytes and the real maximum is 512 bytes. Text above the limit moves into `longform`. See S-015.                 | 2026-11-04 |
 | Q-003 | What are the package names, the binary name, and the plugin identifier? | `@memlens/core`, `@memlens/cli`, `@memlens/dsh-plugin`, binary `memlens`, plugin identifier `dsh-memlens`. See [D-005](04-decisions.md). | 2026-11-04 |
 | Q-016 | Which event types does the log have, and which ids identify them?       | Seven ops. The `id` of an event is a ULID, and it is the identity. See S-016.                                                            | 2026-11-04 |
+| Q-028 | Does the record of a note keep `reviewed_at`?                           | No. The record keeps `review_at` only, and the `review` event gives the date of the check. See S-017.                                    | 2026-11-04 |
+| Q-032 | What does `ts` hold, and how does it differ from `at`?                  | `at` gives the time of the log, and `ts` gives the time of the write. See S-017.                                                         | 2026-11-04 |
