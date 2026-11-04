@@ -24,7 +24,7 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
-| [Q-053](#q-053) | Does the store keep the text of a snapshot on disk?                                                                                     | The text must stay the same until the next snapshot, and S-042 asks whether a file gives that.                                                                                    | REQ-018, REQ-019, REQ-186                | customer | open   |
+| [Q-054](#q-054) | Does the store keep the history of snapshots or the current one only?                                                                   | Only the current one needs the restart. A history costs storage and a wider redact surface.                                                                                       | REQ-019, REQ-186                         | customer | open   |
 
 ## Details
 
@@ -53,15 +53,15 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
 
-### Q-053
+### Q-054
 
-S-042 gives a file for each snapshot and a pointer log. The customer asks whether the file is necessary
-for a stable text before the next compaction.
+A snapshot carries its `session`, so one current snapshot for each session replaces the pointer log of
+S-042. A history would serve an audit of the past slices.
 
-- Option A: no file. The plugin keeps the text in memory for the session, and a restart gives a fresh
-  slice. The CLI loses `wake`, and `slice` renders from the store.
-- Option B: the file and the pointer log of S-042. A restart returns the same text, and `wake` shows a
-  saved snapshot.
+- Option A: the current snapshot only. A new snapshot replaces the old one, and a `redact` drops one
+  object for each session that holds the scope.
+- Option B: each snapshot stays. `wake` can show an old slice, and a `redact` must reach each stored
+  copy of the scope.
 
 ## Closed questions
 
@@ -94,6 +94,7 @@ for a stable text before the next compaction.
 | Q-050 | Which order does the fold take: `built_at` or `due`?                    | `due` only. The fold and the rebuild use one order. See S-041.                                                                           | 2026-11-04 |
 | Q-051 | Where do `high` and `low` come from?                                    | `high` is the budget of the part, and `low` is its half. See S-041.                                                                      | 2026-11-04 |
 | Q-052 | Does the fold build the parent, or does it wait for a built parent?     | The fold builds nothing. The writer builds each node. See S-041.                                                                         | 2026-11-04 |
+| Q-053 | Does the store keep the text of a snapshot on disk?                     | Yes. A restart returns the same text, and the store holds it. See S-043.                                                                 | 2026-11-04 |
 | Q-011 | Which fields does a snapshot hold?                                      | `id`, `session`, `profile`, `reason`, `at`, `text`, `bytes`, `parts`, and `scopes`. See S-042.                                           | 2026-11-04 |
 | Q-018 | Where does the model cache TTL come from?                               | `cacheTtl`: 2 hours for `deepseek/*`, 5 minutes for `anthropic/*`, 1 hour for another model. See S-042.                                  | 2026-11-04 |
 | Q-047 | What does the `here` budget cover, and is `slice` the sum?              | The `slice` budget leaves. `here` limits the tree of the current project and `directions` the catalog tree. See S-037.                   | 2026-11-04 |

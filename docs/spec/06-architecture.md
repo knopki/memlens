@@ -184,7 +184,11 @@ See [REQ-178](02-requirements.md) to [REQ-185](02-requirements.md).
 
 The plugin gives the text to the harness as `systemPrompt.context`, and the text stays the same until
 the next snapshot. A new snapshot follows a new session, a compaction, an idle time longer than the
-cache TTL, and a redact. See [REQ-021](02-requirements.md) and [Q-053](03-open-questions.md#q-053).
+cache TTL, and a redact. See [REQ-021](02-requirements.md).
+
+The store keeps the text of the current snapshot of each session, so a restart of the process returns
+the same text. A new snapshot replaces the old one, and a `redact` drops the snapshot of each session
+that holds the scope. See [D-050](04-decisions.md) and [Q-054](03-open-questions.md#q-054).
 
 ## Merge
 
