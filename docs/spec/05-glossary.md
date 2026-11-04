@@ -22,7 +22,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | bundle           | The installable set of plugin rows for the harness. This package has one row.                                                 | D-007                                        |
 | bundle patch     | The file `cordis.patch.yml`. It adds the plugin row to the harness configuration.                                             | D-007                                        |
 | row              | One plugin entry in the harness configuration. A row has an identifier and a module name.                                     | D-007                                        |
-| workspace        | The pnpm unit that holds the packages of this repository.                                                                     | D-005                                        |
+| workspace        | The unit of the harness that holds one directory. Its id has the form `ws_01H…`, and the rules of `[scope_default]` match it. | S-063, S-065 |
 | localization     | The translation of the product text for one language. The scope of the term is open.                                          | Q-004                                        |
 | STE              | ASD-STE100 Simplified Technical English, the writing standard of this project.                                                | S-003                                        |
 | TBD              | To be determined. The item has no value yet. The item is not a requirement.                                                   | —                                            |
@@ -70,7 +70,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | ULID             | The identifier format of an event. It is unique and it sorts by time.                                                         | S-016                                        |
 | pos              | The ordinal of the creating event in the log of one store. It is not a field of the event.                                    | S-016                                        |
 | target           | The field of an op that names the note for a change.                                                                          | S-016                                        |
-| kind             | The class of a note: `decision`, `preference`, `fact`, `task`, `note`, or `card`.                                             | S-016                                        |
+| kind             | The class of an item. A note takes `decision`, `preference`, `fact`, `task`, `note`, or `card`. A scope takes one of `project`, `global`, `agent`, `user`, `topic`, `task`, and `import`. | S-016, S-065 |
 | `live`           | The state of a note after an `accept` event.                                                                                  | S-016                                        |
 | `deleted`        | The state of a note after a `dismiss` event.                                                                                  | S-016                                        |
 | sanitized form   | The form of a redacted event. It keeps the `id` and has `redacted: true`, an empty `body`, and a null `longform`.             | S-016                                        |
@@ -119,14 +119,11 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `compression`    | The reduction of the slice at a render. It works on `<directions>` first, then on `<here>`, and it cuts no `<how-to>`.        | S-056                                        |
 | `form`           | The shape of a run of the compactor: `parallel`, `batch`, or `auto`.                                                          | S-052, S-061                                 |
 | scope key        | The key of a scope in the form `kind:name`.                                                                                   | S-063                                        |
-| scope kind       | The first part of a scope key: `project`, `global`, `agent`, `user`, `topic`, `task`, or `import`.                            | S-063                                        |
 | scope name       | The second part of a scope key: lowercase letters, digits, the period, the underscore, the slash, and the hyphen.             | S-063                                        |
 | address          | The pointer to one note or one range: `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`.                                      | S-063                                        |
 | active scope     | The scope of the current workspace, from the rules of `[scope_default]`.                                                      | S-063                                        |
-| active profile   | The profile of the session, named by `active_profile`.                                                                        | S-063                                        |
 | scope rule       | One entry of `rules`: a match type, a glob or an id, and a key.                                                               | S-063                                        |
-| scope default    | The section `[scope_default]`: the active profile, the rules, and the fallback key.                                           | S-063                                        |
+| scope default    | The section `[scope_default]`: the rules and the fallback key.                                                                | S-063, S-065 |
 | placeholder      | The part `{repo}` of a rule key. The resolver replaces it with a part of the match.                                           | S-063                                        |
 | render form      | The address with a leading `#`. The renderer writes it, and the tool strips it.                                               | S-064                                        |
 | hidden key       | A technical key of the store that the agent does not see. The catalog key is hidden.                                          | S-064                                        |
-| workspace id     | The identifier of a workspace in the harness, in the form `ws_01H…`.                                                          | S-063                                        |

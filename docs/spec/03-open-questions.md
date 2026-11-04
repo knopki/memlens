@@ -26,13 +26,8 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-055](#q-055) | Which fields does the rendered snapshot carry?                                                                                          | The store holds no record. Each field needs a home, or the record leaves the document.                                                                                            | REQ-182, REQ-183, REQ-184, REQ-185       | customer | open   |
 | [Q-073](#q-073) | What input and what output does `memory_open` have?                                                                                     | The agent opens an omitted range, and the tool is new.                                                                                                                            | REQ-228, REQ-229                         | customer | open   |
 | [Q-074](#q-074) | What does the one line of an old scope hold in `<directions>`?                                                                          | The line replaces the detail of the scope, and the card is one line.                                                                                                              | REQ-224                                  | customer | open   |
-| [Q-082](#q-082) | Is `pos` the ordinal in the store, or the ordinal in the scope? | The qualified address can count for one scope, and the bare address can count for the store. | REQ-049, REQ-259, REQ-261 | customer | open |
-| [Q-083](#q-083) | Do the items take the words `kind` and `workspace`, or do the old items? | The glossary has one meaning for each word, and S-063 uses two words twice. | 05-glossary.md | customer | open |
-| [Q-085](#q-085) | Which part of the match does `{repo}` take? | The rule `github.com/knopki/*` gives one key for each reading. | REQ-265 | customer | open |
-| [Q-086](#q-086) | Does a scope kind change the behavior? | Seven kinds without a rule are labels, and a label costs a field. | REQ-256 | customer | open |
-| [Q-087](#q-087) | Does `active_profile` choose the profile, or does the preset of the harness? | The plugin has a preset entry point, and one profile must win. | REQ-267 | customer | open |
-| [Q-088](#q-088) | Does `*` match a part of the name, or a whole kind? | A profile can need each global scope, and the form `*:prefs` decides it. | REQ-269 | customer | open |
-| [Q-090](#q-090) | What does the store do with a key outside the grammar? | A typo must not make a scope that no profile lists. | REQ-255, REQ-256, REQ-258 | customer | open |
+| [Q-088](#q-088) | Does `*` also stand for the kind, as in `*:prefs`? | The grammar has two parts, and a profile can list a whole kind or one name. | REQ-269 | customer | open |
+| [Q-090](#q-090) | What does the store do with `project:Dsh`, a key outside the grammar? | The name grammar is lowercase, and a typo must not make a second scope. | REQ-255, REQ-258 | customer | open |
 
 ## Details
 
@@ -54,6 +49,14 @@ No license value in the manifests. The file set has no `LICENSE`.
 
 The project rule is three languages. See [D-006](04-decisions.md). The DSH guide recommends five for
 a published plugin.
+### Q-020
+
+REQ-029 merges the main configuration and the preset. The key `active_profile` left
+`[scope_default]` (S-065), so the source of the profile name is open.
+
+- Option A: The preset entry point of the plugin gives the profile, and the main file gives the rest.
+- Option B: The main file gives the profile name in another key of the section.
+
 ### Q-030
 
 The statement stops after the words "the merge rules". The model has no `scrub` step (S-024).
@@ -89,59 +92,19 @@ The compression gives an old line of `<directions>` one line. The card of a scop
 
 The customer answers this point later. See S-057.
 
-### Q-082
-
-D-027 and REQ-049 give `pos` as the ordinal in one store. S-063 adds a scope to the address. A
-number can then count in the scope or in the store.
-
-- Option A: `pos` stays the store ordinal. The scope in the address checks the scope of the record,
-  and it gives an error for another scope.
-- Option B: `pos` becomes the ordinal in the scope. A bare address uses the active scope.
-
-### Q-083
-
-The glossary gives `kind` to the class of a note and `workspace` to the pnpm unit. S-063 uses the two
-words for the scope kind and for the workspace of the harness. The glossary rule is one word for one
-meaning.
-
-- Option A: The new terms take a qualifier: `scope kind` and `workspace id`.
-- Option B: The old terms take a qualifier: `note kind` and `pnpm workspace`.
-
-### Q-085
-
-The rule `git_remote` with the glob `github.com/knopki/*` gives the key `project:{repo}`. The rule
-`workspace` gives `project:dsh/optmem`, so the value can hold a slash.
-
-- Option A: `{repo}` takes the part that `*` matches: `project:optmem`.
-- Option B: `{repo}` takes the repository path after the host: `project:knopki/optmem`.
-
-### Q-086
-
-The seven kinds are `project`, `global`, `agent`, `user`, `topic`, `task`, and `import`. S-063 gives
-no behavior for a kind. A kind without a rule is a label.
-
-- Option A: A kind is a label only. Two kinds have the same behavior.
-- Option B: A kind gives a rule. The specification names each rule. TBD.
-
-### Q-087
-
-REQ-028 gives the plugin the entry points `.` and `./preset`, and REQ-029 merges the preset
-configuration. S-063 puts `active_profile` in the file. One source must win.
-
-- Option A: The file is the only source. The preset sets no profile.
-- Option B: The preset sets the profile, and `active_profile` is the fallback.
-
 ### Q-088
 
-REQ-151 gives `*` in a key, and it matches the rest of the key. The new grammar has two parts, so `*`
-can match a part of the name or a whole kind.
+REQ-151 gives `*` in a key, and it matches the rest of the key. The grammar has two parts, so `*` has
+two places.
 
-- Option A: `*` matches the rest of the name only. `project:dsh/*` works, and `*:prefs` does not.
-- Option B: `*` matches a whole kind too. `*:prefs` works.
+- Option A: `*` stands in the name only. `project:dsh/*` matches `project:dsh/optmem`, and `*:prefs`
+  matches no scope.
+- Option B: `*` stands for the kind too. `*:prefs` matches `global:prefs` and `user:prefs`.
 
 ### Q-090
 
-The grammar defines a valid key. S-063 gives no behavior for a key outside the grammar.
+The grammar allows lowercase letters in the name. An agent can send `project:Dsh` or `Project:dsh`.
+S-063 gives no behavior for a key outside the grammar.
 
 - Option A: The store refuses the write with an error that names the key.
 - Option B: The store lowercases the name and accepts the key.
@@ -211,3 +174,8 @@ The grammar defines a valid key. S-063 gives no behavior for a key outside the g
 | Q-081 | Which key does the catalog scope have under the new grammar?            | A hidden technical key. The grammar covers the keys that the agent sees, and `__catalog__` stays outside it. See S-064.                 | 2026-11-04 |
 | Q-084 | Is `workspace:<id>` a scope key or a row of the cache?                  | No cache. `workspace:<id> → key` is a rule for the scope, and `workspace` stays out of the kind list. See S-064.                        | 2026-11-04 |
 | Q-089 | Does the agent type `#2107` or `2107`?                                  | `2107`. The `#` belongs to the render form, and the tool strips it. See S-064.                                                          | 2026-11-04 |
+| Q-082 | Is `pos` the ordinal in the store, or the ordinal in the scope?         | The ordinal in the store. The scope narrows the count to that scope. See S-065.                                                         | 2026-11-04 |
+| Q-083 | Do the items take the words `kind` and `workspace`, or do the old items? | No new terms. `kind` stays `kind`, and `workspace` stays `workspace`. See S-065.                                                        | 2026-11-04 |
+| Q-085 | Which part of the match does `{repo}` take?                             | The repository name from the remote. See S-065.                                                                                         | 2026-11-04 |
+| Q-086 | Does a scope kind change the behavior?                                  | No. A kind is a label. See S-065.                                                                                                       | 2026-11-04 |
+| Q-087 | Does `active_profile` choose the profile, or does the preset of the harness? | The key leaves `[scope_default]`. The source of the profile stays open. See Q-020 and S-065.                                        | 2026-11-04 |

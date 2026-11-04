@@ -267,12 +267,12 @@ Status: see [README.md](README.md#status-values).
 | REQ-259 | An address is `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. | FR | draft | S-063 | `2107`, `1024-2047`, and `project:dsh/optmem#4` are addresses. |
 | REQ-260 | An address with no scope names a record of the active scope. | FR | draft | S-063 | `2107` gives the record 2107 of the active scope. |
 | REQ-261 | An address with a scope names a record of that scope. | FR | draft | S-063 | `project:acme/x#4` gives the record 4 of `project:acme/x`. |
-| REQ-262 | The `[scope_default]` section gives `active_profile`, `rules`, and `default`. | FR | draft | S-063 | A file with this section gives the three values. |
+| REQ-262 | The `[scope_default]` section gives `rules` and `default`. | FR | draft | S-063, S-065 | A file with this section gives the two values. |
 | REQ-263 | The rules go in order, and the first matching rule gives the active scope. | FR | draft | S-063 | Two matching rules give the key of the first rule. |
 | REQ-264 | A rule matches `git_remote` with a glob, `path` with a glob, or `workspace` with an id. | FR | draft | S-063 | Each of the three forms gives a match. |
-| REQ-265 | A rule key replaces the placeholder `{repo}` with a part of the match. | FR | draft | S-063 | A matched rule gives a key with no brace. |
+| REQ-265 | A rule key replaces the placeholder `{repo}` with the repository name from the remote. | FR | draft | S-063 | The remote `github.com/knopki/optmem` gives `project:optmem`. |
 | REQ-266 | No matching rule gives the key of `default`. | FR | draft | S-063 | A repository outside each glob gives `project:misc` with the example file. |
-| REQ-267 | The `active_profile` key names the profile of the session. | FR | draft | S-063 | `active_profile = "work"` gives the profile `work`. |
+| REQ-267 | The `active_profile` key names the profile of the session. | FR | rejected | S-063 | Refused by S-065: the section holds no profile key. |
 | REQ-268 | Two rules may give one key. | FR | draft | S-063 | Two matches give one active scope. |
 | REQ-269 | A profile sees the scopes of its `scopes` list only. | FR | draft | S-063 | `profile.work` gives no line for `global:prefs`. |
 | REQ-270 | A scope that two profiles list is one scope. | FR | draft | S-063 | A note of `project:acme/x` shows in the slice of each profile. |
@@ -281,6 +281,8 @@ Status: see [README.md](README.md#status-values).
 | REQ-273 | The tool strips one leading `#` from an address before the parse. | FR | draft | S-064 | `#1024-2047` gives the range `1024-2047`. |
 | REQ-274 | The catalog key is hidden from the agent. | FR | draft | S-064 | No line of the slice and no tool output names the catalog key. |
 | REQ-275 | The render form of an address holds a leading `#`. | FR | draft | S-064 | A slice line for record 2107 shows `#2107`. |
+| REQ-276 | The `pos` of an address is the ordinal in the store, and the scope narrows the count to that scope. | FR | draft | S-065 | The record at `pos` 2107 of `project:dsh/optmem` has the address `project:dsh/optmem#2107`. |
+| REQ-277 | A kind is a label, and it changes no behavior. | FR | draft | S-065 | A `global:` scope and a `user:` scope with one record give the same view. |
 
 ## Rules for new requirements
 

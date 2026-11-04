@@ -149,7 +149,7 @@ The configuration is a TOML file. The statement [S-036](../statements.md#s-036) 
 | ----------------- | --------------------------------------------------------- |
 | `store`           | `backend` (`sqlite` or `jsonl`), `path`, `idle`, `form`   |
 | `profile.<name>`  | `scopes`, `budget`, `subagents`                           |
-| `scope_default`   | `active_profile`, `rules`, `default`                      |
+| `scope_default`   | `rules`, `default`                                        |
 | `nudge`           | `mode`, `tool_calls`, `turns`, `expensive`, `text`        |
 | `writer`          | `maxCallsPerHour`                                         |
 
@@ -161,9 +161,9 @@ A profile lists its scopes as keys, and `*` matches the rest of a key. The budge
 `directions` limits the tree of the catalog. The subagent mode is `propose`, `read`, or `off`. See
 [D-046](04-decisions.md) and [D-047](04-decisions.md).
 
-The `[scope_default]` section gives the active profile, the scope rules, and the fallback key. The
+The `[scope_default]` section gives the scope rules and the fallback key. The
 rules go in order, and the first match gives the active scope. The rules match the repository remote,
-the path, or the workspace id. A rule with the match `workspace` gives the key for a workspace id. See
+the path, or the workspace. A rule with the match `workspace` gives the key for the workspace. See
 [REQ-262](02-requirements.md), [REQ-263](02-requirements.md), [REQ-272](02-requirements.md), and
 [D-060](04-decisions.md).
 
@@ -230,8 +230,8 @@ An address is `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. An address with
 active scope, and an address with a scope names a record of that scope. The `pos` stays the same after
 an amend. The input holds no `#`, and the tool strips one leading `#` from a copy of the slice. See
 [D-027](04-decisions.md), [REQ-259](02-requirements.md) to [REQ-261](02-requirements.md), and
-[REQ-273](02-requirements.md) to [REQ-275](02-requirements.md). The meaning of `pos` stays open. See
-[Q-082](03-open-questions.md).
+[REQ-273](02-requirements.md) to [REQ-275](02-requirements.md). The `pos` is the ordinal in the
+store, and the scope narrows the count to that scope. See [REQ-276](02-requirements.md).
 
 ## Tree
 
@@ -394,5 +394,4 @@ test. See [D-010](04-decisions.md).
 ## Open points
 
 The form of the direction map, the index port, and the merge of the configuration are open. The
-retelling prompt, the snapshot fields, and the tool surfaces are open. The meaning of `pos` is open
-too. See [03-open-questions.md](03-open-questions.md).
+retelling prompt, the snapshot fields, and the tool surfaces are open. See [03-open-questions.md](03-open-questions.md).
