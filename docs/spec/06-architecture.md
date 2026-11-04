@@ -414,6 +414,17 @@ give the content back. Review uses the `review` event and stays out of the slice
 The console `memlens ui` works alone. In the harness the console runs in a session mode on the same
 view models.
 
+## CLI
+
+One binary `memlens` runs without the harness. The exit code 0 marks a success, and 1 marks an error
+of the data. The code 2 marks an error of the usage, and 3 marks a refusal by a policy. See
+[REQ-385](02-requirements.md) to [REQ-412](02-requirements.md).
+
+The commands `note`, `find`, `open`, `forget`, `review`, `redact`, and `amend` act on a record. The
+commands `scopes` and `describe` act on a scope. The commands `slice`, `compact`, `status`, `check`,
+and `repair` act on the view and the store. The commands `export`, `import`, and `merge` move the
+store. The commands `config` and `ui` set the configuration and start the console.
+
 ## Code markup
 
 Each source file has one `#region moduleContract` block at the top. The block gives the purpose, the
