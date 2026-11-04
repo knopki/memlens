@@ -100,7 +100,8 @@ A merge is a union of events by id. The projection converges for any order of ar
 ## Addressing
 
 A note has the address `#id`. A range of notes has the address `#a-b`. The agent gets one note or one
-range by its address.
+range by its address. The address names the `note` event, and it stays the same after an amend. See
+[D-027](04-decisions.md).
 
 ## Frontier
 
@@ -124,7 +125,7 @@ The slice stays the same for the whole session. A session is a branch of a profi
 merges into the trunk at close and at idle. The merge of a branch serves several machines, not one
 machine.
 
-An import and a merge are idempotent by `sourceId`. A note can supersede an earlier note. The index is
+An import and a merge are idempotent by `idem`. A note can supersede an earlier note. The index is
 a cache over the log: the store rebuilds it from the log after a loss. See
 [REQ-057](02-requirements.md), [REQ-058](02-requirements.md), and [REQ-059](02-requirements.md).
 

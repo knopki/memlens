@@ -63,7 +63,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | trunk            | The merged state of a profile, above its branches.                                                                            | S-014                                        |
 | branch           | The state of one session or one machine of a profile. A branch merges into the trunk at close and at idle.                    | S-014                                        |
 | freeze           | The rule that the slice of a session stays the same for the whole session.                                                    | S-014                                        |
-| sourceId         | The identifier of the source record of an import. A second import of one source adds no record.                               | S-014                                        |
 | supersede        | The rule that a newer note can replace an older note in the view. It stays inside one scope.                                  | S-014, S-016                                 |
 | event            | One immutable fact in the log. It has `id`, `at`, `op`, and `scope`, and a payload for the op.                                | S-016                                        |
 | op               | The field of an event that names the change: `note`, `amend`, `hide`, `redact`, `review`, `accept`, or `dismiss`.             | S-016                                        |
@@ -77,3 +76,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | sanitized form   | The form of a redacted event. It keeps the `id` and has `redacted: true`, an empty `body`, and a null `longform`.             | S-016                                        |
 | at               | The time of an event in the log.                                                                                              | S-017                                        |
 | ts               | The time of the write of a note.                                                                                              | S-017                                        |
+| idem             | The idempotency key of a write and of an import. A second record with one value adds nothing.                                 | S-018                                        |
