@@ -20,13 +20,14 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-018](#q-018) | Where does the model cache TTL come from?                                                                                               | The update rule uses the value.                                                                                                                                                   | REQ-021                                  | customer | open   |
 | [Q-019](#q-019) | What is the export and import format, and how does `redact` block a restore?                                                            | The transfer between machines uses it.                                                                                                                                            | REQ-025                                  | customer | open   |
 | [Q-020](#q-020) | Which keys does the preset configuration give, and which one wins in a merge?                                                           | Two entry points share one configuration.                                                                                                                                         | REQ-028, REQ-029                         | customer | open   |
-| [Q-021](#q-021) | What are the branch rules of the tree: the number of children, the depth, and the retelling prompt?                                     | The tree is the cache of the memory, so its shape is the cost.                                                                                                                    | REQ-009, REQ-032                         | customer | open   |
+| [Q-021](#q-021) | What are the depth limit and the retelling prompt of the tree?                                                                          | The specification gives the node geometry only, and the depth and the prompt stay open.                                                                                           | REQ-009, REQ-032                         | customer | open   |
 | [Q-022](#q-022) | What is the form of the line about a subagent write in the parent report?                                                               | The parent must see the write, and the line costs tokens.                                                                                                                         | REQ-035                                  | customer | open   |
 | [Q-023](#q-023) | Is `longform` available by address, in the slice, or in both?                                                                           | The size limit says what the tree does not hold.                                                                                                                                  | REQ-010, REQ-013                         | customer | open   |
 | [Q-024](#q-024) | Does the console live in the CLI package or in its own package, and which stack does it use?                                            | C-012 splits client and backend code, and the console is client code.                                                                                                             | REQ-046                                  | customer | open   |
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-039](#q-039) | Do `ts_from` and `ts_to` hold the `ts` values of the notes, or their `at` values?                                                       | A note has two times, and the tree uses one of them for its range.                                                                                                                | REQ-128                                  | customer | open   |
 
 ## Details
 
@@ -54,6 +55,14 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+### Q-039
+
+A note has `at`, the time of the log, and `ts`, the time of the write. The node keeps a range of time
+for the notes that it covers.
+
+- Option A: the `ts` values. The range follows the order of the writes.
+- Option B: the `at` values. The range follows the order of the log.
+
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |

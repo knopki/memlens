@@ -162,11 +162,21 @@ A note has the address `#id`. A range of notes has the address `#a-b`. The agent
 range by its address. The address names the `note` event, and it stays the same after an amend. See
 [D-027](04-decisions.md).
 
+## Tree
+
+A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
+`start` is a multiple of `2^L`. The tree needs no dense prefix: a position with no live record is
+empty, and the hole stays in the geometry. See [D-038](04-decisions.md).
+
+A node holds `summary`, `ts_from`, `ts_to`, `bytes`, `input_gen`, `state`, `built_at`, and
+`truncated`. The state is `built` or `dirty`. A summary line targets 512 bytes and has a limit of
+640 bytes. See [D-039](04-decisions.md).
+
 ## Frontier
 
 The tree has a frontier: levels of fixed width, and one level covers 2^k leaves. The newest level
-holds the detail, and the older levels hold the short form. The frontier geometry comes from the
-prior art. See [D-018](04-decisions.md).
+holds the detail, and the older levels hold the short form. The frontier renders no empty position.
+The frontier geometry comes from the prior art. See [D-018](04-decisions.md).
 
 ## Writer
 
