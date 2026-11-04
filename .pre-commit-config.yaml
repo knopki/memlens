@@ -7,8 +7,9 @@ repos:
     hooks:
       - id: biome
         name: biome check
+        # The binary comes from the root dev dependency, so the version is in the lockfile.
         # Check only. A write conflicts with the stash that prek keeps for unstaged files.
-        entry: biome check --no-errors-on-unmatched
+        entry: pnpm exec biome check --no-errors-on-unmatched
         language: system
         types_or: [ts, tsx, json]
 

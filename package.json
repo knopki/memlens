@@ -15,5 +15,8 @@
 		"format": "biome check --write .",
 		"lint:docs": "sh scripts/ste-lint.sh",
 		"verify": "pnpm run build && pnpm run typecheck && pnpm run test && pnpm run lint && pnpm run lint:docs"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.6.4"
 	}
 }

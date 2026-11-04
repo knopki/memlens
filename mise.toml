@@ -1,10 +1,10 @@
 # Tool versions for this project. Run `mise install` after a clone.
 # A version gives a release line. `mise upgrade` takes the newest patch in the line.
 # The pnpm line must agree with `packageManager` in package.json.
+# A tool that the packages use is a dev dependency, not a mise tool.
 
 [tools]
 node = "24"
 pnpm = "12"
 python = "3.14"
-biome = "2.6"
 prek = "0.5"
