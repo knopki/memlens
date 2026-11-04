@@ -27,6 +27,8 @@ A blocking question stops the current portion of the specification until the cus
 | [Q-026](#q-026) | Which retry limit and which length ratio does the writer use?                                                                           | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051                                  | customer | open   |
 | [Q-027](#q-027) | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The rule decides what the tree keeps and what the document keeps.                                                                                                                 | REQ-011                                  | customer | open   |
 | [Q-030](#q-030) | How does a merge join a sanitized event and a full event with one `id`?                                                                 | An import can bring the full event of a note that a local `redact` event cleared.                                                                                                 | REQ-078, REQ-082                         | customer | open   |
+| [Q-037](#q-037) | Does `scrub` come back, or does the model keep no such step?                                                                            | S-017 removed `scrub`, and S-023 gives `scrub` the work of the card.                                                                                                              | REQ-118                                  | customer | open   |
+| [Q-038](#q-038) | Which required fields of a note does a card carry?                                                                                      | The example gives no `review_at`, `proposed`, `turn`, or `preset`, and the note payload makes two of them required.                                                               | REQ-109                                  | customer | open   |
 
 ## Details
 
@@ -54,6 +56,24 @@ The statement stops after the words "the merge rules", and S-017 removes `scrub`
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+### Q-037
+
+S-017 removes `scrub` as an old artifact. S-023 gives `scrub` the work of the card: a card with a
+redacted source gets the sanitized form.
+
+- Option A: `scrub` is a maintenance step outside the log. It puts the sanitized form into the event
+  of the card, and the op list keeps seven events.
+- Option B: `scrub` returns as an op, and the card gets the sanitized form through one more event.
+
+### Q-038
+
+The note payload makes `review_at` and `proposed` required. The card example gives neither, and it
+gives `session` without `turn` or `preset`.
+
+- Option A: a card carries each required field of a note, and the example omits them.
+- Option B: a card drops `review_at`, `proposed`, `turn`, and `preset`: nobody reviews a card and
+  nobody proposes one.
+
 ## Closed questions
 
 | ID    | Question                                                                | Answer                                                                                                                                   | Date       |

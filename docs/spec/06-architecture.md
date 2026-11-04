@@ -72,8 +72,9 @@ A `supersedes` stays inside one scope. The store refuses a cross-scope `supersed
 `CrossScopeSupersede`.
 
 A redacted event keeps its `id` and gets `redacted: true`, an empty `body`, and a null `longform`. A
-`redact` event gives this form, and so does an import of a redacted record. The model has no `scrub`.
-See [Q-030](03-open-questions.md#q-030) for the merge rule.
+`redact` event gives this form, and so does an import of a redacted record. See
+[Q-030](03-open-questions.md#q-030) for the merge rule and [Q-037](03-open-questions.md#q-037) for
+the `scrub` step.
 
 ## Projection
 
@@ -109,6 +110,26 @@ earlier `hide` event, and the record enters the view again. See [D-032](04-decis
 
 A `redact` event clears `body` and `longform` for good, and a later `amend` does not apply. An event
 with `redacted: true` gives no content. See [D-030](04-decisions.md).
+
+## Catalog
+
+The catalog has one scope for each profile: `__catalog__:<profile>`. A card is a `note` event in this
+scope with `kind: "card"`, `for_scope`, and `for_sources`. See [D-034](04-decisions.md).
+
+One card covers one scope and one session. Its input is the `body` of each live record of that scope
+and session. A record with the state `proposed`, `hidden`, or `deleted` does not enter the card.
+
+A rebuild writes a new card with the old card in `supersedes`. The projection hides the old card, and
+the catalog tree marks the ancestors of the old card dirty. The text of the old card stays. See
+[D-033](04-decisions.md).
+
+A `hide`, `redact`, `amend`, or supersede of a source marks each card of that source dirty. The store
+builds the card again from the live records that stay. See [D-035](04-decisions.md).
+
+A card with a redacted id in `for_sources` gets the sanitized form: an empty `body`, a null `longform`,
+and `redacted: true`. A retelling has no phrase to cut, so the card goes as a whole. The placeholder
+`[redacted]` appears in the console and the view only. See [Q-037](03-open-questions.md#q-037) for the
+`scrub` step.
 
 ## Store
 

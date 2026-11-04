@@ -85,3 +85,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | content_cleared  | The flag of a redacted record. An `amend` event does not change this record.                                                  | S-020                                        |
 | superseded_by    | The field of a record that names the note that superseded it.                                                                 | S-020                                        |
 | pass             | One walk over the ordered events in the projection.                                                                           | S-020                                        |
+| catalog scope    | The scope `__catalog__:<profile>`. It holds the cards of one profile.                                                         | S-023                                        |
+| for_scope        | The field of a card that names the scope that the card describes.                                                             | S-023                                        |
+| for_sources      | The field of a card that lists the ids of the records that the card covers.                                                   | S-023                                        |
+| dirty            | The mark of a card that needs a rebuild after a change of a source.                                                           | S-023                                        |
+| [redacted]       | The placeholder of the console and the view for a sanitized record. An event holds no such text.                              | S-023                                        |
