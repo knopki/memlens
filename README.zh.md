@@ -1,6 +1,6 @@
 # memlens
 
-memlens 是一个无头库（headless library），带一个 CLI 前端和一个 DSH 插件。
+memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构成的树。产品名「Линза」（Lens）。
 
 **状态：** 规范阶段。脚手架可以构建，测试通过。目前没有任何部分完成实际工作。
 
@@ -66,4 +66,5 @@ prek install
 
 ## 下一步
 
-产品功能尚未确定。见 [Q-002](docs/spec/03-open-questions.md#q-002)。
+尚未确定：scope 的结构、方向图的形式和快照的字段。
+见 [Q-009](docs/spec/03-open-questions.md#q-009) 及后续问题。

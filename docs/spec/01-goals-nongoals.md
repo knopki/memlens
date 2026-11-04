@@ -2,17 +2,25 @@
 
 ## Goals
 
-| ID    | Goal | Priority | Source |
-| ----- | ---- | -------- | ------ |
-| G-001 | TBD  | TBD      | —      |
+| ID    | Goal                                                                                           | Priority | Source |
+| ----- | ---------------------------------------------------------------------------------------------- | -------- | ------ |
+| G-001 | The memory survives a session and a harness change.                                            | high     | S-013  |
+| G-002 | At start the agent gets a map of directions: fresh items in detail, old items in a short form. | high     | S-013  |
+| G-003 | The agent gets any fact word for word by its address.                                          | high     | S-013  |
+| G-004 | One note costs one model call for its whole life.                                              | high     | S-013  |
+| G-005 | A read costs no model call.                                                                    | high     | S-013  |
 
 ## Non-goals
 
 Explicitly excluded items. A non-goal must not become a hidden requirement.
 
-| ID     | Non-goal | Reason | Source |
-| ------ | -------- | ------ | ------ |
-| NG-001 | TBD      | TBD    | —      |
+| ID     | Non-goal                                            | Reason                                                    | Source |
+| ------ | --------------------------------------------------- | --------------------------------------------------------- | ------ |
+| NG-001 | A replacement for compaction.                       | Compaction stays. The memory holds facts across sessions. | S-013  |
+| NG-002 | An "infinite chat".                                 | The memory is a log of notes, not a transcript.           | S-013  |
+| NG-003 | A vector search and embeddings.                     | The search is lexical: FTS5.                              | S-013  |
+| NG-004 | An entity graph and bitemporality of the Zep level. | Out of scope for the first version.                       | S-013  |
+| NG-005 | A live synchronization between machines.            | Export and import give the transfer.                      | S-013  |
 
 ## Constraints
 

@@ -1,6 +1,7 @@
 # memlens
 
-memlens is a headless library with a CLI frontend and a DSH plugin.
+memlens is the long-term memory of an agent: a log of curated notes with a tree of retellings
+above them. The product name is «Линза» (Lens).
 
 **Status:** specification phase. The scaffold builds and the tests pass. No part does work yet.
 
@@ -67,4 +68,5 @@ Run the commands in a shell that mise activates, or start each command with `mis
 
 ## Next step
 
-The product function is open. See [Q-002](docs/spec/03-open-questions.md#q-002).
+The shape of a scope, the map of directions, and the snapshot fields are open.
+See [Q-009](docs/spec/03-open-questions.md#q-009) and the questions after it.
