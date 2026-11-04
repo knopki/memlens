@@ -134,7 +134,16 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | language         | The language that the prompt recommends to the agent for the notes. The default is `en`, because the FTS support is better.                                                               | S-067, S-068                                 |
 | agent preset     | The harness composition that selects the child plugins and the config of one agent.                                                                                                       | S-067                                        |
 | profile patch    | The plugin row in `cordis.patch.yml` of a harness profile. It gives the config for the agents of that profile.                                                                            | S-067                                        |
-| memory_note      | The tool that saves one note. Its parameters are `body`, `longform`, `scope`, `kind`, and `supersedes`.                                                                                   | S-067                                        |
+| memory_note | The tool that saves one note. Its parameters are `body`, `longform`, `scope`, `kind`, `supersedes`, and `reviewIn`. | S-067, S-070 |
 | memory_find      | The tool that searches the notes by words and gives the matching lines.                                                                                                                   | S-067                                        |
-| memory_forget    | The tool that hides a note from the map. It takes `target` and `reason`.                                                                                                                  | S-067                                        |
+| memory_forget | The tool that hides records from the map. It takes `targets`, `scope`, and `reason`. | S-067, S-070 |
 | memory_open      | The tool that gives a note and its `longform`, or the two child lines of a node.                                                                                                          | S-067                                        |
+| memory_review | The tool that gives the records due for review and sets a new review date. It takes `scope`, `reviewed`, and `reviewIn`. | S-070 |
+| memory_scope | The tool that lists the visible scopes and changes the `title` or the `description` of a scope. | S-070 |
+| visible scope | A scope in the `scopes` list of the profile. A scope outside the list is invisible. | S-070 |
+| write scope | The scope of a write with no `scope` field. The profile gives it. See Q-099. | S-070 |
+| part | One element of a block answer of `memory_open`. The `label` gives its range. | S-070 |
+| needsExpansion | The flag of a part that the budget of `memory_open` stopped. The `label` opens the range again. | S-070 |
+| depth | The level of detail of a `memory_open` answer, from 1 to 4. It is no limit of the descent. | S-070 |
+| working budget | The count of nodes that one `memory_open` call visits: 4096 at most. | S-070 |
+| proposal line | The line in the report of the parent about one proposal of the child. | S-070 |

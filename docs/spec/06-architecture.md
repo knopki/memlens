@@ -363,21 +363,33 @@ the plugin uses the number 220.
 
 ## Agent surface
 
-| Tool          | Who        | Effect                                                       |
-| ------------- | ---------- | ------------------------------------------------------------ |
-| memory_note   | main agent | A new note, or the live note with the same four fields.      |
-| memory_forget | main agent | The note leaves the view.                                    |
-| memory_find   | main agent | The notes with a matching word.                              |
-| memory_open   | main agent | A note and its `longform`, or the two child lines of a node. |
-| memory_review | main agent | One short review answer.                                     |
+| Tool          | Who        | Effect                                                                  |
+| ------------- | ---------- | ----------------------------------------------------------------------- |
+| memory_note   | main agent | A new note, or the live note with the same four fields.                 |
+| memory_forget | main agent | The records leave the view, and the queues take the rebuilds and cards. |
+| memory_find   | main agent | The records with the matching words, each with its `addr`.              |
+| memory_open   | main agent | A record with its `longform`, or a block of parts for a range.          |
+| memory_review | main agent | The due records, or the count of the reviewed records.                  |
+| memory_scope  | main agent | The visible scopes, or a new `title` and `description`.                 |
 
 Each scope of a profile accepts a write. A write to a scope outside the profile gives a `proposed`
 note, and a human decides about it. See [REQ-160](02-requirements.md) and
 [REQ-026](02-requirements.md).
 
-A subagent has no separate tool. In the mode `propose` it writes only new notes as `proposed`, and a
-line about the write goes to the report of the parent. A subagent cannot hide a note and cannot review
-a note.
+A `forget` to a record of a scope outside the profile gives a proposal. A `review` and a
+`scope describe` give the error `NotAllowed`. See [REQ-349](02-requirements.md) to
+[REQ-352](02-requirements.md).
+
+The answer of `memory_open` is 24 KiB at most, and one call visits 4096 nodes at most. A range that
+the budget stops comes back with `needsExpansion`, and the next call opens it. `depth` gives the level
+of detail only. See [D-068](04-decisions.md).
+
+A subagent has no separate tool. In the mode `propose` it gets `memory_find`, `memory_open`, the
+scope list, and `memory_note`. A write is always `proposed`, and the answer gives the `addr` and the
+line `Proposed to your parent: …`. The proposals of one child collect under its session id. The
+report of the parent gets one line for each proposal: the tag `[memory proposals from <session id>]`,
+the `addr`, and the `body`. A human accepts or dismisses in the console, and an unaccepted proposal gets
+a `dismiss` after 30 days. The event log keeps the content. See [D-069](04-decisions.md).
 
 The nudge is one line at the start of a turn, after the frozen slice, so the cache keeps its prefix.
 A write of a note resets the counters. The modes are `tools`, `turns`, `expensive`, and `off`. The
@@ -422,5 +434,6 @@ test. See [D-010](04-decisions.md).
 
 ## Open points
 
-The retelling prompt, the index port, and the review queue are open. The input and output of
-`memory_review` are open. See [03-open-questions.md](03-open-questions.md).
+The retelling prompt and the index port are open. The review period of each `kind`, the `idem` of a
+write, the default write scope, and the name of the `due` filter are open. The policy text of S-067
+names four tools, and `memory_scope` needs its sentence. See [03-open-questions.md](03-open-questions.md).
