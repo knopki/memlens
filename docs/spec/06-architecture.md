@@ -189,9 +189,10 @@ The slice is one `<memory>` block with three parts:
 
 The compression works on `<directions>` first, then on `<here>`, and the `<how-to>` block stays whole.
 An old line of `<directions>` gives one line, and the compression of `<here>` stops at 60 percent of
-the budget. A part above 1.5 times the budget loses its oldest lines, and the line
-`#<a>-<b> omitted (N lines, compacting)` takes their place. The agent opens the range with
-`memory_open`. See [REQ-223](02-requirements.md) to [REQ-229](02-requirements.md).
+the budget. A part above 1.5 times its budget loses the oldest `<here>` lines, and the line
+`#<a>-<b> omitted (N lines, compacting)` takes their place. The `<directions>` block keeps its lines.
+The agent opens the range with `memory_open`. See [REQ-223](02-requirements.md) to
+[REQ-229](02-requirements.md).
 
 Only the text travels. The nine fields of S-042 have no record. [Q-055](03-open-questions.md) gives
 the choice. The reason of a trigger is `session-start`, `ttl`, `compaction`, or `redact`. Review data
