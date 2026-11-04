@@ -4,43 +4,26 @@ A blocking question stops the current portion of the specification until the cus
 
 | ID              | Question                                                                                                                                | Why it matters                                                                                                                                                                    | Blocks                                   | Owner    | Status |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | -------- | ------ |
-| [Q-004](#q-004) | What does "localization" include: the product interface, the documents, or both?                                                        | This decision changes REQ-006 and the file set.                                                                                                                                   | REQ-006                                  | customer | open   |
-| [Q-005](#q-005) | Which DSH version does the plugin support?                                                                                              | The plugin API changes between DSH releases.                                                                                                                                      | REQ-003                                  | customer | open   |
-| [Q-006](#q-006) | Does the plugin use the library?                                                                                                        | If yes, the library has one public interface for two frontends. If no, the plugin repeats the work.                                                                               | [06-architecture.md](06-architecture.md) | customer | open   |
-| [Q-007](#q-007) | Which license does the project use?                                                                                                     | npm publication and the plugin manifest need a license value.                                                                                                                     | Publishing                               | customer | open   |
-| [Q-008](#q-008) | Does the plugin package need a README in five languages?                                                                                | The DSH guide recommends five for a published plugin. The project uses three.                                                                                                     | Publishing                               | customer | open   |
 | [Q-014](#q-014) | Which surface does the session mode of the console use in the harness?                                                                  | The plugin contract depends on the slot.                                                                                                                                          | REQ-047                                  | customer | open   |
 | [Q-015](#q-015) | Which operations does the index port have?                                                                                              | Two backends must satisfy one interface.                                                                                                                                          | REQ-041                                  | customer | open   |
 | [Q-021](#q-021) | What is the retelling prompt of the tree, and of the card?                                                                              | The statements give the node geometry, the depth, and the size. The prompt stays open.                                                                                            | REQ-009, REQ-032, REQ-192                | customer | open   |
-| [Q-024](#q-024) | Does the console live in the CLI package or in its own package, and which stack does it use?                                            | C-012 splits client and backend code, and the console is client code.                                                                                                             | REQ-046                                  | customer | open   |
-| [Q-026](#q-026) | Which retry limit and which length ratio do the writer and the card build use?                                                          | OptChat gives five tries. elephant-memory took three tries, accepts a line up to 1.25 times the limit, and asks 0.75 of the limit on a retry. Our values must agree with the cap. | REQ-051, REQ-197                         | customer | open   |
+| [Q-108](#q-108) | Which two languages join the three of the project? | The README of the plugin package takes five languages, and the project has three. | REQ-430 | customer | open |
 
 ## Details
 
-### Q-005
-
-The installed host is DeepSeek Harness 0.2.1-rc.5. The scaffold uses this version. A published plugin
-needs a clear support range.
-
-### Q-006
-
-Assumption in this specification: the plugin uses the same library functions as the CLI. This
-assumption is not a requirement. It stays an assumption until the customer agrees to it.
-
-### Q-007
-
-No license value in the manifests. The file set has no `LICENSE`.
-
-### Q-008
-
-The project rule is three languages. See [D-006](04-decisions.md). The DSH guide recommends five for
-a published plugin.
 ### Q-030
 
 The statement stops after the words "the merge rules". The model has no `scrub` step (S-024).
 
 - Option A: a sanitized event wins over a full event with one `id`, in each order.
 - Option B: the event with the later `at` wins, and the store keeps that content.
+
+### Q-108
+
+The project keeps English, Russian, and Chinese. The plugin package takes five.
+
+- Option A: the three of the project, and Spanish and Portuguese join them.
+- Option B: the set of the DSH guide: English, Chinese, Spanish, Portuguese, and Hindi.
 
 ## Closed questions
 
@@ -143,3 +126,10 @@ The statement stops after the words "the merge rules". The model has no `scrub` 
 | Q-101 | Is an import joined by `id` or by `idem`? | The import and the merge join by `id`, and the key `idem` guards a repeated write. The two rules hold together. See S-073 and S-076. | 2026-11-05 |
 | Q-106 | Which screens does the tab `Memory` hold? | The tab holds each screen. It has no catalog of profiles, because the profile of the session is current. See S-078. | 2026-11-05 |
 | Q-107 | Does the tab write, or does it read only? | The tab is a piece of the UI. A human does each action there, as in the full console. See S-078. | 2026-11-05 |
+| Q-004 | What does "localization" include: the product interface, the documents, or both? | The product interface, the READMEs, and the installation and usage instructions. See S-081. | 2026-11-05 |
+| Q-005 | Which DSH version does the plugin support? | DeepSeek Harness 0.2.1 and later. See S-081. | 2026-11-05 |
+| Q-006 | Does the plugin use the library? | The plugin uses the functions of the core library. See S-081. | 2026-11-05 |
+| Q-007 | Which license does the project use? | MIT. See S-081. | 2026-11-05 |
+| Q-008 | Does the plugin package need a README in five languages? | The README of the plugin package takes five languages. See S-081 and Q-108. | 2026-11-05 |
+| Q-024 | Does the console live in the CLI package or in its own package, and which stack does it use? | The UI core is in the core library, and the CLI package hosts the full console. The plugin uses the components of the harness UI, and no package stands alone. See S-077, S-080, and S-081. | 2026-11-05 |
+| Q-026 | Which retry limit and which length ratio do the writer and the card build use? | The writer retries one time, and it keeps the answer only when the retelling is shorter than the source. The build retries one time, and a second bad answer takes the form parallel. See REQ-051, REQ-197, and REQ-250. | 2026-11-05 |

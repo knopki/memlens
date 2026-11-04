@@ -430,6 +430,11 @@ Status: see [README.md](README.md#status-values).
 | REQ-424 | The tab gives no choice of the profile, because the session sets it. | FR | draft | S-078 | The tab shows no list of profiles, and the profile comes from the session. |
 | REQ-425 | `memlens ui` gives its own styles. | FR | draft | S-080 | The console shows the styles of the CLI package. |
 | REQ-426 | The plugin renders the tab with the components of the harness UI. | FR | draft | S-080 | The tab shows the components of the harness, and no style of memlens. |
+| REQ-427 | The plugin supports DeepSeek Harness 0.2.1 and later. | C | draft | S-081 | The manifest gives the version 0.2.1, and the plugin loads in the installed host. |
+| REQ-428 | The plugin uses the functions of the core library. | FR | draft | S-081 | The manifest names `@memlens/core`, and each source file imports that package. |
+| REQ-429 | The license of the project is MIT. | C | draft | S-081 | The file `LICENSE` holds MIT, and each manifest gives `MIT`. |
+| REQ-430 | The README of the plugin package has five languages. | FR | draft | S-081 | The package holds five README files, and the content agrees. |
+| REQ-431 | The localization covers the product interface, the READMEs, and the installation and usage instructions. | FR | draft | S-081 | The interface, each README, and each guide have a Russian and a Chinese version. |
 
 ## Rules for new requirements
 
