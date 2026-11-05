@@ -107,7 +107,7 @@ patch wins over the TOML, and the preset wins over the profile. An array replace
 
 | Layer        | File                       | Keys                                                                 |
 | ------------ | -------------------------- | -------------------------------------------------------------------- |
-| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `profile.<name>`, `scope_default`, `nudge`, `writer`        |
+| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `profile.<name>`, `scope_default`, `nudge`, `writer`, `review` |
 | Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `language`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
 | Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
 
@@ -132,6 +132,9 @@ and the first match gives the active scope. See [REQ-262](02-requirements.md),
 A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget
 gives `here` and `directions` in bytes, and the two budgets are independent. The subagent mode is
 `propose`, `read`, or `off`. See [0006 Scope and config](../adr/0006-scope-config.md) and [0009 Agent surface](../adr/0009-agent-surface.md).
+
+The `review` section gives the review period of each kind in days, and the table of defaults holds
+the values. See [REQ-456](02-requirements.md) and [REQ-457](02-requirements.md).
 
 The key `idle` gives 300 seconds by default. See [0006 Scope and config](../adr/0006-scope-config.md).
 
