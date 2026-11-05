@@ -17,7 +17,7 @@ requirement.
 | [04-decisions.md](04-decisions.md)           | Decisions with alternatives and consequences.      | live         |
 | [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                       | live         |
 | [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.                   | draft        |
-| [07-prior-art.md](07-prior-art.md)           | Each claim of the customer table against the code. | live         |
+| [07-prior-art.md](07-prior-art.md)           | Each claim of the customer table against the code. | archive      |
 | [08-ui.md](08-ui.md)                         | The console, the seven screens, and the two hosts. | draft        |
 | [09-prompts.md](09-prompts.md)               | The four prompts of the writer and the subagent.   | draft        |
 | [../adr/](../adr/)                           | Long decisions, one file for each.                 | as necessary |

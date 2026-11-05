@@ -477,8 +477,6 @@ file must not mix client code and backend code. See [C-012](01-goals-nongoals.md
 The project keeps the linter in `scripts/vendor/`. See [D-009](04-decisions.md). The manifest has a
 test. See [D-010](04-decisions.md).
 
-## Open points
+## Remaining work
 
-The retelling prompt and the index port are open. The review period of each `kind`, the `idem` of a
-write, the default write scope, and the name of the `due` filter are open. The policy text of S-067
-names four tools, and `memory_scope` needs its sentence. See [03-open-questions.md](03-open-questions.md).
+The policy text names four tools. A sentence for `memory_review` and `memory_scope` is not written.

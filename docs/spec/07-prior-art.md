@@ -78,11 +78,3 @@ An unverified claim stays a claim. Do not build a requirement on it.
 ## ai-memory
 
 The reference directory has no copy of this project. The contrast row of the table stays unverified.
-
-## What this comparison changed
-
-1. The body limit: the customer declared 384 bytes and set 512 bytes as the real maximum. The text
-   above the limit moves into `longform`. See [REQ-011](02-requirements.md) and [S-015](../statements.md).
-2. The answer to Q-025 arrives with S-015.
-3. This file gives the true uniichat view number.
-4. Q-026 now gives the evidence of both retry sets.
