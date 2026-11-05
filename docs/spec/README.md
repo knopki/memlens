@@ -21,7 +21,7 @@ requirement.
 | [07-prior-art.md](07-prior-art.md)           | Each claim of the customer table against the code. | archive      |
 | [08-ui.md](08-ui.md)                         | The console, the seven screens, and the two hosts. | draft        |
 | [09-prompts.md](09-prompts.md)               | The four prompts of the writer and the subagent.   | draft        |
-| [../adr/](../adr/)                           | The reason for each area of decisions.             | live         |
+| [../adr/](../adr/)                           | The reason for each decision.                      | live         |
 
 ## Rules
 
@@ -31,7 +31,7 @@ requirement.
    question, not a requirement.
 4. A contradiction becomes an open question with two options. Do not overwrite silently.
 5. Record each non-goal. A non-goal must not become a hidden requirement.
-6. Record each choice with consequences in the ADR of its area, and add one row to
+6. Record each choice with consequences in its ADR, and add one row to
    [04-decisions.md](04-decisions.md).
 7. Do not start the code while the requirement is `draft`, unless the customer asks for it.
 8. Change the specification with small commits.
