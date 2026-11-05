@@ -27,8 +27,8 @@ The test `packages/core/tests/isolation.test.ts` holds this rule. See [REQ-007](
 ## Stack
 
 TypeScript 7 on Node.js with pnpm workspaces. biome lints and formats. vitest runs the tests. esbuild
-makes the bundles. prek runs the git hooks. See [D-011](04-decisions.md). The tool versions come from
-`mise.toml`. See [D-008](04-decisions.md).
+makes the bundles. prek runs the git hooks. See [D-011](../adr/0002-stack-build.md). The tool versions come from
+`mise.toml`. See [D-008](../adr/0002-stack-build.md).
 
 ## Build
 
@@ -65,7 +65,7 @@ the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requi
 
 `pos` is not a field of an event. It is the ordinal of the creating event in the scope of the record,
 and an export holds no `pos`. A redacted event keeps its `id` and gets `redacted: true`, an empty
-`body`, and a null `longform`. See [D-021](04-decisions.md), [D-036](04-decisions.md), and
+`body`, and a null `longform`. See [D-021](../adr/0003-event-log.md), [D-036](../adr/0009-redaction.md), and
 [Q-030](03-open-questions.md#q-030).
 
 ## Projection
@@ -81,8 +81,8 @@ nothing. The effects of the operations, the state order, and the supersede rule 
 The catalog has one scope for each profile: `__catalog__:<profile>`. The key is hidden from the
 agent. A card is a `note` event in this scope with `kind: "card"`, `for_scope`, and `for_sources`. A
 card carries `body`, `kind`, `ts`, `session`, `for_scope`, and `for_sources`. It carries no
-`review_at`, `proposed`, `turn`, or `preset`. See [D-034](04-decisions.md) and
-[D-037](04-decisions.md).
+`review_at`, `proposed`, `turn`, or `preset`. See [D-034](../adr/0006-catalog.md) and
+[D-037](../adr/0006-catalog.md).
 
 The catalog renders in `<directions>`, and the direction line of a scope is its live card. A session
 end and a compaction build the card of each scope with records of the session. The model writes the
@@ -91,7 +91,7 @@ body from the live records. Without a model answer, the store joins the three la
 
 A rebuild writes a new card with the old card in `supersedes`, and the catalog tree marks the
 ancestors of the old card dirty. A change of a source marks each card of that source dirty. See
-[D-033](04-decisions.md), [D-035](04-decisions.md), [REQ-108](02-requirements.md) to
+[D-033](../adr/0006-catalog.md), [D-035](../adr/0006-catalog.md), [REQ-108](02-requirements.md) to
 [REQ-120](02-requirements.md), and [REQ-190](02-requirements.md) to [REQ-199](02-requirements.md).
 
 A card with a redacted id in `for_sources` gets the sanitized form: an empty `body`, a null
@@ -103,7 +103,7 @@ only, and no event holds it.
 The CLI reads a TOML file. The harness reads the plugin config in `cordis.patch.yml` and the agent
 preset. The plugin merges three layers: the TOML file, the profile patch, and the preset patch. The
 patch wins over the TOML, and the preset wins over the profile. An array replaces an array. See
-[D-065](04-decisions.md).
+[D-065](../adr/0007-scope-config.md).
 
 | Layer        | File                       | Keys                                                                 |
 | ------------ | -------------------------- | -------------------------------------------------------------------- |
@@ -124,13 +124,13 @@ the prompt recommends for the notes, and the default is `en`. See [S-067](../sta
 The `nudge` section gives `mode` and `tool_calls` in the patch. The TOML file gives the other nudge
 keys. The `[scope_default]` section gives the scope rules and the fallback key. The rules go in order,
 and the first match gives the active scope. See [REQ-262](02-requirements.md),
-[REQ-263](02-requirements.md), [REQ-272](02-requirements.md), and [D-060](04-decisions.md).
+[REQ-263](02-requirements.md), [REQ-272](02-requirements.md), and [D-060](../adr/0007-scope-config.md).
 
 A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget
 gives `here` and `directions` in bytes, and the two budgets are independent. The subagent mode is
-`propose`, `read`, or `off`. See [D-046](04-decisions.md) and [D-047](04-decisions.md).
+`propose`, `read`, or `off`. See [D-046](../adr/0007-scope-config.md) and [D-047](../adr/0007-scope-config.md).
 
-The key `idle` gives 300 seconds by default. See [D-045](04-decisions.md).
+The key `idle` gives 300 seconds by default. See [D-045](../adr/0007-scope-config.md).
 
 ## Defaults
 
@@ -157,11 +157,11 @@ One store holds many profiles, scopes, and records.
 
 A scope is a key in the events. The key has the form `kind:name`, and the store lowercases it before
 the write. The store holds no record for a scope, and no event describes one. A scope exists because
-a record names its key. See [D-042](04-decisions.md), [D-061](04-decisions.md), and
+a record names its key. See [D-042](../adr/0007-scope-config.md), [D-061](../adr/0007-scope-config.md), and
 [REQ-255](02-requirements.md).
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both. The
-store keeps the queue of the compaction jobs. See [D-054](04-decisions.md).
+store keeps the queue of the compaction jobs. See [D-054](../adr/0005-tree-writer.md).
 
 Each append to the sqlite backend is one transaction, and the backend uses write-ahead logging. The
 jsonl backend takes a lock on each append. Several processes write one store. See
@@ -169,7 +169,7 @@ jsonl backend takes a lock on each append. Several processes write one store. Se
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
 consistent by construction. An import unions the events by `id`, a payload conflict keeps the later
-`at`, and the events of a redacted record arrive sanitized. See [D-071](04-decisions.md).
+`at`, and the events of a redacted record arrive sanitized. See [D-071](../adr/0004-store.md).
 
 | Item     | Value                                       |
 | -------- | ------------------------------------------- |
@@ -202,7 +202,7 @@ part above 1.5 times its budget loses the oldest `<here>` lines, and the line
 `#<a>-<b> omitted (N lines, compacting)` takes their place. The agent opens the range with
 `memory_open`. See [REQ-223](02-requirements.md) to [REQ-229](02-requirements.md).
 
-A `redact` cleans the store. The copy in the session history stays. See [D-052](04-decisions.md).
+A `redact` cleans the store. The copy in the session history stays. See [D-052](../adr/0008-slice-context.md).
 
 ## Addressing
 
@@ -215,14 +215,14 @@ from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requ
 A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
 `start` is a multiple of `2^L`. A node holds `summary`, `ts_from`, `ts_to`, `bytes`, `input_gen`,
 `state`, `built_at`, and `truncated`. The tree has no depth limit, and it needs no dense prefix: a
-position with no live record stays empty. See [D-038](04-decisions.md) and
+position with no live record stays empty. See [D-038](../adr/0005-tree-writer.md) and
 [REQ-122](02-requirements.md) to [REQ-133](02-requirements.md).
 
 ## Frontier
 
 The tree has a frontier: levels of fixed width, and one level covers 2^k leaves. The frontier lists
 the lines from the oldest to the newest: the coarse lines first and the fresh records last. A line
-holds the address, the range of dates, and the text. See [D-040](04-decisions.md).
+holds the address, the range of dates, and the text. See [D-040](../adr/0005-tree-writer.md).
 
 ## Erasure
 
@@ -238,7 +238,7 @@ card with the id in `for_sources`. See [REQ-219](02-requirements.md) to [REQ-222
 The guarantee has four parts. The projection gives no content at once, and the rebuild gives new
 retellings. The transaction covers the disk. A prompt that the model already received stays out of
 reach. No other derivative holds the text, because the summarizer sees two children and a card sees
-`for_sources` only. See [D-055](04-decisions.md).
+`for_sources` only. See [D-055](../adr/0009-redaction.md).
 
 ## Fold
 
@@ -249,7 +249,7 @@ priority `due = (total - (start + 2^(level+1) - 1)) / 2^level`. The choice goes 
 `level`, then `start`. The fold calls no model for an empty child. The model works only on two
 non-empty children, and the shrink check applies to that merge only. Each batch extends the prefix of
 the view, so the prompt cache survives. The cache key is `epoch = hash(storeRev, sorted built nodes)`.
-See [D-048](04-decisions.md), [D-049](04-decisions.md), and [REQ-161](02-requirements.md) to
+See [D-048](../adr/0005-tree-writer.md), [D-049](../adr/0004-store.md), and [REQ-161](02-requirements.md) to
 [REQ-177](02-requirements.md).
 
 ## Writer
@@ -258,8 +258,8 @@ The writer is a background compactor. It runs outside the agent loop, from a que
 store. A run takes one form. `parallel` makes 6 calls of one line with one prefix of the context.
 `batch` makes one call of up to 6 lines in the form `#a-b: line`, and a broken answer gives one retry
 with the error, then `parallel`. `auto` follows the family of the model: `batch` without a cache, and
-`parallel` with one. A merge gives the model the two children only. See [D-054](04-decisions.md) and
-[D-059](04-decisions.md).
+`parallel` with one. A merge gives the model the two children only. See [D-054](../adr/0005-tree-writer.md) and
+[D-059](../adr/0005-tree-writer.md).
 
 A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300
 seconds. A job records the `input_gen` of its children, and the store accepts the result only when
@@ -270,7 +270,7 @@ raw records. When a part of the view at the wake is above 1.5 times its budget, 
 unbuilt nodes. The deadline of the build is 10 seconds, and the render gives the view at the deadline.
 The writer takes the node with the highest `due` first, and a node waits for its children.
 
-The four texts of the calls are in [09-prompts.md](09-prompts.md). See [D-041](04-decisions.md),
+The four texts of the calls are in [09-prompts.md](09-prompts.md). See [D-041](../adr/0005-tree-writer.md),
 [REQ-200](02-requirements.md) to [REQ-254](02-requirements.md), and
 [REQ-432](02-requirements.md) to [REQ-438](02-requirements.md).
 
@@ -284,7 +284,7 @@ the store rebuilds it from the log after a loss. See [REQ-057](02-requirements.m
 ## Harness surface
 
 The plugin registers the slice as `systemPrompt.context`. It does not use a system prompt section: a
-change of the section invalidates the whole cached prefix. See [D-064](04-decisions.md).
+change of the section invalidates the whole cached prefix. See [D-064](../adr/0008-slice-context.md).
 
 The text stays the same until a trigger: a fresh session, a compaction after success, and an idle
 time above the TTL. A process restart gives the same text. See [REQ-300](02-requirements.md) and
@@ -317,12 +317,12 @@ the plugin uses the number 220.
 The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 [REQ-352](02-requirements.md). The subagent modes are in [REQ-353](02-requirements.md) to
 [REQ-363](02-requirements.md). The nudge is in [REQ-230](02-requirements.md) to
-[REQ-237](02-requirements.md). See [D-068](04-decisions.md) and [D-069](04-decisions.md).
+[REQ-237](02-requirements.md). See [D-068](../adr/0008-slice-context.md) and [D-069](../adr/0008-slice-context.md).
 
 ## Human surface
 
 Only the CLI or the GUI can redact and amend. Review uses the `review` event and stays out of the
-slice. See [D-025](04-decisions.md) and [REQ-024](02-requirements.md).
+slice. See [D-025](../adr/0003-event-log.md) and [REQ-024](02-requirements.md).
 
 The console command works alone. The UI core is in the library, and it holds no DOM, no transport, and no style. The console
 gives its own styles, and the plugin uses the components of the harness UI. The plugin mounts the tab
@@ -360,8 +360,8 @@ code. See [C-012](01-goals-nongoals.md).
 | Document language | `pnpm run lint:docs` |
 | All of the above  | `pnpm run verify`    |
 
-The project keeps the linter in `scripts/vendor/`. See [D-009](04-decisions.md). The manifest has a
-test. See [D-010](04-decisions.md).
+The project keeps the linter in `scripts/vendor/`. See [D-009](../adr/0001-spec-process.md). The manifest has a
+test. See [D-010](../adr/0001-spec-process.md).
 
 ## Remaining work
 

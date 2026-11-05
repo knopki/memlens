@@ -1,7 +1,8 @@
 # Architecture decision records
 
-Write an ADR when a decision is expensive to change, or when a reader needs the reason after six
-months. A small decision goes to [../spec/04-decisions.md](../spec/04-decisions.md).
+Write an ADR for each area of decisions. The ADR holds the context and the decisions of the area
+in a table. [../spec/04-decisions.md](../spec/04-decisions.md) is the index: one row for each
+decision, with its status and its ADR.
 
 ## File name
 
@@ -33,6 +34,14 @@ What becomes easy. What becomes difficult. What a reader must know.
 
 ## Index
 
-| ID  | Title | Status |
-| --- | ----- | ------ |
-| —   | —     | —      |
+| ID   | Title             | Status   |
+| ---- | ----------------- | -------- |
+| 0001 | Spec process      | accepted |
+| 0002 | Stack and build   | accepted |
+| 0003 | Event log         | accepted |
+| 0004 | Store             | accepted |
+| 0005 | Tree and writer   | accepted |
+| 0006 | Catalog           | accepted |
+| 0007 | Scope and config  | accepted |
+| 0008 | Slice and context | accepted |
+| 0009 | Redaction         | accepted |
