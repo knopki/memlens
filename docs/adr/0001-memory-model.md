@@ -8,7 +8,9 @@ An agent forgets between sessions, and a long chat is not the answer. The produc
 
 ## Decision
 
-The memory is a log of curated notes. A tree of retellings is a cache above the notes. A catalog of cards is a second level, and one engine builds both trees.
+The memory is a log of notes and of nodes. A node is a summary of two children, and the tree of nodes
+is rebuildable from the log. A catalog of the same nodes is a second level, and one engine builds both
+trees.
 
 ## Alternatives
 
@@ -16,4 +18,5 @@ An infinite chat. A vector store. An entity graph with bitemporality.
 
 ## Consequences
 
-Two levels share one engine. The catalog belongs to one profile. The tree is a cache, and the log is the truth.
+Two levels share one engine. The catalog belongs to one profile. The log is the truth, and each node
+is rebuildable from it.

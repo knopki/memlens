@@ -1,6 +1,6 @@
 # Prompts
 
-This file holds the four texts of the writer and of the subagent. Each text is a copy, and a change
+This file holds the three texts of the writer and of the subagent. Each text is a copy, and a change
 of a word is a change of the product.
 
 ## Policy text
@@ -74,20 +74,6 @@ An answer above 640 bytes after the attempts cuts at a word boundary, and the no
 The check "the line is shorter than the two children" applies to a model merge of two non-empty children
 only. The fold takes the byte count of each line from the field `bytes`. See
 [REQ-172](02-requirements.md).
-
-## Card task
-
-```text
-One scope of the agent's long-term memory had these notes in one session, oldest first:
-<notes>
-{date — kind — body}
-</notes>
-
-Write one line of at most {CARD} bytes for the scope's activity map. Say what changed and what is now
-true or open in this direction; a reader who will not open these notes must be able to tell whether
-this direction matters for their task. Name the subject of every item. Do not invent anything and do
-not narrate the process of summarizing.
-```
 
 ## Subagent prompt
 

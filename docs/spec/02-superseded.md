@@ -16,3 +16,13 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-366 | A write of the kind `fact` without `reviewIn` gives a review date of 180 days. | FR | S-071 | REQ-457 |
 | REQ-367 | A write of the kind `task` without `reviewIn` gives a review date of 7 days. | FR | S-071 | REQ-457 |
 | REQ-369 | The write mechanism moves the text above 512 bytes into the `longform`. | FR | S-072 | REQ-011 |
+| REQ-118 | A card with a redacted id in `for_sources` gets the sanitized form. | FR | S-023 | REQ-220 |
+| REQ-128 | A node holds `summary`, `ts_from`, `ts_to`, `bytes`, `input_gen`, `state`, `built_at`, and `truncated`. | FR | S-025 | REQ-073 |
+| REQ-190 | A session end or a compaction starts the card build of each scope with records of the session. | FR | S-049 | REQ-137 |
+| REQ-193 | The `body` of the card is 512 bytes maximum. | FR | S-049 | REQ-127 |
+| REQ-194 | Without a model answer, the store joins the three last bodies of the input with `; `. | FR | S-049 | REQ-217 |
+| REQ-195 | The fallback takes the three records with the latest `ts`. | FR | S-050 | REQ-217 |
+| REQ-196 | The fallback cuts the text at a word boundary to 512 bytes, and at a character boundary for a word above the limit. | FR | S-050 | REQ-217 |
+| REQ-197 | The build retries the model when the answer holds no text or more than 512 bytes. | FR | S-050 | REQ-217 |
+| REQ-198 | The build uses the fallback after the last retry. | FR | S-050 | REQ-217 |
+| REQ-199 | A scope with no live record of the session gives no card. | FR | S-050 | REQ-217 |

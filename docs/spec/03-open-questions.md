@@ -20,7 +20,7 @@ it. The example text in S-067 is not a source. See [S-095](../statements.md) and
 
 Q-457 has two options. Option A: the field `proposed` extends to the events `amend` and `hide`. The
 projection keeps the target live and holds the proposal beside it. The `accept` event applies the op.
-Option B: a proposal is a `note` with `for_sources` that names the target. The `accept` writes the
+Option B: a proposal is a `note` with a `target` field that names the record. The `accept` writes the
 real event, and the log holds the proposal and the applied event. See [S-096](../statements.md) and
 [REQ-027](02-requirements.md).
 

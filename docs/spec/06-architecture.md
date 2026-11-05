@@ -4,11 +4,11 @@ Status: draft. The specification is the source of truth. The repository has a sc
 
 ## Shape
 
-The memory is a log of curated notes. A tree of retellings is a cache above the log. Two levels share
+The memory is a log of notes and of nodes. A tree of nodes stands above the notes. Two levels share
 one engine:
 
 - The notes of a scope make the leaves.
-- The catalog of cards is the level above the notes. It has its own tree and belongs
+- The catalog of nodes is the level above the notes. It has its own tree and belongs
   to one profile.
 
 The agent reads one map of directions: the registry and the catalog in one `<directions>` block.
@@ -49,15 +49,17 @@ op. A `redact` clears the content of its target.
 
 | Op        | Payload                                                                                                                                                   |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes`, `for_scope`, `for_sources` |
+| `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes` |
 | `amend`   | `target`, and one or more of `body`, `longform`, and `scope`                                                                                              |
 | `hide`    | `target`, `reason`                                                                                                                                        |
 | `redact`  | `target`, `reason`                                                                                                                                        |
 | `review`  | `target`, `review_at`                                                                                                                                     |
 | `accept`  | `target`                                                                                                                                                  |
 | `dismiss` | `target`, `reason`                                                                                                                                        |
+| `node`    | `level`, `start`, `child_a`, `child_b`, `input_gen`, `summary`, `bytes`, `truncated`, `ts_from`, `ts_to`                                                  |
 
-A card is a `note` event with `kind: "card"`, `for_scope`, and `for_sources`. The log has no card op.
+A node is a `node` event. Its `at` is the time of the build, and the projection takes the latest
+`node` event for a key. See [0011 Nodes are events](../adr/0011-nodes-are-events.md).
 
 An event has two times: `at` is the time of the log, and `ts` is the time of the write of a note. Only
 the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requirements.md) to
@@ -79,24 +81,23 @@ nothing. The effects of the operations, the state order, and the supersede rule 
 ## Catalog
 
 The catalog has one scope for each profile: `__catalog__:<profile>`. The key is hidden from the
-agent. A card is a `note` event in this scope with `kind: "card"`, `for_scope`, and `for_sources`. A
-card carries `body`, `kind`, `ts`, `session`, `for_scope`, and `for_sources`. It carries no
-`review_at`, `proposed`, `turn`, or `preset`. See [0005 Catalog](../adr/0005-catalog.md) and
-[0005 Catalog](../adr/0005-catalog.md).
+agent. The catalog is a tree of the same nodes as the tree of a scope. Its leaves are the scope
+lines, and one scope line covers one scope. The children of a scope line are the two nodes of that
+scope which cover its range. A node of the catalog carries no `review_at`, no `proposed`, no
+`session`, no `turn`, and no `preset`. See [0011 Nodes are events](../adr/0011-nodes-are-events.md).
 
-The catalog renders in `<directions>`, and the direction line of a scope is its live card. A session
-end and a compaction build the card of each scope with records of the session. The model writes the
-body from the live records. Without a model answer, the store joins the three last bodies, ordered by
-`ts`, with `; `.
+The catalog renders in `<directions>`, and the direction line of a scope is its scope line. A shared
+scope gets one scope line in each profile where it is visible. See [REQ-108](02-requirements.md),
+[REQ-109](02-requirements.md), [REQ-120](02-requirements.md), [REQ-451](02-requirements.md), and
+[REQ-460](02-requirements.md).
 
-A rebuild writes a new card with the old card in `supersedes`, and the catalog tree marks the
-ancestors of the old card dirty. A change of a source marks each card of that source dirty. See
-[0005 Catalog](../adr/0005-catalog.md), [0005 Catalog](../adr/0005-catalog.md), [REQ-108](02-requirements.md) to
-[REQ-120](02-requirements.md), and [REQ-190](02-requirements.md) to [REQ-199](02-requirements.md).
+A change of a note makes each node above it dirty, and the writer builds the node from its two
+children. A rebuild appends a new `node` event for the same key, and the projection takes the latest.
+See [REQ-113](02-requirements.md) to [REQ-117](02-requirements.md), [REQ-191](02-requirements.md), and
+[REQ-192](02-requirements.md).
 
-A card with a redacted id in `for_sources` gets the sanitized form: an empty `body`, a null
-`longform`, and `redacted: true`. The placeholder `[redacted]` appears in the console and the view
-only, and no event holds it.
+A `redact` clears the content of each node that covers the position, so no node holds the text. The
+placeholder `[redacted]` appears in the console and the view only, and no event holds it.
 
 ## Configuration
 
@@ -237,14 +238,13 @@ render, and its children take its place down to a clean node or a record. The re
 and one change costs `log2(N)+1` model calls at most. See [REQ-217](02-requirements.md) and
 [REQ-218](02-requirements.md).
 
-A `redact` runs in one transaction. It writes the sanitized form into the target. It deletes
-the nodes that cover the position and their ancestors, and it deletes the FTS rows. It sanitizes each
-card with the id in `for_sources`. See [REQ-219](02-requirements.md) to [REQ-222](02-requirements.md).
+A `redact` runs in one transaction. It writes the sanitized form into the target. It clears the
+content of the nodes that cover the position and of their ancestors, and it deletes the FTS rows. See
+[REQ-219](02-requirements.md) to [REQ-222](02-requirements.md).
 
 The guarantee has four parts. The projection gives no content at once, and the rebuild gives new
 retellings. The transaction covers the disk. A prompt that the model already received stays out of
-reach. No other derivative holds the text, because the summarizer sees two children and a card sees
-`for_sources` only. See [0008 Redaction](../adr/0008-redaction.md).
+reach. No other derivative holds the text, because the summarizer sees two children only. See [0008 Redaction](../adr/0008-redaction.md).
 
 ## Fold
 
@@ -313,7 +313,7 @@ the plugin uses the number 220.
 | Tool          | Who        | Effect                                                                  |
 | ------------- | ---------- | ----------------------------------------------------------------------- |
 | memory_note   | main agent | A new note, or the live note with the same four fields.                 |
-| memory_forget | main agent | The records leave the view, and the queues take the rebuilds and cards. |
+| memory_forget | main agent | The records leave the view, and the queues take the rebuilds and the scope lines. |
 | memory_find   | main agent | The records with the matching words, each with its `addr`.              |
 | memory_open   | main agent | A record with its `longform`, or a block of parts for a range.          |
 | memory_review | main agent | The due records, or the count of the reviewed records.                  |

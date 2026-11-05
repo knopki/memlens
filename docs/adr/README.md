@@ -39,9 +39,10 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0002 | Event log | accepted |
 | 0003 | Store | accepted |
 | 0004 | Tree and writer | accepted |
-| 0005 | Catalog | accepted |
+| 0005 | Catalog | replaced by 0011 |
 | 0006 | Scope and config | accepted |
 | 0007 | Slice and context | accepted |
 | 0008 | Redaction | accepted |
 | 0009 | Agent surface | accepted |
 | 0010 | Process and stack | accepted |
+| 0011 | Nodes are events | accepted |

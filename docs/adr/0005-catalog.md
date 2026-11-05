@@ -1,6 +1,6 @@
 # 0005. Catalog
 
-Status: accepted
+Status: replaced by 0011
 
 ## Context
 
