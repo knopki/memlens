@@ -2,17 +2,24 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-One question is open.
+Two questions are open.
 
 ## Open questions
 
-| ID    | Question                                     | Answer        | Date       |
-| ----- | -------------------------------------------- | ------------- | ---------- |
-| Q-456 | What does the policy text of the slice hold? | Not answered. | 2026-11-05 |
+| ID    | Question                                       | Answer        | Date       |
+| ----- | ---------------------------------------------- | ------------- | ---------- |
+| Q-456 | What does the policy text of the slice hold?   | Not answered. | 2026-11-05 |
+| Q-457 | How does a proposal change an existing record? | Not answered. | 2026-11-05 |
 
 The policy text is the static instruction at the head of `<memory>`. The customer has not designed
 it. The example text in S-067 is not a source. See [S-095](../statements.md) and
 [REQ-179](02-requirements.md).
+
+Q-457 has two options. Option A: the field `proposed` extends to the events `amend` and `hide`. The
+projection keeps the target live and holds the proposal beside it. The `accept` event applies the op.
+Option B: a proposal is a `note` with `for_sources` that names the target. The `accept` writes the
+real event, and the log holds the proposal and the applied event. See [S-096](../statements.md) and
+[REQ-027](02-requirements.md).
 
 ## Closed questions
 
