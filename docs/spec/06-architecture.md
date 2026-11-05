@@ -67,6 +67,7 @@ the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requi
 
 `pos` is not a field of an event. It is the ordinal of the creating event in the scope of the record,
 and an export holds no `pos`. A redacted event keeps its `id` and gets `redacted: true`, an empty
+`body` or `summary`,
 `body`, and a null `longform`. See [0002 Event log](../adr/0002-event-log.md), [0008 Redaction](../adr/0008-redaction.md), and
 [Q-030](03-open-questions.md#q-030).
 
@@ -178,7 +179,7 @@ jsonl backend takes a lock on each append. Several processes write one store. Se
 [REQ-372](02-requirements.md) to [REQ-377](02-requirements.md).
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
-consistent by construction. An import unions the events by `id`, a payload conflict keeps the later
+consistent by construction. A per-scope export also holds the scope lines of that scope. An import unions the events by `id`, a payload conflict keeps the later
 `at`, and the events of a redacted record arrive sanitized. See [0003 Store](../adr/0003-store.md).
 
 | Item     | Value                                       |
@@ -223,8 +224,9 @@ from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requ
 ## Tree
 
 A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
-`start` is a multiple of `2^L`. A node holds `summary`, `ts_from`, `ts_to`, `bytes`, `input_gen`,
-`state`, `built_at`, and `truncated`. The tree has no depth limit, and it needs no dense prefix: a
+`start` is a multiple of `2^L`. A `node` event holds `summary`, `ts_from`, `ts_to`, `bytes`,
+`input_gen`, and `truncated`, and its `at` is the time of the build. The state `built` or `dirty`
+follows from `input_gen`, and the store keeps no field for it. The tree has no depth limit, and it needs no dense prefix: a
 position with no live record stays empty. See [0004 Tree and writer](../adr/0004-tree-writer.md) and
 [REQ-122](02-requirements.md) to [REQ-133](02-requirements.md).
 
