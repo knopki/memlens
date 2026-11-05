@@ -253,7 +253,7 @@ The agent opens the range with `memory_open`. See [REQ-223](02-requirements.md) 
 The text travels in `systemPrompt.context`. The session history keeps it. The plugin reads the last
 context message and gives that text until the next trigger. A trigger is a fresh session, a compaction
 after success, and an idle time above the TTL. A process restart gives the same text. See
-[REQ-021](02-requirements.md), [REQ-188](02-requirements.md), and [D-064](04-decisions.md).
+[REQ-300](02-requirements.md), [REQ-188](02-requirements.md), and [D-064](04-decisions.md).
 
 A `redact` cleans the store. The copy in the session history stays. See [D-052](04-decisions.md).
 
@@ -339,7 +339,7 @@ broken answer gives one retry with the error, then `parallel`. `auto` follows th
 
 A merge gives the model the two children only, and no context around them. The `writer` section sets
 the limit of the calls on the store: 120 in one hour by default. A call above the limit waits, and the
-job returns to the queue. See [REQ-248](02-requirements.md), [REQ-252](02-requirements.md), and
+job returns to the queue. See [REQ-433](02-requirements.md), [REQ-252](02-requirements.md), and
 [REQ-254](02-requirements.md).
 
 A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300

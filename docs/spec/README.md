@@ -42,4 +42,5 @@ requirement.
 | `accepted` | Confirmed. The requirement is testable.               |
 | `disputed` | Contradicts another statement. See the open question. |
 | `deferred` | Postponed on purpose.                                 |
+| `superseded` | Replaced by another requirement. The test names the replacement. |
 | `rejected` | Refused on purpose.                                   |
