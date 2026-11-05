@@ -73,7 +73,10 @@ and an export holds no `pos`. A redacted event keeps its `id` and gets `redacted
 ## Projection
 
 The projection builds the records in two passes over the events ordered by `(at, id)`. Pass 1 makes
-one record for each `note` event and copies its payload. The record takes `recorded_at` from `at`.
+one record for each `note` event and copies its payload. The record takes `recorded_at` from `at`. A
+`node` event changes no record, and the current node of a key is the latest `node` event for that key.
+The `gen` of a block is the `id` of the latest event that affects it. See [REQ-113](02-requirements.md)
+and [REQ-462](02-requirements.md).
 Pass 2 applies the operations in the same order. The order of arrival and a local `pos` change
 nothing. The effects of the operations, the state order, and the supersede rule are in
 [REQ-086](02-requirements.md) to [REQ-106](02-requirements.md).
@@ -164,11 +167,11 @@ One store holds many profiles, scopes, and records.
 
 A scope is a key in the events. The key has the form `kind:name`, and the store lowercases it before
 the write. The store holds no record for a scope, and no event describes one. A scope exists because
-a record names its key. See [0006 Scope and config](../adr/0006-scope-config.md), [0006 Scope and config](../adr/0006-scope-config.md), and
-[REQ-255](02-requirements.md).
+a record names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and [REQ-255](02-requirements.md).
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both. The
-store keeps the queue of the compaction jobs. See [0004 Tree and writer](../adr/0004-tree-writer.md).
+queue of the compaction is the set of dirty nodes, so the store keeps no queue. See
+[0004 Tree and writer](../adr/0004-tree-writer.md).
 
 Each append to the sqlite backend is one transaction, and the backend uses write-ahead logging. The
 jsonl backend takes a lock on each append. Several processes write one store. See
