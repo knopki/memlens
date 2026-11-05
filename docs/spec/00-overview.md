@@ -22,7 +22,7 @@ the full text. The `body` becomes a leaf of the tree. The `longform` stays out o
 
 ## Two levels
 
-The leaves are the notes of a scope. Above them is a catalog: a log of cards `[scope] state` with
+The leaves are the notes of a scope. Above them is a catalog of cards with
 its own tree. The catalog belongs to a profile, so a scope of another profile does not enter a
 shared node.
 

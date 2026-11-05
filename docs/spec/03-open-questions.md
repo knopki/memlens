@@ -2,13 +2,7 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-One question is open. Each question gives two options. The affected requirements are `disputed`.
-
-## Open questions
-
-| ID    | Question | Option A | Option B | Requirements | Date |
-| ----- | -------- | -------- | -------- | ------------ | ---- |
-| Q-115 | Does the card render in `<directions>` or in `<here>`? `<directions>` gives `[<scope>] <X>d · <Y> notes · <text>`. `<here>` gives `#<a>-<b> <start>..<end> <text>` with no scope. | The card is the direction line. `<here>` holds no card line. | The card is a line of `<here>`. The direction line holds the scope data only. | REQ-015, REQ-298, REQ-440 | 2026-11-05 |
+No question is open.
 
 ## Closed questions
 
@@ -130,3 +124,4 @@ One question is open. Each question gives two options. The affected requirements
 | Q-116 | Does the product localize eight languages, or English, Russian, and Chinese?  | The eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. See Q-108 and S-088.                                       | 2026-11-05 |
 | Q-117 | Where does the store keep the `title` and the `description` of a scope?       | None. A scope has a name only. The first node of the scope gives the text. See Q-044 and S-088.                                                    | 2026-11-05 |
 | Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | The `redact` event is new. The content of the old event becomes empty. See REQ-078 and S-088.                                                      | 2026-11-05 |
+| Q-115 | Does the card render in `<directions>` or in `<here>`?                        | The card is the direction line. `<here>` holds no card line. See S-089.                                                                            | 2026-11-05 |

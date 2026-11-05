@@ -8,7 +8,7 @@ The memory is a log of curated notes. A tree of retellings is a cache above the 
 one engine:
 
 - The notes of a scope make the leaves.
-- The catalog of cards `[scope] state` is the level above the notes. It has its own tree and belongs
+- The catalog of cards is the level above the notes. It has its own tree and belongs
   to one profile.
 
 The agent reads one map of directions: the registry and the catalog in one `<directions>` block.
@@ -118,7 +118,7 @@ agent. See [REQ-274](02-requirements.md). A card is a `note` event in this scope
 `for_sources`, and it carries no `review_at`, `proposed`, `turn`, or `preset`. See
 [D-034](04-decisions.md) and [D-037](04-decisions.md).
 
-One card covers one scope and one session. A session end and a compaction build the card of each scope
+One card covers one scope and one session. The catalog renders in `<directions>`, and the direction line of a scope is its live card. A session end and a compaction build the card of each scope
 with records of the session. Its input is the `body` of each live record of that scope and session. A
 record with the state `proposed`, `hidden`, or `deleted` does not enter the input.
 
@@ -236,8 +236,8 @@ The slice is one `<memory>` block:
 ```
 
 The policy text stays whole. A direction line gives `[scope] <age|active> · <N> notes · <text>`. A fresh
-scope can add detail lines. A line of `<here>` is a leaf `#<pos> <date> <body>`, a node
-`#<a>-<b> <start>..<end> <summary>`, or a card `#<pos> <date> [scope] <text>`. See
+scope can add detail lines. A line of `<here>` is a leaf `#<pos> <date> <body>` or a node
+`#<a>-<b> <start>..<end> <summary>`. See
 [REQ-297](02-requirements.md) and [REQ-298](02-requirements.md).
 
 The frontier tiles its range with no gap and no overlap. A nested block does not render. The agent opens a

@@ -100,5 +100,5 @@ Use ASD-STE100 Simplified Technical English in all documents and in all code com
 - Do not use Latin abbreviations. Write "for example", not "e.g.".
 - Use one word for one meaning. Use the terms from the glossary.
 - Add a new term to the glossary before you use it in a document.
-- Keep the README in three languages: English, Russian, and Chinese.
+- Keep the README in the eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`.
 - Quotes in the statement journal stay in the source language.
