@@ -1,8 +1,7 @@
 # Architecture decision records
 
-Write an ADR for each architectural decision. The record holds the context, the decision, the
-alternatives, and the consequences. [../spec/04-decisions.md](../spec/04-decisions.md) is the
-register of each choice, grouped by area.
+Write an ADR for each decision. The record holds the context, the decision, the alternatives, and
+the consequences.
 
 ## File name
 
@@ -45,3 +44,4 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0007 | Slice and context | accepted |
 | 0008 | Redaction | accepted |
 | 0009 | Agent surface | accepted |
+| 0010 | Process and stack | accepted |

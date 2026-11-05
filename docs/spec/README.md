@@ -15,13 +15,12 @@ requirement.
 | [02-requirements.md](02-requirements.md)     | Requirements with identifiers and status.          | draft        |
 | [02-superseded.md](02-superseded.md)         | Requirements that a later requirement replaced.     | archive      |
 | [03-open-questions.md](03-open-questions.md) | Open and closed questions.                         | live         |
-| [04-decisions.md](04-decisions.md)           | The register of the choices, grouped by area.      | live         |
 | [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                       | live         |
 | [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.                   | draft        |
 | [07-prior-art.md](07-prior-art.md)           | Each claim of the customer table against the code. | archive      |
 | [08-ui.md](08-ui.md)                         | The console, the seven screens, and the two hosts. | draft        |
 | [09-prompts.md](09-prompts.md)               | The four prompts of the writer and the subagent.   | draft        |
-| [../adr/](../adr/)                           | The architectural decisions.                       | live         |
+| [../adr/](../adr/)                           | The decisions.                                     | live         |
 
 ## Rules
 
@@ -31,8 +30,7 @@ requirement.
    question, not a requirement.
 4. A contradiction becomes an open question with two options. Do not overwrite silently.
 5. Record each non-goal. A non-goal must not become a hidden requirement.
-6. Record each choice in [04-decisions.md](04-decisions.md), and write an ADR for each
-   architectural decision.
+6. Record each decision in an ADR.
 7. Do not start the code while the requirement is `draft`, unless the customer asks for it.
 8. Change the specification with small commits.
 

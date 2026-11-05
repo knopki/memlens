@@ -12,7 +12,7 @@ work yet. The specification in `docs/spec/` is the only authority for requiremen
      with status `draft`.
    - The product boundary goes to [00-overview.md](docs/spec/00-overview.md) or to
      [01-goals-nongoals.md](docs/spec/01-goals-nongoals.md).
-   - A choice with consequences goes to [04-decisions.md](docs/spec/04-decisions.md) or to an ADR.
+   - A choice with consequences goes to an ADR.
    - A new term goes to [05-glossary.md](docs/spec/05-glossary.md).
    - An unclear point goes to [03-open-questions.md](docs/spec/03-open-questions.md).
 3. Compare the statement with the specification. If it contradicts a requirement, set that

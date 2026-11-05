@@ -10,8 +10,6 @@ An agent forgets between sessions, and a long chat is not the answer. The produc
 
 The memory is a log of curated notes. A tree of retellings is a cache above the notes. A catalog of cards is a second level, and one engine builds both trees.
 
-- 0013: The memory is a log of curated notes with a tree of retellings above them.
-
 ## Alternatives
 
 An infinite chat. A vector store. An entity graph with bitemporality.
