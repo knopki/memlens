@@ -153,6 +153,8 @@ The key `idle` gives 300 seconds by default. See [D-045](04-decisions.md).
 
 ## Store
 
+One store holds many profiles, scopes, and records.
+
 A scope is a key in the events. The key has the form `kind:name`, and the store lowercases it before
 the write. The store holds no record for a scope, and no event describes one. A scope exists because
 a record names its key. See [D-042](04-decisions.md), [D-061](04-decisions.md), and
