@@ -44,7 +44,7 @@ external, because the harness gives them at run time.
 
 ## Event log
 
-The log holds immutable events. An event has `id` (ULID), `at`, `op`, and `scope`. The payload belongs
+The log holds events, and a `redact` clears the content of its target. An event has `id` (ULID), `at`, `op`, and `scope`. The payload belongs
 to the op.
 
 | Op        | Payload                                                                                                                                                   | Effect                                                          |
@@ -65,8 +65,8 @@ An event has two times. `at` is the time of the log, and `ts` is the time of the
 Only the `note` event carries `session`, `turn`, and `preset`. The agent gives them when it calls the
 tool. See [REQ-085](02-requirements.md).
 
-`pos` is not a field of an event. It is the ordinal of the creating event in the log of one store. The
-first `note` has `pos` 0. A `pos` is local to one store, and an export holds no `pos`.
+`pos` is not a field of an event. It is the ordinal of the creating event in the scope of the record. The
+first `note` of a scope has `pos` 0. A `pos` is local to one scope, and an export holds no `pos`.
 
 A `supersedes` stays inside one scope. The store refuses a cross-scope `supersedes` with the error
 `CrossScopeSupersede`.
@@ -268,7 +268,7 @@ active scope, and an address with a scope names a record of that scope. The `pos
 an amend. The input holds no `#`, and the tool strips one leading `#` from a copy of the slice. See
 [D-027](04-decisions.md), [REQ-259](02-requirements.md) to [REQ-261](02-requirements.md), and
 [REQ-273](02-requirements.md) to [REQ-275](02-requirements.md). The `pos` is the ordinal in the
-store, and the scope narrows the count to that scope. See [REQ-276](02-requirements.md).
+scope. See [REQ-276](02-requirements.md).
 
 ## Tree
 
@@ -366,13 +366,13 @@ bytes with no retry. A retry asks for 0.75 times the target, and a merge makes t
 shortest line stays. A line above 640 bytes cuts at a word boundary, and the node takes
 `truncated: true`. See [REQ-432](02-requirements.md) to [REQ-438](02-requirements.md).
 
-## Freeze and branch
+## Session and branch
 
-The slice stays the same for the whole session. A session is a branch of a profile, and the branch
+The text stays the same until a trigger: a fresh session, a compaction, and an idle time above the TTL. A session is a branch of a profile, and the branch
 merges into the trunk at close and at idle. The merge of a branch serves several machines, not one
 machine.
 
-An import and a merge are idempotent by `idem`. A note can supersede an earlier note. The index is
+An import is a union of events by `id`. A note can supersede an earlier note. The index is
 a cache over the log: the store rebuilds it from the log after a loss. See
 [REQ-057](02-requirements.md), [REQ-058](02-requirements.md), and [REQ-059](02-requirements.md).
 
@@ -403,14 +403,13 @@ the plugin uses the number 220.
 | memory_find   | main agent | The records with the matching words, each with its `addr`.              |
 | memory_open   | main agent | A record with its `longform`, or a block of parts for a range.          |
 | memory_review | main agent | The due records, or the count of the reviewed records.                  |
-| memory_scope  | main agent | The visible scopes, or a new `title` and `description`.                 |
+| memory_scope  | main agent | The visible scopes.                 |
 
 Each scope of a profile accepts a write. A write to a scope outside the profile gives a `proposed`
 note, and a human decides about it. See [REQ-160](02-requirements.md) and
 [REQ-026](02-requirements.md).
 
-A `forget` to a record of a scope outside the profile gives a proposal. A `review` and a
-`scope describe` give the error `NotAllowed`. See [REQ-349](02-requirements.md) to
+A `forget` to a record of a scope outside the profile gives a proposal. A `review` gives the error `NotAllowed`. See [REQ-349](02-requirements.md) to
 [REQ-352](02-requirements.md).
 
 The answer of `memory_open` is 24 KiB at most, and one call visits 4096 nodes at most. A range that

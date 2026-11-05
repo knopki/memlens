@@ -2,20 +2,13 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-Eight questions are open. Each question gives two options. The affected requirements are `disputed`.
+One question is open. Each question gives two options. The affected requirements are `disputed`.
 
 ## Open questions
 
 | ID    | Question | Option A | Option B | Requirements | Date |
 | ----- | -------- | -------- | -------- | ------------ | ---- |
-| Q-111 | Is `pos` the ordinal in the store, or the ordinal in the scope? See Q-082. | The ordinal in the store. The scope does not change the count. | The ordinal in the scope. Two scopes can hold one `pos`. | REQ-075, REQ-076, REQ-276, REQ-318 | 2026-11-05 |
-| Q-112 | Does the budget `here` limit the tree of the current project, or the tree of the active scope? See Q-047. | The active scope. The profile selects the scope, and the tree follows the scope. | The current project. A session in another scope uses `<directions>` only. | REQ-154, REQ-181 | 2026-11-05 |
-| Q-113 | Does the slice stay the same for the whole session, or does a trigger replace the text inside the session? | A trigger replaces the text. A compaction and an idle time above the TTL give a new text. | The session keeps one text. A new text starts at the next session. | REQ-021, REQ-056, REQ-300 | 2026-11-05 |
-| Q-114 | Does an import join the events by `id` or by `idem`? See Q-101. | The events join by `id`. The key `idem` stops a repeated write of one tool call. | The import is idempotent by `idem`. A second import of one source adds no record. | REQ-057 | 2026-11-05 |
-| Q-115 | Does the card line start with `#<pos> <date> [scope] <text>`, or with `[<key>] <text>`? REQ-015 gives a third form, `[scope] state`. | `#<pos> <date> [scope] <text>`. | `[<key>] <text>`. | REQ-015, REQ-298, REQ-440 | 2026-11-05 |
-| Q-116 | Does the product localize eight languages, or English, Russian, and Chinese? See Q-004 and Q-108. | Eight languages: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. | Three languages: `en`, `ru`, and `zh`. The plugin README takes the eight. | REQ-005, REQ-006, REQ-430 | 2026-11-05 |
-| Q-117 | Where does the store keep the `title` and the `description` of a scope? See Q-044. | In the event log, as a new op. The replay rebuilds the description. | In a separate table outside the log. The log holds no scope record. | REQ-345, REQ-347, REQ-348 | 2026-11-05 |
-| Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | The store rewrites the event in place. The event keeps its `id` and loses the content. | The store keeps the event. The projection gives no content, and the store removes the old bytes from the disk. | REQ-060, REQ-082 | 2026-11-05 |
+| Q-115 | Does the card render in `<directions>` or in `<here>`? `<directions>` gives `[<scope>] <X>d · <Y> notes · <text>`. `<here>` gives `#<a>-<b> <start>..<end> <text>` with no scope. | The card is the direction line. `<here>` holds no card line. | The card is a line of `<here>`. The direction line holds the scope data only. | REQ-015, REQ-298, REQ-440 | 2026-11-05 |
 
 ## Closed questions
 
@@ -54,7 +47,7 @@ Eight questions are open. Each question gives two options. The affected requirem
 | Q-057 | Does a `redact` reach the copy of the slice in the session history?           | No, and that stays. The model saw the text, and the log belongs to the harness. See S-047.                                                         | 2026-11-04 |
 | Q-011 | Which fields does a snapshot hold?                                            | `id`, `session`, `profile`, `reason`, `at`, `text`, `bytes`, `parts`, and `scopes`. See S-042.                                                     | 2026-11-04 |
 | Q-018 | Where does the model cache TTL come from?                                     | `cacheTtl`: 2 hours for `deepseek/*`, 5 minutes for `anthropic/*`, 1 hour for another model. See S-042.                                            | 2026-11-04 |
-| Q-047 | What does the `here` budget cover, and is `slice` the sum?                    | The `slice` budget leaves. `here` limits the tree of the current project and `directions` the catalog tree. See S-037.                             | 2026-11-04 |
+| Q-047 | What does the `here` budget cover, and is `slice` the sum?                    | `here` limits the tree of the active scope, and `directions` limits the catalog tree. See Q-112.                             | 2026-11-04 |
 | Q-048 | What does each subagent mode allow?                                           | `propose` writes and reports, `read` reads only, `off` gives no tool and no slice. See S-037.                                                      | 2026-11-04 |
 | Q-041 | What makes a pair of nodes overdue?                                           | No measure. A node is dirty when a source changes, and the writer works on dirty nodes. See S-030.                                                 | 2026-11-04 |
 | Q-058 | When does the model write the card?                                           | Each build calls the model, and the fallback covers a missing model only. See S-050.                                                               | 2026-11-04 |
@@ -82,7 +75,7 @@ Eight questions are open. Each question gives two options. The affected requirem
 | Q-081 | Which key does the catalog scope have under the new grammar?                  | A hidden technical key. The grammar covers the keys that the agent sees, and `__catalog__` stays outside it. See S-064.                            | 2026-11-04 |
 | Q-084 | Is `workspace:<id>` a scope key?                                              | `workspace:<id> → key` is a rule for the scope, and `workspace` stays out of the kind list. See S-064.                                             | 2026-11-04 |
 | Q-089 | Does the agent type `#2107` or `2107`?                                        | `2107`. The `#` belongs to the render form, and the tool strips it. See S-064.                                                                     | 2026-11-04 |
-| Q-082 | Is `pos` the ordinal in the store, or the ordinal in the scope?               | The ordinal in the store. The scope narrows the count to that scope. See S-065.                                                                    | 2026-11-04 |
+| Q-082 | Is `pos` the ordinal in the store, or the ordinal in the scope?               | The ordinal in the scope. See Q-111 and S-088.                                                                    | 2026-11-04 |
 | Q-083 | Do the items take the words `kind` and `workspace`, or do the old items?      | No new terms. `kind` stays `kind`, and `workspace` stays `workspace`. See S-065.                                                                   | 2026-11-04 |
 | Q-085 | Which part of the match does `{repo}` take?                                   | The repository name from the remote. See S-065.                                                                                                    | 2026-11-04 |
 | Q-086 | Does a scope kind change the behavior?                                        | No. A kind is a label. See S-065.                                                                                                                  | 2026-11-04 |
@@ -112,7 +105,7 @@ Eight questions are open. Each question gives two options. The affected requirem
 | Q-030 | How does a merge join a sanitized event and a full event with one `id`? | The events of a record with a `redact` go in the sanitized form, in each order. See S-073 and REQ-384. | 2026-11-05 |
 | Q-019 | What is the export and import format, and how does `redact` block a restore? | Two formats, `md` and `jsonl`, into a directory. The export is always the whole store. See S-075. | 2026-11-05 |
 | Q-102 | What does `memlens import --from dsh-sessions` read, and what records does it write? | The writer reads each session and writes new notes into the store. See S-076 and REQ-413. | 2026-11-05 |
-| Q-103 | Does the text of `memlens describe` set the `title` or the `description`? | The CLI has no `describe` command. The tool `memory_scope` keeps its action. See S-076. | 2026-11-05 |
+| Q-103 | Does the text of `memlens describe` set the `title` or the `description`? | The CLI has no `describe` command. The tool `memory_scope` lists the scopes only. See Q-117 and S-076. | 2026-11-05 |
 | Q-104 | Must the target of `--into` be one of the two stores of `memlens merge`? | The CLI has no `merge` command. The import makes the merge. See S-076. | 2026-11-05 |
 | Q-105 | What does the directory of `--out` hold for each format? | An export takes the optional `--scope`. With no flag it writes one file for each scope, and with the flag one scope. See S-076. | 2026-11-05 |
 | Q-101 | Is an import joined by `id` or by `idem`? | The import and the merge join by `id`, and the key `idem` guards a repeated write. The two rules hold together. See S-073 and S-076. | 2026-11-05 |
@@ -130,3 +123,10 @@ Eight questions are open. Each question gives two options. The affected requirem
 | Q-110 | Is the budget of the slice one total of 24 KiB with three parts, or two independent budgets? | The profile gives two budgets, `here` and `directions`, and no total. The values are 17 KiB and 3 KiB. See S-084. | 2026-11-05 |
 | Q-014 | Which surface does the session mode of the console use in the harness? | The tab mounts in the slot `conversation.session.header`, and the kind is `memlens`. See S-085 and REQ-446. | 2026-11-05 |
 | Q-015 | Which operations does the index port have? | The port gives the `pos` and the line of each hit. The index shares no transaction with the log. The tokenizer follows `language`. The rest is in D-072. See S-085. | 2026-11-05 |
+| Q-111 | Is `pos` the ordinal in the store, or the ordinal in the scope?               | The ordinal in the scope. See Q-082 and S-088.                                                                                                     | 2026-11-05 |
+| Q-112 | Does the budget `here` limit the tree of the current project, or the tree of the active scope? | The active scope of the session. The `[scope_default]` rules select the scope, and the tree follows it. See Q-047 and S-088.                                      | 2026-11-05 |
+| Q-113 | Does the slice stay the same for the whole session, or does a trigger replace the text inside the session? | The text changes at a compaction and at an idle time above the TTL. A turn, a write, and a process restart change no text. The plugin gives the text. See S-088. | 2026-11-05 |
+| Q-114 | Does an import join the events by `id` or by `idem`?                          | The events join by `id`. The key `idem` stops a repeated write of one tool call. See Q-101 and S-088.                                              | 2026-11-05 |
+| Q-116 | Does the product localize eight languages, or English, Russian, and Chinese?  | The eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. See Q-108 and S-088.                                       | 2026-11-05 |
+| Q-117 | Where does the store keep the `title` and the `description` of a scope?       | None. A scope has a name only. The first node of the scope gives the text. See Q-044 and S-088.                                                    | 2026-11-05 |
+| Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | The `redact` event is new. The content of the old event becomes empty. See REQ-078 and S-088.                                                      | 2026-11-05 |
