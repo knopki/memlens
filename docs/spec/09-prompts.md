@@ -3,6 +3,11 @@
 This file holds the four texts of the writer and of the subagent. Each text is a copy, and a change
 of a word is a change of the product.
 
+## Policy text
+
+The policy text of the slice is not designed. [Q-456](03-open-questions.md) holds the question. An
+example text is not a source.
+
 ## Merge system prompt
 
 ```text

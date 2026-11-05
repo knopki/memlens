@@ -2,7 +2,17 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-No question is open.
+One question is open.
+
+## Open questions
+
+| ID    | Question                                     | Answer        | Date       |
+| ----- | -------------------------------------------- | ------------- | ---------- |
+| Q-456 | What does the policy text of the slice hold? | Not answered. | 2026-11-05 |
+
+The policy text is the static instruction at the head of `<memory>`. The customer has not designed
+it. The example text in S-067 is not a source. See [S-095](../statements.md) and
+[REQ-179](02-requirements.md).
 
 ## Closed questions
 

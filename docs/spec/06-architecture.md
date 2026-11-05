@@ -320,7 +320,7 @@ the plugin uses the number 220.
 The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 [REQ-352](02-requirements.md). The subagent modes are in [REQ-353](02-requirements.md) to
 [REQ-363](02-requirements.md). The nudge is in [REQ-230](02-requirements.md) to
-[REQ-237](02-requirements.md). See [0009 Agent surface](../adr/0009-agent-surface.md) and [0009 Agent surface](../adr/0009-agent-surface.md).
+[REQ-237](02-requirements.md). See [0009 Agent surface](../adr/0009-agent-surface.md).
 
 ## Human surface
 
@@ -363,9 +363,12 @@ code. See [C-012](01-goals-nongoals.md).
 | Document language | `pnpm run lint:docs` |
 | All of the above  | `pnpm run verify`    |
 
-The project keeps the linter in `scripts/vendor/`. See [0010 Process and stack](../adr/0010-process-stack.md). The manifest has a
-test. See [0010 Process and stack](../adr/0010-process-stack.md).
+The project keeps the linter in `scripts/vendor/`, and the manifest has a test. See
+[0010 Process and stack](../adr/0010-process-stack.md).
+
+Biome checks the code only. The documents have their own check, because the journal keeps the
+customer words as given.
 
 ## Remaining work
 
-The policy text names four tools. A sentence for `memory_review` and `memory_scope` is not written.
+The policy text is not designed. [Q-456](03-open-questions.md) holds the question.

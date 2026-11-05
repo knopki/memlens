@@ -292,7 +292,6 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-289 | The `writer` section gives `provider`, `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`.                                                                                     | FR   | draft    | S-067               | The writer reads each key.                                                                                                     |
 | REQ-290 | The writer calls the harness LLM service with the configured provider and model.                                                                                                      | FR   | draft    | S-067               | A stub LLM records the provider and the model of the call.                                                                     |
 | REQ-291 | The `language` key gives the language that the prompt recommends to the agent for the notes. The default is `en`.                                                                     | FR   | draft    | S-067, S-068        | The default slice tells the model to write in English.                                                                         |
-| REQ-292 | The policy text names `memory_find`, `memory_open`, `memory_note`, and `memory_forget`.                                                                                               | FR   | draft    | S-067               | The text holds the four names.                                                                                                 |
 | REQ-293 | The agent tools are `memory_find`, `memory_open`, `memory_note`, `memory_forget`, `memory_review`, and `memory_scope`. | FR | draft | S-067, S-070 | The tool list holds the six names and no `write` or `hide`. |
 | REQ-294 | `memory_note` takes `body`, `longform`, `scope`, `kind`, `supersedes`, and `reviewIn`, and the last five are optional. | FR | draft | S-067, S-070 | A call with a body only writes a note. A call with each optional field succeeds. |
 | REQ-295 | `memory_forget` takes `target` and `reason`. | FR | rejected | S-067, S-071 | A call with both hides the note. |
@@ -460,3 +459,4 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 - Write the behavior that the user can see. Do not write the mechanism, unless the customer
   gives the mechanism as a constraint.
 - Write the test method before you set the status to `accepted`.
+- Take each requirement from a customer statement. An example text in a statement is not a source.
