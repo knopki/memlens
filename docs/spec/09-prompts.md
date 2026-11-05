@@ -78,12 +78,10 @@ One scope of the agent's long-term memory had these notes in one session, oldest
 {date — kind — body}
 </notes>
 
-The scope is "{key}": {description}.
-
-Write one line of at most {CARD} bytes for the scope's activity map. Start with "[{key}] ". Say what changed
-and what is now true or open in this direction; a reader who will not open these notes must be able to tell
-whether this direction matters for their task. Name the subject of every item. Do not invent anything,
-do not repeat the scope description verbatim, and do not narrate the process of summarizing.
+Write one line of at most {CARD} bytes for the scope's activity map. Say what changed and what is now
+true or open in this direction; a reader who will not open these notes must be able to tell whether
+this direction matters for their task. Name the subject of every item. Do not invent anything and do
+not narrate the process of summarizing.
 ```
 
 ## Subagent prompt

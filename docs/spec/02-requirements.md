@@ -443,7 +443,7 @@ Status: see [README.md](README.md#status-values).
 | REQ-437 | A merge makes 3 attempts at most, and the answer is the shortest of them. | FR | draft | S-082 | Three bad answers give three calls and the shortest line. |
 | REQ-438 | A line above 640 bytes after the attempts cuts at a word boundary, and the node takes `truncated: true`. | FR | draft | S-082 | A line of 700 bytes gives 640 bytes at most and `truncated: true`. |
 | REQ-439 | The card call sends the task text of [09-prompts.md](09-prompts.md). | FR | draft | S-082 | The call holds the text with the notes and the scope. |
-| REQ-440 | The line of the card starts with `[<key>] `. | FR | draft    | S-082 | Each card line starts with the key in brackets. |
+| REQ-440 | The line of the card starts with `[<key>] `.                                                                                                                                          | FR   | draft    | S-082, S-090        | Each card line starts with the key in brackets.                                                                                |
 | REQ-441 | A subagent gets the prompt of [09-prompts.md](09-prompts.md). | FR | draft | S-082 | The child session holds the prompt text. |
 | REQ-442 | The field `bytes` of a node holds the byte count of its line. | FR | draft | S-082 | A line of 400 bytes gives `bytes: 400`. |
 | REQ-443 | The default budget `here` is 17 KiB. | FR | draft | S-083 | A profile with no budget value gives 17 KiB for `here`. |
