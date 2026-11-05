@@ -63,10 +63,12 @@ Run the commands in a shell that mise activates, or start each command with `mis
 | -------------------- | --------------------------------------------------------------------------------------- |
 | Documents            | Simplified Technical English, ASD-STE100.                                               |
 | Code comments        | Simplified Technical English, ASD-STE100.                                               |
-| README               | English, Russian ([README.ru.md](README.ru.md)), Chinese ([README.zh.md](README.zh.md)) |
-| Product localization | Russian and Chinese.                                                                    |
+| README files         | The eight languages of the DSH set. The repository has English, Russian ([README.ru.md](README.ru.md)), and Chinese ([README.zh.md](README.zh.md)) now. |
+| Product localization | The eight languages of the DSH set.                                                     |
 
 ## Next step
 
-The shape of a scope, the map of directions, and the snapshot fields are open.
-See [Q-009](docs/spec/03-open-questions.md#q-009) and the questions after it.
+The specification is in the review for acceptance. The review goes slice by slice, and the first
+slice is the data path: the event log, the store, the redaction, and the transfer.
+
+The policy text of the slice is not designed. See [Q-456](docs/spec/03-open-questions.md#q-456).

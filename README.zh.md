@@ -61,10 +61,11 @@ prek install
 | ---------- | ---------------------------------------------------------- |
 | 文档       | Simplified Technical English，ASD-STE100。                 |
 | 代码注释   | Simplified Technical English，ASD-STE100。                 |
-| README     | 英文、俄文（[README.ru.md](README.ru.md)）、中文（本文件） |
-| 产品本地化 | 俄文和中文。                                               |
+| README     | DSH 套件的八种语言。目前仓库中有英文、俄文（[README.ru.md](README.ru.md)）和中文（本文件）。 |
+| 产品本地化 | DSH 套件的八种语言。 |
 
 ## 下一步
 
-尚未确定：scope 的结构、方向图的形式和快照的字段。
-见 [Q-009](docs/spec/03-open-questions.md#q-009) 及后续问题。
+规范正在验收。验收按切片进行，第一个切片是数据路径：事件日志、存储、擦除和传输。
+
+切片的 policy text 尚未设计。见 [Q-456](docs/spec/03-open-questions.md#q-456)。
