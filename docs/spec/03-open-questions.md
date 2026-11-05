@@ -2,15 +2,17 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-Three questions are open.
+Five questions are open.
 
 ## Open questions
 
-| ID    | Question                                                | Answer        | Date       |
-| ----- | ------------------------------------------------------- | ------------- | ---------- |
-| Q-456 | What does the policy text of the slice hold?            | Not answered. | 2026-11-05 |
-| Q-457 | How does a proposal change an existing record?          | Not answered. | 2026-11-05 |
-| Q-458 | What happens to one `id` with two payloads at one `at`? | Not answered. | 2026-11-05 |
+| ID    | Question                                                 | Answer        | Date       |
+| ----- | -------------------------------------------------------- | ------------- | ---------- |
+| Q-456 | What does the policy text of the slice hold?             | Not answered. | 2026-11-05 |
+| Q-457 | How does a proposal change an existing record?           | Not answered. | 2026-11-05 |
+| Q-458 | What happens to one `id` with two payloads at one `at`?  | Not answered. | 2026-11-05 |
+| Q-459 | When does the index show a note that a write just added? | Not answered. | 2026-11-05 |
+| Q-460 | Which tokenizer does the index take for each language?   | Not answered. | 2026-11-05 |
 
 The policy text is the static instruction at the head of `<memory>`. The customer has not designed
 it. The example text in S-067 is not a source. See [S-095](../statements.md) and
@@ -25,6 +27,14 @@ real event, and the log holds the proposal and the applied event. See [S-096](..
 Q-458 has two options. Option A: an import of one `id` with two payloads at one `at` gives an error,
 and the store keeps the local event. Option B: the payload with the greater hash wins, and both
 directions give the same event. See [REQ-040](02-requirements.md) and [REQ-383](02-requirements.md).
+
+Q-459 has two options. Option A: the index takes the new note in the same call, after the commit of
+the log. A `find` after a write sees the note. Option B: the index updates later, and a `find` can
+miss a note until the next rebuild. See [REQ-449](02-requirements.md).
+
+Q-460 has two options. Option A: one tokenizer for each language, and the `language` key selects it.
+Option B: the trigram tokenizer for each language, so the search matches a part of a word. See
+[REQ-450](02-requirements.md).
 
 ## Closed questions
 
