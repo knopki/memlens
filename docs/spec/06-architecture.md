@@ -108,7 +108,7 @@ patch wins over the TOML, and the preset wins over the profile. An array replace
 | Layer        | File                       | Keys                                                                 |
 | ------------ | -------------------------- | -------------------------------------------------------------------- |
 | CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `profile.<name>`, `scope_default`, `nudge`, `writer`        |
-| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `language`, `cacheTtl` |
+| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `language`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
 | Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
 
 The `store` key of the patch sets the same store as the TOML `store` section and `MEMLENS_STORE`. The
@@ -120,6 +120,9 @@ The `writer` section gives `provider`, `model`, `effort`, `mode`, `batch`, and `
 duration for a model glob, and the most specific glob wins. The `language` key gives the language that
 the prompt recommends for the notes, and the default is `en`. See [S-067](../statements.md#s-067) and
 [S-068](../statements.md#s-068).
+
+The `customPrompt` key replaces the policy text in the slice, and the `customPromptAppend` key adds
+text after it. See [S-094](../statements.md#s-094).
 
 The `nudge` section gives `mode` and `tool_calls` in the patch. The TOML file gives the other nudge
 keys. The `[scope_default]` section gives the scope rules and the fallback key. The rules go in order,

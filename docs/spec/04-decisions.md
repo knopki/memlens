@@ -76,3 +76,4 @@ The index of the decisions. The reason for each decision is in its ADR. See [../
 | D-070 | 2026-11-05 | The agent surface is `memory_find`, `memory_open`, `memory_note`, `memory_forget`,… | accepted | [0070](../adr/0070-tool-surface.md) |
 | D-071 | 2026-11-05 | The default export copies the whole store under an exclusive lock. | accepted | [0071](../adr/0071-export-import.md) |
 | D-072 | 2026-11-05 | The index port takes the query after the parse: the words, the words with `-`, the scopes, the… | accepted | [0072](../adr/0072-index-port.md) |
+| D-073 | 2026-11-05 | The profile patch gives `customPrompt` and `customPromptAppend`. | accepted | [0073](../adr/0073-custom-prompt.md) |

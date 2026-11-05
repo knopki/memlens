@@ -108,3 +108,4 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0070 | Tool surface | accepted |
 | 0071 | Export import | accepted |
 | 0072 | Index port | accepted |
+| 0073 | Custom prompt | accepted |
