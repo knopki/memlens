@@ -13,6 +13,7 @@ requirement.
 | [00-overview.md](00-overview.md)             | Problem, users, value, success criteria.           | draft        |
 | [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints.                     | draft        |
 | [02-requirements.md](02-requirements.md)     | Requirements with identifiers and status.          | draft        |
+| [02-superseded.md](02-superseded.md)         | Requirements that a later requirement replaced.     | archive      |
 | [03-open-questions.md](03-open-questions.md) | Open and closed questions.                         | live         |
 | [04-decisions.md](04-decisions.md)           | Decisions with alternatives and consequences.      | live         |
 | [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                       | live         |
@@ -42,5 +43,5 @@ requirement.
 | `accepted` | Confirmed. The requirement is testable.               |
 | `disputed` | Contradicts another statement. See the open question. |
 | `deferred` | Postponed on purpose.                                 |
-| `superseded` | Replaced by another requirement. The test names the replacement. |
+| `superseded` | Replaced by another requirement. The item is in [02-superseded.md](02-superseded.md). |
 | `rejected` | Refused on purpose.                                   |
