@@ -272,14 +272,12 @@ The four texts of the calls are in [09-prompts.md](09-prompts.md). See [D-041](0
 [REQ-200](02-requirements.md) to [REQ-254](02-requirements.md), and
 [REQ-432](02-requirements.md) to [REQ-438](02-requirements.md).
 
-## Session and branch
+## Session and store
 
-A session is a branch of a profile, and the branch merges into the trunk at close and at idle. The
-merge of a branch serves several machines, not one machine.
-
-An import is a union of events by `id`. A note can supersede an earlier note. The index is a cache
-over the log: the store rebuilds it from the log after a loss. See [REQ-057](02-requirements.md) to
-[REQ-059](02-requirements.md).
+A session writes the store. The export and the import move the records between stores. An import is
+a union of events by `id`. A note can supersede an earlier note. The index is a cache over the log:
+the store rebuilds it from the log after a loss. See [REQ-057](02-requirements.md) to
+[REQ-059](02-requirements.md) and [REQ-373](02-requirements.md) to [REQ-377](02-requirements.md).
 
 ## Harness surface
 
