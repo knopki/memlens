@@ -14,6 +14,7 @@ requirement.
 | [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints.                     | draft        |
 | [02-requirements.md](02-requirements.md)     | Requirements with identifiers and status.          | draft        |
 | [02-superseded.md](02-superseded.md)         | Requirements that a later requirement replaced.     | archive      |
+| [02-slices.md](02-slices.md)                 | The review order for acceptance, in slices.        | live         |
 | [03-open-questions.md](03-open-questions.md) | Open and closed questions.                         | live         |
 | [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                       | live         |
 | [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.                   | draft        |
