@@ -2,7 +2,20 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-No question is open.
+Eight questions are open. Each question gives two options. The affected requirements are `disputed`.
+
+## Open questions
+
+| ID    | Question | Option A | Option B | Requirements | Date |
+| ----- | -------- | -------- | -------- | ------------ | ---- |
+| Q-111 | Is `pos` the ordinal in the store, or the ordinal in the scope? See Q-082. | The ordinal in the store. The scope does not change the count. | The ordinal in the scope. Two scopes can hold one `pos`. | REQ-075, REQ-076, REQ-276, REQ-318 | 2026-11-05 |
+| Q-112 | Does the budget `here` limit the tree of the current project, or the tree of the active scope? See Q-047. | The active scope. The profile selects the scope, and the tree follows the scope. | The current project. A session in another scope uses `<directions>` only. | REQ-154, REQ-181 | 2026-11-05 |
+| Q-113 | Does the slice stay the same for the whole session, or does a trigger replace the text inside the session? | A trigger replaces the text. A compaction and an idle time above the TTL give a new text. | The session keeps one text. A new text starts at the next session. | REQ-021, REQ-056, REQ-300 | 2026-11-05 |
+| Q-114 | Does an import join the events by `id` or by `idem`? See Q-101. | The events join by `id`. The key `idem` stops a repeated write of one tool call. | The import is idempotent by `idem`. A second import of one source adds no record. | REQ-057 | 2026-11-05 |
+| Q-115 | Does the card line start with `#<pos> <date> [scope] <text>`, or with `[<key>] <text>`? REQ-015 gives a third form, `[scope] state`. | `#<pos> <date> [scope] <text>`. | `[<key>] <text>`. | REQ-015, REQ-298, REQ-440 | 2026-11-05 |
+| Q-116 | Does the product localize eight languages, or English, Russian, and Chinese? See Q-004 and Q-108. | Eight languages: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. | Three languages: `en`, `ru`, and `zh`. The plugin README takes the eight. | REQ-005, REQ-006, REQ-430 | 2026-11-05 |
+| Q-117 | Where does the store keep the `title` and the `description` of a scope? See Q-044. | In the event log, as a new op. The replay rebuilds the description. | In a separate table outside the log. The log holds no scope record. | REQ-345, REQ-347, REQ-348 | 2026-11-05 |
+| Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | The store rewrites the event in place. The event keeps its `id` and loses the content. | The store keeps the event. The projection gives no content, and the store removes the old bytes from the disk. | REQ-060, REQ-082 | 2026-11-05 |
 
 ## Closed questions
 
