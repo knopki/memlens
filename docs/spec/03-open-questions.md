@@ -97,7 +97,7 @@ No question is open.
 | Q-027 | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The write mechanism cuts the text mechanically at a word boundary and moves the rest into the `longform`. See S-072. | 2026-11-05 |
 | Q-097 | Which field of the `memory_forget` answer holds a proposal? | The answer gives `hidden: 0`. The proposal stays invisible to the agent. See S-072. | 2026-11-05 |
 | Q-030 | How does a merge join a sanitized event and a full event with one `id`? | The events of a record with a `redact` go in the sanitized form, in each order. See S-073 and REQ-384. | 2026-11-05 |
-| Q-019 | What is the export and import format, and how does `redact` block a restore? | Two formats, `md` and `jsonl`, into a directory. The export is always the whole store. See S-075. | 2026-11-05 |
+| Q-019 | What is the export and import format, and how does `redact` block a restore?  | Two formats, `md` and `jsonl`, into a directory. With no flag, the export writes the whole store, one file for each scope. The flag `--scope` writes one scope. See S-075 and S-076. | 2026-11-05 |
 | Q-102 | What does `memlens import --from dsh-sessions` read, and what records does it write? | The writer reads each session and writes new notes into the store. See S-076 and REQ-413. | 2026-11-05 |
 | Q-103 | Does the text of `memlens describe` set the `title` or the `description`? | The CLI has no `describe` command. The tool `memory_scope` lists the scopes only. See Q-117 and S-076. | 2026-11-05 |
 | Q-104 | Must the target of `--into` be one of the two stores of `memlens merge`? | The CLI has no `merge` command. The import makes the merge. See S-076. | 2026-11-05 |

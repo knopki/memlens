@@ -145,7 +145,7 @@ The key `idle` gives 300 seconds by default. See [D-045](04-decisions.md).
 | Fold             | `high` is the budget of the block, and `low` is its half. The order is `(due↓, level↑, start↑)` | The order gives one answer. |
 | Writer           | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
 | Nudge            | `mode=tools`, 10 calls                                                    | The profile sets it.                                             |
-| Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | No note takes an eternal period. |
+| Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
 | `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 bytes.                   |
 | `cacheTtl`       | `deepseek/*` 2 hours, `anthropic/*` 5 minutes, another model 1 hour        | An idle time above the TTL gives a new snapshot.                 |
