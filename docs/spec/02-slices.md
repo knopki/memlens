@@ -8,8 +8,8 @@ are the data path, and they need no model call. A rejected requirement stays out
 
 | Slice | Subject | Requirements | Count |
 | ----- | ------- | ------------ | ----- |
-| 1 | The events and the notes | 008, 010-014, 026-027, 037, 058-072, 074-076, 079-081, 083-085, 238-240, 244, 277, 307, 309, 370 | 41 |
-| 2 | The projection | 086-107 | 22 |
+| 1 | The events and the notes | 008, 010-014, 026-027, 037, 058-069, 071-072, 074-076, 079-081, 083-085, 238-240, 244, 277, 307, 309, 370, 472-474 | 43 |
+| 2 | The projection | 086-093, 096, 098-106 | 18 |
 | 3 | The store | 042-045, 148, 174-175, 236, 306, 372-376, 467, 471 | 16 |
 | 4 | The redaction | 025, 078, 082, 119, 219-222 | 8 |
 | 5 | The transfer | 040, 057, 077, 378-379, 381-384, 466, 469 | 11 |

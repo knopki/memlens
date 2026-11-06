@@ -1,12 +1,27 @@
 # Prompts
 
-This file holds the three texts of the writer and of the subagent. Each text is a copy, and a change
+This file holds the texts of the slice, of the writer, and of the subagent. Each text is a copy, and a change
 of a word is a change of the product.
 
 ## Policy text
 
-The policy text of the slice is not designed. [Q-456](03-open-questions.md) holds the question. An
-example text is not a source.
+The policy text is the block of [S-067](../statements.md#s-067), word for word. The research of the
+prior art can change the text. See [REQ-179](02-requirements.md) and [Q-456](03-open-questions.md).
+
+```text
+Long-term memory, kept across sessions and across chats in this project. It holds what earlier
+sessions learned: decisions, preferences, facts, tasks. It is a map, not a transcript.
+Write every memory in English, whatever language the user speaks.
+
+Lines: "#2107 text" is one memory; "#1024-2047 text" summarizes those; dates are when it happened.
+memory_find(query) searches by words; memory_open(2107) gives one memory whole, together with its
+document; memory_open("1024-2047") opens a summary into the two lines it was made from. Open before you
+act, guess or ask, whenever a line only mentions something you need.
+memory_note(body, longform?, scope?, kind?, supersedes?) saves one memory. Do not save greetings, transient
+execution detail, routine tool output, or anything already remembered. Supersede instead of repeating.
+memory_forget(target, reason) drops a memory from this map.
+This snapshot is from the start of the session; records you save appear here from the next one on.
+```
 
 ## Merge system prompt
 

@@ -2,39 +2,11 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-Five questions are open.
+No question is open.
 
 ## Open questions
 
-| ID    | Question                                                 | Answer        | Date       |
-| ----- | -------------------------------------------------------- | ------------- | ---------- |
-| Q-456 | What does the policy text of the slice hold?             | Not answered. | 2026-11-05 |
-| Q-457 | How does a proposal change an existing record?           | Not answered. | 2026-11-05 |
-| Q-458 | What happens to one `id` with two payloads at one `at`?  | Not answered. | 2026-11-05 |
-| Q-459 | When does the index show a note that a write just added? | Not answered. | 2026-11-05 |
-| Q-460 | Which tokenizer does the index take for each language?   | Not answered. | 2026-11-05 |
-
-The policy text is the static instruction at the head of `<memory>`. The customer has not designed
-it. The example text in S-067 is not a source. See [S-095](../statements.md) and
-[REQ-179](02-requirements.md).
-
-Q-457 has two options. Option A: the field `proposed` extends to the events `amend` and `hide`. The
-projection keeps the target live and holds the proposal beside it. The `accept` event applies the op.
-Option B: a proposal is a `note` with a `target` field that names the record. The `accept` writes the
-real event, and the log holds the proposal and the applied event. See [S-096](../statements.md) and
-[REQ-027](02-requirements.md).
-
-Q-458 has two options. Option A: an import of one `id` with two payloads at one `at` gives an error,
-and the store keeps the local event. Option B: the payload with the greater hash wins, and both
-directions give the same event. See [REQ-040](02-requirements.md) and [REQ-383](02-requirements.md).
-
-Q-459 has two options. Option A: the index takes the new note in the same call, after the commit of
-the log. A `find` after a write sees the note. Option B: the index updates later, and a `find` can
-miss a note until the next rebuild. See [REQ-449](02-requirements.md).
-
-Q-460 has two options. Option A: one tokenizer for each language, and the `language` key selects it.
-Option B: the trigram tokenizer for each language, so the search matches a part of a word. See
-[REQ-450](02-requirements.md).
+None.
 
 ## Closed questions
 
@@ -52,7 +24,7 @@ Option B: the trigram tokenizer for each language, so the search matches a part 
 | Q-031 | Do all events carry `session`, `turn`, and `preset`, or the note only?        | The `note` event only. The agent gives the three fields when it calls the tool. See S-019.                                                         | 2026-11-04 |
 | Q-034 | Does a `hide` event on a proposed note remove it from the review queue?       | No. The state stays `proposed` and the note leaves the view only. See S-021.                                                                       | 2026-11-04 |
 | Q-035 | Does `dismiss` apply to a note that is not proposed?                          | Each state. A live note becomes `deleted` after a `dismiss`. See S-021.                                                                            | 2026-11-04 |
-| Q-036 | Does a hidden proposed record enter the view after an `accept`?               | Yes. The `accept` clears the effect of the earlier `hide` event. See S-022.                                                                        | 2026-11-04 |
+| Q-036 | Does a hidden proposed record enter the view after an `accept`?               | Yes. The `accept` clears the effect of the earlier `hide` event. See S-022.                                                                         Superseded by Q-457: a proposed record has no state. | 2026-11-04 |
 | Q-037 | Does `scrub` come back, or does the model keep no such step?                  | No `scrub`. A `redact` event gives the sanitized form, and the store extends it to each card. See S-024.                                           | 2026-11-04 |
 | Q-038 | Which required fields of a note does a card carry?                            | None of `review_at`, `proposed`, `turn`, and `preset`. A card is not reviewed and not proposed. See S-024.                                         | 2026-11-04 |
 | Q-039 | Do `ts_from`/`ts_to` hold the `ts` values, or the `at` values?                | The `ts` values, the time of the write. See S-026.                                                                                                 | 2026-11-04 |
@@ -157,3 +129,8 @@ Option B: the trigram tokenizer for each language, so the search matches a part 
 | Q-117 | Where does the store keep the `title` and the `description` of a scope?       | None. A scope has a name only. The first node of the scope gives the text. See Q-044 and S-088.                                                    | 2026-11-05 |
 | Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | The `redact` event is new. The content of the old event becomes empty. See REQ-078 and S-088.                                                      | 2026-11-05 |
 | Q-115 | Does the card render in `<directions>` or in `<here>`?                        | The card is the direction line. `<here>` holds no card line. See S-089.                                                                            | 2026-11-05 |
+| Q-456 | What does the policy text of the slice hold? | The block of [S-067](../statements.md#s-067), word for word, until the research of the prior art gives the text. See [S-101](../statements.md#s-101) and [REQ-179](02-requirements.md). | 2026-11-06 |
+| Q-457 | How does a proposal change an existing record? | A proposal is a write op with `proposed`, and the projection ignores it. A decision is a write op with `accepts`, and a `dismiss` closes a proposal. See [S-101](../statements.md#s-101) and [0012 Proposals](../adr/0012-proposals.md). | 2026-11-06 |
+| Q-458 | What happens to one `id` with two payloads at one `at`? | The payload with the greater SHA-256 of its canonical JSON wins, and the sanitized form wins over each payload. See [S-101](../statements.md#s-101), [REQ-383](02-requirements.md), and [REQ-466](02-requirements.md). | 2026-11-06 |
+| Q-459 | When does the index show a note that a write just added? | The index add is part of the append transaction in the SQLite backend and follows the append in the JSONL backend. A rebuild covers the gap. See [S-101](../statements.md#s-101) and [REQ-449](02-requirements.md). | 2026-11-06 |
+| Q-460 | Which tokenizer does the index take for each language? | One value of `language` for the installation. `porter unicode61 remove_diacritics 1` for `en`, `unicode61 remove_diacritics 1` for the other languages with spaces, and `trigram` for `zh` and `ja`. See [S-101](../statements.md#s-101) and [REQ-450](02-requirements.md). | 2026-11-06 |

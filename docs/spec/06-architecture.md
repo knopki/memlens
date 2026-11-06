@@ -54,9 +54,11 @@ op. A `redact` clears the content of its target.
 | `hide`    | `target`, `reason`                                                                                                                                        |
 | `redact`  | `target`, `reason`                                                                                                                                        |
 | `review`  | `target`, `review_at`                                                                                                                                     |
-| `accept`  | `target`                                                                                                                                                  |
 | `dismiss` | `target`, `reason`                                                                                                                                        |
 | `node`    | `level`, `start`, `child_a`, `child_b`, `input_gen`, `summary`, `bytes`, `truncated`, `ts_from`, `ts_to`                                                  |
+
+A write op carries the optional field `proposed`, and the projection ignores a proposed event. A
+decision carries the field `accepts`, the id of the proposal. See [0012 Proposals](../adr/0012-proposals.md).
 
 A node is a `node` event. Its `at` is the time of the build, and the projection takes the latest
 `node` event for a key. See [0011 Nodes are events](../adr/0011-nodes-are-events.md).
@@ -67,15 +69,15 @@ the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requi
 
 `pos` is not a field of an event. It is the ordinal of the creating event in the scope of the record,
 and an export holds no `pos`. A redacted event keeps its `id` and gets `redacted: true`, an empty
-`body` or `summary`,
-`body`, and a null `longform`. See [0002 Event log](../adr/0002-event-log.md), [0008 Redaction](../adr/0008-redaction.md), and
+`body` or `summary`, and a null `longform`. See [0002 Event log](../adr/0002-event-log.md), [0008 Redaction](../adr/0008-redaction.md), and
 [Q-030](03-open-questions.md#q-030).
 
 ## Projection
 
 The projection builds the records in two passes over the events ordered by `(at, id)`. Pass 1 makes
 one record for each `note` event and copies its payload. The record takes `recorded_at` from `at`. A
-`node` event changes no record, and the current node of a key is the latest `node` event for that key.
+`node` event changes no record, and a proposed event changes no record and takes no `pos`. The
+current node of a key is the latest `node` event for that key.
 The `gen` of a block is the `id` of the latest event that affects it. See [REQ-113](02-requirements.md)
 and [REQ-462](02-requirements.md).
 Pass 2 applies the operations in the same order. The order of arrival and a local `pos` change
@@ -112,8 +114,8 @@ patch wins over the TOML, and the preset wins over the profile. An array replace
 
 | Layer        | File                       | Keys                                                                 |
 | ------------ | -------------------------- | -------------------------------------------------------------------- |
-| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `profile.<name>`, `scope_default`, `nudge`, `writer`, `review` |
-| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `language`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
+| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `language`, `profile.<name>`, `scope_default`, `nudge`, `writer`, `review` |
+| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
 | Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
 
 The `store` key of the patch sets the same store as the TOML `store` section and `MEMLENS_STORE`. The
@@ -238,7 +240,7 @@ holds the address, the range of dates, and the text. See [0004 Tree and writer](
 
 ## Erasure
 
-A `hide`, `amend`, or `accept` makes the ancestors of the position dirty. A dirty node does not
+A `hide` or an `amend` makes the ancestors of the position dirty. A dirty node does not
 render, and its children take its place down to a clean node or a record. The rebuild goes bottom-up,
 and one change costs `log2(N)+1` model calls at most. See [REQ-217](02-requirements.md) and
 [REQ-218](02-requirements.md).

@@ -62,21 +62,21 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | freeze           | The rule that the text stays the same until the next trigger.                                                                                                                | S-014                                        |
 | supersede        | A newer note replaces an older note in the view. It applies one time, at the first `live` state, and in one scope.                                                                        | S-014, S-016                                 |
 | event            | One record of the log. It has `id`, `at`, `op`, and `scope`, and a payload for the op.                                                                                            | S-016                                        |
-| op               | The field of an event that names the change: `note`, `amend`, `hide`, `redact`, `review`, `accept`, or `dismiss`.                                                                         | S-016                                        |
+| op               | The field of an event that names the change: `note`, `amend`, `hide`, `redact`, `review`, `dismiss`, or `node`. | S-016, S-101 |
 | payload          | The fields of an event that belong to the op.                                                                                                                                             | S-016                                        |
 | ULID             | The identifier format of an event. It is unique and it sorts by time.                                                                                                                     | S-016                                        |
 | pos              | The ordinal of the creating event in the scope of the record. It is not a field of the event.                                                                                                | S-016                                        |
-| target           | The field of an op that names the note for a change.                                                                                                                                      | S-016                                        |
+| target           | The field of an op that names the record or the proposal for a change. | S-016, S-101 |
 | kind             | The class of an item. A note takes `decision`, `preference`, `fact`, `task`, or `note`. A scope takes one of `project`, `global`, `agent`, `user`, `topic`, `task`, and `import`. | S-016, S-065                                 |
-| `live`           | The state of a note after an `accept` event.                                                                                                                                              | S-016                                        |
-| `deleted`        | The state of a note after a `dismiss` event.                                                                                                                                              | S-016                                        |
+| `live`           | The state of a record after a write with no proposal. | S-016, S-101 |
+| `deleted`        | The state of a record after a `redact` event. | S-016, S-101 |
 | sanitized form   | The form of a redacted event. It keeps the `id` and has `redacted: true`, an empty `body` or `summary`, and a null `longform`.                                                                         | S-016                                        |
 | at               | The time of an event in the log.                                                                                                                                                          | S-017                                        |
 | ts               | The time of the write of a note.                                                                                                                                                          | S-017                                        |
 | idem             | The idempotency key of a write. A second write with one value adds nothing.                                                                                                               | S-018                                        |
 | projection       | The build of the record set from the log, in two passes.                                                                                                                                  | S-020                                        |
 | record           | One note after the projection: the copied fields, `recorded_at`, and the flags.                                                                                                           | S-020                                        |
-| `record state`   | The lifecycle value of a record, in the order `live`, `hidden`, `proposed`, `deleted`. Only an `accept` lowers it.                                                                        | S-020, S-021                                 |
+| `record state`   | The lifecycle value of a record, in the order `live`, `hidden`, `deleted`. A `hide` and a `redact` raise it. | S-020, S-021, S-101 |
 | `node state`     | The state of a tree node: `built` when its `input_gen` matches the `gen` of its children, and `dirty` otherwise.                                                                                                                                             | S-025                                        |
 | hidden           | The state of a record after a `hide` event. The content stays.                                                                                                                            | S-020                                        |
 | recorded_at      | The time of the note event in the log. It is equal to `at`.                                                                                                                               | S-020                                        |
@@ -147,3 +147,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | working budget | The count of nodes that one `memory_open` call visits: 4096 at most. | S-070 |
 | proposal line | The line in the report of the parent about one proposal of the child. | S-070 |
 | UI core | The view models of the console in the core library. It holds no DOM, no transport, and no style. | S-077, S-080 |
+| proposal | A write op with the field `proposed`. The projection ignores it. | S-101 |
+| decision | A write op with the field `accepts`, the id of the proposal. It applies as a normal op. | S-101 |
+| pending proposal | A proposal with no decision and no `dismiss`. | S-101 |
+| tokenizer | The FTS5 search tokenizer of the index. It follows the key `language`. | S-101 |

@@ -26,3 +26,8 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-197 | The build retries the model when the answer holds no text or more than 512 bytes. | FR | S-050 | REQ-217 |
 | REQ-198 | The build uses the fallback after the last retry. | FR | S-050 | REQ-217 |
 | REQ-199 | A scope with no live record of the session gives no card. | FR | S-050 | REQ-217 |
+| REQ-070 | An `accept` event carries `target`, and it changes a proposed note to `live`. | FR | S-016 | REQ-473 |
+| REQ-094 | An `accept` event changes the state to `live` only at an actual transition. | FR | S-020 | REQ-473 |
+| REQ-095 | An `accept` event applies the `supersedes` of the note. | FR | S-020 | REQ-093 |
+| REQ-097 | A `dismiss` event sets the state to the maximum of the state and `deleted`. | FR | S-020 | REQ-474 |
+| REQ-107 | An `accept` event returns a proposed record that a `hide` event hid to the view. | FR | S-022 | REQ-473 |
