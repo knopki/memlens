@@ -11,16 +11,16 @@ guide line. See [REQ-178](02-requirements.md) and [REQ-475](02-requirements.md).
 ```text
 <memory>
 <how-to>
-{policy}
-{append}
+{{policy}}
+{{append}}
 </how-to>
 <directions>
 One line for each scope of the profile: the key, the age, the count, and the summary.
-{directions}
+{{directions}}
 </directions>
-<here scope="{scope}">
+<here scope="{{scope}}">
 The frontier of the active scope: one line for each block, from the oldest to the newest.
-{here}
+{{here}}
 </here>
 </memory>
 ```
@@ -46,7 +46,7 @@ Save a note when the user gives an order, a decision, a correction, or a prefere
 changes later work, and when a task fails and the reason matters later. Do not save greetings, routine
 tool output, the status of work in progress, or a note the memory already holds. One note holds one of
 these kinds: decision, preference, fact, task, or note. Copy names, numbers, paths, dates and errors
-exactly. When a new note replaces an earlier note, name the earlier note in the write. Never record
+exactly. When a new note replaces an earlier note, give the earlier note in `supersedes`. Never record
 secrets, credentials, or keys.
 ```
 

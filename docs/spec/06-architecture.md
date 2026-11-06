@@ -128,8 +128,9 @@ duration for a model glob, and the most specific glob wins. The `language` key g
 index tokenizer, and the default is `en`. See [REQ-291](02-requirements.md) and
 [REQ-450](02-requirements.md).
 
-The `customPrompt` key replaces the policy text in the slice, and the `customPromptAppend` key adds
-text after it. See [S-094](../statements.md#s-094).
+The `customPrompt` key replaces the whole template of the slice, and the placeholders apply in it.
+The `customPromptAppend` key is the value of `{{append}}`. See [REQ-452](02-requirements.md) to
+[REQ-455](02-requirements.md).
 
 The `nudge` section gives `mode` and `tool_calls` in the patch. The TOML file gives the other nudge
 keys. The `[scope_default]` section gives the scope rules and the fallback key. The rules go in order,
@@ -203,7 +204,7 @@ The slice is one `<memory>` block with the `how-to`, `directions`, and `here` pa
 
 ```
 <memory>
-<how-to>{policy}{append}</how-to>
+<how-to>{{policy}}{{append}}</how-to>
 <directions>...</directions>
 <here scope="...">...</here>
 </memory>

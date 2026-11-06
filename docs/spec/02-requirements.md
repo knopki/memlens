@@ -431,9 +431,9 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-450 | The tokenizer is `porter unicode61 remove_diacritics 1` for each language except `zh` and `ja`, and `trigram` for `zh` and `ja`. | FR | accepted | S-085, S-101, S-102 | A store with `language` of `zh` gives the trigram search, and one of `ru` gives the porter search. |
 | REQ-451 | The direction line of a scope is its scope line, or the frontier of that scope when the scope line is not built. | FR | draft | S-089 | A built scope line gives one line. An unbuilt one gives the frontier lines. |
 | REQ-452 | The profile patch gives `customPrompt` and `customPromptAppend`.                                                                                                                      | FR   | draft    | S-094               | A patch with the two keys sets them for the profile.                                                                           |
-| REQ-453 | A `customPrompt` value replaces the text of the `<how-to>` block. | FR | draft | S-094, S-102 | A profile with a custom value gives a `<how-to>` block with this text and no policy text. |
-| REQ-454 | A `customPromptAppend` value follows the policy text in the `<how-to>` block. | FR | draft | S-094, S-102 | The block holds the policy text and then the append text. |
-| REQ-455 | With both keys, the slice holds `customPrompt` and then `customPromptAppend`.                                                                                                         | FR   | draft    | S-094               | The custom text comes first, and the append text follows it.                                                                   |
+| REQ-453 | A `customPrompt` value replaces the whole template of the slice, and the placeholders of the template apply in it. | FR | draft | S-094, S-102, S-103 | A custom template with `{{policy}}` gives the policy text, and one without it gives no policy text. |
+| REQ-454 | A `customPromptAppend` value takes the place of `{{append}}` in the template. | FR | draft | S-094, S-102, S-103 | A template with `{{append}}` gives the append text, and one without it gives none. |
+| REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | draft | S-094, S-102, S-103 | A custom template and an append value give the append text in the custom template. |
 | REQ-456 | The `review` section of the config gives the review period of each kind in days. | FR | draft | S-097 | A section with five keys gives the period of each kind. |
 | REQ-457 | The default review period is 365 days for `decision`, `preference`, and `note`, 180 days for `fact`, and 7 days for `task`. | FR | accepted | S-097 | A write of each kind without `reviewIn` takes the default of its kind. |
 | REQ-458 | `memlens compact --answer` writes the result of a job, and it takes the path of the answer file. | FR | draft | S-098 | A job and its answer give a built node. |
@@ -455,6 +455,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-474 | A `dismiss` closes the proposal of its target and changes no record. | FR | accepted | S-101 | The proposal leaves the pending set, and the record keeps its state. |
 | REQ-475 | The `<directions>` and `<here>` blocks each hold a guide line before the content. | FR | draft | S-102 | Each block holds its guide line, and then the lines. |
 | REQ-476 | The index records the tokenizer of its build. A change of the `language` value rebuilds the index from the log. | FR | draft | S-102 | A store with another `language` gives a rebuilt index. |
+| REQ-477 | The description of `memory_open` names the address form `scope#pos`. | FR | draft | S-103 | The description holds the form with a scope and a pos. |
 
 ## Rules for new requirements
 
