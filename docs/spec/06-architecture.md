@@ -124,9 +124,9 @@ then `MEMLENS_STORE`, then the TOML file.
 
 The `writer` section gives `provider`, `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. The
 `mode` is `parallel`, `batch`, or `auto`, and the default is `auto`. The `cacheTtl` map gives a
-duration for a model glob, and the most specific glob wins. The `language` key gives the language that
-the prompt recommends for the notes, and the default is `en`. See [S-067](../statements.md#s-067) and
-[S-068](../statements.md#s-068).
+duration for a model glob, and the most specific glob wins. The `language` key gives the language of the
+index tokenizer, and the default is `en`. See [REQ-291](02-requirements.md) and
+[REQ-450](02-requirements.md).
 
 The `customPrompt` key replaces the policy text in the slice, and the `customPromptAppend` key adds
 text after it. See [S-094](../statements.md#s-094).
@@ -180,6 +180,9 @@ Each append to the sqlite backend is one transaction, and the backend uses write
 jsonl backend takes a lock on each append. Several processes write one store. See
 [REQ-372](02-requirements.md) to [REQ-377](02-requirements.md).
 
+The index records the tokenizer of its build. A change of the `language` value rebuilds the index
+from the log, so the store needs no migration. See [REQ-476](02-requirements.md).
+
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
 consistent by construction. A per-scope export also holds the scope lines of that scope. An import unions the events by `id`, a payload conflict keeps the later
 `at`, and the events of a redacted record arrive sanitized. See [0003 Store](../adr/0003-store.md).
@@ -196,21 +199,22 @@ consistent by construction. A per-scope export also holds the scope lines of tha
 
 The view is a deterministic function of the records, the built nodes, and `storeRev`.
 
-The slice is one `<memory>` block:
+The slice is one `<memory>` block with the `how-to`, `directions`, and `here` parts:
 
 ```
 <memory>
-... the policy text ...
+<how-to>{policy}{append}</how-to>
 <directions>...</directions>
 <here scope="...">...</here>
 </memory>
 ```
 
-The policy text stays whole. A direction line gives `[scope] <age|active> · <N> notes · <text>`. A
-line of `<here>` is a leaf `#<pos> <date> <body>` or a node `#<a>-<b> <start>..<end> <summary>`. See
-[REQ-297](02-requirements.md) and [REQ-298](02-requirements.md).
+The `<how-to>` block stays whole, and the `directions` and `here` blocks carry their own guide line.
+A direction line gives `[scope] <age|active> · <N> notes · <text>`. A line of `here` is a leaf
+`#<pos> <date> <body>` or a node `#<a>-<b> <start>..<end> <summary>`. See [REQ-297](02-requirements.md)
+and [REQ-298](02-requirements.md).
 
-The compression works on `<directions>` first, then on `<here>`, and the policy text stays whole. A
+The compression works on `directions` first, then on `here`, and the `<how-to>` block stays whole. A
 part above 1.5 times its budget loses the oldest `<here>` lines, and the line
 `#<a>-<b> omitted (N lines, compacting)` takes their place. The agent opens the range with
 `memory_open`. See [REQ-223](02-requirements.md) to [REQ-229](02-requirements.md).

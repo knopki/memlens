@@ -151,3 +151,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | decision | A write op with the field `accepts`, the id of the proposal. It applies as a normal op. | S-101 |
 | pending proposal | A proposal with no decision and no `dismiss`. | S-101 |
 | tokenizer | The FTS5 search tokenizer of the index. It follows the key `language`. | S-101 |
+| how-to | The block of the slice that holds the policy text and the append text. | S-102 |
