@@ -38,3 +38,5 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-358 | The report of the parent gets one line for each proposal of the child. | FR | S-070 | REQ-359 |
 | REQ-274 | The catalog key is hidden from the agent. | FR | S-064 | REQ-108 |
 | REQ-279 | The key `*` in `scopes` matches each scope. | FR | S-066 | REQ-151 |
+| REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
+| REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
