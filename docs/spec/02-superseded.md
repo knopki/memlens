@@ -64,6 +64,8 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-226 | A part of the slice above 1.5 times its budget loses the oldest lines of `<here>` until it fits 1.5 times its budget. | FR | S-056 | REQ-223 |
 | REQ-227 | The omitted lines leave one line `#<a>-<b> omitted (N lines, compacting)`. | FR | S-056 | REQ-223 |
 | REQ-234 | The nudge changes no byte of the frozen slice. | FR | S-058 | REQ-233 |
+| REQ-243 | A turn with more than `expensive` steps demands a write before its end. | FR | S-059 | No requirement in this version. |
+| REQ-246 | The default `text` of the nudge names no unit of the count. | FR | S-060 | REQ-237 |
 | REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | S-056 | No requirement. |

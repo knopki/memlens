@@ -148,7 +148,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
 | Fold             | `high` is the budget of the block, and `low` is its half. The order is `(due↓, level↑, start↑)` | The order gives one answer. |
 | Writer           | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
-| Nudge            | `tool_calls` and `turns` 10, `expensive` 5                                | The counters run at the same time.                               |
+| Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
 | `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 bytes.                   |
@@ -209,29 +209,32 @@ and a block gives `#<a>-<b> <ts_from>..<ts_to> <summary>`.
 The budget counts lines. The `here` value limits the `<here>` part, and the `directions` value limits
 the `<directions>` part. The two values are independent, and the `<how-to>` part is never cut.
 
-A part above its budget takes two steps in order. First, it merges the built pair with the highest
-`due`, and the line of the parent takes the place of the two lines of the pair. Then, when no built
-pair stays, it replaces the oldest raw lines with one line: `#<a>-<b> omitted (N lines, compacting)`.
+Each part is a tree. The tree of the active scope gives the `<here>` part, and the catalog tree gives
+the `<directions>` part.
 
-At a session start the plugin starts a build when a part is above 1.5 times its budget because of
-nodes that are not built. The build has a deadline of 10 seconds, and the render waits for it. The
-render does not wait for the queue of the compaction.
+A part above its budget merges the built pair with the highest `due`. The line of the parent takes the
+place of the two lines of the pair. The part merges pairs until it fits its budget.
+
+A part with a node that is not built can stay above its budget, because a pair needs a built parent.
+At a session start the plugin starts a build when a part is above 1.5 times its budget. The build has
+a deadline of 10 seconds, and the render waits for it. The render does not wait for the queue of the
+compaction.
 
 A `redact` cleans the store. The copy in the session history stays. See
 [0007 Slice and context](../adr/0007-slice-context.md).
 
 ## Nudge
 
-The nudge is one line for the turn, and the line is not part of the slice. The `[nudge]` section gives
-the counters `tool_calls` and `turns`, the value `expensive`, and the `text`.
+The plugin gives the nudge as a second runtime context, with an order after the memory context. The
+context holds one line for the turn, and the line is not part of the slice.
 
-The two counters run at the same time. Each counter counts from the session start, from the last nudge,
-or from the last write of a note. A counter that reaches its value gives the line for that turn.
+The `[nudge]` section gives the counters `tool_calls` and `turns`. The two counters run at the same
+time. Each counter counts from the session start, from the last nudge, or from the last write of a
+note. A counter that reaches its value gives its line for that turn, and the context holds no text in
+another turn.
 
-A turn with more than `expensive` steps demands a write before its end.
-
-The `text` holds `{n}`, and the count of the counter takes the place of `{n}`. The default text names
-no unit of the count.
+The text of each counter holds `{n}`, and the count of that counter takes the place of `{n}`. The
+texts are in [09-prompts.md](09-prompts.md).
 
 ## Addressing
 

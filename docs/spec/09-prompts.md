@@ -117,6 +117,16 @@ The check "the line is shorter than the two children" applies to a model merge o
 only. The fold takes the length of each line from the field `chars`. See
 [REQ-172](02-requirements.md).
 
+## Nudge texts
+
+The text of each counter holds `{n}`, and the count of that counter takes its place. The default
+texts are below.
+
+```text
+tool_calls: [memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
+turns:      [memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
+```
+
 ## Subagent prompt
 
 ```text

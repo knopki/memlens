@@ -99,9 +99,8 @@ export interface NudgeConfig {
 	/** The counters run at the same time. */
 	tool_calls: number;
 	turns: number;
-	expensive: number;
-	/** The line of the nudge. `{n}` takes the count. */
-	text: string;
+	/** The line of each counter. `{n}` takes the count of that counter. */
+	text: Record<"tool_calls" | "turns", string>;
 }
 
 export interface WriterConfig {
