@@ -328,7 +328,8 @@ The text stays the same until a trigger: a fresh session, a compaction after suc
 time above the TTL. A process restart gives the same text. See [REQ-300](02-requirements.md) and
 [REQ-188](02-requirements.md).
 
-The plugin registers one context for each agent at `agent/created`. The event gives the agent scope.
+The plugin registers one context for each agent at `agent/created`. The event gives the agent scope,
+and the context is bound to it: another agent does not receive the context.
 The context has `required: true` and the order 220. A line for one step comes through injected context
 instead, and the nudge uses that surface. The registration reads `agent.session.id`,
 `agent.session.meta.agentPreset`, and `agent.session.meta.cwd`. The preset selects the profile, and

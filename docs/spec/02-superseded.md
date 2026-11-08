@@ -130,3 +130,7 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-426 | The plugin renders the tab with the components of the harness UI. | FR | S-080 | [08-ui.md](08-ui.md) |
 | REQ-446 | The tab `Memory` mounts in the slot `conversation.session.header`. | FR | S-085 | [08-ui.md](08-ui.md) |
 | REQ-447 | The kind of the tab is `memlens`. | FR | S-085 | [08-ui.md](08-ui.md) |
+| REQ-281 | The plugin registers one runtime context for each agent at `agent/created`. | FR | S-067 | [06-architecture.md](06-architecture.md) |
+| REQ-282 | The runtime context is bound to the agent scope, and another agent does not receive it. | FR | S-067 | [06-architecture.md](06-architecture.md) |
+| REQ-283 | The registration reads `agent.session.id`, `agent.session.meta.agentPreset`, and `agent.session.meta.cwd`. | FR | S-067 | [06-architecture.md](06-architecture.md) |
+| REQ-284 | The runtime context has a fixed order of 220, after the built-in contexts. | FR | S-067 | [06-architecture.md](06-architecture.md) |

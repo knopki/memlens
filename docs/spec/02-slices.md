@@ -23,7 +23,7 @@ are the data path, and they need no model call. A rejected requirement stays out
 | 13 | The subagents | 034, 158-159, 353-357, 359-360, 362-363, 441 | 13 |
 | 14 | The command line | 046, 385-386, 411-416, 458 | 10 |
 | 15 | The console | 361, 417-419, 423, 459 | 6 |
-| 16 | The plugin | 028, 281-284, 427-428 | 7 |
+| 16 | The plugin | 028, 427-428 | 3 |
 | 17 | The repository | 001-004, 006-007, 429 | 7 |
 
 ## Rules
