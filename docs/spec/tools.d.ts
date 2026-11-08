@@ -101,10 +101,10 @@ export interface MemoryOpenEntry {
 /** One child of a node: a note or a smaller node, as the slice renders it. */
 export interface MemoryOpenLine {
 	/**
-	 * The render form of the address: `#2107` for a note, or `#1024-2047` for a node. The tool
+	 * The address of the child: `scope#2107` for a note, or `scope#1024-2047` for a node. The tool
 	 * accepts this value as a target, with the `#` or without it.
 	 */
-	label: Address;
+	addr: Address;
 	ts_from: string;
 	ts_to: string;
 	/** The body of a note, the summary of a node, or the temporary text of a node that is not built. */

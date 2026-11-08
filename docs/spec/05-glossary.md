@@ -141,7 +141,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | memory_scopes | The tool that lists the visible scopes. | S-070, S-112 |
 | visible scope | A scope in the `scopes` list of the profile. A scope outside the list is invisible. | S-070 |
 | write scope | The scope of a write with no `scope` field. The profile gives it. See Q-099. | S-070 |
-| part | One element of a block answer of `memory_open`. The `label` gives its range. | S-070 |
 | depth | The level of detail of a `memory_open` answer, from 1 to 4. It is no limit of the descent. | S-070 |
 | working budget | The count of nodes that one `memory_open` call visits: 4096 at most. | S-070 |
 | proposal line | The line in the report of the parent about one proposal of the child. | S-070 |
