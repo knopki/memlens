@@ -333,8 +333,11 @@ restart. The harness writes a new message only when the text changes. A compacti
 message, and the plugin renders a new snapshot after the compaction succeeds. See
 [REQ-280](02-requirements.md) to [REQ-285](02-requirements.md).
 
-The host gives no `getContextOrder` name for a plugin. The harness names seven built-in contexts,
-and the plugin uses the number 220.
+The harness gives a name to each built-in runtime context, and no name to a plugin. The built-in
+values are `WORKING_DIRECTORY` 100, `SANDBOX_POLICY` 110, `APPROVAL_POLICY` 115,
+`SUBAGENT_DELEGATION` 120, `TEAM_IDENTITY` 125, `HARNESS_SOURCE` 200, and `WEB_SURFACE` 210. The
+plugin uses 220, after the last built-in context. Tool declarations and prompt sections have their own
+orders, so 220 places the memory after each built-in context and before no tool guide.
 
 ## Agent surface
 
