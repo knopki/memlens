@@ -123,13 +123,11 @@ export interface WriterConfig {
 	maxCallsPerHour: number;
 }
 
-export interface ReviewConfig {
-	decision: Days;
-	preference: Days;
-	note: Days;
-	fact: Days;
-	task: Days;
-}
+/** The kind of a note. The `review` section holds one key of each kind. */
+export type NoteKind = "decision" | "preference" | "fact" | "task" | "note";
+
+/** The review period of each kind of a note, in days. */
+export type ReviewConfig = Record<NoteKind, Days>;
 
 /** The idle time of one model glob. The most specific glob wins. */
 export type CacheTtl = Record<Glob, Duration>;
