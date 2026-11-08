@@ -66,6 +66,27 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-234 | The nudge changes no byte of the frozen slice. | FR | S-058 | REQ-233 |
 | REQ-243 | A turn with more than `expensive` steps demands a write before its end. | FR | S-059 | No requirement in this version. |
 | REQ-246 | The default `text` of the nudge names no unit of the count. | FR | S-060 | REQ-237 |
+| REQ-293 | The agent tools are `memory_find`, `memory_open`, `memory_note`, `memory_forget`, `memory_review`, and `memory_scope`. | FR | S-067, S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-294 | `memory_note` takes `body`, `longform`, `scope`, `kind`, `supersedes`, and `reviewIn`, and the last five are optional. | FR | S-067, S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-296 | `memory_find` takes `query`, `scopes`, `since`, `until`, `kinds`, `due`, and `limit`, and it searches by words. | FR | S-067, S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-302 | `memory_note` returns the `addr`, the `id`, the `state`, and the `review_at` of the record. A proposed write returns the `id` only. | FR | S-070, S-101 | [tools.d.ts](tools.d.ts) |
+| REQ-304 | `memory_note` accepts the kinds `decision`, `preference`, `fact`, `task`, and `note`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-305 | Each target of `supersedes` is a `pos` or an `addr`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-308 | `reviewIn` takes a period in days or the word `never`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-317 | A hit gives the `addr`, the `pos`, and the line of the record. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-318 | Each hit carries the `addr`, because a `pos` of another scope is ambiguous. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-320 | The `target` of `memory_open` is an `addr`, a `pos` of the active scope, or a range `a-b`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-321 | An entry answer gives the `addr`, the `pos`, the `id`, the `ts`, the `scope`, the `body`, and the `review_at`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-322 | An entry answer gives the `longform`, the `longformBytes`, the `longformOffset`, the `longformTruncated`, and the `refs`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-323 | Each part of a block gives the `label`, the `body`, the `ts_from`, the `ts_to`, the `built`, and the `needsExpansion`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-324 | A block answer gives the `truncated`, the `next`, and the `notice`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-338 | `memory_forget` takes the `targets`, the `reason`, and the `scope` of a `pos` target. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-339 | `memory_forget` returns the count of hidden records, the count of queued rebuilds, and the count of queued top nodes. | FR | S-070, S-104 | [tools.d.ts](tools.d.ts) |
+| REQ-340 | `memory_review` returns the due records with the `addr`, the `scope`, the `pos`, the `ts`, the `kind`, the `body`, and the `review_at`. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-341 | `memory_review` returns the count of reviewed records and the next review date. | FR | S-070 | [tools.d.ts](tools.d.ts) |
+| REQ-345 | The tool `memory_scope` takes the `action` and the `scope`. | FR | S-070, S-088 | [tools.d.ts](tools.d.ts) |
+| REQ-346 | The `action` of `memory_scope` is `list`. | FR | S-070, S-088 | [tools.d.ts](tools.d.ts) |
+| REQ-347 | The action `list` gives each scope with the `key`, the `notes`, the `lastSeen`, and the `writable`. | FR | S-070, S-088 | [tools.d.ts](tools.d.ts) |
 | REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | S-056 | No requirement. |
