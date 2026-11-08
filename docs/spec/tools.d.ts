@@ -80,10 +80,6 @@ export interface MemoryOpenInput {
 	target: string | number;
 	longform?: "none" | "head" | "all";
 	offset?: number;
-	/** The level of detail, from 1 to 4. */
-	depth?: 1 | 2 | 3 | 4;
-	/** 32 by default and 32 at most. */
-	parts?: number;
 }
 
 export interface MemoryOpenEntry {

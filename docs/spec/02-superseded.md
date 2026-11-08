@@ -90,3 +90,6 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | S-056 | No requirement. |
+| REQ-330 | `parts` is 32 by default and 32 maximum. | FR | S-070 | No requirement. |
+| REQ-332 | `depth` is the level of detail of the answer, from 1 to 4. | FR | S-070 | No requirement. |
+| REQ-333 | `depth` is no limit of the descent to the clean nodes. | FR | S-070 | No requirement. |

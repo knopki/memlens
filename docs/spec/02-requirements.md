@@ -270,10 +270,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-327 | `offset` continues the document after the characters of the earlier answer. | FR | draft | S-070 | A call with the `longformOffset` gives the next 8 192 characters. |
 | REQ-328 | `all` gives 16 384 characters of the document at most. | FR | draft | S-070 | A document of 24 576 characters gives 16 384 with `all`. |
 | REQ-329 | The answer of `memory_open` is 24 576 characters maximum. | FR | draft | S-070 | An answer above 24 576 characters cuts the parts and sets `truncated`. |
-| REQ-330 | `parts` is 32 by default and 32 maximum. | FR | draft | S-070 | A range of 40 parts gives 32 parts. The value 100 gives 32 parts. |
-| REQ-331 | `next` continues a block that reaches the limit of parts or of the answer size. | FR | draft | S-070 | The call with the `next` value gives the later parts. |
-| REQ-332 | `depth` is the level of detail of the answer, from 1 to 4. | FR | draft | S-070 | Each of the four levels gives an answer. The level 5 gives an error. |
-| REQ-333 | `depth` is no limit of the descent to the clean nodes. | FR | draft | S-070 | A clean node at a deep position opens with `depth: 1`. |
+| REQ-331 | `next` continues a block that reaches the answer size limit. | FR | draft | S-070 | A block at the limit gives a `next` value. |
 | REQ-334 | The descent to the clean nodes visits 4096 nodes at most. | FR | draft | S-070 | A walk of a large tree stops at 4096 visited nodes. |
 | REQ-335 | A descent that stops at the budget gives a part with `needsExpansion` and its `label`. | FR | draft | S-070 | A tree above the budget gives a part with `needsExpansion: true`. |
 | REQ-336 | `memory_open` of the range with `needsExpansion` opens that range. | FR | draft | S-070 | The call with the `label` gives the inner parts. |
