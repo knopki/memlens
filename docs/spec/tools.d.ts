@@ -98,23 +98,23 @@ export interface MemoryOpenEntry {
 	refs: string[];
 }
 
-export interface MemoryOpenPart {
+/** One child of a node: a note or a smaller node, as the slice renders it. */
+export interface MemoryOpenLine {
+	/** `#2107` for a note, or `#1024-2047` for a node. */
 	label: string;
-	body?: string;
-	ts_from?: string;
-	ts_to?: string;
+	ts_from: string;
+	ts_to: string;
+	/** The body of a note, the summary of a node, or the temporary text of a node that is not built. */
+	text: string;
+	/** False when the line is temporary, because the node is not built. */
 	built: boolean;
-	/** The range is open by `memory_open` with this label. */
-	needsExpansion?: boolean;
+	chars: number;
 }
 
 export interface MemoryOpenBlock {
 	kind: "block";
-	parts: MemoryOpenPart[];
-	truncated: boolean;
-	/** The continuation of a block that reaches the limit of parts or of size. */
-	next?: string;
-	notice?: string;
+	/** The children of the node: two, or one when a position is empty. */
+	children: MemoryOpenLine[];
 }
 
 export type MemoryOpenOutput = MemoryOpenEntry | MemoryOpenBlock;

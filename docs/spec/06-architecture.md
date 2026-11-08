@@ -142,7 +142,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | ---------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
 | `body`           | 384 characters required, 512 characters accepted                          | The 512 characters give room for a miss of the model.            |
 | `longform`       | 16 384 characters                                                         | The document does not enter the tree.                            |
-| `memory_open`    | `head` 8 192, `all` 16 384, 32 parts, 24 576 characters                   | The answer continues with `offset` and `next`.                   |
+| `memory_open`    | `head` 8 192, `all` 16 384 characters                                     | The answer continues with `offset`.                              |
 | Node             | Target 512 characters, limit 640 characters, a cut with a flag            | The p90 miss is 610 characters.                                  |
 | Input of a merge | Two children, and 1 024 characters of `longform` at level 1               | The input holds no context, so a delete stays derivable.         |
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
@@ -219,6 +219,12 @@ A part with a node that is not built can stay above its budget, because a pair n
 At a session start the plugin starts a build when a part is above 1.5 times its budget. The build has
 a deadline of 10 seconds, and the render waits for it. The render does not wait for the queue of the
 compaction.
+
+An open of a note gives the note and its `longform`. An open of a node gives the two children of that
+node, as the slice renders them. A range that matches no built node gives one block: the level follows
+the span of the range, and the block holds the first `pos`. A node that is not built gives a temporary
+line of its two children, so the render calls no model. A rebuild keeps each address, because a merge
+with another log is the only change of the order.
 
 A `redact` cleans the store. The copy in the session history stays. See
 [0007 Slice and context](../adr/0007-slice-context.md).
@@ -346,7 +352,7 @@ orders, so 220 places the memory after each built-in context and before no tool 
 | memory_note   | main agent | A new note, or the live note with the same four fields.                 |
 | memory_forget | main agent | The records leave the view, and the queues take the rebuilds and the top nodes. |
 | memory_find   | main agent | The records with the matching words, each with its `addr`.              |
-| memory_open   | main agent | A record with its `longform`, or a block of parts for a range.          |
+| memory_open   | main agent | A record with its `longform`, or the two children of a node.            |
 | memory_review | main agent | The due records, or the count of the reviewed records.                  |
 | memory_scopes | main agent | The visible scopes, each with its count and its last write.              |
 

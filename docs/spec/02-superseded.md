@@ -93,3 +93,8 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-330 | `parts` is 32 by default and 32 maximum. | FR | S-070 | No requirement. |
 | REQ-332 | `depth` is the level of detail of the answer, from 1 to 4. | FR | S-070 | No requirement. |
 | REQ-333 | `depth` is no limit of the descent to the clean nodes. | FR | S-070 | No requirement. |
+| REQ-329 | The answer of `memory_open` is 24 576 characters maximum. | FR | S-070 | REQ-228 |
+| REQ-331 | `next` continues a block that reaches the answer size limit. | FR | S-070 | REQ-228 |
+| REQ-334 | The descent to the clean nodes visits 4096 nodes at most. | FR | S-070 | REQ-228 |
+| REQ-335 | A descent that stops at the budget gives a part with `needsExpansion` and its `label`. | FR | S-070 | REQ-228 |
+| REQ-336 | `memory_open` of the range with `needsExpansion` opens that range. | FR | S-070 | REQ-228 |

@@ -200,7 +200,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-222 | A `redact` deletes the FTS rows of the target.                                                                                                                                        | FR   | accepted  | S-054               | A search after the redact finds no row of the target.                                                                          |
 | REQ-223 | A part above its budget merges the built pair with the highest `due` until it fits its budget. The line of the parent takes the place of the two lines. | FR | draft | S-056, S-109 | A part above its budget holds fewer lines after the merges. |
 | REQ-228 | The tool `memory_open` gives the note and its `longform` for a leaf, and the two child lines for a node.                                                                              | FR   | draft    | S-056, S-067        | A call for 2107 gives the note and document. A call for 1024-2047 gives two lines.                                             |
-| REQ-229 | The omitted range stays open by `memory_open`.                                                                                                                                        | FR   | draft    | S-056               | `memory_open` with the omitted range gives the omitted records.                                                                |
+| REQ-229 | A range that matches no built node gives one block. The level follows the span of the range, and the block holds the first `pos`. | FR | draft | S-070, S-113 | The range `3-6` gives the level-2 block that holds the position 3. |
 | REQ-232 | The default values of the counters `tool_calls` and `turns` are 10 and 10. | FR | draft | S-058, S-059 | A file without these keys gives these values. |
 | REQ-233 | The plugin gives the nudge as injected context for the next step, with its own source kind. The line is not part of the slice and not part of the memory context. | FR | draft | S-058, S-110 | The step holds one line, and the snapshot holds none of it. |
 | REQ-235 | A write of a note resets the two counters. | FR | draft | S-058 | The counters read 0 after a write. |
@@ -269,12 +269,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-326 | `head` gives 8 192 characters of the document at most. | FR | draft | S-070 | A document of 24 576 characters gives 8 192 with `head`. |
 | REQ-327 | `offset` continues the document after the characters of the earlier answer. | FR | draft | S-070 | A call with the `longformOffset` gives the next 8 192 characters. |
 | REQ-328 | `all` gives 16 384 characters of the document at most. | FR | draft | S-070 | A document of 24 576 characters gives 16 384 with `all`. |
-| REQ-329 | The answer of `memory_open` is 24 576 characters maximum. | FR | draft | S-070 | An answer above 24 576 characters cuts the parts and sets `truncated`. |
-| REQ-331 | `next` continues a block that reaches the answer size limit. | FR | draft | S-070 | A block at the limit gives a `next` value. |
-| REQ-334 | The descent to the clean nodes visits 4096 nodes at most. | FR | draft | S-070 | A walk of a large tree stops at 4096 visited nodes. |
-| REQ-335 | A descent that stops at the budget gives a part with `needsExpansion` and its `label`. | FR | draft | S-070 | A tree above the budget gives a part with `needsExpansion: true`. |
-| REQ-336 | `memory_open` of the range with `needsExpansion` opens that range. | FR | draft | S-070 | The call with the `label` gives the inner parts. |
-| REQ-337 | `memory_open` never renders a dirty node. | FR | draft | S-070 | A dirty node gives its two child lines or a part with `needsExpansion`. |
+| REQ-337 | A node that is not built gives a temporary line. The line holds the first half of each child. It cuts at a word boundary. | FR | draft | S-070, S-113 | A dirty node gives a line with `built: false`, and the model receives no call. |
 | REQ-342 | Without `scope`, `memory_review` gives the due records of each visible scope. | FR | draft | S-070 | One call gives the due records of two scopes. |
 | REQ-343 | A numeric `reviewed` without a `scope` gives an error. | FR | draft | S-070 | The value `[12]` fails. The `addr` succeeds. |
 | REQ-344 | The description of `memory_review` tells the model to review only at a user request. | FR | draft | S-070 | The tool description holds the sentence about a user request. |
