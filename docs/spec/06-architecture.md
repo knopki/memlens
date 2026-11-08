@@ -385,7 +385,7 @@ memlens review --mark <target>,<target> [--scope key] [--for 180d]
 memlens redact <target> [--scope key] [--reason "text"] [--yes]
 memlens amend <target> [--scope key] [--body "text"] [--longform file.md]
 memlens scopes [--json]
-memlens slice --profile name [--scope key] [--json]
+memlens slice [--profile name] [--scope key] [--json]
 memlens compact [--scope key] [--max 50] [--dry-run]
 memlens compact --answer path
 memlens status [--json]
@@ -401,6 +401,10 @@ memlens ui [--port 7788] [--allow-delete]
 The CLI has no active scope. The command `note` takes the scope in `--scope`. A command with a
 target takes the scope in the address, as `scope#pos`, or in `--scope`. The commands `find` and
 `review` take no value, and they use each visible scope.
+
+The command `slice` is the one exception. It takes the active scope from the rules of `[scope_default]`
+for the directory of the call, and `--scope` replaces the result. The profile comes from `--profile`,
+or from `defaultProfile`.
 
 The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
 and `3` a refusal by a policy.
