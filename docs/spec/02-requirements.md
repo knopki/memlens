@@ -301,7 +301,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-384 | An import writes the events of a record with a `redact` in the sanitized form. | FR | accepted | S-073 | The imported record keeps `[redacted]` and no content. |
 | REQ-385 | The CLI is one binary with the name `memlens`. | FR | draft | S-075 | The package gives one binary, and it runs each command. |
 | REQ-386 | The CLI needs no harness. | FR | draft | S-075 | Each command runs on a machine with no harness. |
-|REQ-404|`memlens merge` takes two stores and the flag `--into`, with `--dry-run`.|FR| S-075, S-076 | rejected | Refused by S-076: the import makes the merge. |
+| REQ-404 | `memlens merge` takes two stores and the flag `--into`, with `--dry-run`. | FR | rejected | S-075, S-076 | Refused by S-076: the import makes the merge. |
 | REQ-411 | `memlens redact` deletes the content from the disk. | FR | draft | S-075 | The file of the store holds no byte of the body after the command. |
 | REQ-412 | `memlens redact` asks for a confirmation, and the flag `--yes` skips it. | FR | draft | S-075 | A call with no `--yes` waits for the answer, and `--yes` starts the work. |
 | REQ-413 | The import from the sessions writes new notes of each session into the store. | FR | draft | S-076 | A session with a decision gives a note after the import, and the writer makes the text. |
