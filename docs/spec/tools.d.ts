@@ -11,7 +11,7 @@
  * @invariants
  *  - A tool takes the fields of its input type only.
  *  - An answer holds the fields of its output type only.
- * @keywords tools, memory_note, memory_find, memory_open, memory_forget, memory_review, memory_scope
+ * @keywords tools, memory_note, memory_find, memory_open, memory_forget, memory_review, memory_scopes
  * #endregion moduleContract
  */
 
@@ -153,17 +153,13 @@ export type MemoryReviewOutput =
 	| { due: MemoryReviewDue[] }
 	| { reviewed: number; next: string };
 
-/**
- * The tool takes no field. A scope has no record of its own: the first note of the key makes the
- * scope, and that note is the description.
- */
+/** The tool takes no field. */
 export type MemoryScopeInput = Record<never, never>;
 
 export interface MemoryScopeLine {
 	key: ScopeKey;
 	notes: number;
 	lastSeen: string;
-	writable: boolean;
 }
 
 export type MemoryScopeOutput =

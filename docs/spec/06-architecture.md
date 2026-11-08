@@ -348,7 +348,7 @@ orders, so 220 places the memory after each built-in context and before no tool 
 | memory_find   | main agent | The records with the matching words, each with its `addr`.              |
 | memory_open   | main agent | A record with its `longform`, or a block of parts for a range.          |
 | memory_review | main agent | The due records, or the count of the reviewed records.                  |
-| memory_scope  | main agent | The visible scopes.                                                     |
+| memory_scopes | main agent | The visible scopes, each with its count and its last write.              |
 
 The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 [REQ-352](02-requirements.md). The subagent modes are in [REQ-353](02-requirements.md) to

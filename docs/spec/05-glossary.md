@@ -114,6 +114,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `ancestor`       | A node above another node in a tree. A change of a child makes each ancestor dirty.                                                                                                       | S-054                                        |
 | `form`           | The shape of a run of the compactor: `parallel`, `batch`, or `auto`. The key `writer.mode` gives it.                                                                                      | S-052, S-061, S-067                          |
 | scope key        | The key of a scope: two segments separated by a colon, and each segment holds lowercase text.                                                                                             | S-063, S-108                                 |
+| scope | The set of records under one key. A scope has no record of its own: the first note of the key makes it, and that note is the description. | S-063, S-112 |
 | scope name       | The second part of a scope key: lowercase letters, digits, the period, the underscore, the slash, and the hyphen.                                                                         | S-063                                        |
 | wildcard         | The part `*` of a scope key. It matches any text of the kind or of the name.                                                                                                              | S-066                                        |
 | address          | The pointer to one note or one range: `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`.                                                                                                  | S-063                                        |
@@ -137,7 +138,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | memory_forget | The tool that hides records from the map. It takes `targets`, `scope`, and `reason`. | S-067, S-070 |
 | memory_open      | The tool that gives a note and its `longform`, or the two child lines of a node.                                                                                                          | S-067                                        |
 | memory_review | The tool that gives the records due for review and sets a new review date. It takes `scope`, `reviewed`, and `reviewIn`. | S-070 |
-| memory_scope | The tool that lists the visible scopes. | S-070 |
+| memory_scopes | The tool that lists the visible scopes. | S-070, S-112 |
 | visible scope | A scope in the `scopes` list of the profile. A scope outside the list is invisible. | S-070 |
 | write scope | The scope of a write with no `scope` field. The profile gives it. See Q-099. | S-070 |
 | part | One element of a block answer of `memory_open`. The `label` gives its range. | S-070 |
