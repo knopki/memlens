@@ -21,7 +21,7 @@ Explicitly excluded items. A non-goal must not become a hidden requirement.
 | NG-003 | A vector search and embeddings.                         | The search is lexical: FTS5.                              | S-013  |
 | NG-004 | An entity graph and bitemporality of the Zep level.     | Out of scope for the first version.                       | S-013  |
 | NG-005 | A live synchronization between machines.                | Export and import give the transfer.                      | S-013  |
-| NG-006 | A blocking wake on a note debt.                         | The agent works without a stop. A stop costs a turn.      | S-014  |
+| NG-006 | A blocking stop on a note debt.                         | The agent works without a stop. A stop costs a turn.      | S-014  |
 | NG-007 | Memory maintenance inside the agent loop.               | The writer works in the background.                       | S-014  |
 | NG-008 | A regular expression search.                            | The search is FTS5.                                       | S-014  |
 | NG-009 | Each chat message as a leaf of the tree.                | A note is a curated fact, not a message.                  | S-014  |

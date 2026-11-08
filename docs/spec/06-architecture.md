@@ -303,8 +303,8 @@ A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 s
 seconds. A job records the `input_gen` of its children, and the store accepts the result only when
 `gen` matches that record.
 
-The wake gives the view when the queue is not empty. A position with no built parent gives its
-raw records. When a part of the view at the wake is above 1.5 times its budget, the store builds the
+The render at a session start gives the view when the queue is not empty. A position with no built parent gives its
+raw records. When a part of the view at a session start is above 1.5 times its budget, the store builds the
 unbuilt nodes. The deadline of the build is 10 seconds, and the render gives the view at the deadline.
 The writer takes the node with the highest `due` first, and a node waits for its children.
 
@@ -376,17 +376,16 @@ The binary `memlens` runs without the harness, and it takes one command. The usa
 commands and their flags. A flag outside the usage is an error by usage.
 
 ```text
-memlens note "<body>" [--longform file.md] [--scope key] [--kind kind] [--supersedes 12,14] [--review 180d|never]
+memlens note "<body>" --scope key [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
 memlens find "<words>" [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
-memlens open 2107|scope#2107|1024-2047 [--scope key] [--no-longform] [--offset N]
-memlens forget 2107 [--scope key] [--reason "text"]
-memlens review [--limit 50] [--json]
-memlens review --mark 2107,2110 --scope key [--for 180d]
-memlens redact 2107 [--reason "text"] [--yes]
-memlens amend 2107 [--body "text"] [--longform file.md]
+memlens open <target> [--scope key] [--no-longform] [--offset N]
+memlens forget <target> [--scope key] [--reason "text"]
+memlens review [--scope key]... [--limit 50] [--json]
+memlens review --mark <target>,<target> [--scope key] [--for 180d]
+memlens redact <target> [--scope key] [--reason "text"] [--yes]
+memlens amend <target> [--scope key] [--body "text"] [--longform file.md]
 memlens scopes [--json]
-memlens slice --profile name [--json]
-memlens wake --session id
+memlens slice --profile name [--scope key] [--json]
 memlens compact [--scope key] [--max 50] [--dry-run]
 memlens compact --answer path
 memlens status [--json]
@@ -398,6 +397,10 @@ memlens import --from dsh-sessions dir [--since date] [--dry-run]
 memlens config get|set key [value]
 memlens ui [--port 7788] [--allow-delete]
 ```
+
+The CLI has no active scope. The command `note` takes the scope in `--scope`. A command with a
+target takes the scope in the address, as `scope#pos`, or in `--scope`. The commands `find` and
+`review` take no value, and they use each visible scope.
 
 The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
 and `3` a refusal by a policy.
