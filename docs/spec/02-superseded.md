@@ -134,3 +134,14 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-282 | The runtime context is bound to the agent scope, and another agent does not receive it. | FR | S-067 | [06-architecture.md](06-architecture.md) |
 | REQ-283 | The registration reads `agent.session.id`, `agent.session.meta.agentPreset`, and `agent.session.meta.cwd`. | FR | S-067 | [06-architecture.md](06-architecture.md) |
 | REQ-284 | The runtime context has a fixed order of 220, after the built-in contexts. | FR | S-067 | [06-architecture.md](06-architecture.md) |
+| REQ-032 | A background writer makes the retellings in batches. | FR | S-013 | REQ-203 |
+| REQ-052 | A background compactor makes the retellings in parallel jobs. | FR | S-014 | REQ-203 |
+
+## Removed requirements
+
+The customer refused these items with no replacement. The item stays for the record, and it is not
+live.
+
+| ID | Requirement | Type | Source | Removed by |
+| --- | --- | --- | --- | --- |
+| REQ-292 | The policy text names `memory_find`, `memory_open`, `memory_note`, and `memory_forget`. | FR | S-067 | S-095 |

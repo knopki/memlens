@@ -293,11 +293,11 @@ See [0004 Tree and writer](../adr/0004-tree-writer.md), [0003 Store](../adr/0003
 
 ## Writer
 
-The writer is a background compactor. It runs outside the agent loop, from a queue of jobs in the
-store. A run takes one form. `parallel` makes 6 calls of one line with one prefix of the context.
-`batch` makes one call of up to 6 lines in the form `#a-b: line`, and a broken answer gives one retry
-with the error, then `parallel`. `auto` follows the family of the model: `batch` without a cache, and
-`parallel` with one. A merge gives the model the two children only. See [0004 Tree and writer](../adr/0004-tree-writer.md).
+The writer runs outside the agent loop, from a queue of jobs in the store. A run takes one form.
+`parallel` makes 6 calls of one line with one prefix of the context. `batch` makes one call of up to
+6 lines in the form `#a-b: line`, and a broken answer gives one retry with the error, then
+`parallel`. `auto` follows the family of the model: `batch` without a cache, and `parallel` with
+one. A merge gives the model the two children only. See [0004 Tree and writer](../adr/0004-tree-writer.md).
 
 A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300
 seconds. A job records the `input_gen` of its children, and the store accepts the result only when

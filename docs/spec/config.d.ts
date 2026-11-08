@@ -45,7 +45,7 @@ export type StoreBackend = "sqlite" | "jsonl";
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
-/** The shape of a run of the compactor. */
+/** The shape of a run of the writer. */
 export type WriterMode = "parallel" | "batch" | "auto";
 
 export interface StoreConfig {
