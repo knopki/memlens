@@ -30,24 +30,14 @@ export type Duration = `${number}${"s" | "m" | "h"}`;
 /** A glob over the whole key. The part `*` matches any text. */
 export type Glob = string;
 
-/** The first part of a scope key. */
-export type ScopeKind =
-	| "project"
-	| "global"
-	| "agent"
-	| "user"
-	| "topic"
-	| "task"
-	| "import";
-
 /**
- * A scope key of the form `kind:name`.
+ * A scope key: two segments separated by a colon.
  *
- * The store lowercases the key before the check. The name starts with a lowercase letter or a
+ * The store lowercases the key before the check. Each segment starts with a lowercase letter or a
  * digit, and it holds lowercase letters, digits, the period, the underscore, the slash, and the
- * hyphen after that.
+ * hyphen after that. The catalog key is hidden, and the shape covers no hidden key.
  */
-export type ScopeKey = `${ScopeKind}:${string}`;
+export type ScopeKey = `${string}:${string}`;
 
 /** The backend of the store. */
 export type StoreBackend = "sqlite" | "jsonl";

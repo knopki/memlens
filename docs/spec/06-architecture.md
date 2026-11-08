@@ -119,8 +119,8 @@ gives the values of one harness profile. The preset gives the values of one agen
 | Preset | the agent preset                           |
 
 [config.d.ts](config.d.ts) gives the type of each layer, and the type holds the keys of that layer.
-A key outside the type is an error at load. A scope key outside the grammar of the type is an error
-at load.
+A key outside the type is an error at load. A scope key outside the shape `segment:segment` is an
+error at load.
 
 The merge is deep. A later layer wins over an earlier layer. A table merges with a table. A scalar or
 a list replaces the earlier value. The result is the type `ResolvedConfig`.

@@ -52,6 +52,9 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-456 | The `review` section of the config gives the review period of each kind in days. | FR | S-097 | [config.d.ts](config.d.ts) |
 | REQ-443 | The default budget `here` is 17 KiB. | FR | S-083 | [config.d.ts](config.d.ts) |
 | REQ-444 | The default budget `directions` is 3 KiB. | FR | S-083 | [config.d.ts](config.d.ts) |
+| REQ-256 | The kind of a scope key is `project`, `global`, `agent`, `user`, `topic`, `task`, or `import`. | FR | S-063 | REQ-255 |
+| REQ-257 | The name of a scope key starts with a lowercase letter or a digit. | FR | S-063 | REQ-255 |
+| REQ-258 | The name of a scope key holds lowercase letters, digits, the period, the underscore, the slash, and the hyphen only. | FR | S-063 | REQ-255 |
 | REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | S-056 | No requirement. |
