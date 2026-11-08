@@ -15,8 +15,8 @@
  * #endregion moduleContract
  */
 
-/** A count of bytes of UTF-8 text. */
-export type Bytes = number;
+/** A count of lines of the slice. */
+export type Lines = number;
 
 /** A count of days. */
 export type Days = number;
@@ -55,9 +55,6 @@ export type StoreBackend = "sqlite" | "jsonl";
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
-/** The trigger of the nudge. */
-export type NudgeMode = "tools" | "turns" | "expensive" | "off";
-
 /** The shape of a run of the compactor. */
 export type WriterMode = "parallel" | "batch" | "auto";
 
@@ -67,16 +64,16 @@ export interface StoreConfig {
 }
 
 export interface Budget {
-	/** The size limit of the tree of the active scope. */
-	here: Bytes;
-	/** The size limit of the tree of the catalog. */
-	directions: Bytes;
+	/** The maximum count of lines of the tree of the active scope. */
+	here: Lines;
+	/** The maximum count of lines of the tree of the catalog. */
+	directions: Lines;
 }
 
 export interface ProfileConfig {
 	/** The scopes that the profile sees. A key is a glob. */
 	scopes: Glob[];
-	budget?: Partial<Budget>;
+	budget: Budget;
 	subagents?: SubagentMode;
 }
 
@@ -109,7 +106,7 @@ export interface ScopeDefault {
 }
 
 export interface NudgeConfig {
-	mode: NudgeMode;
+	/** The counters run at the same time. */
 	tool_calls: number;
 	turns: number;
 	expensive: number;
@@ -156,7 +153,7 @@ export interface PatchConfig {
 	defaultProfile?: string;
 	budget?: Partial<Budget>;
 	writer?: Partial<WriterConfig>;
-	nudge?: Pick<NudgeConfig, "mode" | "tool_calls">;
+	nudge?: Partial<NudgeConfig>;
 	cacheTtl?: CacheTtl;
 	customPrompt?: string;
 	customPromptAppend?: string;
@@ -165,8 +162,11 @@ export interface PatchConfig {
 /** The agent preset. `profile` is the only required key. */
 export interface PresetConfig {
 	profile: string;
-	writer?: Partial<WriterConfig>;
 	budget?: Partial<Budget>;
+	writer?: Partial<WriterConfig>;
+	nudge?: Partial<NudgeConfig>;
+	customPrompt?: string;
+	customPromptAppend?: string;
 }
 
 /** The configuration that the code uses, after the merge and the defaults. */

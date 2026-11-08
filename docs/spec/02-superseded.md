@@ -50,6 +50,8 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-289 | The `writer` section gives `provider`, `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. | FR | S-051 | [config.d.ts](config.d.ts) |
 | REQ-452 | The profile patch gives `customPrompt` and `customPromptAppend`. | FR | S-094 | [config.d.ts](config.d.ts) |
 | REQ-456 | The `review` section of the config gives the review period of each kind in days. | FR | S-097 | [config.d.ts](config.d.ts) |
+| REQ-443 | The default budget `here` is 17 KiB. | FR | S-083 | [config.d.ts](config.d.ts) |
+| REQ-444 | The default budget `directions` is 3 KiB. | FR | S-083 | [config.d.ts](config.d.ts) |
 | REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | S-056 | No requirement. |

@@ -78,13 +78,13 @@ Use the space up to the limit, and give it by value:
 Avoid omissions. Name a minor item in a word or two rather than drop it: an absent item can never be found.
 Copy names, numbers, ids, paths, dates and errors exactly. Keep each decision's date with it. A line lands
 among lines about other subjects, so name the subject: "billing: …", not "it". Never make anything look
-further along than it was. If told the line is too long, shorten it. Non-ASCII characters cost 2-4 bytes.
+further along than it was. If told the line is too long, shorten it.
 ```
 
 ## Merge task
 
 ```text
-Merge these two adjacent lines into one line of at most {TARGET} bytes (about {TARGET/7.3} words),
+Merge these two adjacent lines into one line of at most {TARGET} characters (about {TARGET/6} words),
 the length of this ruler:
 {RULER = '-' * TARGET}
 <input>
@@ -99,22 +99,22 @@ The input holds the two children only. It holds no frontier and no `<context>`. 
 record outside its block depends on that record. A delete of the record then has an effect that the
 store cannot derive. See [REQ-433](02-requirements.md).
 
-At level 1, each child carries the preview of its `longform`, at most 1 KiB. The preview belongs to the
+At level 1, each child carries the preview of its `longform`, at most 1 024 characters. The preview belongs to the
 child. See [REQ-434](02-requirements.md).
 
 ## Sizes and retries
 
-The target is 512 bytes, and the limit is 640 bytes. The call accepts an answer up to 640 bytes with no
-retry. See [REQ-435](02-requirements.md).
+The target is 512 characters, and the limit is 640 characters. The call accepts an answer up to 640
+characters with no retry. See [REQ-435](02-requirements.md).
 
 A retry asks for 0.75 times the target, and the call makes three attempts at most. The answer is the
 shortest of the attempts. See [REQ-436](02-requirements.md) and [REQ-437](02-requirements.md).
 
-An answer above 640 bytes after the attempts cuts at a word boundary, and the node takes
+An answer above 640 characters after the attempts cuts at a word boundary, and the node takes
 `truncated: true`. See [REQ-438](02-requirements.md).
 
 The check "the line is shorter than the two children" applies to a model merge of two non-empty children
-only. The fold takes the byte count of each line from the field `bytes`. See
+only. The fold takes the length of each line from the field `chars`. See
 [REQ-172](02-requirements.md).
 
 ## Subagent prompt

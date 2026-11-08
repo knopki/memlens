@@ -55,7 +55,7 @@ op. A `redact` clears the content of its target.
 | `redact`  | `target`, `reason`                                                                                                                                        |
 | `review`  | `target`, `review_at`                                                                                                                                     |
 | `dismiss` | `target`, `reason`                                                                                                                                        |
-| `node`    | `level`, `start`, `child_a`, `child_b`, `input_gen`, `summary`, `bytes`, `truncated`, `ts_from`, `ts_to`                                                  |
+| `node`    | `level`, `start`, `child_a`, `child_b`, `input_gen`, `summary`, `chars`, `truncated`, `ts_from`, `ts_to`                                                  |
 
 A write op carries the optional field `proposed`, and the projection ignores a proposed event. A
 decision carries the field `accepts`, the id of the proposal. See [0012 Proposals](../adr/0012-proposals.md).
@@ -128,7 +128,7 @@ a list replaces the earlier value. The result is the type `ResolvedConfig`.
 The store path comes from `--store` first, then the patch, then `MEMLENS_STORE`, then the base file.
 The CLI has no patch, so its order is `--store`, `MEMLENS_STORE`, the base file.
 
-The `budget` keys `here` and `directions` are byte counts, and the two values are independent. The
+The `budget` keys `here` and `directions` count lines, and the two values are independent. The
 `language` key has one value for the store, and it selects the tokenizer of the index. See
 [REQ-291](02-requirements.md) and [REQ-450](02-requirements.md).
 
@@ -140,15 +140,15 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 
 | Item             | Value                                                                    | Reason                                                          |
 | ---------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| `body`           | 384 bytes required, 512 bytes accepted                                    | The 512 bytes give room for a miss of the model.                 |
-| `longform`       | 16 KiB                                                                    | The document does not enter the tree.                            |
-| `memory_open`    | `head` 8 KiB, `all` 16 KiB, 32 parts, 24 KiB                              | The answer continues with `offset` and `next`.                   |
-| Node             | Target 512 bytes, limit 640 bytes, a cut with a flag                      | The p90 miss is 610 bytes.                                       |
-| Input of a merge | Two children, and 1 KiB of `longform` at level 1                          | The input holds no context, so a delete stays derivable.         |
-| Budget           | `here` 17 KiB, `directions` 3 KiB                                        | The profile gives no total budget.                               |
+| `body`           | 384 characters required, 512 characters accepted                          | The 512 characters give room for a miss of the model.            |
+| `longform`       | 16 384 characters                                                         | The document does not enter the tree.                            |
+| `memory_open`    | `head` 8 192, `all` 16 384, 32 parts, 24 576 characters                   | The answer continues with `offset` and `next`.                   |
+| Node             | Target 512 characters, limit 640 characters, a cut with a flag            | The p90 miss is 610 characters.                                  |
+| Input of a merge | Two children, and 1 024 characters of `longform` at level 1               | The input holds no context, so a delete stays derivable.         |
+| Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
 | Fold             | `high` is the budget of the block, and `low` is its half. The order is `(due↓, level↑, start↑)` | The order gives one answer. |
 | Writer           | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
-| Nudge            | `mode=tools`, 10 calls                                                    | The profile sets it.                                             |
+| Nudge            | `tool_calls` and `turns` 10, `expensive` 5                                | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
 | `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 bytes.                   |
@@ -221,7 +221,7 @@ from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requ
 ## Tree
 
 A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
-`start` is a multiple of `2^L`. A `node` event holds `summary`, `ts_from`, `ts_to`, `bytes`,
+`start` is a multiple of `2^L`. A `node` event holds `summary`, `ts_from`, `ts_to`, `chars`,
 `input_gen`, and `truncated`, and its `at` is the time of the build. The state `built` or `dirty`
 follows from `input_gen`, and the store keeps no field for it. The tree has no depth limit, and it needs no dense prefix: a
 position with no live record stays empty. See [0004 Tree and writer](../adr/0004-tree-writer.md) and
@@ -323,8 +323,8 @@ and the plugin uses the number 220.
 
 The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 [REQ-352](02-requirements.md). The subagent modes are in [REQ-353](02-requirements.md) to
-[REQ-363](02-requirements.md). The nudge is in [REQ-230](02-requirements.md) to
-[REQ-237](02-requirements.md). See [0009 Agent surface](../adr/0009-agent-surface.md).
+[REQ-363](02-requirements.md). The nudge is in [REQ-232](02-requirements.md) to
+[REQ-246](02-requirements.md). See [0009 Agent surface](../adr/0009-agent-surface.md).
 
 ## Human surface
 
