@@ -146,5 +146,5 @@ Run the commands in a shell that mise activates, or start each command with `mis
 
 ## Next step
 
-The specification is in the review for acceptance. The customer accepted slices 1 to 8, and slices 9 to
-17 wait. The policy text of the slice is a working copy, and the research of the prior art can change it.
+The specification is in the review for acceptance. The customer accepted slices 1 to 9, 13, 16, and 17.
+Slices 10, 11, 12, 14, and 15 wait. The policy text of the slice is a working copy, and the research of the prior art can change it.
