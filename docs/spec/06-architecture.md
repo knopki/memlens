@@ -225,8 +225,9 @@ A `redact` cleans the store. The copy in the session history stays. See
 
 ## Nudge
 
-The plugin gives the nudge as a second runtime context, with an order after the memory context. The
-context holds one line for the turn, and the line is not part of the slice.
+The plugin gives the nudge as injected context for the next step, with its own source kind,
+`memlens-nudge`. The harness claims the context at the next step boundary. The line is not part of the
+slice and not part of the memory context.
 
 The `[nudge]` section gives the counters `tool_calls` and `turns`. The two counters run at the same
 time. Each counter counts from the session start, from the last nudge, or from the last write of a
@@ -322,7 +323,8 @@ time above the TTL. A process restart gives the same text. See [REQ-300](02-requ
 [REQ-188](02-requirements.md).
 
 The plugin registers one context for each agent at `agent/created`. The event gives the agent scope.
-The context has `required: true` and the order 220. The registration reads `agent.session.id`,
+The context has `required: true` and the order 220. A line for one step comes through injected context
+instead, and the nudge uses that surface. The registration reads `agent.session.id`,
 `agent.session.meta.agentPreset`, and `agent.session.meta.cwd`. The preset selects the profile, and
 the cwd selects the active scope.
 
