@@ -109,44 +109,111 @@ placeholder `[redacted]` appears in the console and the view only, and no event 
 
 ## Configuration
 
-The CLI reads a TOML file. The harness reads the plugin config in `cordis.patch.yml` and the agent
-preset. The plugin merges three layers: the TOML file, the profile patch, and the preset patch. The
-patch wins over the TOML, and the preset wins over the profile. An array replaces an array. See
-[0006 Scope and config](../adr/0006-scope-config.md).
+The configuration has three layers. The base file gives the values of the machine. The profile patch
+gives the values of one harness profile. The preset gives the values of one agent.
 
-| Layer        | File                       | Keys                                                                 |
-| ------------ | -------------------------- | -------------------------------------------------------------------- |
-| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `defaultProfile`, `language`, `profile.<name>`, `scope_default`, `nudge`, `writer`, `review` |
-| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `budget`, `writer`, `nudge`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
-| Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
+| Layer  | Source                                | Keys                                                                                           |
+| ------ | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Base   | `$XDG_CONFIG_HOME/memlens/config.toml` | `language`, `defaultProfile`, `store`, `profile`, `scope_default`, `nudge`, `writer`, `review`   |
+| Patch  | `cordis.patch.yml` of the profile      | `store`, `defaultProfile`, `budget`, `writer`, `nudge`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
+| Preset | the agent preset                       | `profile`, `writer`, `budget`                                                                   |
 
-The `store` key of the patch sets the same store as the TOML `store` section and `MEMLENS_STORE`. The
-plugin takes the patch first, then `MEMLENS_STORE`, then the TOML file. The CLI takes `--store` first,
-then `MEMLENS_STORE`, then the TOML file.
+The merge is deep. A later layer wins over an earlier layer. A table merges with a table. A scalar or
+a list replaces the earlier value.
 
-The `writer` section gives `provider`, `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. The
-`mode` is `parallel`, `batch`, or `auto`, and the default is `auto`. The `cacheTtl` map gives a
-duration for a model glob, and the most specific glob wins. The `language` key gives the language of the
-index tokenizer, and the default is `en`. See [REQ-291](02-requirements.md) and
+The base file is TOML. The example below holds the default value of each key.
+
+```toml
+language = "en"                    # one value for the store
+defaultProfile = "default"
+
+[store]
+backend = "sqlite"                 # sqlite | jsonl
+path = "~/.local/share/memlens"
+
+[profile.default]
+scopes = ["global:prefs", "project:dsh/*"]
+budget = { here = 17408, directions = 3072 }   # bytes
+subagents = "propose"              # propose | read | off
+
+[profile.work]
+scopes = ["global:work-rules", "project:acme/*"]
+subagents = "read"
+
+[scope_default]
+rules = [
+  { match = "git_remote", glob = "github.com/knopki/*", key = "project:{repo}" },
+  { match = "path", glob = "~/prj/dsh/**", key = "project:dsh" },
+  { match = "workspace", id = "ws_01H...", key = "project:dsh/optmem" },
+]
+default = "project:misc"
+
+[nudge]
+mode = "tools"                     # tools | turns | expensive | off
+tool_calls = 10
+turns = 10
+expensive = 5
+text = "[memory] {n} tool calls since the last record. Anything durable?"
+
+[writer]
+provider = ""
+model = ""
+effort = "off"
+mode = "auto"                      # parallel | batch | auto
+batch = 6
+maxCallsPerHour = 120
+
+[review]
+decision = 365
+preference = 365
+note = 365
+fact = 180
+task = 7
+```
+
+The harness gives two more layers. The patch of the profile holds its keys. The preset of the agent
+holds its keys, and the preset wins over the patch.
+
+```yaml
+# cordis.patch.yml, one row of the harness profile
+- id: memlens
+  config:
+    store: "~/.local/share/memlens"
+    defaultProfile: default
+    writer: { provider: "deepseek", model: "deepseek-chat", effort: "off", mode: auto, batch: 6, maxCallsPerHour: 120 }
+    nudge: { mode: tools, tool_calls: 10 }
+    cacheTtl: { "deepseek/*": "2h", "anthropic/*": "5m", "*": "1h" }
+
+# the agent preset, the differences only
+- id: memlens-preset
+  config: { profile: work, budget: { here: 17408, directions: 3072 } }
+```
+
+The patch gives `nudge.mode` and `nudge.tool_calls`. The base file gives the other three nudge keys.
+
+The store path has three sources. `--store` wins over `MEMLENS_STORE`, and `MEMLENS_STORE` wins over
+the base file. The plugin has no `--store` flag, so the patch gives its path.
+
+A scope key has the form `kind:name`. The kind is one of `project`, `global`, `agent`, `user`, `topic`,
+`task`, or `import`. The name starts with a lowercase letter or a digit. The rest of the name holds
+lowercase letters, digits, the period, the underscore, the slash, and the hyphen. The store lowercases
+a key before it checks the grammar.
+
+A key in `scopes` is a glob. The glob matches the whole key, and `*` matches any text. The key `*`
+alone matches each scope.
+
+The rules of `[scope_default]` go in order. The first match gives the active scope. A rule matches
+`git_remote` and `path` as a glob, and `workspace` as an id. A key replaces `{repo}` with the
+repository name of the remote. No match gives `default`. Several rules can give one key.
+
+The `review` section gives the review period of each kind in days. The `language` key has one value
+for the store, and it selects the tokenizer of the index. See [REQ-291](02-requirements.md) and
 [REQ-450](02-requirements.md).
 
 The `customPrompt` key replaces the whole template of the slice, and the placeholders apply in it.
-The `customPromptAppend` key is the value of `{{append}}`. See [REQ-452](02-requirements.md) to
-[REQ-455](02-requirements.md).
+The `customPromptAppend` key is the value of `{{append}}`. See [REQ-453](02-requirements.md) and
+[REQ-454](02-requirements.md).
 
-The `nudge` section gives `mode` and `tool_calls` in the patch. The TOML file gives the other nudge
-keys. The `[scope_default]` section gives the scope rules and the fallback key. The rules go in order,
-and the first match gives the active scope. See [REQ-262](02-requirements.md),
-[REQ-263](02-requirements.md), [REQ-272](02-requirements.md), and [0006 Scope and config](../adr/0006-scope-config.md).
-
-A profile lists its scopes as keys, and `*` matches any text of the kind or of the name. The budget
-gives `here` and `directions` in bytes, and the two budgets are independent. The subagent mode is
-`propose`, `read`, or `off`. See [0006 Scope and config](../adr/0006-scope-config.md) and [0009 Agent surface](../adr/0009-agent-surface.md).
-
-The `review` section gives the review period of each kind in days, and the table of defaults holds
-the values. See [REQ-456](02-requirements.md) and [REQ-457](02-requirements.md).
-
-The key `idle` gives 300 seconds by default. See [0006 Scope and config](../adr/0006-scope-config.md).
 
 ## Defaults
 
