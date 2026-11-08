@@ -116,8 +116,8 @@ patch wins over the TOML, and the preset wins over the profile. An array replace
 
 | Layer        | File                       | Keys                                                                 |
 | ------------ | -------------------------- | -------------------------------------------------------------------- |
-| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `language`, `profile.<name>`, `scope_default`, `nudge`, `writer`, `review` |
-| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `writer`, `nudge`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
+| CLI and base | `$XDG_CONFIG_HOME/memlens` | `store`, `defaultProfile`, `language`, `profile.<name>`, `scope_default`, `nudge`, `writer`, `review` |
+| Profile      | `cordis.patch.yml`         | `store`, `defaultProfile`, `budget`, `writer`, `nudge`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
 | Preset       | the agent preset           | `profile`, `writer`, `budget`                                        |
 
 The `store` key of the patch sets the same store as the TOML `store` section and `MEMLENS_STORE`. The

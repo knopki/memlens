@@ -37,3 +37,4 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-157 | In the mode `propose`, the parent gets a report about the proposed notes. | FR | S-037 | REQ-359 |
 | REQ-358 | The report of the parent gets one line for each proposal of the child. | FR | S-070 | REQ-359 |
 | REQ-274 | The catalog key is hidden from the agent. | FR | S-064 | REQ-108 |
+| REQ-279 | The key `*` in `scopes` matches each scope. | FR | S-066 | REQ-151 |
