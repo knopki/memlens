@@ -372,11 +372,35 @@ gives its own styles, and the plugin uses the components of the harness UI. The 
 
 ## CLI
 
-The binary `memlens` runs without the harness. The commands `note`, `find`, `open`, `forget`,
-`review`, `redact`, and `amend` act on a record. The command `scopes` acts on a scope. The commands
-`slice`, `compact`, `status`, `check`, and `repair` act on the view and the store. The commands
-`export` and `import` move the store. The commands `config` and `ui` set the configuration and start
-the console. See [REQ-385](02-requirements.md) to [REQ-412](02-requirements.md).
+The binary `memlens` runs without the harness, and it takes one command. The usage below gives the
+commands and their flags. A flag outside the usage is an error by usage.
+
+```text
+memlens note "<body>" [--longform file.md] [--scope key] [--kind kind] [--supersedes 12,14] [--review 180d|never]
+memlens find "<words>" [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
+memlens open 2107|scope#2107|1024-2047 [--scope key] [--no-longform] [--offset N]
+memlens forget 2107 [--scope key] [--reason "text"]
+memlens review [--limit 50] [--json]
+memlens review --mark 2107,2110 --scope key [--for 180d]
+memlens redact 2107 [--reason "text"] [--yes]
+memlens amend 2107 [--body "text"] [--longform file.md]
+memlens scopes [--json]
+memlens slice --profile name [--json]
+memlens wake --session id
+memlens compact [--scope key] [--max 50] [--dry-run]
+memlens compact --answer path
+memlens status [--json]
+memlens check [--json]
+memlens repair [--dry-run]
+memlens export --format md|jsonl --out dir [--scope key]
+memlens import --in path [--as key] [--dry-run]
+memlens import --from dsh-sessions dir [--since date] [--dry-run]
+memlens config get|set key [value]
+memlens ui [--port 7788] [--allow-delete]
+```
+
+The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
+and `3` a refusal by a policy.
 
 ## Code markup
 

@@ -98,3 +98,22 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-334 | The descent to the clean nodes visits 4096 nodes at most. | FR | S-070 | REQ-228 |
 | REQ-335 | A descent that stops at the budget gives a part with `needsExpansion` and its `label`. | FR | S-070 | REQ-228 |
 | REQ-336 | `memory_open` of the range with `needsExpansion` opens that range. | FR | S-070 | REQ-228 |
+| REQ-387 | `memlens note` takes the `body` argument and the flags `--longform`, `--scope`, `--kind`, `--supersedes`, and `--review`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-388 | `memlens find` takes the words argument and the flags `--scope`, `--since`, `--until`, `--due`, `--limit`, and `--json`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-389 | `memlens open` takes the target argument and the flags `--scope`, `--no-longform`, and `--offset`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-390 | `memlens forget` takes the target argument and the flags `--reason` and `--scope`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-391 | `memlens review` gives the due records, and it takes the flags `--limit` and `--json`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-392 | `memlens review --mark` sets the review date of the named records, and it takes the flags `--scope` and `--for`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-393 | `memlens redact` takes the target argument and the flags `--reason` and `--yes`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-394 | `memlens amend` takes the target argument and the flags `--body` and `--longform`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-395 | `memlens scopes` gives the visible scopes, and the flag `--json` gives the machine form. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-396 | `memlens slice` renders a fresh slice for a profile, and it takes the flags `--profile` and `--json`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-397 | `memlens compact` gives the next compaction job of a scope, and it takes the flags `--scope`, `--max`, and `--dry-run`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-398 | `memlens status` gives the state of the store, and the flag `--json` gives the machine form. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-399 | `memlens check` gives the result of the test of the store, and the flag `--json` gives the machine form. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-400 | `memlens repair` fixes the store, and the flag `--dry-run` lists the changes only. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-401 | The `--format` of `memlens export` is `md` or `jsonl`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-402 | `memlens import` takes the flags `--in`, `--as`, and `--dry-run`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-403 | `memlens import --from dsh-sessions` reads a directory of harness sessions, and it takes the flags `--since` and `--dry-run`. | FR | S-075, S-076 | [06-architecture.md](06-architecture.md) |
+| REQ-405 | `memlens config` has the actions `get` and `set`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-406 | `memlens ui` starts the console, and it takes the flags `--port` and `--allow-delete`. | FR | S-075 | [06-architecture.md](06-architecture.md) |

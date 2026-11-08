@@ -306,26 +306,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-384 | An import writes the events of a record with a `redact` in the sanitized form. | FR | accepted | S-073 | The imported record keeps `[redacted]` and no content. |
 | REQ-385 | The CLI is one binary with the name `memlens`. | FR | draft | S-075 | The package gives one binary, and it runs each command. |
 | REQ-386 | The CLI needs no harness. | FR | draft | S-075 | Each command runs on a machine with no harness. |
-| REQ-387 | `memlens note` takes the `body` argument and the flags `--longform`, `--scope`, `--kind`, `--supersedes`, and `--review`. | FR | draft | S-075 | The flag `--review 180d` sets `review_at` 180 days after the write. |
-| REQ-388 | `memlens find` takes the words argument and the flags `--scope`, `--since`, `--until`, `--due`, `--limit`, and `--json`. | FR | draft | S-075 | The flag `--due` gives the due records, and `--json` gives the machine form. |
-| REQ-389 | `memlens open` takes the target argument and the flags `--scope`, `--no-longform`, and `--offset`. | FR | draft | S-075 | A `pos`, a `scope#pos`, and a range open. The flag `--no-longform` leaves the document out. |
-| REQ-390 | `memlens forget` takes the target argument and the flags `--reason` and `--scope`. | FR | draft | S-075 | The record leaves the view, and the log keeps the reason. |
-| REQ-391 | `memlens review` gives the due records, and it takes the flags `--limit` and `--json`. | FR | draft | S-075 | The answer holds each due record, and `--json` gives the machine form. |
-| REQ-392 | `memlens review --mark` sets the review date of the named records, and it takes the flags `--scope` and `--for`. | FR | draft | S-075 | The command `--mark 2107,2110 --for 180d` moves both dates. |
-| REQ-393 | `memlens redact` takes the target argument and the flags `--reason` and `--yes`. | FR | draft | S-075 | The record becomes `deleted`, and the content clears. |
-| REQ-394 | `memlens amend` takes the target argument and the flags `--body` and `--longform`. | FR | draft | S-075 | A later `open` gives the new body. |
-| REQ-395 | `memlens scopes` gives the visible scopes, and the flag `--json` gives the machine form. | FR | draft | S-075 | Each visible scope of the profile is in the answer. |
-| REQ-396 | `memlens slice` renders a fresh slice for a profile, and it takes the flags `--profile` and `--json`. | FR | draft | S-075 | The output holds the policy text and the two blocks. |
-| REQ-397 | `memlens compact` gives the next compaction job of a scope, and it takes the flags `--scope`, `--max`, and `--dry-run`. | FR | draft | S-075 | The flag `--dry-run` builds no node. |
-| REQ-398 | `memlens status` gives the state of the store, and the flag `--json` gives the machine form. | FR | draft | S-075 | The command prints the state, and `--json` prints a JSON object. |
-| REQ-399 | `memlens check` gives the result of the test of the store, and the flag `--json` gives the machine form. | FR | draft | S-075 | A good store gives the code 0, and a broken store gives the code 1. |
-| REQ-400 | `memlens repair` fixes the store, and the flag `--dry-run` lists the changes only. | FR | draft | S-075 | The flag `--dry-run` changes no byte of the store. |
-| REQ-401 | The `--format` of `memlens export` is `md` or `jsonl`. | FR | draft | S-075 | Each of the two values gives an export in that format. |
-| REQ-402 | `memlens import` takes the flags `--in`, `--as`, and `--dry-run`. | FR | draft | S-075 | The flag `--as` puts the imported records in the named scope. |
-| REQ-403 | `memlens import --from dsh-sessions` reads a directory of harness sessions, and it takes the flags `--since` and `--dry-run`. | FR | draft | S-075, S-076 | The command accepts the directory and the two flags. |
-| REQ-404 | `memlens merge` takes two stores and the flag `--into`, with `--dry-run`.                                                                                                             | FR   | rejected | S-075, S-076        | Refused by S-076: the CLI has no `merge` command. The import makes the merge.                                                  |
-| REQ-405 | `memlens config` has the actions `get` and `set`. | FR | draft | S-075 | The action `get` gives the value of a key, and `set` writes it. |
-| REQ-406 | `memlens ui` starts the console, and it takes the flags `--port` and `--allow-delete`. | FR | draft | S-075 | The default port is 7788, and a delete needs `--allow-delete`. |
+|REQ-404|`memlens merge` takes two stores and the flag `--into`, with `--dry-run`.|FR| S-075, S-076 | rejected | Refused by S-076: the import makes the merge. |
 | REQ-407 | The exit code 0 marks a success. | FR | draft | S-075 | A successful command gives 0. |
 | REQ-408 | The exit code 1 marks an error of the data. | FR | draft | S-075 | A broken store gives 1. |
 | REQ-409 | The exit code 2 marks an error of the usage. | FR | draft | S-075 | A wrong flag gives 2. |
