@@ -38,6 +38,18 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-358 | The report of the parent gets one line for each proposal of the child. | FR | S-070 | REQ-359 |
 | REQ-274 | The catalog key is hidden from the agent. | FR | S-064 | REQ-108 |
 | REQ-279 | The key `*` in `scopes` matches each scope. | FR | S-066 | REQ-151 |
+| REQ-029 | The plugin config is the deep merge of the memlens config, the profile patch, and the preset patch. The patch wins over the memlens config, and the preset wins over the profile. | FR | S-013, S-067 | [config.d.ts](config.d.ts) |
+| REQ-147 | The `store` section gives `backend` and `path`. | FR | S-013 | [config.d.ts](config.d.ts) |
+| REQ-150 | Each profile has the section `[profile.<name>]`. | FR | S-067 | [config.d.ts](config.d.ts) |
+| REQ-152 | The profile budget gives `here` and `directions` in bytes. | FR | S-036, S-037 | [config.d.ts](config.d.ts) |
+| REQ-153 | The profile gives the subagent mode `propose`, `read`, or `off`. | FR | S-037 | [config.d.ts](config.d.ts) |
+| REQ-230 | The `[nudge]` section gives `mode`, `tool_calls`, `turns`, `expensive`, and `text`. The patch gives `mode` and `tool_calls`, and the TOML file gives the other three. | FR | S-058 | [config.d.ts](config.d.ts) |
+| REQ-231 | The `mode` of the nudge is `tools`, `turns`, `expensive`, or `off`. | FR | S-058 | [config.d.ts](config.d.ts) |
+| REQ-287 | The general config and the patch give `defaultProfile`. The preset `profile` wins over it. | FR | S-067 | [config.d.ts](config.d.ts) |
+| REQ-288 | The `store` key of the plugin config sets the same store as the TOML `store` section and `MEMLENS_STORE`. The plugin takes the patch first, then `MEMLENS_STORE`, then the TOML file. | FR | S-067 | [config.d.ts](config.d.ts) |
+| REQ-289 | The `writer` section gives `provider`, `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. | FR | S-051 | [config.d.ts](config.d.ts) |
+| REQ-452 | The profile patch gives `customPrompt` and `customPromptAppend`. | FR | S-094 | [config.d.ts](config.d.ts) |
+| REQ-456 | The `review` section of the config gives the review period of each kind in days. | FR | S-097 | [config.d.ts](config.d.ts) |
 | REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | S-056 | No requirement. |

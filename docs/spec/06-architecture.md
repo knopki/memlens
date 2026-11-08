@@ -112,108 +112,29 @@ placeholder `[redacted]` appears in the console and the view only, and no event 
 The configuration has three layers. The base file gives the values of the machine. The profile patch
 gives the values of one harness profile. The preset gives the values of one agent.
 
-| Layer  | Source                                | Keys                                                                                           |
-| ------ | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Base   | `$XDG_CONFIG_HOME/memlens/config.toml` | `language`, `defaultProfile`, `store`, `profile`, `scope_default`, `nudge`, `writer`, `review`   |
-| Patch  | `cordis.patch.yml` of the profile      | `store`, `defaultProfile`, `budget`, `writer`, `nudge`, `cacheTtl`, `customPrompt`, `customPromptAppend` |
-| Preset | the agent preset                       | `profile`, `writer`, `budget`                                                                   |
+| Layer  | Source                                    |
+| ------ | ----------------------------------------- |
+| Base   | `$XDG_CONFIG_HOME/memlens/config.toml`     |
+| Patch  | the row `memlens` of `cordis.patch.yml`    |
+| Preset | the agent preset                           |
+
+[config.d.ts](config.d.ts) gives the type of each layer, and the type holds the keys of that layer.
+A key outside the type is an error at load. A scope key outside the grammar of the type is an error
+at load.
 
 The merge is deep. A later layer wins over an earlier layer. A table merges with a table. A scalar or
-a list replaces the earlier value.
+a list replaces the earlier value. The result is the type `ResolvedConfig`.
 
-The base file is TOML. The example below holds the default value of each key.
+The store path comes from `--store` first, then the patch, then `MEMLENS_STORE`, then the base file.
+The CLI has no patch, so its order is `--store`, `MEMLENS_STORE`, the base file.
 
-```toml
-language = "en"                    # one value for the store
-defaultProfile = "default"
+The `budget` keys `here` and `directions` are byte counts, and the two values are independent. The
+`language` key has one value for the store, and it selects the tokenizer of the index. See
+[REQ-291](02-requirements.md) and [REQ-450](02-requirements.md).
 
-[store]
-backend = "sqlite"                 # sqlite | jsonl
-path = "~/.local/share/memlens"
-
-[profile.default]
-scopes = ["global:prefs", "project:dsh/*"]
-budget = { here = 17408, directions = 3072 }   # bytes
-subagents = "propose"              # propose | read | off
-
-[profile.work]
-scopes = ["global:work-rules", "project:acme/*"]
-subagents = "read"
-
-[scope_default]
-rules = [
-  { match = "git_remote", glob = "github.com/knopki/*", key = "project:{repo}" },
-  { match = "path", glob = "~/prj/dsh/**", key = "project:dsh" },
-  { match = "workspace", id = "ws_01H...", key = "project:dsh/optmem" },
-]
-default = "project:misc"
-
-[nudge]
-mode = "tools"                     # tools | turns | expensive | off
-tool_calls = 10
-turns = 10
-expensive = 5
-text = "[memory] {n} tool calls since the last record. Anything durable?"
-
-[writer]
-provider = ""
-model = ""
-effort = "off"
-mode = "auto"                      # parallel | batch | auto
-batch = 6
-maxCallsPerHour = 120
-
-[review]
-decision = 365
-preference = 365
-note = 365
-fact = 180
-task = 7
-```
-
-The harness gives two more layers. The patch of the profile holds its keys. The preset of the agent
-holds its keys, and the preset wins over the patch.
-
-```yaml
-# cordis.patch.yml, one row of the harness profile
-- id: memlens
-  config:
-    store: "~/.local/share/memlens"
-    defaultProfile: default
-    writer: { provider: "deepseek", model: "deepseek-chat", effort: "off", mode: auto, batch: 6, maxCallsPerHour: 120 }
-    nudge: { mode: tools, tool_calls: 10 }
-    cacheTtl: { "deepseek/*": "2h", "anthropic/*": "5m", "*": "1h" }
-
-# the agent preset, the differences only
-- id: memlens-preset
-  config: { profile: work, budget: { here: 17408, directions: 3072 } }
-```
-
-The patch gives `nudge.mode` and `nudge.tool_calls`. The base file gives the other three nudge keys.
-
-The store path has three sources. `--store` wins over `MEMLENS_STORE`, and `MEMLENS_STORE` wins over
-the base file. The plugin has no `--store` flag, so the patch gives its path.
-
-A scope key has the form `kind:name`. The kind is one of `project`, `global`, `agent`, `user`, `topic`,
-`task`, or `import`. The name starts with a lowercase letter or a digit. The rest of the name holds
-lowercase letters, digits, the period, the underscore, the slash, and the hyphen. The store lowercases
-a key before it checks the grammar.
-
-A key in `scopes` is a glob. The glob matches the whole key, and `*` matches any text. The key `*`
-alone matches each scope.
-
-The rules of `[scope_default]` go in order. The first match gives the active scope. A rule matches
-`git_remote` and `path` as a glob, and `workspace` as an id. A key replaces `{repo}` with the
-repository name of the remote. No match gives `default`. Several rules can give one key.
-
-The `review` section gives the review period of each kind in days. The `language` key has one value
-for the store, and it selects the tokenizer of the index. See [REQ-291](02-requirements.md) and
-[REQ-450](02-requirements.md).
-
-The `customPrompt` key replaces the whole template of the slice, and the placeholders apply in it.
-The `customPromptAppend` key is the value of `{{append}}`. See [REQ-453](02-requirements.md) and
+The `customPrompt` key replaces the whole template of the slice, and the placeholders apply in it. The
+`customPromptAppend` key is the value of `{{append}}`. See [REQ-453](02-requirements.md) and
 [REQ-454](02-requirements.md).
-
 
 ## Defaults
 
