@@ -307,10 +307,6 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-385 | The CLI is one binary with the name `memlens`. | FR | draft | S-075 | The package gives one binary, and it runs each command. |
 | REQ-386 | The CLI needs no harness. | FR | draft | S-075 | Each command runs on a machine with no harness. |
 |REQ-404|`memlens merge` takes two stores and the flag `--into`, with `--dry-run`.|FR| S-075, S-076 | rejected | Refused by S-076: the import makes the merge. |
-| REQ-407 | The exit code 0 marks a success. | FR | draft | S-075 | A successful command gives 0. |
-| REQ-408 | The exit code 1 marks an error of the data. | FR | draft | S-075 | A broken store gives 1. |
-| REQ-409 | The exit code 2 marks an error of the usage. | FR | draft | S-075 | A wrong flag gives 2. |
-| REQ-410 | The exit code 3 marks a refusal by a policy. | FR | draft | S-075 | A redact of a record outside `scopes` gives 3. |
 | REQ-411 | `memlens redact` deletes the content from the disk. | FR | draft | S-075 | The file of the store holds no byte of the body after the command. |
 | REQ-412 | `memlens redact` asks for a confirmation, and the flag `--yes` skips it. | FR | draft | S-075 | A call with no `--yes` waits for the answer, and `--yes` starts the work. |
 | REQ-413 | The import from the sessions writes new notes of each session into the store. | FR | draft | S-076 | A session with a decision gives a note after the import, and the writer makes the text. |

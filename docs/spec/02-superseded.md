@@ -117,3 +117,7 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-403 | `memlens import --from dsh-sessions` reads a directory of harness sessions, and it takes the flags `--since` and `--dry-run`. | FR | S-075, S-076 | [06-architecture.md](06-architecture.md) |
 | REQ-405 | `memlens config` has the actions `get` and `set`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-406 | `memlens ui` starts the console, and it takes the flags `--port` and `--allow-delete`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-407 | The exit code 0 marks a success. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-408 | The exit code 1 marks an error of the data. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-409 | The exit code 2 marks an error of the usage. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-410 | The exit code 3 marks a refusal by a policy. | FR | S-075 | [06-architecture.md](06-architecture.md) |
