@@ -76,7 +76,7 @@ export interface MemoryFindOutput {
 }
 
 export interface MemoryOpenInput {
-	/** An `Address`, a `pos` of the active scope, or a range `a-b`. */
+	/** An `Address`, a `pos` of the active scope, or a range `a-b`. A leading `#` is allowed. */
 	target: string | number;
 	longform?: "none" | "head" | "all";
 	offset?: number;
@@ -100,8 +100,11 @@ export interface MemoryOpenEntry {
 
 /** One child of a node: a note or a smaller node, as the slice renders it. */
 export interface MemoryOpenLine {
-	/** `#2107` for a note, or `#1024-2047` for a node. */
-	label: string;
+	/**
+	 * The render form of the address: `#2107` for a note, or `#1024-2047` for a node. The tool
+	 * accepts this value as a target, with the `#` or without it.
+	 */
+	label: Address;
 	ts_from: string;
 	ts_to: string;
 	/** The body of a note, the summary of a node, or the temporary text of a node that is not built. */
