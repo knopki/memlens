@@ -188,29 +188,50 @@ consistent by construction. A per-scope export also holds the top node of that s
 
 ## View
 
-The view is a deterministic function of the records, the built nodes, and `storeRev`.
+A view is the lines that one render gives. The render takes the records, the built nodes, and
+`storeRev`, and it gives one text.
 
-The slice is one `<memory>` block with the `how-to`, `directions`, and `here` parts:
+The text is one `<memory>` block with three parts: `<how-to>`, `<directions>`, and `<here>`. The
+template is in [09-prompts.md](09-prompts.md), and each placeholder takes its value.
 
-```
-<memory>
-<how-to>{{policy}}{{append}}</how-to>
-<directions>...</directions>
-<here scope="...">...</here>
-</memory>
-```
+The `<how-to>` part holds the policy text and the value of `customPromptAppend`. A `customPrompt`
+value replaces the whole template, and the placeholders apply in it.
 
-The `<how-to>` block stays whole, and the `directions` and `here` blocks carry their own guide line.
-A direction line gives `[scope] <age|active> · <N> notes · <text>`. A line of `here` is a leaf
-`#<pos> <date> <body>` or a node `#<a>-<b> <start>..<end> <summary>`. See [REQ-297](02-requirements.md)
-and [REQ-298](02-requirements.md).
+The `<directions>` part holds the direction line of each scope of the profile. A direction line has
+the form `[<key>] <age> <count> <text>`. The age of the active scope is `active`, and the age of
+another scope is its idle time. The count is the count of live notes. The text is the summary of the
+top node of the scope. When the top node is not built, the lines of the frontier of that scope take
+the place of the line.
 
-The compression works on `directions` first, then on `here`, and the `<how-to>` block stays whole. A
-part above 1.5 times its budget loses the oldest `<here>` lines, and the line
-`#<a>-<b> omitted (N lines, compacting)` takes their place. The agent opens the range with
-`memory_open`. See [REQ-223](02-requirements.md) to [REQ-229](02-requirements.md).
+The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
+and a block gives `#<a>-<b> <ts_from>..<ts_to> <summary>`.
 
-A `redact` cleans the store. The copy in the session history stays. See [0007 Slice and context](../adr/0007-slice-context.md).
+The budget counts lines. The `here` value limits the `<here>` part, and the `directions` value limits
+the `<directions>` part. The two values are independent, and the `<how-to>` part is never cut.
+
+A part above its budget takes two steps in order. First, it merges the built pair with the highest
+`due`, and the line of the parent takes the place of the two lines of the pair. Then, when no built
+pair stays, it replaces the oldest raw lines with one line: `#<a>-<b> omitted (N lines, compacting)`.
+
+At a session start the plugin starts a build when a part is above 1.5 times its budget because of
+nodes that are not built. The build has a deadline of 10 seconds, and the render waits for it. The
+render does not wait for the queue of the compaction.
+
+A `redact` cleans the store. The copy in the session history stays. See
+[0007 Slice and context](../adr/0007-slice-context.md).
+
+## Nudge
+
+The nudge is one line for the turn, and the line is not part of the slice. The `[nudge]` section gives
+the counters `tool_calls` and `turns`, the value `expensive`, and the `text`.
+
+The two counters run at the same time. Each counter counts from the session start, from the last nudge,
+or from the last write of a note. A counter that reaches its value gives the line for that turn.
+
+A turn with more than `expensive` steps demands a write before its end.
+
+The `text` holds `{n}`, and the count of the counter takes the place of `{n}`. The default text names
+no unit of the count.
 
 ## Addressing
 

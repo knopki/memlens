@@ -16,4 +16,4 @@ A system prompt section. `agent.inject` with a user message. Store a snapshot in
 
 ## Consequences
 
-The text survives a restart. A `redact` leaves the copy in the session history. The compression keeps the policy text whole and cuts `<here>` last. The nudge follows the slice.
+The text survives a restart. A `redact` leaves the copy in the session history. A part above its budget merges built pairs, and one line then covers the raw lines that stay. The nudge is one line for the turn, and it is not part of the slice.

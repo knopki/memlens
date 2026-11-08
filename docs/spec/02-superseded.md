@@ -55,6 +55,15 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-256 | The kind of a scope key is `project`, `global`, `agent`, `user`, `topic`, `task`, or `import`. | FR | S-063 | REQ-255 |
 | REQ-257 | The name of a scope key starts with a lowercase letter or a digit. | FR | S-063 | REQ-255 |
 | REQ-258 | The name of a scope key holds lowercase letters, digits, the period, the underscore, the slash, and the hyphen only. | FR | S-063 | REQ-255 |
+| REQ-018 | The plugin renders the text of the snapshot from the store at a trigger. | FR | S-046 | REQ-300 |
+| REQ-178 | The slice is one `<memory>` block with `<how-to>`, `<directions>`, and `<here>`. | FR | S-042, S-067, S-102 | [06-architecture.md](06-architecture.md) |
+| REQ-179 | The `<how-to>` block holds the policy text of [09-prompts.md](09-prompts.md). The text holds no XML tag and no tool signature. | FR | S-042, S-067, S-101, S-102 | [06-architecture.md](06-architecture.md) |
+| REQ-180 | The `<directions>` block holds one line for each scope of the profile, and the line is the direction line of that scope. | FR | S-067 | [06-architecture.md](06-architecture.md) |
+| REQ-181 | The `<here>` block holds the frontier of the active scope. | FR | S-067 | [06-architecture.md](06-architecture.md) |
+| REQ-224 | The compression turns an old line of `<directions>` into one line. | FR | S-056 | REQ-223 |
+| REQ-226 | A part of the slice above 1.5 times its budget loses the oldest lines of `<here>` until it fits 1.5 times its budget. | FR | S-056 | REQ-223 |
+| REQ-227 | The omitted lines leave one line `#<a>-<b> omitted (N lines, compacting)`. | FR | S-056 | REQ-223 |
+| REQ-234 | The nudge changes no byte of the frozen slice. | FR | S-058 | REQ-233 |
 | REQ-440 | The direction line starts with `[<key>] `. | FR | S-089 | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | S-103 | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | S-056 | No requirement. |
