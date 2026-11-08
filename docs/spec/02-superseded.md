@@ -31,3 +31,9 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-095 | An `accept` event applies the `supersedes` of the note. | FR | S-020 | REQ-093 |
 | REQ-097 | A `dismiss` event sets the state to the maximum of the state and `deleted`. | FR | S-020 | REQ-474 |
 | REQ-107 | An `accept` event returns a proposed record that a `hide` event hid to the view. | FR | S-022 | REQ-473 |
+| REQ-005 | The README has the eight languages of the DSH set. | FR | S-003, S-088 | REQ-006 |
+| REQ-430 | The README of the plugin package has eight languages: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. | FR | S-081 | REQ-006 |
+| REQ-431 | The localization covers the product interface, the READMEs, and the installation and usage instructions. | FR | S-081 | REQ-006 |
+| REQ-157 | In the mode `propose`, the parent gets a report about the proposed notes. | FR | S-037 | REQ-359 |
+| REQ-358 | The report of the parent gets one line for each proposal of the child. | FR | S-070 | REQ-359 |
+| REQ-274 | The catalog key is hidden from the agent. | FR | S-064 | REQ-108 |

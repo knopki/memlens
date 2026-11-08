@@ -19,8 +19,8 @@ The store folds the notes into a tree. A background writer merges two adjacent n
 then two lines into one, and so on. A line stands in for its notes for weeks or years, and the agent
 opens it back into the two lines below.
 
-The catalog is a second tree above the scopes. Its leaves are the scope lines, so the agent sees each
-scope of the profile in one line.
+The catalog is a second tree over the scopes. Its leaves are the top nodes of the scopes, so the agent
+sees each scope of the profile in one line.
 
 The slice is the text in the agent context. It holds the policy, the `directions` block with one line
 for each scope, and the `here` block with the frontier of the active scope.

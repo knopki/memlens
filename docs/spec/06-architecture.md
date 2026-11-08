@@ -11,7 +11,7 @@ one engine:
 - The catalog of nodes is the level above the notes. It has its own tree and belongs
   to one profile.
 
-The agent reads one map of directions: the registry and the catalog in one `<directions>` block.
+The agent reads one map of directions: the catalog in the `<directions>` block.
 
 ## Parts
 
@@ -87,15 +87,17 @@ nothing. The effects of the operations, the state order, and the supersede rule 
 ## Catalog
 
 The catalog has one scope for each profile: `__catalog__:<profile>`. The key is hidden from the
-agent. The catalog is a tree of the same nodes as the tree of a scope. Its leaves are the scope
-lines, and one scope line covers one scope. The children of a scope line are the two nodes of that
-scope which cover its range. A node of the catalog carries no `review_at`, no `proposed`, no
-`session`, no `turn`, and no `preset`. See [0011 Nodes are events](../adr/0011-nodes-are-events.md).
+agent. The catalog is a tree over the scopes of the profile. One position holds one scope, and the
+content of the position is the top node of the tree of that scope. A node above the leaves lives in
+the catalog scope. A node of the catalog carries no `review_at`, no `proposed`, no `session`, no
+`turn`, and no `preset`. See [0011 Nodes are events](../adr/0011-nodes-are-events.md) and
+[S-104](../statements.md#s-104).
 
-The catalog renders in `<directions>`, and the direction line of a scope is its scope line. A shared
-scope gets one scope line in each profile where it is visible. See [REQ-108](02-requirements.md),
-[REQ-109](02-requirements.md), [REQ-120](02-requirements.md), [REQ-451](02-requirements.md), and
-[REQ-460](02-requirements.md).
+The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
+When the top node is not built, the direction line is the frontier of that scope. A scope with no
+live note gives no direction line. A shared scope gets one position in each profile where it is
+visible. See [REQ-108](02-requirements.md), [REQ-109](02-requirements.md),
+[REQ-120](02-requirements.md), [REQ-451](02-requirements.md), and [REQ-460](02-requirements.md).
 
 A change of a note makes each node above it dirty, and the writer builds the node from its two
 children. A rebuild appends a new `node` event for the same key, and the projection takes the latest.
@@ -185,7 +187,7 @@ The index records the tokenizer of its build. A change of the `language` value r
 from the log, so the store needs no migration. See [REQ-476](02-requirements.md).
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
-consistent by construction. A per-scope export also holds the scope lines of that scope. An import unions the events by `id`, a payload conflict keeps the later
+consistent by construction. A per-scope export also holds the top node of that scope. An import unions the events by `id`, a payload conflict keeps the later
 `at`, and the events of a redacted record arrive sanitized. See [0003 Store](../adr/0003-store.md).
 
 | Item     | Value                                       |
@@ -317,15 +319,15 @@ restart. The harness writes a new message only when the text changes. A compacti
 message, and the plugin renders a new snapshot after the compaction succeeds. See
 [REQ-280](02-requirements.md) to [REQ-285](02-requirements.md).
 
-The host gives no `getContextOrder` name for a plugin. The registry names seven built-in contexts, and
-the plugin uses the number 220.
+The host gives no `getContextOrder` name for a plugin. The harness names seven built-in contexts,
+and the plugin uses the number 220.
 
 ## Agent surface
 
 | Tool          | Who        | Effect                                                                  |
 | ------------- | ---------- | ----------------------------------------------------------------------- |
 | memory_note   | main agent | A new note, or the live note with the same four fields.                 |
-| memory_forget | main agent | The records leave the view, and the queues take the rebuilds and the scope lines. |
+| memory_forget | main agent | The records leave the view, and the queues take the rebuilds and the top nodes. |
 | memory_find   | main agent | The records with the matching words, each with its `addr`.              |
 | memory_open   | main agent | A record with its `longform`, or a block of parts for a range.          |
 | memory_review | main agent | The due records, or the count of the reviewed records.                  |

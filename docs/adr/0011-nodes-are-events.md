@@ -15,8 +15,9 @@ A node is a `node` event. It holds `level`, `start`, `child_a`, `child_b`, `inpu
 a key is the latest `node` event for that key in the projection order. A node is dirty when its
 `input_gen` does not match the `gen` of its children, so the store keeps no state field. The queue of
 the writer is the set of dirty nodes. The catalog is a tree of the same nodes in the scope
-`__catalog__:<profile>`. Its leaves are the scope lines. One scope line covers one scope, and its
-children are the two nodes of that scope which cover its range. The direction line is the scope line.
+`__catalog__:<profile>`. One position holds one scope, and the content of the position is the top node
+of the tree of that scope. The leaves of the catalog are these top nodes. The direction line is the
+line of that top node. See [S-104](../statements.md#s-104).
 
 ## Alternatives
 

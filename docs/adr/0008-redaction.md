@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-A user must be able to clear content. The text can live in the log, in the tree, in the index, and in a scope line.
+A user must be able to clear content. The text can live in the log, in the tree, in the index, and in the top node of a scope.
 
 ## Decision
 
@@ -13,7 +13,7 @@ FTS rows. Each node above the position becomes dirty. The model has no `scrub` s
 
 ## Alternatives
 
-A `scrub` step. Mark the nodes dirty and rebuild. Delete the scope line. Keep the content.
+A `scrub` step. Mark the nodes dirty and rebuild. Delete the top node. Keep the content.
 
 ## Consequences
 
