@@ -157,17 +157,14 @@ export type MemoryReviewOutput =
 	| { due: MemoryReviewDue[] }
 	| { reviewed: number; next: string };
 
-export interface MemoryScopeInput {
-	action: "list" | "describe";
-	scope?: ScopeKey;
-	title?: string;
-	description?: string;
-}
+/**
+ * The tool takes no field. A scope has no record of its own: the first note of the key makes the
+ * scope, and that note is the description.
+ */
+export type MemoryScopeInput = Record<never, never>;
 
 export interface MemoryScopeLine {
 	key: ScopeKey;
-	title?: string;
-	description?: string;
 	notes: number;
 	lastSeen: string;
 	writable: boolean;
