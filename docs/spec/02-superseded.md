@@ -121,3 +121,12 @@ live. The live rule is in [02-requirements.md](02-requirements.md).
 | REQ-408 | The exit code 1 marks an error of the data. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-409 | The exit code 2 marks an error of the usage. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-410 | The exit code 3 marks a refusal by a policy. | FR | S-075 | [06-architecture.md](06-architecture.md) |
+| REQ-047 | In the harness the console runs in a session mode on the same view models. | FR | S-013 | [08-ui.md](08-ui.md) |
+| REQ-420 | `memlens ui` hosts the full console. | FR | S-077 | [08-ui.md](08-ui.md) |
+| REQ-421 | The plugin mounts the console as the tab `Memory` on the session page. | FR | S-077 | [08-ui.md](08-ui.md) |
+| REQ-422 | The tab shows the scopes of one profile. | FR | S-077 | [08-ui.md](08-ui.md) |
+| REQ-424 | The tab gives no choice of the profile, because the session sets it. | FR | S-078 | [08-ui.md](08-ui.md) |
+| REQ-425 | `memlens ui` gives its own styles. | FR | S-080 | [08-ui.md](08-ui.md) |
+| REQ-426 | The plugin renders the tab with the components of the harness UI. | FR | S-080 | [08-ui.md](08-ui.md) |
+| REQ-446 | The tab `Memory` mounts in the slot `conversation.session.header`. | FR | S-085 | [08-ui.md](08-ui.md) |
+| REQ-447 | The kind of the tab is `memlens`. | FR | S-085 | [08-ui.md](08-ui.md) |
