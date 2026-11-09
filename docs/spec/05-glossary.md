@@ -153,3 +153,5 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | pending proposal | A proposal with no decision and no `dismiss`. | S-101 |
 | tokenizer | The FTS5 search tokenizer of the index. It follows the key `language`. | S-101 |
 | how-to | The section of the slice that holds the policy text and the append text. | S-102 |
+| invalidation | The action that makes a summary unusable until a rebuild. The draft log form is in Q-461. | S-133, S-134 |
+| common prefix | The initial positions that have the same records and content before and after an import. | S-133 |

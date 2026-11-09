@@ -2,11 +2,22 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-No question is open.
+One question is open. It blocks the replacement of the tree revision contract.
 
 ## Open questions
 
-None.
+### Q-461
+
+Which log form preserves selective invalidation after an import and a restart?
+
+| Option | Form | Consequence |
+| --- | --- | --- |
+| A | An `invalidate` event names the node ids that must stay unusable. | The log has eight ops. REQ-063 needs a change. |
+| B | A `node` marker invalidates a range and has no summary. | The log keeps seven ops. The node type has two forms. |
+
+[0015 Node invalidation](../adr/0015-node-invalidation.md) gives the proposed behavior and the writer check.
+The selected design must define atomic publication of data changes and invalidations for both backends.
+The current types and ADR 0013 stay unchanged until this choice.
 
 ## Closed questions
 
