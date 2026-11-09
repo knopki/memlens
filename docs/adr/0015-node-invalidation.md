@@ -87,4 +87,5 @@ The common prefix survives a tail merge. An old imported amend invalidates its p
 A restart and a rebuild of the projection preserve the invalidation. A later build writes a new node id.
 
 This decision does not change the fold, the address rules, or the catalog positions.
-The projection replay cursor remains a separate review finding. Invalidation does not replace the deletion of content by redaction.
+[0014 Store projection](0014-store-projection.md) defines the physical replay cursor and the rebuild after an earlier import.
+Invalidation does not replace the deletion of content by redaction.

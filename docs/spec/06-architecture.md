@@ -178,14 +178,17 @@ jsonl backend takes a lock on each append. Several processes write one store. Se
 The index records the tokenizer of its build. A change of the `language` value rebuilds the index
 from the log, so the store needs no migration. See [REQ-476](02-requirements.md).
 
-The store keeps a projection of the log: the records, the current node of each range, and the count of
-each scope. The projection holds the order of the last event that it applied. The sqlite backend
-changes it in the append transaction, and the jsonl backend changes the sidecar after the append. A
-read with a small gap replays the events after the mark, and a gap above 1 000 events gives a rebuild.
-The projection holds the version of its schema, and a change of the shape migrates it in one
-transaction. A rebuild reads each event one time, and the render scans no event. See
-[0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to
-[REQ-494](02-requirements.md).
+The store keeps a projection: the records, the current node of each range, the invalidated ids, and the scope counts.
+Its replay cursor marks a local append position. SQLite uses its append sequence, and JSONL uses a byte offset after a complete line.
+The SQLite append transaction changes the projection and cursor together. JSONL changes both in one sidecar transaction after the append.
+
+Recovery reads complete lines after the JSONL cursor, regardless of event time. It applies events in `(at, id)` order.
+An earlier imported event, a changed event payload, or a gap above 1 000 events requires a projection rebuild.
+A JSONL rewrite or replacement invalidates its earlier cursor. The next read rebuilds the projection before it advances the cursor.
+
+A projection rebuild reads each event once, preserves node events and invalidations, and calls no model.
+A schema change still uses a migration in one transaction. The render scans no event.
+See [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to [REQ-494](02-requirements.md).
 
 The `md` export writes one directory with one file for each scope, at `<kind>/<name>.md`. Each file
 starts with the scope key and the format version. Each record is a section `## #<pos>` with a YAML

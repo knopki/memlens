@@ -156,3 +156,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | invalidation | The action that makes a node id unusable. An `invalidate` event holds the target ids, and a rebuild writes a new id. | S-133, S-134, S-135 |
 | common prefix | The initial positions that have the same records and content before and after an import. | S-133 |
 | build input | The exact child values that a job copies before its model call. The store compares them again before the append. | S-135 |
+| replay cursor | The local position through which the projection processed the log. It is not an event order or a note position. | S-136 |
