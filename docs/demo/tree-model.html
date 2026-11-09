@@ -215,35 +215,17 @@ const MODEL = (() => {
     return built;
   }
 
-  /** The first half of a text, cut at a word boundary. */
-  function half(text) {
-    const part = text.slice(0, Math.ceil(text.length / 2));
-    const space = part.lastIndexOf(" ");
-    return space > 8 ? part.slice(0, space) : part;
-  }
-
-  /** The temporary line of a node that is not built: the first half of each child. */
-  const joinHalves = (left, right) => `${half(left)} ${half(right)}`;
-
   /**
-   * The text of a block: the summary of a clean node, or the temporary line down to the records.
-   * A temporary line costs no model call, so the fold always reaches the budget.
+   * The period of a range: the first record and the last record of it. A temporary line shows this
+   * period, and it holds no text: the text is the summary of a built node, and nothing else.
    */
-  function lineOf(block) {
-    if (block.level === 0) {
-      const note = noteAt(block.start);
-      return note ? note.body : "";
-    }
-    const node = nodeAt(block.start, block.level);
-    if (node && isValid(node) && isClean(node)) return node.summary;
-    const halfWidth = 2 ** (block.level - 1);
-    return joinHalves(
-      lineOf({ start: block.start, level: block.level - 1 }),
-      lineOf({ start: block.start + halfWidth, level: block.level - 1 }),
-    );
+  function periodOf(block) {
+    const first = noteAt(block.start);
+    const last = noteAt(block.start + 2 ** block.level - 1);
+    return { from: first ? first.at : "", to: last ? last.at : "" };
   }
 
-  /** A clean node gives its summary line; another node gives a temporary line. */
+  /** A clean node gives its summary; any other node gives a temporary line with no text. */
   function builtAt(block) {
     if (block.level === 0) return true;
     const node = nodeAt(block.start, block.level);
@@ -252,7 +234,8 @@ const MODEL = (() => {
 
   /**
    * The slice is the frontier: the fold merges the pair with the highest `due` until the view
-   * holds no more lines than the budget. The budget counts lines.
+   * holds no more lines than the budget. A pair merges though its node is not built, so the fold
+   * always reaches the budget, and the cut is never needed.
    */
   function frontier(budget) {
     const total = state.notes.length;
@@ -274,11 +257,20 @@ const MODEL = (() => {
       const pick = options[0];
       blocks.splice(pick.index, 2, { start: pick.start, level: pick.level });
     }
-    return blocks.map((block) => ({ start: block.start, level: block.level, addr: addrOf(block),
-      text: lineOf(block), built: builtAt(block) }));
+    return blocks;
   }
 
-  function slice(budget = state.budget) { return frontier(budget); }
+  function slice(budget = state.budget) {
+    return frontier(budget).map((block) => {
+      const built = builtAt(block);
+      const period = periodOf(block);
+      const text = block.level === 0
+        ? noteAt(block.start).body
+        : built ? nodeAt(block.start, block.level).summary : "";
+      return { start: block.start, level: block.level, addr: addrOf(block),
+        from: period.from, to: period.to, text, built };
+    });
+  }
 
   function put(text, at) {
     const id = newId();
@@ -348,7 +340,7 @@ const MODEL = (() => {
   }
 
   return { state, rev, isValid, isClean, slice, frontier, problems, rebuild, seed, add, amend,
-           mergeSecond, describe, topLevel, nodeAt, noteAt, lineOf, builtAt };
+           mergeSecond, describe, topLevel, nodeAt, noteAt, periodOf, builtAt };
 })();
 // #endregion model
 
@@ -406,7 +398,8 @@ function renderSlice() {
     addr.className = "addr";
     addr.textContent = `#${line.addr}`;
     if (!line.built) item.classList.add("tmp");
-    item.append(addr, ` ${line.built ? "" : "≈ "}${line.text}`);
+    const when = `${line.from}–${line.to}`;
+    item.append(addr, ` ${when}${line.built ? ` ${line.text}` : " (врем.)"}`);
     list.appendChild(item);
   }
   $("sliceInfo").textContent = `строк ${lines.length}, бюджет ${MODEL.state.budget}`;
