@@ -1,7 +1,7 @@
 # Prior art, compared with the code
 
 The customer gave a table of seven implementations. The table is the source of [S-014](../statements.md).
-This file compares each claim with the code in `../optmem-test-drive/refs` on 2026-11-04. A claim has
+This file compares each claim with the source of the project on 2026-11-04. A claim has
 one verdict: confirmed, imprecise, or unverified.
 
 An unverified claim stays a claim. Do not build a requirement on it.

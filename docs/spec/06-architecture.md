@@ -484,4 +484,5 @@ customer words as given.
 
 ## Remaining work
 
-The policy text is not designed. [Q-456](03-open-questions.md) holds the question.
+The policy text is the block of [S-067](../statements.md#s-067), and the customer accepts it. A later
+research of the prior art can replace it. See [Q-456](03-open-questions.md).

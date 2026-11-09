@@ -77,7 +77,6 @@ before a push. `lint:docs` uses the vendored linter in `scripts/vendor/`. See
 
 - Do not invent requirements. An unknown item is `TBD` or an open question.
 - Do not write code before the requirement is `accepted`, or before the customer asks for it.
-- Do not work outside this repository without permission.
 - Do not edit an old statement. The journal is a record, not a draft.
 
 ## Language rules
