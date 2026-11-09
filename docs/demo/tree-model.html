@@ -97,7 +97,14 @@
 const MODEL = (() => {
   const state = { notes: [], nodes: [], clock: 400, idc: 0, budget: 10 };
 
-  const atOf = (n) => `T${String(n).padStart(4, "0")}`;
+  const atOf = (n) => `T${String(n).padStart(6, "0")}`;
+  /** The clock of a new event stays above each record, so an append is always at the end. */
+  function nextAt() {
+    let max = 0;
+    for (const note of state.notes) max = Math.max(max, Number(note.at.slice(1)));
+    state.clock = Math.max(state.clock, max + 10);
+    return state.clock;
+  }
   const orderOf = (n, id) => `${atOf(n)}|${id}`;
   const newId = () => `e${++state.idc}`;
   const addrOf = (block) => (block.level === 0 ? String(block.start) : `${block.start}..${block.start + 2 ** block.level - 1}`);
@@ -305,7 +312,7 @@ const MODEL = (() => {
   }
 
   function add() {
-    put(`запись ${state.notes.length + 1} в конец`, state.clock);
+    put(`запись ${state.notes.length + 1} в конец`, nextAt());
     state.clock += 10;
     return "Добавлена запись в конец: адреса прежних записей не изменились.";
   }
@@ -318,7 +325,7 @@ const MODEL = (() => {
   function amend(pos) {
     const note = noteAt(pos);
     if (!note) return `Нет записи на позиции ${pos}.`;
-    note.order = orderOf(state.clock, note.id);
+    note.order = orderOf(nextAt(), note.id);
     state.clock += 10;
     note.body = `${note.body} (правка)`;
     return `Правка записи ${pos}: порядок события вырос, адрес прежний.`;
