@@ -96,6 +96,19 @@ the catalog scope. A node of the catalog carries no `review_at`, no `proposed`, 
 `turn`, and no `preset`. See [0011 Nodes are events](../adr/0011-nodes-are-events.md) and
 [S-104](../statements.md#s-104).
 
+The projection derives catalog positions from the resolved log and the profile scope filter.
+Its counter follows the first real appearance of each scope in `(at, id)` order.
+A non-proposed note or an applied scope transfer can introduce a scope. Proposals and derived events do not allocate positions.
+A scope with no live record keeps its historical empty position.
+
+An import merges the events and derives the positions again. It does not merge independent counter values.
+The same log and profile filter give the same positions after a restart or either import order.
+A changed leaf identity or position invalidates its old and new catalog paths. The unaffected prefix and scope tree coordinates stay intact.
+At a catalog leaf, child lookup uses that position to find the scope and its current top node.
+The node is the existing scope root, with no synthetic event. Its range belongs to the scope tree, not to the catalog position.
+A live scope with an unready root is non-empty, so the catalog writer waits for it.
+See [REQ-463](02-requirements.md) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
+
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
 When the top node is not built, the direction line is the frontier of that scope. A scope with no
 live note gives no direction line. A shared scope gets one position in each profile where it is
@@ -242,7 +255,8 @@ the `<directions>` part.
 A part above its budget merges one pair at a time, and it stops as soon as the count of lines fits the
 budget. The line of the parent takes the place of the two lines of the pair. Among the pairs, a merge
 keeps the level steps of the neighbours at one. No pair that covers the greatest live position merges.
-A non-empty slice therefore ends with that record, even when later assigned positions are empty.
+A scope slice therefore ends with its last live record, even when later assigned positions are empty.
+The catalog keeps its greatest non-empty scope leaf unfolded by the same rule.
 
 A pair merges though the node of its range is not built, and a temporary line takes the place of the
 two lines. So the part always reaches its budget. When no pair merges and the part is still above its

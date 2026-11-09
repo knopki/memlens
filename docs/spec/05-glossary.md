@@ -159,3 +159,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | replay cursor | The local position through which the projection processed the log. It is not an event order or a note position. | S-136 |
 | total | One plus the greatest assigned position, or zero when no position exists. Records in the `hidden` and `deleted` states keep their positions. | S-137 |
 | root range | The aligned range that starts at zero and covers every assigned position. Empty padding completes its power-of-two width. | S-137 |
+| catalog position | The ordinal of a scope when the projection first encounters it in a profile. It does not change the scope tree range. | S-138, S-139 |

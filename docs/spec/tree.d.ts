@@ -84,6 +84,13 @@ export interface Tree {
 	/** One plus the greatest assigned position. Hidden and deleted records still count. */
 	readonly total: Pos;
 	readonly notes: readonly TreeRecord[];
+	/**
+	 * A catalog uses an empty notes array and maps its positions to existing record trees.
+	 * Each leaf is the current top node of that tree, with no new event or record.
+	 * A scope with live records and no clean top node is non-empty but not ready.
+	 * Record trees have no scope_roots map. A profile includes no other catalog in this map.
+	 */
+	readonly scope_roots?: ReadonlyMap<Pos, Tree>;
 	readonly nodes: readonly NodeEvent[];
 	/** The target ids of invalidate events. The projection derives this set from the log. */
 	readonly invalidated: readonly Id[];
@@ -135,8 +142,10 @@ export declare function rev(tree: Tree, range: Range): Rev;
 /**
  * Tell whether a node is built.
  *
- * Each non-null child id must name the live record or node at that exact half of the range.
- * A record has the expected position. A child node has the expected start and level.
+ * At level 1, each child id must match the leaf at the expected position.
+ * A catalog leaf resolves through `scope_roots` to the current top node of that scope tree.
+ * The scope root keeps its own range. Its catalog position comes from the map key.
+ * Above level 1, a child node must have the expected start and level within this tree.
  * A null child is valid only when its half has no live record, including padding beyond `total`.
  * A missing summary of a non-empty half does not satisfy the check. A node with two empty halves is not built.
  */
@@ -195,7 +204,7 @@ export declare function inputUnchanged(tree: Tree, input: BuildInput): boolean;
  * neighbours within one step, then the pair with the greatest `due`, then the lowest level, then
  * the lowest start. A pair merges though its node
  * is not built, so a temporary line takes the place of the two lines. Empty ranges do not render or count against the budget.
- * A pair that covers the greatest live position never merges, so a non-empty slice ends with that record.
+ * A pair that covers the greatest non-empty leaf never merges. A scope ends with a record. A catalog ends with a scope root.
  * When no pair can merge and the count is still above the budget, the oldest lines leave the slice.
  * A scope with no live record gives an empty slice. Dates come from the first and last live records in each range.
  *

@@ -20,6 +20,22 @@ queue of the writer is the set of nodes that are not clean. The catalog is a tre
 of the tree of that scope. The leaves of the catalog are these top nodes. The direction line is the
 line of that top node. See [S-104](../statements.md#s-104).
 
+Catalog positions derive from the resolved log and the scope filter of the profile.
+The projection traverses source events in `(at, id)` order and increments its counter at the first real appearance of each scope.
+A non-proposed note introduces its scope. An applied amend can introduce its destination scope through a record transfer.
+Proposals, dismissals, nodes, and invalidations do not introduce scopes. A scope with no live note keeps its empty position.
+A rebuild preserves this historical order, including scopes whose records later leave or lose their content.
+
+An import merges events, not the counters of two stores. The projection derives positions again after the union.
+The same resolved log and profile filter give the same positions in every arrival order.
+An earlier scope appearance can shift positions. Invalidation covers the old and new catalog paths of changed leaves.
+An unaffected prefix survives. The scope trees keep their own coordinates.
+
+At a catalog leaf, the child id resolves through the scope assigned to that catalog position.
+It names the current top node of that scope tree. The top node's own range does not determine its catalog position.
+A scope with live records but no clean top node remains non-empty, and the catalog writer waits for that node.
+No synthetic leaf event is necessary. See [S-138](../statements.md#s-138) and [S-139](../statements.md#s-139).
+
 ## Alternatives
 
 A separate node table. A dirty flag in the store. A node outside the export. A node for one session.
