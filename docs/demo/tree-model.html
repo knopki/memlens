@@ -61,8 +61,8 @@
   </div>
   <div class="budget">
     <span>бюджет here, строк</span>
-    <input type="range" id="budget" min="2" max="12" step="1" value="6" />
-    <span id="budgetOut">6</span>
+    <input type="range" id="budget" min="2" max="40" step="1" value="10" />
+    <span id="budgetOut">10</span>
   </div>
 </header>
 <main>
@@ -91,7 +91,7 @@
 <script>
 // #region model
 const MODEL = (() => {
-  const state = { notes: [], nodes: [], clock: 400, idc: 0, budget: 6 };
+  const state = { notes: [], nodes: [], clock: 400, idc: 0, budget: 10 };
 
   const atOf = (n) => `T${String(n).padStart(4, "0")}`;
   const orderOf = (n, id) => `${atOf(n)}|${id}`;
@@ -233,32 +233,39 @@ const MODEL = (() => {
   }
 
   /**
-   * The slice is the frontier: the fold merges the pair with the highest `due` until the view
-   * holds no more lines than the budget. A pair merges though its node is not built, so the fold
-   * always reaches the budget, and the cut is never needed.
+   * The slice is the frontier. The fold merges the pair with the highest `due` until the count
+   * reaches low = high/2. The tail keeps one or two leaves, the pair of the last position never
+   * merges. When the fold reaches its floor and the budget is still above, the oldest lines are
+   * evicted and they do not show.
    */
   function frontier(budget) {
     const total = state.notes.length;
+    const low = Math.max(2, Math.floor(budget / 2));
     const blocks = state.notes.map((note, pos) => ({ start: pos, level: 0 }));
-    while (blocks.length > budget) {
-      const options = [];
-      for (let i = 0; i + 1 < blocks.length; i += 1) {
-        const left = blocks[i];
-        const right = blocks[i + 1];
-        if (left.level !== right.level) continue;
-        if (right.start !== left.start + 2 ** left.level) continue;
-        const level = left.level + 1;
-        if (left.start % 2 ** level !== 0) continue;
-        // The last line of the slice is always a leaf, so a pair never covers the last position.
-        if (left.start + 2 ** level === total) continue;
-        const due = (total - (left.start + 2 ** level - 1)) / 2 ** left.level;
-        options.push({ index: i, due, level, start: left.start });
+    // The fold runs above high only, and a batch takes the view down to low = high/2.
+    if (blocks.length > budget) {
+      while (blocks.length > low) {
+        const options = [];
+        for (let i = 0; i + 1 < blocks.length; i += 1) {
+          const left = blocks[i];
+          const right = blocks[i + 1];
+          if (left.level !== right.level) continue;
+          if (right.start !== left.start + 2 ** left.level) continue;
+          const level = left.level + 1;
+          if (left.start % 2 ** level !== 0) continue;
+          // The last line of the slice is always a leaf, so a pair never covers the last position.
+          if (left.start + 2 ** level === total) continue;
+          const due = (total - (left.start + 2 ** level - 1)) / 2 ** left.level;
+          options.push({ index: i, due, level, start: left.start });
+        }
+        if (options.length === 0) break;
+        options.sort((a, b) => b.due - a.due || a.level - b.level || a.start - b.start);
+        const pick = options[0];
+        blocks.splice(pick.index, 2, { start: pick.start, level: pick.level });
       }
-      if (options.length === 0) break;
-      options.sort((a, b) => b.due - a.due || a.level - b.level || a.start - b.start);
-      const pick = options[0];
-      blocks.splice(pick.index, 2, { start: pick.start, level: pick.level });
     }
+    // The floor is reached and the oldest lines leave the view.
+    while (blocks.length > 1 && blocks.length > budget) blocks.shift();
     return blocks;
   }
 
