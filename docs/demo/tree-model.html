@@ -61,7 +61,7 @@
   </div>
   <div class="budget">
     <span>бюджет here, строк</span>
-    <input type="range" id="budget" min="1" max="12" step="1" value="6" />
+    <input type="range" id="budget" min="2" max="12" step="1" value="6" />
     <span id="budgetOut">6</span>
   </div>
 </header>
@@ -249,6 +249,8 @@ const MODEL = (() => {
         if (right.start !== left.start + 2 ** left.level) continue;
         const level = left.level + 1;
         if (left.start % 2 ** level !== 0) continue;
+        // The last line of the slice is always a leaf, so a pair never covers the last position.
+        if (left.start + 2 ** level === total) continue;
         const due = (total - (left.start + 2 ** level - 1)) / 2 ** left.level;
         options.push({ index: i, due, level, start: left.start });
       }
@@ -402,7 +404,8 @@ function renderSlice() {
     item.append(addr, ` ${when}${line.built ? ` ${line.text}` : " (врем.)"}`);
     list.appendChild(item);
   }
-  $("sliceInfo").textContent = `строк ${lines.length}, бюджет ${MODEL.state.budget}`;
+  const floor = lines.length > MODEL.state.budget ? " — ниже не сжать: последняя строка всегда лист" : "";
+  $("sliceInfo").textContent = `строк ${lines.length}, бюджет ${MODEL.state.budget}${floor}`;
   return lines;
 }
 
