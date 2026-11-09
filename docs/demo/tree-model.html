@@ -6,7 +6,7 @@
 <title>memlens: пирамида, срез, слияние логов</title>
 <style>
   :root { --bg:#11141a; --fg:#e8eaf0; --dim:#7d8595; --line:#242a35;
-          --clean:#2f8f5b; --dirty:#b98a1f; --bad:#a3403f; --empty:#2a3140; }
+          --clean:#2f8f5b; --dirty:#b98a1f; --bad:#a3403f; --empty:#2a3140; --used:#7aa2ff; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--fg);
          font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
@@ -16,6 +16,8 @@
   button { background:#1b212c; color:var(--fg); border:1px solid var(--line);
            border-radius:8px; padding:9px 12px; font:inherit; cursor:pointer; }
   button:active { background:#26303f; }
+  .budget { display:flex; align-items:center; gap:10px; margin-top:10px; font-size:12px; color:var(--dim); }
+  .budget input { flex:1 1 auto; accent-color:var(--used); }
   main { padding:12px 14px 40px; display:grid; gap:16px; }
   .panel { border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
   .panel h2 { font-size:12px; margin:0 0 10px; color:var(--dim); font-weight:600;
@@ -28,9 +30,11 @@
   .blk.dirty { background:rgba(185,138,31,.22); border-color:var(--dirty); color:#f0dca6; }
   .blk.bad { background:rgba(163,64,63,.22); border-color:var(--bad); color:#f2c3c2; }
   .blk.missing { border-style:dashed; }
+  .blk.used { box-shadow:0 0 0 2px var(--used) inset; }
   .notes { display:flex; gap:4px; margin-top:6px; }
   .note { flex:1 1 0; min-width:0; border:1px solid var(--line); border-radius:6px;
           padding:4px 6px; font-size:11px; overflow:hidden; }
+  .note.used { box-shadow:0 0 0 2px var(--used) inset; }
   .note b { color:#9fb3ff; font-weight:600; }
   .note span { color:var(--dim); }
   ul.lines { list-style:none; margin:0; padding:0; }
@@ -54,6 +58,11 @@
     <button type="button" id="rebuildBtn">пересобрать</button>
     <button type="button" id="resetBtn">сброс</button>
   </div>
+  <div class="budget">
+    <span>бюджет here</span>
+    <input type="range" id="budget" min="30" max="400" step="10" value="120" />
+    <span id="budgetOut">120</span>
+  </div>
 </header>
 <main>
   <section class="panel">
@@ -64,12 +73,14 @@
       <span><i class="sw" style="background:rgba(185,138,31,.22);border:1px solid #b98a1f"></i>грязный</span>
       <span><i class="sw" style="background:rgba(163,64,63,.22);border:1px solid #a3403f"></i>недействителен</span>
       <span><i class="sw" style="background:#2a3140;border:1px dashed #4a5468"></i>не построен</span>
+      <span><i class="sw" style="border:2px solid #7aa2ff"></i>попал в срез</span>
     </div>
-    <div class="hint">Узел адресуется диапазоном. Грязный и недействительный узел в срез не попадает, вместо него видны дети.</div>
+    <div class="hint">Срез это фронтир: свёртка идёт от самой старой пары, пока текст не влезет в бюджет. Грязный и недействительный узел не сливается, вместо него остаются дети.</div>
   </section>
   <section class="panel">
     <h2>срез (slice)</h2>
     <ul class="lines" id="slice"></ul>
+    <div class="hint" id="sliceInfo"></div>
   </section>
   <section class="panel">
     <h2>что произошло</h2>
@@ -79,21 +90,23 @@
 <script>
 // #region model
 const MODEL = (() => {
-  const state = { notes: [], nodes: [], clock: 400, idc: 0 };
+  const state = { notes: [], nodes: [], clock: 400, idc: 0, budget: 120 };
 
   const atOf = (n) => `T${String(n).padStart(4, "0")}`;
   const orderOf = (n, id) => `${atOf(n)}|${id}`;
+  const newId = () => `e${++state.idc}`;
+  const addrOf = (block) => (block.level === 0 ? String(block.start) : `${block.start}..${block.start + 2 ** block.level - 1}`);
+
   /** The order values are strings, so compare them as strings and never with Math.max. */
-  const maxOrder = (a, b) => {
+  function maxOrder(a, b) {
     if (a === null) return b;
     if (b === null) return a;
     // biome-ignore lint/complexity/useMathMinMax: the order values are strings, and Math.max turns them into NaN
     return a >= b ? a : b;
-  };
-  const newId = () => `e${++state.idc}`;
-  const addrOf = (node) => `${node.start}..${node.start + 2 ** node.level - 1}`;
+  }
 
   function noteAt(pos) { return state.notes[pos] || null; }
+
   /** The current node of an address is the latest node event for that address. */
   function nodeAt(start, level) {
     let best = null;
@@ -103,10 +116,12 @@ const MODEL = (() => {
     }
     return best;
   }
+
   /** pos is the ordinal of the note event, so an amend keeps the address. */
   function renumber() {
     state.notes.sort((a, b) => (a.created < b.created ? -1 : a.created > b.created ? 1 : 0));
   }
+
   /** The order of the latest event that touches the range, or null for an empty range. */
   function rev(start, level) {
     if (level === 0) {
@@ -119,6 +134,7 @@ const MODEL = (() => {
     if (node) best = maxOrder(best, node.order);
     return best;
   }
+
   /** The id of the line that the child address shows now. */
   function occupant(start, level) {
     if (level === 0) {
@@ -128,24 +144,47 @@ const MODEL = (() => {
     const node = nodeAt(start, level);
     return node && isValid(node) ? node.id : null;
   }
+
   /** The children must sit exactly at the two halves of the address. */
   function isValid(node) {
     const half = 2 ** (node.level - 1);
     return occupant(node.start, node.level - 1) === node.child_a
         && occupant(node.start + half, node.level - 1) === node.child_b;
   }
+
   /** The input revision must still equal the revision of the two children. */
   function isClean(node) {
     const half = 2 ** (node.level - 1);
     const now = maxOrder(rev(node.start, node.level - 1), rev(node.start + half, node.level - 1));
     return now === node.input_rev;
   }
+
   function topLevel() {
     const total = Math.max(1, state.notes.length);
     let level = 1;
     while (2 ** level < total) level += 1;
     return level;
   }
+
+  /** The current node of each address: an older event for the same address is superseded. */
+  function currentNodes() {
+    const seen = new Map();
+    for (const node of state.nodes) {
+      const key = `${node.start}:${node.level}`;
+      const current = seen.get(key);
+      if (current === undefined || node.order > current.order) seen.set(key, node);
+    }
+    return [...seen.values()];
+  }
+
+  function problems() {
+    const nodes = currentNodes();
+    return {
+      bad: nodes.filter((n) => !isValid(n)).map(addrOf),
+      dirty: nodes.filter((n) => isValid(n) && !isClean(n)).map(addrOf),
+    };
+  }
+
   /** Build each range bottom-up where the node is missing, invalid, or dirty. */
   function rebuild() {
     const built = [];
@@ -164,56 +203,56 @@ const MODEL = (() => {
           child_a: childA, child_b: childB,
           input_rev: maxOrder(rev(start, level - 1), rev(start + half, level - 1)),
           order: orderOf(state.clock, id),
-          summary: `сводка ${start}..${start + width - 1}, строк ${width}`,
+          summary: `[${start}..${start + width - 1}]`,
         };
         state.clock += 1;
         if (node) state.nodes[state.nodes.indexOf(node)] = next;
         else state.nodes.push(next);
-        built.push(`[${addrOf(next)}]`);
+        built.push(addrOf(next));
       }
     }
     return built;
   }
-  /** The frontier: clean nodes from the top, the children of the rest. */
-  function slice() {
-    const out = [];
-    if (state.notes.length === 0) return out;
-    const walk = (start, level) => {
-      if (start >= state.notes.length) return;
-      if (level === 0) {
-        const note = noteAt(start);
-        out.push({ addr: String(start), text: note.body });
-        return;
+
+  const lineText = (block) => {
+    if (block.level === 0) return noteAt(block.start).body;
+    return nodeAt(block.start, block.level).summary;
+  };
+  const lineSize = (blocks) => blocks.reduce((sum, block) => sum + lineText(block).length, 0);
+
+  /**
+   * The slice is the frontier: the fold merges the pair with the highest `due` while the view
+   * is above the budget, and the cut takes the oldest lines.
+   */
+  function frontier(budget) {
+    const total = state.notes.length;
+    let blocks = state.notes.map((note, pos) => ({ start: pos, level: 0 }));
+    while (lineSize(blocks) > budget) {
+      const options = [];
+      for (let i = 0; i + 1 < blocks.length; i += 1) {
+        const left = blocks[i];
+        const right = blocks[i + 1];
+        if (left.level !== right.level) continue;
+        if (right.start !== left.start + 2 ** left.level) continue;
+        const level = left.level + 1;
+        if (left.start % 2 ** level !== 0) continue;
+        const node = nodeAt(left.start, level);
+        if (node === null || !isValid(node) || !isClean(node)) continue;
+        const due = (total - (left.start + 2 ** level - 1)) / 2 ** left.level;
+        options.push({ index: i, due, level, start: left.start });
       }
-      const node = nodeAt(start, level);
-      if (node && isValid(node) && isClean(node)) {
-        out.push({ addr: addrOf(node), text: node.summary });
-        return;
-      }
-      const half = 2 ** (level - 1);
-      walk(start, level - 1);
-      walk(start + half, level - 1);
-    };
-    walk(0, topLevel());
-    return out;
-  }
-  /** The current node of each address: an older event for the same address is superseded. */
-  function currentNodes() {
-    const seen = new Map();
-    for (const node of state.nodes) {
-      const key = `${node.start}:${node.level}`;
-      const current = seen.get(key);
-      if (current === undefined || node.order > current.order) seen.set(key, node);
+      if (options.length === 0) break;
+      options.sort((a, b) => b.due - a.due || a.level - b.level || a.start - b.start);
+      const pick = options[0];
+      blocks.splice(pick.index, 2, { start: pick.start, level: pick.level });
     }
-    return [...seen.values()];
+    while (blocks.length > 1 && lineSize(blocks) > budget) blocks = blocks.slice(1);
+    return blocks.map((block) => ({ start: block.start, level: block.level,
+      addr: addrOf(block), text: lineText(block) }));
   }
-  function problems() {
-    const nodes = currentNodes();
-    return {
-      bad: nodes.filter((n) => !isValid(n)).map(addrOf),
-      dirty: nodes.filter((n) => isValid(n) && !isClean(n)).map(addrOf),
-    };
-  }
+
+  function slice(budget = state.budget) { return frontier(budget); }
+
   function put(text, at) {
     const id = newId();
     const created = orderOf(at, id);
@@ -221,6 +260,7 @@ const MODEL = (() => {
     renumber();
     return id;
   }
+
   function seed() {
     state.notes = [];
     state.nodes = [];
@@ -230,14 +270,20 @@ const MODEL = (() => {
     put("предпочтение: короткий ответ", 200);
     put("факт: сборка через esbuild", 300);
     put("задача: срез под 16 КБ", 400);
+    put("факт: стора два, sqlite и jsonl", 500);
+    put("решение: узел это событие", 600);
+    put("предпочтение: без смайлов", 700);
+    put("задача: импорт с мерджем", 800);
     rebuild();
-    state.clock = 500;
+    state.clock = 900;
   }
+
   function add() {
     put(`запись ${state.notes.length + 1} в конец`, state.clock);
     state.clock += 10;
     return "Добавлена запись в конец: адреса прежних записей не изменились.";
   }
+
   function amend(pos) {
     const note = noteAt(pos);
     if (!note) return `Нет записи на позиции ${pos}.`;
@@ -246,41 +292,43 @@ const MODEL = (() => {
     note.body = `${note.body} (правка)`;
     return `Правка записи ${pos}: порядок события вырос, адрес прежний.`;
   }
+
   /** A second store with parallel events: the merge resorts the notes. */
   function mergeSecond() {
     put("B: запись с другой машины", 150);
     put("B: вторая запись", 250);
-    const b1 = state.notes.find((n) => n.order.startsWith(atOf(150)));
-    const b2 = state.notes.find((n) => n.order.startsWith(atOf(250)));
+    const b1 = state.notes.find((note) => note.order.startsWith(atOf(150)));
+    const b2 = state.notes.find((note) => note.order.startsWith(atOf(250)));
     const id = newId();
     state.nodes.push({
       id, start: 0, level: 1,
       child_a: b1.id, child_b: b2.id,
       input_rev: maxOrder(b1.order, b2.order),
       order: orderOf(260, id),
-      summary: "B: сводка двух своих записей",
+      summary: "[B..0..1]",
     });
-    state.clock = 700;
+    state.clock = 1000;
     return "Импорт стора B: union по id, сортировка по order, адреса пересчитаны.";
   }
+
   function describe() {
     return {
-      notes: state.notes.map((n, pos) => ({ pos, id: n.id, at: n.at, order: n.order, body: n.body })),
-      nodes: currentNodes().map((n) => ({ addr: addrOf(n), id: n.id, child_a: n.child_a,
-        child_b: n.child_b, input_rev: n.input_rev, valid: isValid(n), clean: isClean(n) })),
+      notes: state.notes.map((note, pos) => ({ pos, id: note.id, at: note.at, order: note.order, body: note.body })),
+      nodes: currentNodes().map((node) => ({ addr: addrOf(node), id: node.id, child_a: node.child_a,
+        child_b: node.child_b, input_rev: node.input_rev, valid: isValid(node), clean: isClean(node) })),
       superseded: state.nodes.length - currentNodes().length,
     };
   }
 
-  return { state, rev, isValid, isClean, slice, problems, rebuild, seed, add, amend,
-           mergeSecond, describe, topLevel, nodeAt, noteAt };
+  return { state, rev, isValid, isClean, slice, frontier, problems, rebuild, seed, add, amend,
+           mergeSecond, describe, topLevel, nodeAt, noteAt, lineText };
 })();
 // #endregion model
 
 // #region ui
 const $ = (id) => document.getElementById(id);
 
-function renderTree() {
+function renderTree(used) {
   const total = MODEL.state.notes.length || 1;
   const tree = $("tree");
   tree.innerHTML = "";
@@ -292,14 +340,14 @@ function renderTree() {
       const node = MODEL.nodeAt(start, level);
       const el = document.createElement("div");
       el.className = "blk";
-      const label = `[${start}..${start + width - 1}]`;
       el.style.left = `${(start / total) * 100}%`;
       el.style.width = `${(Math.min(width, total - start) / total) * 100}%`;
       if (!node) el.classList.add("missing");
       else if (!MODEL.isValid(node)) el.classList.add("bad");
       else if (!MODEL.isClean(node)) el.classList.add("dirty");
       else el.classList.add("clean");
-      el.textContent = label;
+      if (used.has(`${start}:${level}`)) el.classList.add("used");
+      el.textContent = `[${start}..${start + width - 1}]`;
       el.title = node ? `${node.id} input_rev ${node.input_rev}` : "нет узла";
       row.appendChild(el);
     }
@@ -310,6 +358,7 @@ function renderTree() {
   MODEL.state.notes.forEach((note, pos) => {
     const el = document.createElement("div");
     el.className = "note";
+    if (used.has(`${pos}:0`)) el.classList.add("used");
     const head = document.createElement("b");
     head.textContent = `${pos} `;
     const at = document.createElement("span");
@@ -321,9 +370,10 @@ function renderTree() {
 }
 
 function renderSlice() {
+  const lines = MODEL.slice();
   const list = $("slice");
   list.innerHTML = "";
-  for (const line of MODEL.slice()) {
+  for (const line of lines) {
     const item = document.createElement("li");
     const addr = document.createElement("span");
     addr.className = "addr";
@@ -331,6 +381,9 @@ function renderSlice() {
     item.append(addr, ` ${line.text}`);
     list.appendChild(item);
   }
+  const size = lines.reduce((sum, line) => sum + line.text.length, 0);
+  $("sliceInfo").textContent = `строк ${lines.length}, символов ${size}, бюджет ${MODEL.state.budget}`;
+  return lines;
 }
 
 function say(text) {
@@ -349,8 +402,8 @@ function report(message) {
 }
 
 function draw() {
-  renderTree();
-  renderSlice();
+  const lines = renderSlice();
+  renderTree(new Set(lines.map((line) => `${line.start}:${line.level}`)));
 }
 
 $("addBtn").onclick = () => { report(MODEL.add()); draw(); };
@@ -364,12 +417,17 @@ $("rebuildBtn").onclick = () => {
 $("resetBtn").onclick = () => {
   MODEL.seed();
   $("log").innerHTML = "";
-  say("Начальное состояние: четыре записи, дерево собрано.");
+  say("Начальное состояние: восемь записей, дерево собрано.");
+  draw();
+};
+$("budget").oninput = (event) => {
+  MODEL.state.budget = Number(event.target.value);
+  $("budgetOut").textContent = String(MODEL.state.budget);
   draw();
 };
 
 MODEL.seed();
-say("Начальное состояние: четыре записи, дерево собрано.");
+say("Начальное состояние: восемь записей, дерево собрано.");
 draw();
 // #endregion ui
 </script>
