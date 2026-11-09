@@ -178,9 +178,10 @@ The store keeps a projection of the log: the records, the current node of each r
 each scope. The projection holds the order of the last event that it applied. The sqlite backend
 changes it in the append transaction, and the jsonl backend changes the sidecar after the append. A
 read with a small gap replays the events after the mark, and a gap above 1 000 events gives a rebuild.
-A rebuild reads each event one time, and the render scans no event. See
+The projection holds the version of its schema, and a change of the shape migrates it in one
+transaction. A rebuild reads each event one time, and the render scans no event. See
 [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to
-[REQ-491](02-requirements.md).
+[REQ-494](02-requirements.md).
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
 consistent by construction. A per-scope export also holds the top node of that scope. An import unions the events by `id`, a payload conflict keeps the later

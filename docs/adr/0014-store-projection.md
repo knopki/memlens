@@ -17,6 +17,10 @@ The SQLite backend changes the projection in the append transaction. The JSONL b
 projection after the append, so a read can find a gap. A read with a small gap replays the events after
 the mark. A gap above 1 000 events gives a rebuild from the log.
 
+The projection holds the version of its schema, and the first version is 1. A change of the shape
+migrates the projection, and the store does not rebuild it from the log. A migration is one
+transaction, and a failed migration leaves the earlier version.
+
 A rebuild reads each event one time. The render of the view reads the projection and scans no event.
 
 ## Alternatives
@@ -28,4 +32,6 @@ that the writer builds in the background.
 
 A read costs the lines of the view and not the events of the log. A crash of the JSONL backend can
 leave a gap, and the next read repairs it. An import appends events, and the projection follows the
-same rules. The projection derives from the log, so a lost projection costs one pass over the log and no data.
+same rules. The projection derives from the log, so a lost projection costs one pass over the log and no
+data. The store carries the schema version from the first release, so the first change of the shape is
+a migration and no rebuild.
