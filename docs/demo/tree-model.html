@@ -16,6 +16,11 @@
   button { background:#1b212c; color:var(--fg); border:1px solid var(--line);
            border-radius:8px; padding:9px 12px; font:inherit; cursor:pointer; }
   button:active { background:#26303f; }
+  .edit { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; color:var(--dim); flex-wrap:wrap; }
+  .edit input { background:#1b212c; color:var(--fg); border:1px solid var(--line); border-radius:8px;
+                padding:8px 10px; font:inherit; font-size:12px; }
+  .edit input[type="number"] { width:70px; }
+  .edit input[type="text"] { flex:1 1 160px; min-width:120px; }
   .budget { display:flex; align-items:center; gap:10px; margin-top:10px; font-size:12px; color:var(--dim); }
   .budget input { flex:1 1 auto; accent-color:var(--used); }
   main { padding:12px 14px 40px; display:grid; gap:16px; }
@@ -57,11 +62,18 @@
   <h1>memlens: пирамида, срез, импорт</h1>
   <div class="btns">
     <button type="button" id="addBtn">+ запись в конец</button>
-    <button type="button" id="amendBtn">правка записи</button>
+    <button type="button" id="amendBtn">правка листа</button>
     <button type="button" id="importBtn">импорт стора B</button>
     <button type="button" id="rebuildBtn">пересобрать</button>
     <button type="button" id="addManyBtn">+16 записей</button>
     <button type="button" id="resetBtn">сброс</button>
+  </div>
+  <div class="edit">
+    <span>pos</span>
+    <input type="number" id="posIn" min="0" max="999" value="2" />
+    <span>текст</span>
+    <input type="text" id="textIn" placeholder="новый текст листа" />
+    <button type="button" id="insertBtn">вставка в pos</button>
   </div>
   <div class="budget">
     <span>бюджет here, строк</span>
@@ -95,25 +107,19 @@
 <script>
 // #region model
 const MODEL = (() => {
-  const state = { notes: [], nodes: [], clock: 400, idc: 0, budget: 10 };
+  const state = { notes: [], nodes: [], clock: 4000, idc: 0, budget: 10 };
 
-  const atOf = (n) => `T${String(n).padStart(6, "0")}`;
-  /** The clock of a new event stays above each record, so an append is always at the end. */
-  function nextAt() {
-    let max = 0;
-    for (const note of state.notes) max = Math.max(max, Number(note.at.slice(1)));
-    state.clock = Math.max(state.clock, max + 10);
-    return state.clock;
-  }
+  /** The order key of an event: a number, padded so that text compare keeps the numeric order. */
+  const atOf = (n) => String(Math.round(n * 1000)).padStart(12, "0");
+  const labelOf = (n) => `T${String(Math.round(n)).padStart(4, "0")}`;
   const orderOf = (n, id) => `${atOf(n)}|${id}`;
   const newId = () => `e${++state.idc}`;
   const addrOf = (block) => (block.level === 0 ? String(block.start) : `${block.start}..${block.start + 2 ** block.level - 1}`);
 
-  /** The order values are strings, so compare them as strings and never with Math.max. */
   function maxOrder(a, b) {
     if (a === null) return b;
     if (b === null) return a;
-    // biome-ignore lint/complexity/useMathMinMax: the order values are strings, and Math.max turns them into NaN
+    // biome-ignore lint/complexity/useMathMinMax: the order keys are text, and Math.max turns them into NaN
     return a >= b ? a : b;
   }
 
@@ -226,14 +232,11 @@ const MODEL = (() => {
     return built;
   }
 
-  /**
-   * The period of a range: the first record and the last record of it. A temporary line shows this
-   * period, and it holds no text: the text is the summary of a built node, and nothing else.
-   */
+  /** The period of a range: the first record and the last record of it. */
   function periodOf(block) {
     const first = noteAt(block.start);
     const last = noteAt(block.start + 2 ** block.level - 1);
-    return { from: first ? first.at : "", to: last ? last.at : "" };
+    return { from: first ? labelOf(first.atNum) : "", to: last ? labelOf(last.atNum) : "" };
   }
 
   /** A clean node gives its summary; any other node gives a temporary line with no text. */
@@ -244,10 +247,9 @@ const MODEL = (() => {
   }
 
   /**
-   * The slice is the frontier. The fold merges one pair at a time, the pair with the highest
-   * `due`, and stops as soon as the count fits the budget. It does not fold earlier than needed.
-   * The last line is always a leaf, so the pair of the last position never merges. When no pair
-   * can merge and the count is still above the budget, the oldest lines leave the view.
+   * The slice is the frontier. The fold merges one pair at a time and stops as soon as the count
+   * fits the budget. A merge keeps the levels of the neighbours within one step. The last line is
+   * always a leaf. When no pair can merge, the oldest lines leave the view.
    */
   function frontier(budget) {
     const total = state.notes.length;
@@ -263,7 +265,6 @@ const MODEL = (() => {
         if (left.start % 2 ** level !== 0) continue;
         if (left.start + 2 ** level === total) continue;
         const due = (total - (left.start + 2 ** level - 1)) / 2 ** left.level;
-        // A merge keeps the levels of the neighbours within one step when a choice exists.
         const leftLevel = i > 0 ? blocks[i - 1].level : null;
         const rightLevel = i + 2 < blocks.length ? blocks[i + 2].level : null;
         const jump = (leftLevel === null ? 0 : Math.max(0, level - 1 - leftLevel))
@@ -291,10 +292,18 @@ const MODEL = (() => {
     });
   }
 
+  /** The clock of a new event stays above each record, so an append is always at the end. */
+  function nextAt() {
+    let max = 0;
+    for (const note of state.notes) max = Math.max(max, note.atNum);
+    state.clock = Math.max(state.clock, max + 10);
+    return state.clock;
+  }
+
   function put(text, at) {
     const id = newId();
     const created = orderOf(at, id);
-    state.notes.push({ id, at: atOf(at), created, order: created, body: text });
+    state.notes.push({ id, atNum: at, created, order: created, body: text });
     renumber();
     return id;
   }
@@ -303,7 +312,7 @@ const MODEL = (() => {
     state.notes = [];
     state.nodes = [];
     state.idc = 0;
-    state.clock = 400;
+    state.clock = 4000;
     put("решение: логи хранить отдельно", 100);
     put("предпочтение: короткий ответ", 200);
     put("факт: сборка через esbuild", 300);
@@ -313,13 +322,13 @@ const MODEL = (() => {
     put("предпочтение: без смайлов", 700);
     put("задача: импорт с мерджем", 800);
     rebuild();
-    state.clock = 900;
+    state.clock = 4000;
   }
 
   function add() {
     put(`запись ${state.notes.length + 1} в конец`, nextAt());
     state.clock += 10;
-    return "Добавлена запись в конец: адреса прежних записей не изменились.";
+    return "Запись добавлена в конец: адреса прежних записей не изменились.";
   }
 
   function addMany(count) {
@@ -327,21 +336,35 @@ const MODEL = (() => {
     return `Добавлено ${count} записей.`;
   }
 
-  function amend(pos) {
+  /** Change the body of one record. The address stays, the revision grows. */
+  function amend(pos, text) {
     const note = noteAt(pos);
     if (!note) return `Нет записи на позиции ${pos}.`;
     note.order = orderOf(nextAt(), note.id);
     state.clock += 10;
-    note.body = `${note.body} (правка)`;
+    note.body = text === undefined || text === "" ? `${note.body} (правка)` : text;
     return `Правка записи ${pos}: порядок события вырос, адрес прежний.`;
+  }
+
+  /** Put a new record at one position: its order falls between the two neighbours. */
+  function insertAt(pos, text) {
+    const before = pos > 0 ? noteAt(pos - 1) : null;
+    const after = noteAt(pos) || null;
+    if (pos < 0 || pos > state.notes.length) return `Позиция ${pos} вне диапазона.`;
+    if (after === null && pos !== state.notes.length) return `Позиция ${pos} вне диапазона.`;
+    const low = before ? before.atNum : 0;
+    const high = after ? after.atNum : low + 200;
+    const at = (low + high) / 2;
+    put(text === "" || text === undefined ? `вставка в ${pos}` : text, at);
+    return `Запись вставлена в ${pos}: адреса записей после неё сдвинулись.`;
   }
 
   /** A second store with parallel events: the merge resorts the notes. */
   function mergeSecond() {
     put("B: запись с другой машины", 150);
     put("B: вторая запись", 250);
-    const b1 = state.notes.find((note) => note.order.startsWith(atOf(150)));
-    const b2 = state.notes.find((note) => note.order.startsWith(atOf(250)));
+    const b1 = state.notes.find((note) => note.atNum === 150);
+    const b2 = state.notes.find((note) => note.atNum === 250);
     const id = newId();
     state.nodes.push({
       id, start: 0, level: 1,
@@ -350,21 +373,21 @@ const MODEL = (() => {
       order: orderOf(260, id),
       summary: "[B..0..1]",
     });
-    state.clock = 1000;
+    state.clock = nextAt();
     return "Импорт стора B: union по id, сортировка по order, адреса пересчитаны.";
   }
 
   function describe() {
     return {
-      notes: state.notes.map((note, pos) => ({ pos, id: note.id, at: note.at, order: note.order, body: note.body })),
+      notes: state.notes.map((note, pos) => ({ pos, id: note.id, at: labelOf(note.atNum), order: note.order, body: note.body })),
       nodes: currentNodes().map((node) => ({ addr: addrOf(node), id: node.id, child_a: node.child_a,
         child_b: node.child_b, input_rev: node.input_rev, valid: isValid(node), clean: isClean(node) })),
       superseded: state.nodes.length - currentNodes().length,
     };
   }
 
-  return { state, rev, isValid, isClean, slice, frontier, problems, rebuild, seed, add, amend,
-           mergeSecond, addMany, describe, topLevel, nodeAt, noteAt, periodOf, builtAt };
+  return { state, rev, isValid, isClean, slice, frontier, problems, rebuild, seed, add, addMany,
+           amend, insertAt, mergeSecond, describe, topLevel, nodeAt, noteAt, periodOf, builtAt };
 })();
 // #endregion model
 
@@ -456,7 +479,14 @@ function draw() {
 }
 
 $("addBtn").onclick = () => { report(MODEL.add()); draw(); };
-$("amendBtn").onclick = () => { report(MODEL.amend(MODEL.state.notes.length > 1 ? 1 : 0)); draw(); };
+$("amendBtn").onclick = () => {
+  report(MODEL.amend(Number($("posIn").value), $("textIn").value));
+  draw();
+};
+$("insertBtn").onclick = () => {
+  report(MODEL.insertAt(Number($("posIn").value), $("textIn").value));
+  draw();
+};
 $("importBtn").onclick = () => { report(MODEL.mergeSecond()); draw(); };
 $("rebuildBtn").onclick = () => {
   const built = MODEL.rebuild();
