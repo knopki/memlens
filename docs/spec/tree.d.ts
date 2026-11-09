@@ -10,7 +10,7 @@
  * @invariants
  *  - A node covers `2^level` positions from `start`, and level 1 or more.
  *  - A node is built when its two children sit at the two halves of its range.
- *  - A node is clean when the revision of its children equals `input_rev`.
+ *  - A clean node is built, has clean children, and has no invalidation.
  * @keywords tree, node, pos, address, revision, slice, frontier
  * #endregion moduleContract
  */
@@ -44,14 +44,17 @@ export interface Range {
 /** The order of the latest event that touches a range. An empty range gives null. */
 export type Rev = Order | null;
 
-/** One note event. Its `pos` is fixed, and a later event changes no address. */
-export interface NoteEvent {
-	readonly op: "note";
+/** The current record from the projection, not the original note event. */
+export interface TreeRecord {
 	readonly id: Id;
+	/** The latest order of the events that affect this record. */
 	readonly order: Order;
 	readonly pos: Pos;
+	readonly state: "live" | "hidden" | "deleted";
 	readonly body: string;
+	readonly longform: string | null;
 	readonly at: string;
+	readonly ts: string;
 }
 
 /** One summary of a range, recorded as an event. */
@@ -75,10 +78,12 @@ export interface NodeEvent {
 	readonly ts_to: string;
 }
 
-/** The log of one scope: the records and the nodes. */
+/** The tree input from the projection of one scope. */
 export interface Tree {
-	readonly notes: readonly NoteEvent[];
+	readonly notes: readonly TreeRecord[];
 	readonly nodes: readonly NodeEvent[];
+	/** The target ids of invalidate events. The projection derives this set from the log. */
+	readonly invalidated: readonly Id[];
 }
 
 /**
@@ -109,14 +114,14 @@ export type SliceLine =
 			readonly to: string;
 	  };
 
-/** The current node of a range is the latest node event of that range. */
+/** The current node is the latest node of the range whose id has no invalidation. */
 export declare function currentNode(tree: Tree, range: Range): NodeEvent | null;
 
 /**
  * The revision of a range: the latest order of the events that touch it.
  *
- * A record touches its own position. A node touches its own range. A node of a smaller range
- * touches each range above it.
+ * A record carries the latest order of its mutations. A node touches its own range and each range above it.
+ * The maximum is not proof of an unchanged input after an import. The invalidation check is also necessary.
  */
 export declare function rev(tree: Tree, range: Range): Rev;
 
@@ -132,10 +137,42 @@ export declare function isBuilt(tree: Tree, node: NodeEvent): boolean;
 /**
  * Tell whether a node is clean.
  *
- * A node is clean when the revision of its two children equals `input_rev`. A built node of a
- * record pair is clean when no event touched the two records after the build.
+ * A clean node is built and has no invalidation. Each child node must also be clean.
+ * The revision of its two children must equal `input_rev`. This equality alone does not prove freshness.
+ * A change of summary input invalidates every affected summary candidate before the next read.
  */
 export declare function isClean(tree: Tree, node: NodeEvent): boolean;
+
+/** The values of one non-empty child that a model call reads. */
+export type BuildChild =
+	| {
+			readonly kind: "record";
+			readonly id: Id;
+			readonly pos: Pos;
+			readonly body: string;
+			readonly preview: string;
+			readonly ts: string;
+	  }
+	| {
+			readonly kind: "node";
+			readonly id: Id;
+			readonly range: Range;
+			readonly summary: string;
+			readonly ts_from: string;
+			readonly ts_to: string;
+	  };
+
+/** A job copies these values. It does not retain mutable references to the projection. */
+export interface BuildInput {
+	readonly range: Range;
+	readonly children: readonly [BuildChild, BuildChild];
+}
+
+/** Give the exact input of two live records or clean nodes. Another pair gives null. */
+export declare function buildInput(tree: Tree, range: Range): BuildInput | null;
+
+/** Compare both current children with the copied input. A hidden record or dirty node fails the check. */
+export declare function inputUnchanged(tree: Tree, input: BuildInput): boolean;
 
 /**
  * Give the slice of one scope.

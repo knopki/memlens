@@ -8,7 +8,8 @@ The view must fit a budget, and a retelling costs a model call. The writer must 
 
 ## Decision
 
-A binary tree over `pos` keeps the view under the budget. The fold merges built pairs by `due`, then `level`, then `start`. The writer runs outside the agent loop from a queue with a lease and a backoff. The store accepts a result only when `gen` matches the recorded `input_gen`.
+A binary tree over `pos` keeps the view under the budget. The fold merges built pairs by `due`, then `level`, then `start`. The writer runs outside the agent loop from a queue with a lease and a backoff. The store compares both exact child inputs under the write lock or transaction before it appends a result.
+See [0015 Node invalidation](0015-node-invalidation.md).
 
 ## Alternatives
 

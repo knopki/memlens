@@ -106,8 +106,14 @@
 </main>
 <script>
 // #region model
+/**
+ * #region moduleContract
+ * @purpose Demonstrate the tree rules and durable invalidation without a backend or a model call.
+ * @invariants Invalidation events survive a JSON round-trip and never permit stale summaries.
+ * #endregion moduleContract
+ */
 const MODEL = (() => {
-  const state = { notes: [], nodes: [], clock: 4000, idc: 0, budget: 10 };
+  const state = { notes: [], nodes: [], invalidations: [], imports: [], clock: 4000, idc: 0, budget: 10 };
 
   /** The order key of an event: a number, padded so that text compare keeps the numeric order. */
   const atOf = (n) => String(Math.round(n * 1000)).padStart(12, "0");
@@ -125,15 +131,53 @@ const MODEL = (() => {
 
   function noteAt(pos) { return state.notes[pos] || null; }
 
-  /** The current node of an address is the latest node event for that address. */
+  // #region FUNC_isInvalidated
+  /** @purpose Exclude a node whose id appears in an invalidation event. */
+  function isInvalidated(node) {
+    return state.invalidations.some((event) => event.targets.includes(node.id));
+  }
+  // #endregion FUNC_isInvalidated
+
+  /** The current node of an address is the latest node event that is not invalidated. */
   function nodeAt(start, level) {
     let best = null;
     for (const node of state.nodes) {
       if (node.start !== start || node.level !== level) continue;
+      if (isInvalidated(node)) continue;
       if (best === null || node.order > best.order) best = node;
     }
     return best;
   }
+
+  // #region FUNC_recordInvalidation
+  /** @purpose Preserve the node ids that must never render again. */
+  function recordInvalidation(targets) {
+    const unique = [...new Set(targets)];
+    if (unique.length === 0) return null;
+    const id = newId();
+    const at = nextAt();
+    const event = Object.freeze({
+      id, atNum: at, order: orderOf(at, id), targets: Object.freeze(unique),
+    });
+    state.invalidations.push(event);
+    return event;
+  }
+  // #endregion FUNC_recordInvalidation
+
+  // #region FUNC_invalidateNotePositions
+  /**
+   * @purpose Prevent stale text in each historical node above a changed position.
+   * The node set includes all ancestors because each ancestor covers the position.
+   */
+  function invalidateNotePositions(positions) {
+    const targets = [];
+    for (const node of state.nodes) {
+      const end = node.start + 2 ** node.level;
+      if (positions.some((pos) => pos >= node.start && pos < end)) targets.push(node.id);
+    }
+    return recordInvalidation(targets);
+  }
+  // #endregion FUNC_invalidateNotePositions
 
   /** pos is the ordinal of the note event, so an amend keeps the address. */
   function renumber() {
@@ -170,9 +214,15 @@ const MODEL = (() => {
         && occupant(node.start + half, node.level - 1) === node.child_b;
   }
 
-  /** The input revision must still equal the revision of the two children. */
+  /** A clean node is valid, is not invalidated, and has two clean children. */
   function isClean(node) {
+    if (isInvalidated(node) || !isValid(node)) return false;
     const half = 2 ** (node.level - 1);
+    if (node.level > 1) {
+      const left = nodeAt(node.start, node.level - 1);
+      const right = nodeAt(node.start + half, node.level - 1);
+      if (left === null || right === null || !isClean(left) || !isClean(right)) return false;
+    }
     const now = maxOrder(rev(node.start, node.level - 1), rev(node.start + half, node.level - 1));
     return now === node.input_rev;
   }
@@ -188,6 +238,7 @@ const MODEL = (() => {
   function currentNodes() {
     const seen = new Map();
     for (const node of state.nodes) {
+      if (isInvalidated(node)) continue;
       const key = `${node.start}:${node.level}`;
       const current = seen.get(key);
       if (current === undefined || node.order > current.order) seen.set(key, node);
@@ -203,30 +254,58 @@ const MODEL = (() => {
     };
   }
 
+  // #region FUNC_buildInput
+  /** @purpose Copy the exact clean child values before a writer call. */
+  function buildInput(start, level) {
+    const half = 2 ** (level - 1);
+    const children = [];
+    for (const childStart of [start, start + half]) {
+      if (level === 1) {
+        const note = noteAt(childStart);
+        if (!note) return null;
+        children.push({ kind: "record", id: note.id, pos: childStart, body: note.body,
+          preview: (note.longform || "").slice(0, 1024), ts: labelOf(note.atNum) });
+      } else {
+        const node = nodeAt(childStart, level - 1);
+        if (!node || !isClean(node)) return null;
+        const period = periodOf({ start: childStart, level: level - 1 });
+        children.push({ kind: "node", id: node.id, range: { start: childStart, level: level - 1 },
+          summary: node.summary, ts_from: period.from, ts_to: period.to });
+      }
+    }
+    return { range: { start, level }, children };
+  }
+  // #endregion FUNC_buildInput
+
+  // #region FUNC_commitBuild
+  /** @purpose Reject a stale result before the synchronous append of the demo model. */
+  function commitBuild(input, summary) {
+    if (!input) return false;
+    const { start, level } = input.range;
+    if (JSON.stringify(buildInput(start, level)) !== JSON.stringify(input)) return false;
+    const id = newId();
+    const at = nextAt();
+    const half = 2 ** (level - 1);
+    state.nodes.push({ id, atNum: at, start, level,
+      child_a: input.children[0].id, child_b: input.children[1].id,
+      input_rev: maxOrder(rev(start, level - 1), rev(start + half, level - 1)),
+      order: orderOf(at, id), summary });
+    return true;
+  }
+  // #endregion FUNC_commitBuild
+
   /** Build each range bottom-up where the node is missing, invalid, or dirty. */
   function rebuild() {
     const built = [];
     for (let level = 1; level <= topLevel(); level += 1) {
       const width = 2 ** level;
-      const half = width / 2;
       for (let start = 0; start + width <= state.notes.length; start += width) {
         const node = nodeAt(start, level);
         if (node && isValid(node) && isClean(node)) continue;
-        const childA = occupant(start, level - 1);
-        const childB = occupant(start + half, level - 1);
-        if (childA === null || childB === null) continue;
-        const id = newId();
-        const at = nextAt();
-        const next = {
-          id, atNum: at, start, level,
-          child_a: childA, child_b: childB,
-          input_rev: maxOrder(rev(start, level - 1), rev(start + half, level - 1)),
-          order: orderOf(at, id),
-          summary: `сводка ${start}..${start + width - 1} по ${width} записям`,
-        };
-        if (node) state.nodes[state.nodes.indexOf(node)] = next;
-        else state.nodes.push(next);
-        built.push(addrOf(next));
+        const input = buildInput(start, level);
+        if (commitBuild(input, `сводка ${start}..${start + width - 1} по ${width} записям`)) {
+          built.push(addrOf({ start, level }));
+        }
       }
     }
     return built;
@@ -297,6 +376,7 @@ const MODEL = (() => {
     let max = 0;
     for (const note of state.notes) max = Math.max(max, note.atNum);
     for (const node of state.nodes) max = Math.max(max, node.atNum);
+    for (const event of state.invalidations) max = Math.max(max, event.atNum);
     return max;
   }
 
@@ -317,6 +397,8 @@ const MODEL = (() => {
   function seed() {
     state.notes = [];
     state.nodes = [];
+    state.invalidations = [];
+    state.imports = [];
     state.idc = 0;
     state.clock = 4000;
     put("решение: логи хранить отдельно", 100);
@@ -341,15 +423,40 @@ const MODEL = (() => {
     return `Добавлено ${count} записей.`;
   }
 
-  /** Change the body of one record. The address stays, the revision grows. */
+  // #region FUNC_amend
+  /** Change the body of one record. The address stays, and the revision grows. */
   function amend(pos, text) {
     const note = noteAt(pos);
     if (!note) return `Нет записи на позиции ${pos}.`;
+    invalidateNotePositions([pos]);
     note.order = orderOf(nextAt(), note.id);
     state.clock += 10;
     note.body = text === undefined || text === "" ? `${note.body} (правка)` : text;
     return `Правка записи ${pos}: порядок события вырос, адрес прежний.`;
   }
+  // #endregion FUNC_amend
+
+  // #region FUNC_importAmend
+  /**
+   * @purpose Apply an imported amend after the import selects the winning payload.
+   * This model does not select a winner between conflicting payloads.
+   */
+  function importAmend(pos, at, body, eventId = newId()) {
+    const note = noteAt(pos);
+    if (!note) return `Нет записи на позиции ${pos}.`;
+    const previous = state.imports.find((event) => event.id === eventId);
+    if (previous && previous.target === note.id && previous.at === at && previous.body === body) {
+      return `Импорт ${eventId} уже применён.`;
+    }
+    invalidateNotePositions([pos]);
+    const incoming = { id: eventId, target: note.id, at, body };
+    if (previous) state.imports[state.imports.indexOf(previous)] = incoming;
+    else state.imports.push(incoming);
+    note.order = orderOf(at, eventId);
+    note.body = body;
+    return `Импортирована правка ${eventId} записи ${pos}: порядок ${at}.`;
+  }
+  // #endregion FUNC_importAmend
 
   /** Put a new record at one position: its order falls between the two neighbours. */
   function insertAt(pos, text) {
@@ -360,17 +467,22 @@ const MODEL = (() => {
     const low = before ? before.atNum : 0;
     const high = after ? after.atNum : low + 200;
     const at = (low + high) / 2;
+    const changed = [];
+    for (let next = pos; next < state.notes.length; next += 1) changed.push(next);
+    invalidateNotePositions(changed);
     put(text === "" || text === undefined ? `вставка в ${pos}` : text, at);
     return `Запись вставлена в ${pos}: адреса записей после неё сдвинулись.`;
   }
 
   /** A second store with parallel events: the merge resorts the notes. */
   function mergeSecond() {
+    invalidateNotePositions(state.notes.map((_, pos) => pos).filter((pos) => pos > 0));
     put("B: запись с другой машины", 150);
     put("B: вторая запись", 250);
     const b1 = state.notes.find((note) => note.atNum === 150);
     const b2 = state.notes.find((note) => note.atNum === 250);
     const id = newId();
+    recordInvalidation([id]);
     state.nodes.push({
       id, atNum: 260, start: 0, level: 1,
       child_a: b1.id, child_b: b2.id,
@@ -381,17 +493,51 @@ const MODEL = (() => {
     return "Импорт стора B: union по id, сортировка по order, адреса пересчитаны.";
   }
 
+  // #region FUNC_serialize
+  /** @purpose Preserve the notes, nodes, and invalidation history for a restart check. */
+  function serialize() {
+    return JSON.stringify({
+      notes: state.notes,
+      nodes: state.nodes,
+      invalidations: state.invalidations,
+      imports: state.imports,
+      clock: state.clock,
+      idc: state.idc,
+      budget: state.budget,
+    });
+  }
+  // #endregion FUNC_serialize
+
+  // #region FUNC_restore
+  /** @purpose Restore the model and each physical invalidation event after a restart. */
+  function restore(json) {
+    const data = typeof json === "string" ? JSON.parse(json) : json;
+    state.notes = data.notes;
+    state.nodes = data.nodes;
+    state.invalidations = (data.invalidations || []).map((event) => Object.freeze({
+      ...event, targets: Object.freeze([...event.targets]),
+    }));
+    state.imports = data.imports || [];
+    state.clock = data.clock;
+    state.idc = data.idc;
+    state.budget = data.budget;
+    return `Восстановлено записей: ${state.notes.length}, инвалидаций: ${state.invalidations.length}.`;
+  }
+  // #endregion FUNC_restore
+
   function describe() {
     return {
       notes: state.notes.map((note, pos) => ({ pos, id: note.id, at: labelOf(note.atNum), order: note.order, body: note.body })),
       nodes: currentNodes().map((node) => ({ addr: addrOf(node), id: node.id, child_a: node.child_a,
         child_b: node.child_b, input_rev: node.input_rev, valid: isValid(node), clean: isClean(node) })),
       superseded: state.nodes.length - currentNodes().length,
+      invalidations: state.invalidations.length,
     };
   }
 
-  return { state, rev, isValid, isClean, slice, frontier, problems, rebuild, seed, add, addMany,
-           amend, insertAt, mergeSecond, describe, topLevel, nodeAt, noteAt, periodOf, builtAt };
+  return { state, rev, isValid, isClean, isInvalidated, slice, frontier, problems, rebuild, seed, add, addMany,
+           amend, importAmend, insertAt, mergeSecond, describe, serialize, restore, topLevel, nodeAt, noteAt,
+           periodOf, builtAt, buildInput, commitBuild };
 })();
 // #endregion model
 

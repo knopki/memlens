@@ -10,9 +10,10 @@ the writer has not rebuilt yet.
 
 ## Decision
 
-A node is `built` when the event of each child sits at its half of the range, and the check reads the
-`pos` of each child. A node is `clean` when `input_rev` equals the revision of its two children. The
-revision of a range is the order of the latest event that touches it. The store keeps no state field.
+A node is `built` when the event of each child sits at its half of the range.
+A clean node is built, has no invalidation, and has clean child nodes. Its child revision must equal `input_rev`.
+An import can change the input without a change of the maximum order. The revision equality alone does not prove freshness.
+[0015 Node invalidation](0015-node-invalidation.md) defines durable invalidation and the writer check.
 
 The slice is the frontier. The fold merges one pair at a time, the pair with the highest `due`, and it
 keeps the level steps of the neighbours at one. It stops as soon as the count of lines is not above
@@ -27,6 +28,5 @@ A dirty flag in the store. A tree that the store keeps. The cut of the oldest li
 
 ## Consequences
 
-A read finds the revision by a descent to the built nodes, so the store keeps no state. An import that
-moves the addresses makes each node above the first moved position not built. A rebuild appends an
+The projection derives the invalidated ids from the log. An import that moves an address makes each affected node not built. A rebuild appends an
 event, and a repeated rebuild appends nothing.

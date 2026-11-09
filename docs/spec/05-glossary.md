@@ -60,7 +60,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | compaction       | The process that builds the dirty nodes. The writer runs it in the background.                                                                                                            | S-013, S-051                                 |
 | supersede        | A newer note replaces an older note in the view. It applies one time, at the first `live` state, and in one scope.                                                                        | S-014, S-016                                 |
 | event            | One record of the log. It has `id`, `at`, `op`, and `scope`, and a payload for the op.                                                                                            | S-016                                        |
-| op               | The field of an event that names the change: `note`, `amend`, `hide`, `redact`, `review`, `dismiss`, or `node`. | S-016, S-101 |
+| op | The field that names an event: `note`, `amend`, `hide`, `redact`, `review`, `dismiss`, `node`, or `invalidate`. | S-016, S-101, S-135 |
 | payload          | The fields of an event that belong to the op.                                                                                                                                             | S-016                                        |
 | ULID             | The identifier format of an event. It is unique and it sorts by time.                                                                                                                     | S-016                                        |
 | pos              | The ordinal of the creating event in the scope of the record. It is not a field of the event.                                                                                                | S-016                                        |
@@ -84,7 +84,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | catalog scope    | The scope `__catalog__:<profile>`. It holds the nodes of one profile.                                                                                                                     | S-023                                        |
 | dirty            | The state of a node that needs a build: it is not `built` or it is not `clean`.                                                                                                           | S-054, S-121, S-123                          |
 | built            | The state of a node whose two children sit at the two halves of its range.                                                                                                                | S-121, S-123                                 |
-| clean            | The state of a built node whose `input_rev` equals the revision of its two children.                                                                                                      | S-121                                        |
+| clean | A built node with clean child nodes, matching `input_rev`, and no invalidation. | S-121, S-135 |
 | [redacted]       | The placeholder of the console and the view for a sanitized record. An event holds no such text.                                                                                          | S-023                                        |
 | node             | One summary of the tree, recorded by a `node` event. It covers `2^level` positions for a level of 1 or more.                                                                                                          | S-025                                        |
 | position         | One `pos` value in the geometry of the tree. A position with no live record is empty.                                                                                                     | S-025                                        |
@@ -153,5 +153,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | pending proposal | A proposal with no decision and no `dismiss`. | S-101 |
 | tokenizer | The FTS5 search tokenizer of the index. It follows the key `language`. | S-101 |
 | how-to | The section of the slice that holds the policy text and the append text. | S-102 |
-| invalidation | The action that makes a summary unusable until a rebuild. The draft log form is in Q-461. | S-133, S-134 |
+| invalidation | The action that makes a node id unusable. An `invalidate` event holds the target ids, and a rebuild writes a new id. | S-133, S-134, S-135 |
 | common prefix | The initial positions that have the same records and content before and after an import. | S-133 |
+| build input | The exact child values that a job copies before its model call. The store compares them again before the append. | S-135 |

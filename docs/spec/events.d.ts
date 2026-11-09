@@ -6,7 +6,7 @@
  * @purpose Hold the shape of each event in one type file, so the log, the export, and the import have
  * one source.
  * @scope
- *  - The envelope of an event and the payload of each of the seven ops.
+ *  - The envelope of an event and the payload of each of the eight ops.
  *  - NOT: the projection, the tool inputs, and the configuration.
  * @invariants
  *  - An event is immutable, and its `id` is a ULID.
@@ -116,7 +116,13 @@ export interface NodeEvent extends EventBase {
 	readonly ts_to: IsoTime;
 }
 
-/** The log holds these seven ops. */
+/** The node ids whose summaries must stay unusable. A later rebuild gets a new id. */
+export interface InvalidateEvent extends EventBase {
+	readonly op: "invalidate";
+	readonly targets: readonly Ulid[];
+}
+
+/** The log holds these eight ops. */
 export type Event =
 	| NoteEvent
 	| AmendEvent
@@ -124,7 +130,8 @@ export type Event =
 	| RedactEvent
 	| ReviewEvent
 	| DismissEvent
-	| NodeEvent;
+	| NodeEvent
+	| InvalidateEvent;
 
 /** An event after a `redact` of its record: it keeps the `id` and loses the content. */
 export interface SanitizedEvent extends EventBase {

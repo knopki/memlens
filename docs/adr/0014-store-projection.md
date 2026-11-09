@@ -12,6 +12,7 @@ and a render happens on each turn.
 
 The store keeps a projection of the log: the records, the current node of each range, and the count of
 each scope. The projection holds the order of the last event that it applied.
+It also derives the invalidated node ids from the log. See [0015 Node invalidation](0015-node-invalidation.md).
 
 The SQLite backend changes the projection in the append transaction. The JSONL backend changes the
 projection after the append, so a read can find a gap. A read with a small gap replays the events after

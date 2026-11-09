@@ -56,12 +56,14 @@ op. A `redact` clears the content of its target.
 | `review`  | `target`, `review_at`                                                                                                                                     |
 | `dismiss` | `target`, `reason`                                                                                                                                        |
 | `node`    | `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`, `chars`, `truncated`, `ts_from`, `ts_to`                                                  |
+| `invalidate` | `targets`, the ids of node events whose summaries must stay unusable |
 
 A write op carries the optional field `proposed`, and the projection ignores a proposed event. A
 decision carries the field `accepts`, the id of the proposal. See [0012 Proposals](../adr/0012-proposals.md).
 
-A node is a `node` event. Its `at` is the time of the build, and the projection takes the latest
-`node` event for a key. See [0011 Nodes are events](../adr/0011-nodes-are-events.md).
+A node is a `node` event. Its `at` is the time of the build.
+The projection takes the latest candidate whose id has no invalidation.
+An `invalidate` event changes no note and deletes no text. See [0015 Node invalidation](../adr/0015-node-invalidation.md).
 
 An event has two times: `at` is the time of the log, and `ts` is the time of the write of a note. Only
 the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requirements.md) to
@@ -77,9 +79,10 @@ and an export holds no `pos`. A redacted event keeps its `id` and gets `redacted
 The projection builds the records in two passes over the events ordered by `(at, id)`. Pass 1 makes
 one record for each `note` event and copies its payload. The record takes `recorded_at` from `at`. A
 `node` event changes no record, and a proposed event changes no record and takes no `pos`. The
-current node of a key is the latest `node` event for that key.
-The `rev` of a range is the order of the latest event that touches it. See [tree.d.ts](tree.d.ts) and
-[REQ-113](02-requirements.md).
+current node is the latest candidate whose id has no invalidation.
+The projection derives the invalidated ids from the log before it selects candidates.
+The `rev` of a range is the latest order that touches it. This maximum alone does not prove freshness.
+The tree reads current records, their states, and their mutation orders. See [tree.d.ts](tree.d.ts) and [REQ-113](02-requirements.md).
 Pass 2 applies the operations in the same order. The order of arrival and a local `pos` change
 nothing. The effects of the operations, the state order, and the supersede rule are in
 [REQ-086](02-requirements.md) to [REQ-106](02-requirements.md).
@@ -100,7 +103,8 @@ visible. See [REQ-108](02-requirements.md), [REQ-109](02-requirements.md),
 [REQ-120](02-requirements.md), [REQ-451](02-requirements.md), and [REQ-460](02-requirements.md).
 
 A change of a note makes each node above it dirty, and the writer builds the node from its two
-children. A rebuild appends a new `node` event for the same key, and the projection takes the latest.
+children. A rebuild appends a new `node` event for the same key.
+The projection takes the latest candidate whose id has no invalidation.
 See [REQ-113](02-requirements.md) to [REQ-117](02-requirements.md), [REQ-191](02-requirements.md), and
 [REQ-192](02-requirements.md).
 
@@ -279,8 +283,8 @@ from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requ
 
 A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
 `start` is a multiple of `2^L`. A `node` event holds `summary`, `ts_from`, `ts_to`, `chars`,
-`input_rev`, and `truncated`, and its `at` is the time of the build. The state follows from
-`input_rev`, and the store keeps no field for it. The tree has no depth limit, and it needs no dense prefix: a
+`input_rev`, and `truncated`, and its `at` is the time of the build.
+A clean node is built, has clean child nodes, and has no invalidation. Its child revision must match `input_rev`. The tree has no depth limit, and it needs no dense prefix: a
 position with no live record stays empty. See [0004 Tree and writer](../adr/0004-tree-writer.md) and
 [REQ-122](02-requirements.md) to [REQ-133](02-requirements.md).
 
@@ -326,8 +330,9 @@ The writer runs outside the agent loop, from a queue of jobs in the store. A run
 one. A merge gives the model the two children only. See [0004 Tree and writer](../adr/0004-tree-writer.md).
 
 A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300
-seconds. A job records `input_rev` of its two children, and the store accepts the result only when the
-revision of the children still equals it.
+seconds. A job copies its two exact child inputs as `BuildInput`.
+The store compares both current children under the write lock or transaction before it appends the result.
+A changed input, a hidden record, or a dirty child rejects the result. The `input_rev` equality alone does not permit a result.
 
 The writer starts a job when the queue holds `writer.batch` dirty nodes, when no event arrives for
 `store.idle` seconds, and at `memlens compact`. It takes the dirty node with the highest `due` first,
@@ -336,6 +341,19 @@ and a node waits for its two children.
 The four texts of the calls are in [09-prompts.md](09-prompts.md). See [0004 Tree and writer](../adr/0004-tree-writer.md),
 [REQ-200](02-requirements.md) to [REQ-254](02-requirements.md), and
 [REQ-432](02-requirements.md) to [REQ-438](02-requirements.md).
+
+## Invalidation
+
+An import preserves the unaffected branches of the common prefix. A changed record or position invalidates its old and new ancestor paths.
+The import invalidates all historical candidates of those ranges, so an older summary cannot return as a fallback.
+Each new imported node candidate also starts unusable. Reuse of new imported summaries is outside this version.
+A repeated import with no new event or payload change writes no invalidation.
+
+A local change of summary input uses the same rule. Target selection and the write share one store lock or transaction.
+SQLite appends the data and invalidations in one transaction. JSONL flushes the invalidation lines before it appends the affected data.
+A crash can leave an unnecessary rebuild, but it must not leave changed data with a usable stale summary.
+The projection derives invalidation from the log after a restart or a rebuild. A rebuilt node has a new id.
+See [0015 Node invalidation](../adr/0015-node-invalidation.md) and [REQ-510](02-requirements.md) to [REQ-513](02-requirements.md).
 
 ## Session and store
 
