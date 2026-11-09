@@ -136,8 +136,10 @@ export declare function isClean(tree: Tree, node: NodeEvent): boolean;
 /**
  * Give the slice of one scope.
  *
- * The slice is the frontier. The fold takes one pair at a time, the pair with the greatest `due`,
- * and it stops as soon as the count of lines is not above the budget. A pair merges though its node
+ * The slice is the frontier. The fold takes one pair at a time and stops as soon as the count of
+ * lines is not above the budget. Among the pairs, it takes one that keeps the levels of the two
+ * neighbours within one step, then the pair with the greatest `due`, then the lowest level, then
+ * the lowest start. A pair merges though its node
  * is not built, so a temporary line takes the place of the two lines. The last line is always a
  * record, because the pair of the last position never merges. When no pair can merge and the count
  * is still above the budget, the oldest lines leave the slice.
