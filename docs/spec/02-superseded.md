@@ -147,3 +147,11 @@ live.
 | REQ-292 | The policy text names `memory_find`, `memory_open`, `memory_note`, and `memory_forget`. | FR | S-067 | S-095 |
 | REQ-211 | `gen` grows on a `note` or op event that affects the block, and a `node` event changes no `gen`. | FR | S-051 | REQ-462, REQ-465 |
 | REQ-207 | A position with no built parent shows its raw records in the view. | FR | S-051 | REQ-217 |
+| REQ-073 | A `node` event carries `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`, `chars`, `truncated`, `ts_from`, and `ts_to`. | FR | S-016, S-121 | [tree.d.ts](tree.d.ts) |
+| REQ-123 | A node of level `L` covers `2^L` consecutive `pos` values, for a level of 1 or more. | FR | S-025 | [tree.d.ts](tree.d.ts) |
+| REQ-129 | A node is `built` when the event of each child sits at its half of the range. | FR | S-025, S-121 | [tree.d.ts](tree.d.ts) |
+| REQ-462 | The `rev` of a range is the order of the latest event that touches the range. | FR | S-100, S-121 | [tree.d.ts](tree.d.ts) |
+| REQ-465 | An event touches a range when the position of the event or the position of its target is in the range. | FR | S-100, S-121 | [tree.d.ts](tree.d.ts) |
+| REQ-470 | The field `input_rev` holds the revision of the two children at the build. | FR | S-100, S-121 | [tree.d.ts](tree.d.ts) |
+| REQ-478 | A node is `clean` when the revision of its two children equals `input_rev`. | FR | S-121 | [tree.d.ts](tree.d.ts) |
+| REQ-481 | A `node` event touches its own range. | FR | S-121 | [tree.d.ts](tree.d.ts) |

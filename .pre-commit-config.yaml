@@ -17,7 +17,7 @@ repos:
         name: ste lint
         entry: pnpm run lint:docs
         language: system
-        files: \.md$
+        files: \.(md|html)$
         pass_filenames: false
 
       - id: typecheck
