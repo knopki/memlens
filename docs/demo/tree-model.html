@@ -41,6 +41,7 @@
   ul.lines li { padding:6px 0; border-bottom:1px dashed var(--line); font-size:12px; }
   ul.lines li:last-child { border-bottom:0; }
   .addr { color:#9fb3ff; }
+  .lines .tmp .addr { color:#c9a227; }
   #log div { padding:4px 0; border-bottom:1px dashed var(--line); font-size:12px; color:#c9cfda; }
   .legend { display:flex; gap:12px; flex-wrap:wrap; font-size:11px; color:var(--dim); margin-top:10px; }
   .sw { display:inline-block; width:10px; height:10px; border-radius:3px;
@@ -203,7 +204,7 @@ const MODEL = (() => {
           child_a: childA, child_b: childB,
           input_rev: maxOrder(rev(start, level - 1), rev(start + half, level - 1)),
           order: orderOf(state.clock, id),
-          summary: `[${start}..${start + width - 1}]`,
+          summary: `сводка ${start}..${start + width - 1} по ${width} записям`,
         };
         state.clock += 1;
         if (node) state.nodes[state.nodes.indexOf(node)] = next;
@@ -214,18 +215,48 @@ const MODEL = (() => {
     return built;
   }
 
-  const lineText = (block) => {
-    if (block.level === 0) return noteAt(block.start).body;
-    return nodeAt(block.start, block.level).summary;
-  };
+  /** The first half of a text, cut at a word boundary. */
+  function half(text) {
+    const part = text.slice(0, Math.ceil(text.length / 2));
+    const space = part.lastIndexOf(" ");
+    return space > 8 ? part.slice(0, space) : part;
+  }
+
+  /** The temporary line of a node that is not built: the first half of each child. */
+  const joinHalves = (left, right) => `${half(left)} ${half(right)}`;
 
   /**
-   * The slice is the frontier: the fold merges the pair with the highest `due` while the view
-   * holds more lines than the budget, and the cut takes the oldest lines. The budget counts lines.
+   * The text of a block: the summary of a clean node, or the temporary line down to the records.
+   * A temporary line costs no model call, so the fold always reaches the budget.
+   */
+  function lineOf(block) {
+    if (block.level === 0) {
+      const note = noteAt(block.start);
+      return note ? note.body : "";
+    }
+    const node = nodeAt(block.start, block.level);
+    if (node && isValid(node) && isClean(node)) return node.summary;
+    const halfWidth = 2 ** (block.level - 1);
+    return joinHalves(
+      lineOf({ start: block.start, level: block.level - 1 }),
+      lineOf({ start: block.start + halfWidth, level: block.level - 1 }),
+    );
+  }
+
+  /** A clean node gives its summary line; another node gives a temporary line. */
+  function builtAt(block) {
+    if (block.level === 0) return true;
+    const node = nodeAt(block.start, block.level);
+    return node !== null && isValid(node) && isClean(node);
+  }
+
+  /**
+   * The slice is the frontier: the fold merges the pair with the highest `due` until the view
+   * holds no more lines than the budget. The budget counts lines.
    */
   function frontier(budget) {
     const total = state.notes.length;
-    let blocks = state.notes.map((note, pos) => ({ start: pos, level: 0 }));
+    const blocks = state.notes.map((note, pos) => ({ start: pos, level: 0 }));
     while (blocks.length > budget) {
       const options = [];
       for (let i = 0; i + 1 < blocks.length; i += 1) {
@@ -235,8 +266,6 @@ const MODEL = (() => {
         if (right.start !== left.start + 2 ** left.level) continue;
         const level = left.level + 1;
         if (left.start % 2 ** level !== 0) continue;
-        const node = nodeAt(left.start, level);
-        if (node === null || !isValid(node) || !isClean(node)) continue;
         const due = (total - (left.start + 2 ** level - 1)) / 2 ** left.level;
         options.push({ index: i, due, level, start: left.start });
       }
@@ -245,9 +274,8 @@ const MODEL = (() => {
       const pick = options[0];
       blocks.splice(pick.index, 2, { start: pick.start, level: pick.level });
     }
-    while (blocks.length > 1 && blocks.length > budget) blocks = blocks.slice(1);
-    return blocks.map((block) => ({ start: block.start, level: block.level,
-      addr: addrOf(block), text: lineText(block) }));
+    return blocks.map((block) => ({ start: block.start, level: block.level, addr: addrOf(block),
+      text: lineOf(block), built: builtAt(block) }));
   }
 
   function slice(budget = state.budget) { return frontier(budget); }
@@ -320,7 +348,7 @@ const MODEL = (() => {
   }
 
   return { state, rev, isValid, isClean, slice, frontier, problems, rebuild, seed, add, amend,
-           mergeSecond, describe, topLevel, nodeAt, noteAt, lineText };
+           mergeSecond, describe, topLevel, nodeAt, noteAt, lineOf, builtAt };
 })();
 // #endregion model
 
@@ -377,7 +405,8 @@ function renderSlice() {
     const addr = document.createElement("span");
     addr.className = "addr";
     addr.textContent = `#${line.addr}`;
-    item.append(addr, ` ${line.text}`);
+    if (!line.built) item.classList.add("tmp");
+    item.append(addr, ` ${line.built ? "" : "≈ "}${line.text}`);
     list.appendChild(item);
   }
   $("sliceInfo").textContent = `строк ${lines.length}, бюджет ${MODEL.state.budget}`;
