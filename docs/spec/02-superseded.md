@@ -146,3 +146,4 @@ live.
 | --- | --- | --- | --- | --- |
 | REQ-292 | The policy text names `memory_find`, `memory_open`, `memory_note`, and `memory_forget`. | FR | S-067 | S-095 |
 | REQ-211 | `gen` grows on a `note` or op event that affects the block, and a `node` event changes no `gen`. | FR | S-051 | REQ-462, REQ-465 |
+| REQ-207 | A position with no built parent shows its raw records in the view. | FR | S-051 | REQ-217 |

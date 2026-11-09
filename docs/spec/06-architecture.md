@@ -146,7 +146,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Node             | Target 512 characters, limit 640 characters, a cut with a flag            | The p90 miss is 610 characters.                                  |
 | Input of a merge | Two children, and 1 024 characters of `longform` at level 1               | The input holds no context, so a delete stays derivable.         |
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
-| Fold             | `high` is the budget of the block, and `low` is its half. The order is `(due↓, level↑, start↑)` | The order gives one answer. |
+| Fold             | `high` is the budget of the part, and `low` is its half. The order is `(due↓, level↑, start↑)` | The order gives one answer. |
 | Writer           | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
 | Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
@@ -204,7 +204,7 @@ top node of the scope. When the top node is not built, the lines of the frontier
 the place of the line.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
-and a block gives `#<a>-<b> <ts_from>..<ts_to> <summary>`.
+and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`.
 
 The budget counts lines. The `here` value limits the `<here>` part, and the `directions` value limits
 the `<directions>` part. The two values are independent, and the `<how-to>` part is never cut.
@@ -221,8 +221,8 @@ a deadline of 10 seconds, and the render waits for it. The render does not wait 
 compaction.
 
 An open of a note gives the note and its `longform`. An open of a node gives the two children of that
-node, as the slice renders them. A range that matches no built node gives one block: the level follows
-the span of the range, and the block holds the first `pos`. A node that is not built gives a temporary
+node, as the slice renders them. A range that matches no built node gives one line: the level follows
+the span of the range, and the line holds the first `pos`. A node that is not built gives a temporary
 line of its two children, so the render calls no model. A rebuild keeps each address, because a merge
 with another log is the only change of the order.
 
@@ -281,7 +281,7 @@ reach. No other derivative holds the text, because the summarizer sees two child
 
 ## Fold
 
-The view is a tiling of `[0, total)` with non-overlapping blocks. The fold merges built pairs while
+The view is a tiling of `[0, total)` with non-overlapping ranges. The fold merges built pairs while
 the view is above `high` and stops at `low = high/2`. A merge needs two neighbors of one level, a
 `start` that is a multiple of `2^(level+1)`, and a built parent with a fresh input. The pair takes the
 priority `due = (total - (start + 2^(level+1) - 1)) / 2^level`. The choice goes by `due`, then

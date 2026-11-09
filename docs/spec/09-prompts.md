@@ -19,7 +19,7 @@ One line for each scope of the profile: the key, the age, the count, and the sum
 {{directions}}
 </directions>
 <here scope="{{scope}}">
-The frontier of the active scope: one line for each block, from the oldest to the newest.
+The frontier of the active scope: one line for each range, from the oldest to the newest.
 {{here}}
 </here>
 </memory>
@@ -96,7 +96,7 @@ the length of this ruler:
 ## The input of the merge
 
 The input holds the two children only. It holds no frontier and no `<context>`. A summary that reads a
-record outside its block depends on that record. A delete of the record then has an effect that the
+record outside its range depends on that record. A delete of the record then has an effect that the
 store cannot derive. See [REQ-433](02-requirements.md).
 
 At level 1, each child carries the preview of its `longform`, at most 1 024 characters. The preview belongs to the
