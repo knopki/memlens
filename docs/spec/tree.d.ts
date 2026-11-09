@@ -91,6 +91,7 @@ export interface Tree {
 	 * Record trees have no scope_roots map. A profile includes no other catalog in this map.
 	 */
 	readonly scope_roots?: ReadonlyMap<Pos, Tree>;
+	/** The projection excludes sanitized node events from this candidate input. */
 	readonly nodes: readonly NodeEvent[];
 	/** The target ids of invalidate events. The projection derives this set from the log. */
 	readonly invalidated: readonly Id[];

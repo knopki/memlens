@@ -9,7 +9,7 @@
  *  - The envelope of an event and the payload of each of the eight ops.
  *  - NOT: the projection, the tool inputs, and the configuration.
  * @invariants
- *  - An event is immutable, and its `id` is a ULID.
+ *  - An event keeps its structure. Redaction can clear its content. Its `id` is a ULID.
  *  - `at` is the time of the log, and `ts` is the time of the write of a note.
  *  - The payload belongs to the op, and no op takes a field of another op.
  * @keywords event, log, op, note, amend, hide, redact, review, dismiss, node
@@ -32,7 +32,13 @@ export interface EventBase {
 	readonly id: Ulid;
 	/** The time of the log. The projection orders the events by `(at, id)`. */
 	readonly at: IsoTime;
+	/**
+	 * The resolved scope. For an `amend`, this is the destination scope. For another op, this is
+	 * the current scope.
+	 */
 	readonly scope: ScopeKey;
+	/** A raw event carries no `redacted` field. A sanitized event carries `redacted: true`. */
+	readonly redacted?: never;
 }
 
 /**
@@ -65,7 +71,6 @@ export interface AmendEvent extends EventBase {
 	readonly target: Ulid;
 	readonly body?: string;
 	readonly longform?: string;
-	readonly scope?: ScopeKey;
 	readonly proposed?: boolean;
 }
 
@@ -135,13 +140,44 @@ export type Event =
 	| NodeEvent
 	| InvalidateEvent;
 
-/** An event after a `redact` of its record: it keeps the `id` and loses the content. */
-export interface SanitizedEvent extends EventBase {
+/** A sanitized note event. The content is cleared, and the metadata stays. */
+export type SanitizedNoteEvent = Omit<
+	NoteEvent,
+	"body" | "longform" | "redacted"
+> & {
+	readonly body: "";
+	readonly longform: null;
 	readonly redacted: true;
-	readonly body?: "";
-	readonly summary?: "";
-	readonly longform?: null;
-}
+};
 
-/** The line of the JSONL log: one event, or its sanitized form. */
+/** A sanitized amend event. Clear present content fields and preserve absent fields and metadata. */
+export type SanitizedAmendEvent = Omit<
+	AmendEvent,
+	"body" | "longform" | "redacted"
+> & {
+	readonly body?: "";
+	readonly longform?: null;
+	readonly redacted: true;
+};
+
+/**
+ * A sanitized node event. The summary is cleared, and the metadata stays.
+ * The child ids stay. The node says nothing about the content of the child notes.
+ */
+export type SanitizedNodeEvent = Omit<
+	NodeEvent,
+	"summary" | "chars" | "redacted"
+> & {
+	readonly summary: "";
+	readonly chars: 0;
+	readonly redacted: true;
+};
+
+/** A sanitized content-bearing event. The content is cleared, and the metadata stays. */
+export type SanitizedEvent =
+	| SanitizedNoteEvent
+	| SanitizedAmendEvent
+	| SanitizedNodeEvent;
+
+/** The line of the JSONL log: one raw event, or one sanitized content-bearing event. */
 export type JsonlLine = Event | SanitizedEvent;

@@ -28,7 +28,8 @@ It does not erase text. Redaction keeps its separate duty to erase text.
 
 The projection derives the set of target ids from the log. A target stays unusable in every arrival order.
 A rebuild collects this set before it selects node candidates. An incremental update applies invalidations before it selects new candidates.
-The current node is the latest candidate whose id has no invalidation. If no candidate survives, the range has no current node.
+The current node is the latest candidate whose id has no invalidation. Sanitized node events never become candidates.
+If no candidate survives, the range has no current node.
 
 A clean node must be built and have no invalidation. Each child node must also be clean.
 The `input_rev` equality remains a check, but it is not proof of unchanged input.
@@ -48,6 +49,8 @@ The import selects targets under the store write lock or transaction. That lock 
 An empty target set writes no event. The target ids have no duplicates.
 A repeated import that changes no event or payload writes no invalidation.
 An import returns its generated invalidation events in a later export, as it returns other log events.
+Redaction also clears historical payloads, including imported summaries, before publication.
+An import that clears stored content follows [0008 Redaction](0008-redaction.md) instead of the append-only publication steps below.
 
 ### Publication
 

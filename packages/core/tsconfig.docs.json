@@ -4,7 +4,8 @@
 		"noEmit": true,
 		"declaration": false,
 		"declarationMap": false,
+		"skipLibCheck": false,
 		"rootDir": "../.."
 	},
-	"include": ["../../docs/spec/*.d.ts"]
+	"include": ["../../docs/spec/*.d.ts", "tests/event-contracts.ts"]
 }

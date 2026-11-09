@@ -70,8 +70,9 @@ the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requi
 [REQ-085](02-requirements.md).
 
 `pos` is not a field of an event. It is the ordinal of the creating event in the scope of the record,
-and an export holds no `pos`. A redacted event keeps its `id` and gets `redacted: true`, an empty
-`body` or `summary`, and a null `longform`. See [0002 Event log](../adr/0002-event-log.md), [0008 Redaction](../adr/0008-redaction.md), and
+and an export holds no `pos`. A sanitized event keeps its operation and structural metadata, with `redacted: true`.
+A note has empty body and null longform. An amendment clears present content fields and retains absent fields.
+A node has empty summary and zero chars. See [0002 Event log](../adr/0002-event-log.md), [0008 Redaction](../adr/0008-redaction.md), and
 [Q-030](03-open-questions.md#q-030).
 
 ## Projection
@@ -121,8 +122,8 @@ The projection takes the latest candidate whose id has no invalidation.
 See [REQ-113](02-requirements.md) to [REQ-117](02-requirements.md), [REQ-191](02-requirements.md), and
 [REQ-192](02-requirements.md).
 
-A `redact` clears the content of each node that covers the position, so no node holds the text. The
-placeholder `[redacted]` appears in the console and the view only, and no event holds it.
+A `redact` clears historical dependent nodes through their child ids, including earlier scope paths and catalog ancestors.
+The placeholder `[redacted]` appears in the console and the view only, and no event holds it.
 
 ## Configuration
 
@@ -207,12 +208,15 @@ The `md` export writes one directory with one file for each scope, at `<kind>/<n
 starts with the scope key and the format version. Each record is a section `## #<pos>` with a YAML
 block of `id`, `at`, `ts`, `kind`, `review_at`, `refs`, and `supersedes`, and then the `body`. The
 `longform` of a record follows as a section `### longform`. A redacted record holds `[redacted]` and
-no `longform`. An `md` export holds no `node` event, because a rebuild gives the tree. See
+no `longform`. Its YAML also carries `redacted: true`. The importer reads that flag and stores empty content, not the display placeholder.
+An `md` export holds no `node` event, because a rebuild gives the tree. See
 [REQ-505](02-requirements.md) to [REQ-508](02-requirements.md).
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
-consistent by construction. A per-scope export also holds the top node of that scope. An import unions the events by `id`, a payload conflict keeps the later
-`at`, and the events of a redacted record arrive sanitized. See [0003 Store](../adr/0003-store.md).
+consistent by construction. A per-scope export also holds the top node of that scope. An import unions events by `id`.
+A sanitized copy takes priority. Equal sanitized status compares `at`, then the canonical JSON hash.
+The import collects erasure evidence from both sides and clears the merged dependencies before publication.
+See [0003 Store](../adr/0003-store.md) and [0008 Redaction](../adr/0008-redaction.md).
 
 | Item     | Value                                       |
 | -------- | ------------------------------------------- |
@@ -326,13 +330,19 @@ render, and its children take its place down to a clean node or a record. The re
 and one change costs `log2(N)+1` model calls at most. See [REQ-217](02-requirements.md) and
 [REQ-218](02-requirements.md).
 
-A `redact` runs in one transaction. It writes the sanitized form into the target. It clears the
-content of the nodes that cover the position and of their ancestors, and it deletes the FTS rows. See
-[REQ-219](02-requirements.md) to [REQ-222](02-requirements.md).
+A redaction clears the note, every historical amendment, and every historical node whose child dependencies reach cleared event ids.
+The clearing follows source ids across scopes and catalogs. Current numeric positions do not determine historical dependencies.
+A cleared parent summary does not clear its unaffected child notes or sibling subtree.
+The store invalidates affected node ids and excludes sanitized nodes from current candidates.
 
-The guarantee has four parts. The projection gives no content at once, and the rebuild gives new
-retellings. The transaction covers the disk. A prompt that the model already received stays out of
-reach. No other derivative holds the text, because the summarizer sees two children only. See [0008 Redaction](../adr/0008-redaction.md).
+Sanitized notes and amendments set their record to `deleted` and `content_cleared`, including imports without the original redact event.
+The store clears the index, projection content, and future view caches. A late writer answer fails the exact-input check.
+Already delivered session messages stay unchanged.
+
+Publication uses one exclusive store lock and an atomic source replacement. SQLite journals and the disposable JSONL index cannot accompany the sanitized source with stale content.
+A successful operation leaves no cleared content in store-owned named files or journals.
+A crash leaves either the earlier complete source or the complete sanitized source. Recovery runs before a read.
+See [0008 Redaction](../adr/0008-redaction.md) for the backend steps and [REQ-219](02-requirements.md) to [REQ-222](02-requirements.md).
 
 ## Fold
 
@@ -375,7 +385,8 @@ Each new imported node candidate also starts unusable. Reuse of new imported sum
 A repeated import with no new event or payload change writes no invalidation.
 
 A local change of summary input uses the same rule. Target selection and the write share one store lock or transaction.
-SQLite appends the data and invalidations in one transaction. JSONL flushes the invalidation lines before it appends the affected data.
+SQLite appends ordinary data changes and invalidations in one transaction. JSONL flushes invalidations before an ordinary append.
+An import that clears stored content uses the redaction publication protocol in [0008 Redaction](../adr/0008-redaction.md).
 A crash can leave an unnecessary rebuild, but it must not leave changed data with a usable stale summary.
 The projection derives invalidation from the log after a restart or a rebuild. A rebuilt node has a new id.
 See [0015 Node invalidation](../adr/0015-node-invalidation.md) and [REQ-510](02-requirements.md) to [REQ-513](02-requirements.md).

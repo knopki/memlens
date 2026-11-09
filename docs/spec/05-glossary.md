@@ -67,8 +67,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | target           | The field of an op that names the record or the proposal for a change. | S-016, S-101 |
 | kind             | The class of a note: `decision`, `preference`, `fact`, `task`, or `note`. | S-016, S-065                                 |
 | `live`           | The state of a record after a write with no proposal. | S-016, S-101 |
-| `deleted`        | The state of a record after a `redact` event. | S-016, S-101 |
-| sanitized form   | The form of a redacted event. It keeps the `id` and has `redacted: true`, an empty `body` or `summary`, and a null `longform`.                                                                         | S-016                                        |
+| `deleted`        | The state after redaction, including evidence from a sanitized note or amendment. | S-016, S-101 |
+| sanitized form | A content event with `redacted: true` and its structural fields intact. Notes have empty body and null longform. Amendments clear present content fields. Nodes have empty summary and zero chars. | S-016, S-140, S-141 |
 | at               | The time of an event in the log.                                                                                                                                                          | S-017                                        |
 | ts               | The time of the write of a note.                                                                                                                                                          | S-017                                        |
 | idem             | The idempotency key of a write. A second write with one value adds nothing.                                                                                                               | S-018                                        |
