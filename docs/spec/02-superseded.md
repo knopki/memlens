@@ -155,3 +155,5 @@ live.
 | REQ-470 | The field `input_rev` holds the revision of the two children at the build. | FR | S-100, S-121 | [tree.d.ts](tree.d.ts) |
 | REQ-478 | A node is `clean` when the revision of its two children equals `input_rev`. | FR | S-121 | [tree.d.ts](tree.d.ts) |
 | REQ-481 | A `node` event touches its own range. | FR | S-121 | [tree.d.ts](tree.d.ts) |
+| REQ-206 | At a session start a part above 1.5 times its budget because of nodes that are not built starts a build. | FR | S-051, S-067 | REQ-204 |
+| REQ-215 | The deadline of the build at a session start is 10 seconds. | FR | S-052 | REQ-204 |

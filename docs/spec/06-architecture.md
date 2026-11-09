@@ -220,9 +220,9 @@ the last position never merges.
 A pair merges though the node of its range is not built, and a temporary line takes the place of the
 two lines. So the part always reaches its budget. When no pair merges and the part is still above its
 budget, the oldest lines leave the part.
-At a session start the plugin starts a build when a part is above 1.5 times its budget. The build has
-a deadline of 10 seconds, and the render waits for it. The render does not wait for the queue of the
-compaction.
+
+The render never waits for a job. A line stays temporary until the writer builds its node, so the
+slice fits its budget at once.
 
 An open of a note gives the note and its `longform`. An open of a node gives the two children of that
 node, as the slice renders them. A range that matches no built node gives one line: the level follows
@@ -309,10 +309,9 @@ A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 s
 seconds. A job records `input_rev` of its two children, and the store accepts the result only when the
 revision of the children still equals it.
 
-The render at a session start gives the view when the queue is not empty. A position with no built parent gives its
-raw records. When a part of the view at a session start is above 1.5 times its budget, the store builds the
-unbuilt nodes. The deadline of the build is 10 seconds, and the render gives the view at the deadline.
-The writer takes the node with the highest `due` first, and a node waits for its children.
+The writer starts a job when the queue holds `writer.batch` dirty nodes, when no event arrives for
+`store.idle` seconds, and at `memlens compact`. It takes the dirty node with the highest `due` first,
+and a node waits for its two children.
 
 The four texts of the calls are in [09-prompts.md](09-prompts.md). See [0004 Tree and writer](../adr/0004-tree-writer.md),
 [REQ-200](02-requirements.md) to [REQ-254](02-requirements.md), and
