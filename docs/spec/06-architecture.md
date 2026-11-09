@@ -55,7 +55,7 @@ op. A `redact` clears the content of its target.
 | `redact`  | `target`, `reason`                                                                                                                                        |
 | `review`  | `target`, `review_at`                                                                                                                                     |
 | `dismiss` | `target`, `reason`                                                                                                                                        |
-| `node`    | `level`, `start`, `child_a`, `child_b`, `input_gen`, `summary`, `chars`, `truncated`, `ts_from`, `ts_to`                                                  |
+| `node`    | `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`, `chars`, `truncated`, `ts_from`, `ts_to`                                                  |
 
 A write op carries the optional field `proposed`, and the projection ignores a proposed event. A
 decision carries the field `accepts`, the id of the proposal. See [0012 Proposals](../adr/0012-proposals.md).
@@ -78,7 +78,7 @@ The projection builds the records in two passes over the events ordered by `(at,
 one record for each `note` event and copies its payload. The record takes `recorded_at` from `at`. A
 `node` event changes no record, and a proposed event changes no record and takes no `pos`. The
 current node of a key is the latest `node` event for that key.
-The `gen` of a block is the `id` of the latest event that affects it. See [REQ-113](02-requirements.md)
+The `rev` of a range is the order of the latest event that touches it. See [REQ-113](02-requirements.md)
 and [REQ-462](02-requirements.md).
 Pass 2 applies the operations in the same order. The order of arrival and a local `pos` change
 nothing. The effects of the operations, the state order, and the supersede rule are in
@@ -253,8 +253,8 @@ from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requ
 
 A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
 `start` is a multiple of `2^L`. A `node` event holds `summary`, `ts_from`, `ts_to`, `chars`,
-`input_gen`, and `truncated`, and its `at` is the time of the build. The state `built` or `dirty`
-follows from `input_gen`, and the store keeps no field for it. The tree has no depth limit, and it needs no dense prefix: a
+`input_rev`, and `truncated`, and its `at` is the time of the build. The state follows from
+`input_rev`, and the store keeps no field for it. The tree has no depth limit, and it needs no dense prefix: a
 position with no live record stays empty. See [0004 Tree and writer](../adr/0004-tree-writer.md) and
 [REQ-122](02-requirements.md) to [REQ-133](02-requirements.md).
 
@@ -300,8 +300,8 @@ The writer runs outside the agent loop, from a queue of jobs in the store. A run
 one. A merge gives the model the two children only. See [0004 Tree and writer](../adr/0004-tree-writer.md).
 
 A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300
-seconds. A job records the `input_gen` of its children, and the store accepts the result only when
-`gen` matches that record.
+seconds. A job records `input_rev` of its two children, and the store accepts the result only when the
+revision of the children still equals it.
 
 The render at a session start gives the view when the queue is not empty. A position with no built parent gives its
 raw records. When a part of the view at a session start is above 1.5 times its budget, the store builds the

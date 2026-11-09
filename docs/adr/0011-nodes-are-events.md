@@ -10,11 +10,11 @@ node out of the log, so a rebuild had no event to travel. A session is not a sou
 
 ## Decision
 
-A node is a `node` event. It holds `level`, `start`, `child_a`, `child_b`, `input_gen`, `summary`,
+A node is a `node` event. It holds `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`,
 `bytes`, `truncated`, `ts_from`, and `ts_to`. Its `at` is the time of the build. The current node of
-a key is the latest `node` event for that key in the projection order. A node is dirty when its
-`input_gen` does not match the `gen` of its children, so the store keeps no state field. The queue of
-the writer is the set of dirty nodes. The catalog is a tree of the same nodes in the scope
+a key is the latest `node` event for that key in the projection order. A node is not clean when its
+`input_rev` does not equal the revision of its two children, so the store keeps no state field. The
+queue of the writer is the set of nodes that are not clean. The catalog is a tree of the same nodes in the scope
 `__catalog__:<profile>`. One position holds one scope, and the content of the position is the top node
 of the tree of that scope. The leaves of the catalog are these top nodes. The direction line is the
 line of that top node. See [S-104](../statements.md#s-104).

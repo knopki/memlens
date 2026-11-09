@@ -107,9 +107,9 @@ export interface MemoryOpenLine {
 	addr: Address;
 	ts_from: string;
 	ts_to: string;
-	/** The body of a note, the summary of a node, or the temporary text of a node that is not built. */
+	/** The body of a note or the summary of a clean node. A temporary line gives no text. */
 	text: string;
-	/** False when the line is temporary, because the node is not built. */
+	/** False when the node of the line is not clean, and the line is temporary. */
 	built: boolean;
 	chars: number;
 }

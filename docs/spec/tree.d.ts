@@ -144,7 +144,7 @@ export declare function isClean(tree: Tree, node: NodeEvent): boolean;
  * record, because the pair of the last position never merges. When no pair can merge and the count
  * is still above the budget, the oldest lines leave the slice.
  *
- * The budget counts lines, not characters. See [config.d.ts](../spec/config.d.ts).
+ * The budget counts lines, not characters. See [config.d.ts](config.d.ts).
  */
 export declare function slice(tree: Tree, budget: Lines): readonly SliceLine[];
 
