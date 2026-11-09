@@ -105,8 +105,10 @@ export interface NodeEvent extends EventBase {
 	readonly op: "node";
 	readonly level: number;
 	readonly start: number;
-	readonly child_a: Ulid;
-	readonly child_b: Ulid;
+	/** Null means that the left half has no live record. */
+	readonly child_a: Ulid | null;
+	/** Null means that the right half has no live record. */
+	readonly child_b: Ulid | null;
 	/** The revision of the two children at the build. */
 	readonly input_rev: `${string}|${string}` | null;
 	readonly summary: string;

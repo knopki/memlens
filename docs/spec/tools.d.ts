@@ -116,7 +116,7 @@ export interface MemoryOpenLine {
 
 export interface MemoryOpenChildren {
 	kind: "children";
-	/** The children of the node: two, or one when a position is empty. */
+	/** The non-empty children, at most two. An empty range gives no child line. */
 	children: MemoryOpenLine[];
 }
 

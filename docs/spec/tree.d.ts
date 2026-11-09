@@ -9,7 +9,7 @@
  *  - NOT: the log, the store, the writer queue, and the tools.
  * @invariants
  *  - A node covers `2^level` positions from `start`, and level 1 or more.
- *  - A node is built when its two children sit at the two halves of its range.
+ *  - Each child reference matches its half. A null reference denotes only an empty half.
  *  - A clean node is built, has clean children, and has no invalidation.
  * @keywords tree, node, pos, address, revision, slice, frontier
  * #endregion moduleContract
@@ -33,15 +33,16 @@ export type Lines = number;
 /**
  * A range of positions under one line of the view.
  *
- * A range of level 1 holds two records, and a range of level `l` holds `2^l` records. The address
- * of a range is `start..start + 2^level - 1`. A record has the address `pos`.
+ * A range of level 0 holds one position. A range of level `l` holds `2^l` positions, which can be empty.
+ * Only a node requires a level of 1 or more. A record has the address `pos`.
+ * The address of a larger range is `start..start + 2^level - 1`.
  */
 export interface Range {
 	readonly start: Pos;
 	readonly level: Level;
 }
 
-/** The order of the latest event that touches a range. An empty range gives null. */
+/** The latest input order of a non-empty range. A range with no live record gives null. */
 export type Rev = Order | null;
 
 /** The current record from the projection, not the original note event. */
@@ -63,10 +64,10 @@ export interface NodeEvent {
 	readonly id: Id;
 	readonly order: Order;
 	readonly range: Range;
-	/** The event id of the record or the node at the left half. */
-	readonly child_a: Id;
-	/** The event id of the record or the node at the right half. */
-	readonly child_b: Id;
+	/** The left child id, or null when that half has no live record. */
+	readonly child_a: Id | null;
+	/** The right child id, or null when that half has no live record. */
+	readonly child_b: Id | null;
 	/** The revision of the two children at the time of the build. */
 	readonly input_rev: Rev;
 	readonly summary: string;
@@ -80,6 +81,8 @@ export interface NodeEvent {
 
 /** The tree input from the projection of one scope. */
 export interface Tree {
+	/** One plus the greatest assigned position. Hidden and deleted records still count. */
+	readonly total: Pos;
 	readonly notes: readonly TreeRecord[];
 	readonly nodes: readonly NodeEvent[];
 	/** The target ids of invalidate events. The projection derives this set from the log. */
@@ -114,13 +117,17 @@ export type SliceLine =
 			readonly to: string;
 	  };
 
+/** The root starts at zero with level max(1, ceil(log2(total))). A total of zero gives null. */
+export declare function topRange(tree: Tree): Range | null;
+
 /** The current node is the latest node of the range whose id has no invalidation. */
 export declare function currentNode(tree: Tree, range: Range): NodeEvent | null;
 
 /**
  * The revision of a range: the latest order of the events that touch it.
  *
- * A record carries the latest order of its mutations. A node touches its own range and each range above it.
+ * A live record carries the latest order of its mutations. A current node contributes its order within a non-empty range.
+ * A range with no live record gives null, even when hidden records remain at its positions.
  * The maximum is not proof of an unchanged input after an import. The invalidation check is also necessary.
  */
 export declare function rev(tree: Tree, range: Range): Rev;
@@ -128,16 +135,17 @@ export declare function rev(tree: Tree, range: Range): Rev;
 /**
  * Tell whether a node is built.
  *
- * A node is built when `child_a` is the event at the left half and `child_b` is the event at the
- * right half. The check reads the `pos` of each child, so an import that moves the positions makes
- * the node not built.
+ * Each non-null child id must name the live record or node at that exact half of the range.
+ * A record has the expected position. A child node has the expected start and level.
+ * A null child is valid only when its half has no live record, including padding beyond `total`.
+ * A missing summary of a non-empty half does not satisfy the check. A node with two empty halves is not built.
  */
 export declare function isBuilt(tree: Tree, node: NodeEvent): boolean;
 
 /**
  * Tell whether a node is clean.
  *
- * A clean node is built and has no invalidation. Each child node must also be clean.
+ * A clean node is built and has no invalidation. Each non-empty child node must also be clean.
  * The revision of its two children must equal `input_rev`. This equality alone does not prove freshness.
  * A change of summary input invalidates every affected summary candidate before the next read.
  */
@@ -165,13 +173,18 @@ export type BuildChild =
 /** A job copies these values. It does not retain mutable references to the projection. */
 export interface BuildInput {
 	readonly range: Range;
-	readonly children: readonly [BuildChild, BuildChild];
+	/** Null means an empty half. At least one half must be non-empty. */
+	readonly children: readonly [BuildChild | null, BuildChild | null];
 }
 
-/** Give the exact input of two live records or clean nodes. Another pair gives null. */
+/**
+ * Copy live records or clean nodes, with null children for empty halves.
+ * A dirty non-empty half or two empty halves make this function return null.
+ * One non-empty child copies its text and dates without a model call.
+ */
 export declare function buildInput(tree: Tree, range: Range): BuildInput | null;
 
-/** Compare both current children with the copied input. A hidden record or dirty node fails the check. */
+/** Compare both children, including empty halves. A changed live state or a dirty non-empty child fails the check. */
 export declare function inputUnchanged(tree: Tree, input: BuildInput): boolean;
 
 /**
@@ -181,9 +194,10 @@ export declare function inputUnchanged(tree: Tree, input: BuildInput): boolean;
  * lines is not above the budget. Among the pairs, it takes one that keeps the levels of the two
  * neighbours within one step, then the pair with the greatest `due`, then the lowest level, then
  * the lowest start. A pair merges though its node
- * is not built, so a temporary line takes the place of the two lines. The last line is always a
- * record, because the pair of the last position never merges. When no pair can merge and the count
- * is still above the budget, the oldest lines leave the slice.
+ * is not built, so a temporary line takes the place of the two lines. Empty ranges do not render or count against the budget.
+ * A pair that covers the greatest live position never merges, so a non-empty slice ends with that record.
+ * When no pair can merge and the count is still above the budget, the oldest lines leave the slice.
+ * A scope with no live record gives an empty slice. Dates come from the first and last live records in each range.
  *
  * The budget counts lines, not characters. See [config.d.ts](config.d.ts).
  */

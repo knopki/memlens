@@ -10,7 +10,13 @@ the writer has not rebuilt yet.
 
 ## Decision
 
-A node is `built` when the event of each child sits at its half of the range.
+The root range starts at zero and covers `total` assigned positions. Its level is `max(1, ceil(log2(total)))` when `total` is positive.
+A total of zero gives no root range. Hidden and deleted records keep their positions and count towards `total`.
+
+A node is `built` when each non-null child names the live record or node at its exact half.
+A null child means that the half has no live record. A missing summary of a non-empty half is not an empty child.
+Two empty halves need no node event. With one non-empty half, the parent copies its text and dates without a model call.
+This rule also builds a partial root, whose other half can extend beyond `total`.
 A clean node is built, has no invalidation, and has clean child nodes. Its child revision must equal `input_rev`.
 An import can change the input without a change of the maximum order. The revision equality alone does not prove freshness.
 [0015 Node invalidation](0015-node-invalidation.md) defines durable invalidation and the writer check.
@@ -18,8 +24,9 @@ An import can change the input without a change of the maximum order. The revisi
 The slice is the frontier. The fold merges one pair at a time, the pair with the highest `due`, and it
 keeps the level steps of the neighbours at one. It stops as soon as the count of lines is not above
 the budget. A pair merges though its node is not built, and a temporary line takes the place of the
-two lines. A temporary line holds the period from the first record to the last record of its range,
-and no text. The last line is a record. When no pair merges and the slice is above its budget, the
+two lines. Empty ranges do not render or count against the budget.
+A temporary line holds the period from its first live record to its last live record, and no text.
+A non-empty slice ends with the greatest live position as a record. No merge covers that position. When no pair merges and the slice is above its budget, the
 oldest lines leave the slice. See [tree.d.ts](../spec/tree.d.ts).
 
 ## Alternatives

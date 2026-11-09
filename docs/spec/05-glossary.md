@@ -83,7 +83,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | pass             | One walk over the ordered events in the projection.                                                                                                                                       | S-020                                        |
 | catalog scope    | The scope `__catalog__:<profile>`. It holds the nodes of one profile.                                                                                                                     | S-023                                        |
 | dirty            | The state of a node that needs a build: it is not `built` or it is not `clean`.                                                                                                           | S-054, S-121, S-123                          |
-| built            | The state of a node whose two children sit at the two halves of its range.                                                                                                                | S-121, S-123                                 |
+| built | A node whose child references match its two halves. Null matches only an empty half. | S-121, S-123, S-137 |
 | clean | A built node with clean child nodes, matching `input_rev`, and no invalidation. | S-121, S-135 |
 | [redacted]       | The placeholder of the console and the view for a sanitized record. An event holds no such text.                                                                                          | S-023                                        |
 | node             | One summary of the tree, recorded by a `node` event. It covers `2^level` positions for a level of 1 or more.                                                                                                          | S-025                                        |
@@ -92,7 +92,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | summary          | The text of one node. The target size is 512 characters and the limit is 640 characters.                                                                                                            | S-025                                        |
 | input_rev        | The revision of the two children of a node at the build.                                                                                                                                  | S-025, S-100, S-121                          |
 | leaf             | One record at the bottom of the tree. The tree holds no node of level 0.                                                                                                                  | S-028                                        |
-| child            | A node or a record below a node. A change of a child makes the parent dirty.                                                                                                              | S-030                                        |
+| child | A node or live record in one half of a parent range. Null denotes an empty half. A change makes the parent dirty. | S-030, S-137 |
 | budget           | The line limits of one profile: `here` and `directions`. The two are independent.                                                                                                | S-036, S-037, S-069                          |
 | subagent mode    | The access of a subagent: `propose` writes and reports, `read` reads only, `off` has no tool and no slice.                                                                                | S-036, S-037                                 |
 | here             | The tree slice of the active scope. The budget `here` limits this part.                                                                                                                | S-037                                        |
@@ -100,7 +100,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | view             | The tiling of the frontier that the agent reads. Its cache key is `epoch`.                                                                                                                | S-040                                        |
 | fold             | The pass that merges built pairs until the view fits under `high`. It builds no node.                                                                                                     | S-040, S-041                                 |
 | line             | One item of the view: a record, a node, or a temporary line.                                                                                                                              | S-121, S-124                                 |
-| revision         | The value that `rev` gives for a range: the order of the latest event that touches it.                                                                                                    | S-121, S-124                                 |
+| revision | The latest input order within a non-empty range. A range with no live record gives null. | S-121, S-124, S-137 |
 | tile             | One range of the view. A tile is a node or a record.                                                                                                                                      | S-040                                        |
 | range            | The positions under one line: `2^level` positions from `start`.                                                                                                                           | S-121                                        |
 | due              | The priority of a pair: `(total - (start + 2^(level+1) - 1)) / 2^level`. The fold and the rebuild use it.                                                                                 | S-040, S-041                                 |
@@ -139,7 +139,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | memory_note | The tool that saves one note. Its parameters are `body`, `longform`, `scope`, `kind`, `supersedes`, and `reviewIn`. | S-067, S-070 |
 | memory_find      | The tool that searches the notes by words and gives the matching lines.                                                                                                                   | S-067                                        |
 | memory_forget | The tool that hides records from the map. It takes `targets`, `scope`, and `reason`. | S-067, S-070 |
-| memory_open      | The tool that gives a note and its `longform`, or the two child lines of a node.                                                                                                          | S-067                                        |
+| memory_open | The tool that gives a note and its longform, or the non-empty child lines of a node. | S-067, S-137 |
 | memory_review | The tool that gives the records due for review and sets a new review date. It takes `scope`, `reviewed`, and `reviewIn`. | S-070 |
 | memory_scopes | The tool that lists the visible scopes. | S-070, S-112 |
 | visible scope | A scope in the `scopes` list of the profile. A scope outside the list is invisible. | S-070 |
@@ -157,3 +157,5 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | common prefix | The initial positions that have the same records and content before and after an import. | S-133 |
 | build input | The exact child values that a job copies before its model call. The store compares them again before the append. | S-135 |
 | replay cursor | The local position through which the projection processed the log. It is not an event order or a note position. | S-136 |
+| total | One plus the greatest assigned position, or zero when no position exists. Records in the `hidden` and `deleted` states keep their positions. | S-137 |
+| root range | The aligned range that starts at zero and covers every assigned position. Empty padding completes its power-of-two width. | S-137 |

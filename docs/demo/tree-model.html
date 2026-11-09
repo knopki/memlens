@@ -131,9 +131,29 @@ const MODEL = (() => {
 
   function noteAt(pos) { return state.notes[pos] || null; }
 
+  // #region FUNC_liveNoteAt
+  /** @purpose Read the live record at a position, and treat an absent state as live. */
+  function liveNoteAt(pos) {
+    const note = noteAt(pos);
+    return note && (note.state ?? "live") === "live" ? note : null;
+  }
+  // #endregion FUNC_liveNoteAt
+
+  // #region FUNC_hasLive
+  /** @purpose Tell whether a range holds at least one live record. */
+  function hasLive(start, level = 0) {
+    const end = Math.min(state.notes.length, start + 2 ** level);
+    for (let pos = start; pos < end; pos += 1) {
+      if (liveNoteAt(pos)) return true;
+    }
+    return false;
+  }
+  // #endregion FUNC_hasLive
+
   // #region FUNC_isInvalidated
   /** @purpose Exclude a node whose id appears in an invalidation event. */
   function isInvalidated(node) {
+    if (!node) return false;
     return state.invalidations.some((event) => event.targets.includes(node.id));
   }
   // #endregion FUNC_isInvalidated
@@ -184,12 +204,10 @@ const MODEL = (() => {
     state.notes.sort((a, b) => (a.created < b.created ? -1 : a.created > b.created ? 1 : 0));
   }
 
-  /** The order of the latest event that touches the range, or null for an empty range. */
+  /** The order of the latest event that touches a live range, or null for an empty range. */
   function rev(start, level) {
-    if (level === 0) {
-      const note = noteAt(start);
-      return note ? note.order : null;
-    }
+    if (!hasLive(start, level)) return null;
+    if (level === 0) return liveNoteAt(start).order;
     const half = 2 ** (level - 1);
     let best = maxOrder(rev(start, level - 1), rev(start + half, level - 1));
     const node = nodeAt(start, level);
@@ -200,35 +218,45 @@ const MODEL = (() => {
   /** The id of the line that the child address shows now. */
   function occupant(start, level) {
     if (level === 0) {
-      const note = noteAt(start);
+      const note = liveNoteAt(start);
       return note ? note.id : null;
     }
     const node = nodeAt(start, level);
     return node && isValid(node) ? node.id : null;
   }
 
-  /** The children must sit exactly at the two halves of the address. */
+  // #region FUNC_isValid
+  /** @purpose Accept a null child only when its half has no live record. */
   function isValid(node) {
+    if (!node || !hasLive(node.start, node.level)) return false;
     const half = 2 ** (node.level - 1);
-    return occupant(node.start, node.level - 1) === node.child_a
-        && occupant(node.start + half, node.level - 1) === node.child_b;
+    const matches = (start, level, ref) => {
+      if (!hasLive(start, level)) return ref === null;
+      return ref !== null && occupant(start, level) === ref;
+    };
+    return matches(node.start, node.level - 1, node.child_a)
+        && matches(node.start + half, node.level - 1, node.child_b);
   }
+  // #endregion FUNC_isValid
 
-  /** A clean node is valid, is not invalidated, and has two clean children. */
+  /** A clean node is valid, is not invalidated, and has clean live children. */
   function isClean(node) {
-    if (isInvalidated(node) || !isValid(node)) return false;
+    if (!node || isInvalidated(node) || !isValid(node)) return false;
     const half = 2 ** (node.level - 1);
     if (node.level > 1) {
-      const left = nodeAt(node.start, node.level - 1);
-      const right = nodeAt(node.start + half, node.level - 1);
-      if (left === null || right === null || !isClean(left) || !isClean(right)) return false;
+      for (const childStart of [node.start, node.start + half]) {
+        if (!hasLive(childStart, node.level - 1)) continue;
+        const child = nodeAt(childStart, node.level - 1);
+        if (child === null || !isClean(child)) return false;
+      }
     }
     const now = maxOrder(rev(node.start, node.level - 1), rev(node.start + half, node.level - 1));
     return now === node.input_rev;
   }
 
   function topLevel() {
-    const total = Math.max(1, state.notes.length);
+    const total = state.notes.length;
+    if (total === 0) return null;
     let level = 1;
     while (2 ** level < total) level += 1;
     return level;
@@ -255,14 +283,17 @@ const MODEL = (() => {
   }
 
   // #region FUNC_buildInput
-  /** @purpose Copy the exact clean child values before a writer call. */
+  /** @purpose Copy the exact clean child values, or give null for an empty or waiting pair. */
   function buildInput(start, level) {
     const half = 2 ** (level - 1);
     const children = [];
     for (const childStart of [start, start + half]) {
+      if (!hasLive(childStart, level - 1)) {
+        children.push(null);
+        continue;
+      }
       if (level === 1) {
-        const note = noteAt(childStart);
-        if (!note) return null;
+        const note = liveNoteAt(childStart);
         children.push({ kind: "record", id: note.id, pos: childStart, body: note.body,
           preview: (note.longform || "").slice(0, 1024), ts: labelOf(note.atNum) });
       } else {
@@ -273,33 +304,49 @@ const MODEL = (() => {
           summary: node.summary, ts_from: period.from, ts_to: period.to });
       }
     }
+    if (children.every((child) => child === null)) return null;
     return { range: { start, level }, children };
   }
   // #endregion FUNC_buildInput
 
   // #region FUNC_commitBuild
-  /** @purpose Reject a stale result before the synchronous append of the demo model. */
+  /** @purpose Reject a stale result, then append an immutable node with exact child ids. */
   function commitBuild(input, summary) {
-    if (!input) return false;
+    if (!input?.range || input.children.length !== 2) return false;
     const { start, level } = input.range;
-    if (JSON.stringify(buildInput(start, level)) !== JSON.stringify(input)) return false;
+    const current = buildInput(start, level);
+    if (current === null || JSON.stringify(current) !== JSON.stringify(input)) return false;
+    const nonempty = input.children.filter((child) => child !== null);
+    if (nonempty.length === 0) return false;
+    const finalSummary = nonempty.length === 1
+      ? (nonempty[0].kind === "record" ? nonempty[0].body : nonempty[0].summary)
+      : summary;
+    const period = nonempty.length === 1
+      ? (nonempty[0].kind === "record"
+        ? { from: nonempty[0].ts, to: nonempty[0].ts }
+        : { from: nonempty[0].ts_from, to: nonempty[0].ts_to })
+      : periodOf({ start, level });
     const id = newId();
     const at = nextAt();
     const half = 2 ** (level - 1);
     state.nodes.push({ id, atNum: at, start, level,
-      child_a: input.children[0].id, child_b: input.children[1].id,
+      child_a: input.children[0]?.id ?? null, child_b: input.children[1]?.id ?? null,
       input_rev: maxOrder(rev(start, level - 1), rev(start + half, level - 1)),
-      order: orderOf(at, id), summary });
+      order: orderOf(at, id), summary: finalSummary, ts_from: period.from, ts_to: period.to });
     return true;
   }
   // #endregion FUNC_commitBuild
 
-  /** Build each range bottom-up where the node is missing, invalid, or dirty. */
+  // #region FUNC_rebuild
+  /** @purpose Build each aligned range bottom-up, including a partial top range. */
   function rebuild() {
+    const total = state.notes.length;
+    const top = topLevel();
     const built = [];
-    for (let level = 1; level <= topLevel(); level += 1) {
+    if (top === null) return built;
+    for (let level = 1; level <= top; level += 1) {
       const width = 2 ** level;
-      for (let start = 0; start + width <= state.notes.length; start += width) {
+      for (let start = 0; start < total; start += width) {
         const node = nodeAt(start, level);
         if (node && isValid(node) && isClean(node)) continue;
         const input = buildInput(start, level);
@@ -310,30 +357,46 @@ const MODEL = (() => {
     }
     return built;
   }
+  // #endregion FUNC_rebuild
 
-  /** The period of a range: the first record and the last record of it. */
+  /** The period of a range: the first and the last live record in it. */
   function periodOf(block) {
-    const first = noteAt(block.start);
-    const last = noteAt(block.start + 2 ** block.level - 1);
+    const end = Math.min(state.notes.length, block.start + 2 ** block.level);
+    let first = null;
+    let last = null;
+    for (let pos = block.start; pos < end; pos += 1) {
+      const note = liveNoteAt(pos);
+      if (!note) continue;
+      if (first === null) first = note;
+      last = note;
+    }
     return { from: first ? labelOf(first.atNum) : "", to: last ? labelOf(last.atNum) : "" };
   }
 
   /** A clean node gives its summary; any other node gives a temporary line with no text. */
   function builtAt(block) {
+    if (!hasLive(block.start, block.level)) return false;
     if (block.level === 0) return true;
     const node = nodeAt(block.start, block.level);
     return node !== null && isValid(node) && isClean(node);
   }
 
+  // #region FUNC_frontier
   /**
-   * The slice is the frontier. The fold merges one pair at a time and stops as soon as the count
-   * fits the budget. A merge keeps the levels of the neighbours within one step. The last line is
-   * always a leaf. When no pair can merge, the oldest lines leave the view.
+   * @purpose Tile the assigned geometry with empty tiles, and render only live ranges.
+   * The budget counts live lines. A merge never covers the highest live position.
    */
   function frontier(budget) {
     const total = state.notes.length;
-    const blocks = state.notes.map((note, pos) => ({ start: pos, level: 0 }));
-    while (blocks.length > budget) {
+    if (total === 0) return [];
+    let highestLive = -1;
+    for (let pos = 0; pos < total; pos += 1) {
+      if (liveNoteAt(pos)) highestLive = pos;
+    }
+    if (highestLive < 0) return [];
+    const blocks = Array.from({ length: total }, (_, pos) => ({ start: pos, level: 0 }));
+    const liveCount = () => blocks.filter((block) => hasLive(block.start, block.level)).length;
+    while (liveCount() > budget) {
       const options = [];
       for (let i = 0; i + 1 < blocks.length; i += 1) {
         const left = blocks[i];
@@ -341,9 +404,11 @@ const MODEL = (() => {
         if (left.level !== right.level) continue;
         if (right.start !== left.start + 2 ** left.level) continue;
         const level = left.level + 1;
-        if (left.start % 2 ** level !== 0) continue;
-        if (left.start + 2 ** level === total) continue;
-        const due = (total - (left.start + 2 ** level - 1)) / 2 ** left.level;
+        const width = 2 ** level;
+        if (left.start % width !== 0) continue;
+        if (left.start + width > total) continue;
+        if (highestLive >= left.start && highestLive < left.start + width) continue;
+        const due = (total - (left.start + width - 1)) / 2 ** left.level;
         const leftLevel = i > 0 ? blocks[i - 1].level : null;
         const rightLevel = i + 2 < blocks.length ? blocks[i + 2].level : null;
         const jump = (leftLevel === null ? 0 : Math.max(0, level - 1 - leftLevel))
@@ -355,16 +420,19 @@ const MODEL = (() => {
       const pick = options[0];
       blocks.splice(pick.index, 2, { start: pick.start, level: pick.level });
     }
-    while (blocks.length > 1 && blocks.length > budget) blocks.shift();
-    return blocks;
+    const visible = blocks.filter((block) => hasLive(block.start, block.level));
+    while (visible.length > 1 && visible.length > budget) visible.shift();
+    return visible;
   }
+  // #endregion FUNC_frontier
 
   function slice(budget = state.budget) {
     return frontier(budget).map((block) => {
       const built = builtAt(block);
       const period = periodOf(block);
+      const note = block.level === 0 ? liveNoteAt(block.start) : null;
       const text = block.level === 0
-        ? noteAt(block.start).body
+        ? (note ? note.body : "")
         : built ? nodeAt(block.start, block.level).summary : "";
       return { start: block.start, level: block.level, addr: addrOf(block),
         from: period.from, to: period.to, text, built };
@@ -389,7 +457,7 @@ const MODEL = (() => {
   function put(text, at) {
     const id = newId();
     const created = orderOf(at, id);
-    state.notes.push({ id, atNum: at, created, order: created, body: text });
+    state.notes.push({ id, atNum: at, created, order: created, body: text, state: "live" });
     renumber();
     return id;
   }
@@ -435,6 +503,18 @@ const MODEL = (() => {
     return `Правка записи ${pos}: порядок события вырос, адрес прежний.`;
   }
   // #endregion FUNC_amend
+
+  // #region FUNC_hide
+  /** @purpose Hide a record at its position, and invalidate each node above the position. */
+  function hide(pos) {
+    const note = noteAt(pos);
+    if (!note) return `Нет записи на позиции ${pos}.`;
+    if ((note.state ?? "live") !== "live") return `Запись ${pos} уже скрыта.`;
+    invalidateNotePositions([pos]);
+    note.state = "hidden";
+    return `Запись ${pos} скрыта: позиция сохранена.`;
+  }
+  // #endregion FUNC_hide
 
   // #region FUNC_importAmend
   /**
@@ -536,8 +616,8 @@ const MODEL = (() => {
   }
 
   return { state, rev, isValid, isClean, isInvalidated, slice, frontier, problems, rebuild, seed, add, addMany,
-           amend, importAmend, insertAt, mergeSecond, describe, serialize, restore, topLevel, nodeAt, noteAt,
-           periodOf, builtAt, buildInput, commitBuild };
+           amend, hide, importAmend, insertAt, mergeSecond, describe, serialize, restore, topLevel, nodeAt,
+           noteAt, liveNoteAt, hasLive, invalidateNotePositions, periodOf, builtAt, buildInput, commitBuild };
 })();
 // #endregion model
 
@@ -545,17 +625,19 @@ const MODEL = (() => {
 const $ = (id) => document.getElementById(id);
 
 function renderTree(used) {
-  const total = MODEL.state.notes.length || 1;
+  const total = MODEL.state.notes.length;
   const tree = $("tree");
   tree.innerHTML = "";
   const grid = document.createElement("div");
   grid.className = "grid";
-  grid.style.setProperty("--cols", String(total));
-  for (let level = MODEL.topLevel(); level >= 1; level -= 1) {
+  grid.style.setProperty("--cols", String(Math.max(1, total)));
+  const top = MODEL.topLevel();
+  for (let level = top ?? 0; level >= 1; level -= 1) {
     const row = document.createElement("div");
     row.className = "row";
     const width = 2 ** level;
-    for (let start = 0; start < MODEL.state.notes.length; start += width) {
+    for (let start = 0; start < total; start += width) {
+      if (!MODEL.hasLive(start, level)) continue;
       const node = MODEL.nodeAt(start, level);
       const el = document.createElement("div");
       el.className = "blk";
@@ -575,6 +657,13 @@ function renderTree(used) {
   const notes = document.createElement("div");
   notes.className = "notes";
   MODEL.state.notes.forEach((note, pos) => {
+    if (!MODEL.liveNoteAt(pos)) {
+      const gap = document.createElement("div");
+      gap.className = "note";
+      gap.style.visibility = "hidden";
+      notes.appendChild(gap);
+      return;
+    }
     const el = document.createElement("div");
     el.className = "note";
     if (used.has(`${pos}:0`)) el.classList.add("used");

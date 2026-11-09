@@ -62,7 +62,8 @@ Only complete log lines enter the projection. Recovery handles an incomplete fin
 ### Writer
 
 A local change of summary input uses the same invalidation rule and publication order.
-The writer takes two live records or clean nodes. A job copies their exact values as `BuildInput`.
+The writer takes live records or clean nodes and represents an empty half as null.
+A job copies both halves as `BuildInput`. One empty half needs no model call, and two empty halves need no job.
 The copy holds child ids, positions, text, dates, and the document previews that the call reads.
 It holds no mutable reference to a record. It needs no persistent copy of the input.
 

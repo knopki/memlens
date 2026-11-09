@@ -44,6 +44,17 @@ const problems = () => MODEL.problems();
 /** The last record and the count of the notes. */
 const notes = () => MODEL.state.notes.length;
 
+/** @purpose Give the model a dense prefix of the seed records. */
+function seedPrefix(count) {
+	MODEL.seed();
+	const data = JSON.parse(MODEL.serialize());
+	data.notes = data.notes.slice(0, count);
+	data.nodes = [];
+	data.invalidations = [];
+	data.imports = [];
+	MODEL.restore(data);
+}
+
 // 1. A frontier covers its range with no gap, and the last line is a record.
 MODEL.seed();
 for (let budget = 2; budget <= 20; budget += 1) {
@@ -294,6 +305,239 @@ check(
 check(
 	"two writers can commit unchanged inputs",
 	MODEL.commitBuild(freshInput, "also fresh") === true,
+);
+
+// 14. One note gives a level-1 root, and the root copies the record text and period.
+seedPrefix(1);
+check("one note gives a level-1 top", MODEL.topLevel() === 1);
+const oneInput = MODEL.buildInput(0, 1);
+check(
+	"one note leaves the empty child null",
+	oneInput !== null &&
+		oneInput.children[0] !== null &&
+		oneInput.children[1] === null,
+);
+MODEL.rebuild();
+const oneRoot = MODEL.nodeAt(0, 1);
+const oneNote = MODEL.noteAt(0);
+const onePeriod = MODEL.periodOf({ start: 0, level: 1 });
+check(
+	"one note root copies the record text",
+	oneRoot !== null && oneRoot.summary === oneNote.body,
+);
+check(
+	"one note root has one child id",
+	oneRoot !== null &&
+		oneRoot.child_a === oneNote.id &&
+		oneRoot.child_b === null,
+);
+check("one note root is clean", oneRoot !== null && MODEL.isClean(oneRoot));
+check(
+	"one note root keeps the record period",
+	onePeriod.from !== "" &&
+		onePeriod.from === onePeriod.to &&
+		oneRoot.ts_from === onePeriod.from &&
+		oneRoot.ts_to === onePeriod.to,
+);
+
+// 15. Five notes give a level-3 partial root, and each child covers one half.
+seedPrefix(5);
+MODEL.rebuild();
+const fiveRoot = MODEL.nodeAt(0, 3);
+const fiveLeft = MODEL.nodeAt(0, 2);
+const fiveRight = MODEL.nodeAt(4, 2);
+check("five notes give a level-3 top", MODEL.topLevel() === 3);
+check(
+	"five notes build the partial root",
+	fiveRoot !== null && fiveRoot.level === 3 && MODEL.isClean(fiveRoot),
+);
+check(
+	"the partial root keeps both child ids",
+	fiveRoot?.child_a === fiveLeft?.id && fiveRoot?.child_b === fiveRight?.id,
+);
+check(
+	"the right partial node has one empty child",
+	fiveRight !== null && fiveRight.child_b === null && MODEL.isValid(fiveRight),
+);
+check(
+	"the partial root period ends at the last live note",
+	MODEL.periodOf({ start: 0, level: 3 }).from !== "" &&
+		MODEL.periodOf({ start: 0, level: 3 }).to ===
+			MODEL.periodOf({ start: 4, level: 2 }).to,
+);
+
+// 16. The root extent stays 1024 when only the last assigned record is live.
+MODEL.seed();
+MODEL.addMany(1016);
+MODEL.rebuild();
+const hiddenPositions = [];
+for (let pos = 0; pos < 1023; pos += 1) {
+	MODEL.state.notes[pos].state = "hidden";
+	hiddenPositions.push(pos);
+}
+MODEL.invalidateNotePositions(hiddenPositions);
+const sparseBuilt = MODEL.rebuild();
+const sparseRoot = MODEL.nodeAt(0, 10);
+const sparseSlice = MODEL.slice(10);
+const sparseLast = sparseSlice[sparseSlice.length - 1];
+check("1024 assigned records give level 10", MODEL.topLevel() === 10);
+check(
+	"the sparse root has one null child",
+	sparseRoot !== null &&
+		sparseRoot.child_a === null &&
+		sparseRoot.child_b !== null,
+);
+check("the sparse rebuild builds the root", sparseBuilt.length > 0);
+check(
+	"the highest live position stays a leaf",
+	sparseLast !== undefined &&
+		sparseLast.start === 1023 &&
+		sparseLast.level === 0,
+);
+
+// 17. A hidden tail leaves the new highest live position on a leaf line.
+MODEL.seed();
+MODEL.hide(7);
+MODEL.rebuild();
+for (const budget of [1, 2, 3]) {
+	const tailSlice = MODEL.slice(budget);
+	const highest = tailSlice.find((line) => line.start === 6);
+	check(
+		"a hidden tail keeps the highest live leaf",
+		highest !== undefined && highest.level === 0,
+		`budget ${budget}`,
+	);
+	check(
+		"a hidden tail renders no tail line",
+		!tailSlice.some((line) => line.start === 7),
+		`budget ${budget}`,
+	);
+}
+
+// 18. Hiding every record gives an empty slice, and it builds no empty node.
+MODEL.seed();
+const nodeCountBeforeHideAll = MODEL.state.nodes.length;
+for (let pos = 0; pos < notes(); pos += 1) MODEL.hide(pos);
+const hiddenBuilt = MODEL.rebuild();
+check("all hidden keeps the assigned geometry", MODEL.topLevel() !== null);
+check("all hidden gives an empty build input", MODEL.buildInput(0, 1) === null);
+check("all hidden gives an empty slice", MODEL.slice(1).length === 0);
+check("all hidden builds no node", hiddenBuilt.length === 0);
+check(
+	"two empty halves do not form a valid node",
+	!MODEL.isValid({ start: 0, level: 1, child_a: null, child_b: null }),
+);
+check(
+	"all hidden appends no node event",
+	MODEL.state.nodes.length === nodeCountBeforeHideAll,
+);
+
+// 19. An interior hole renders no line, and it moves no position.
+MODEL.seed();
+const interiorIds = MODEL.state.notes.map((note) => note.id);
+const interiorCount = notes();
+MODEL.hide(2);
+MODEL.rebuild();
+const holeSlice = MODEL.slice(10);
+check(
+	"an interior hole renders no leaf",
+	!holeSlice.some((line) => line.start === 2 && line.level === 0),
+);
+check(
+	"an interior hole keeps the position count",
+	notes() === interiorCount &&
+		MODEL.state.notes.every((note, pos) => note.id === interiorIds[pos]),
+);
+check(
+	"an interior hole gives no blank period",
+	holeSlice.every((line) => line.from !== "" && line.to !== ""),
+);
+
+// 20. A null child that becomes live rejects the old writer input.
+MODEL.seed();
+MODEL.hide(0);
+MODEL.rebuild();
+const nullChildInput = MODEL.buildInput(0, 1);
+check(
+	"a writer input holds a null empty child",
+	nullChildInput !== null &&
+		nullChildInput.children[0] === null &&
+		nullChildInput.children[1] !== null,
+);
+MODEL.state.notes[0].state = "live";
+check(
+	"a null-to-live change rejects the old result",
+	MODEL.commitBuild(nullChildInput, "stale copy") === false,
+);
+check(
+	"a fresh input sees the restored record",
+	MODEL.buildInput(0, 1)?.children[0]?.id === MODEL.noteAt(0).id,
+);
+delete MODEL.state.notes[0].state;
+check(
+	"an absent record state is live",
+	MODEL.liveNoteAt(0) === MODEL.noteAt(0) && MODEL.hasLive(0),
+);
+
+// 21. A null child is valid only over an empty half, and one-child build copies the child text.
+MODEL.seed();
+MODEL.hide(0);
+MODEL.rebuild();
+const sparsePair = MODEL.nodeAt(0, 1);
+check(
+	"a null child over an empty half is valid",
+	sparsePair !== null &&
+		sparsePair.child_a === null &&
+		MODEL.isValid(sparsePair),
+);
+check(
+	"a null child over a live half is invalid",
+	sparsePair !== null && !MODEL.isValid({ ...sparsePair, child_b: null }),
+);
+const copyInput = MODEL.buildInput(0, 1);
+check(
+	"the one-child copy is committed",
+	MODEL.commitBuild(copyInput, "generated text") === true,
+);
+check(
+	"the one-child commit ignores the given summary",
+	MODEL.nodeAt(0, 1)?.summary === MODEL.noteAt(1).body,
+);
+MODEL.seed();
+const explicitInput = MODEL.buildInput(0, 1);
+check(
+	"the two-child build is committed",
+	MODEL.commitBuild(explicitInput, "explicit summary") === true,
+);
+check(
+	"the two-child commit uses the given summary",
+	MODEL.nodeAt(0, 1)?.summary === "explicit summary",
+);
+
+// 22. A JSON round-trip keeps a sparse state and its null child references.
+MODEL.seed();
+MODEL.hide(1);
+MODEL.hide(7);
+MODEL.rebuild();
+const sparseBefore = MODEL.slice(5);
+const sparseSaved = MODEL.serialize();
+MODEL.restore(sparseSaved);
+const sparseAfter = MODEL.slice(5);
+check(
+	"a restore keeps the sparse slice",
+	JSON.stringify(sparseAfter) === JSON.stringify(sparseBefore),
+);
+check(
+	"a restore keeps each hidden state",
+	MODEL.liveNoteAt(1) === null &&
+		MODEL.noteAt(1).state === "hidden" &&
+		MODEL.liveNoteAt(7) === null,
+);
+check(
+	"a restore keeps the null child reference",
+	MODEL.state.nodes.some(
+		(node) => node.child_a === null || node.child_b === null,
+	),
 );
 
 if (faults > 0) {

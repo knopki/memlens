@@ -241,8 +241,8 @@ the `<directions>` part.
 
 A part above its budget merges one pair at a time, and it stops as soon as the count of lines fits the
 budget. The line of the parent takes the place of the two lines of the pair. Among the pairs, a merge
-keeps the level steps of the neighbours at one. The last line of the slice is a record, so the pair of
-the last position never merges.
+keeps the level steps of the neighbours at one. No pair that covers the greatest live position merges.
+A non-empty slice therefore ends with that record, even when later assigned positions are empty.
 
 A pair merges though the node of its range is not built, and a temporary line takes the place of the
 two lines. So the part always reaches its budget. When no pair merges and the part is still above its
@@ -251,8 +251,7 @@ budget, the oldest lines leave the part.
 The render never waits for a job. A line stays temporary until the writer builds its node, so the
 slice fits its budget at once.
 
-An open of a note gives the note and its `longform`. An open of a node gives the two children of that
-node, as the slice renders them. A range that matches no built node gives one line: the level follows
+An open of a note gives the note and its `longform`. An open of a node gives its non-empty children as slice lines. A range that matches no built node gives one line: the level follows
 the span of the range, and the line holds the first `pos`.
 
 A range gives a temporary line, unless its node passes both tests: `built` and `clean`. That line
@@ -287,9 +286,18 @@ from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requ
 A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
 `start` is a multiple of `2^L`. A `node` event holds `summary`, `ts_from`, `ts_to`, `chars`,
 `input_rev`, and `truncated`, and its `at` is the time of the build.
-A clean node is built, has clean child nodes, and has no invalidation. Its child revision must match `input_rev`. The tree has no depth limit, and it needs no dense prefix: a
-position with no live record stays empty. See [0004 Tree and writer](../adr/0004-tree-writer.md) and
-[REQ-122](02-requirements.md) to [REQ-133](02-requirements.md).
+A clean node is built, has clean non-empty child nodes, and has no invalidation. Its child revision must match `input_rev`.
+The tree has no depth limit and needs no dense prefix. A position with no live record stays empty.
+
+The root range starts at zero and has level `max(1, ceil(log2(total)))` for positive `total`.
+The total includes hidden and deleted records. A hide keeps their positions, so it does not shrink the root range.
+A total of zero gives no root range. Empty padding completes the last half of a partial root.
+
+A null child means that its half has no live record. A non-empty half with no clean summary must wait for a rebuild.
+Two empty halves need no node event. With one non-empty child, the parent copies its text and dates without a model call.
+Empty ranges do not render or count against the budget. A non-empty slice keeps its last live record as a leaf.
+Dates come from the first and last live records of the range in position order.
+See [0013 The tree model](../adr/0013-tree-model.md) and [REQ-122](02-requirements.md) to [REQ-133](02-requirements.md).
 
 ## Frontier
 
