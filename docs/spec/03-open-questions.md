@@ -10,6 +10,18 @@ None.
 
 ## Closed questions
 
+### Q-462
+
+The customer settles these conflicting forms directly in [S-142](../statements.md#s-142). No further selection is pending.
+
+| Area | Earlier form | Selected form |
+| --- | --- | --- |
+| Fold | Continue to half the budget, or require a ready parent. | Stop at the first fit and use temporary lines for unready ranges. |
+| Transfer | Keep the address across every amendment. | A content edit keeps its address. A scope transfer gets a new destination slot. |
+| Proposals | Add an accepts field and a separate decision form. | Use proposed true on an ordinary operation and apply ordinary writes. |
+| Markdown | Import the human export as a record recovery format. | Export only, with encoded scope filenames. JSONL transfers events. |
+| Writer | Persist jobs and leases, and let rendering wait. | Derive ordered candidates, retain only transient attempts, and render immediately. |
+
 ### Q-461
 
 Which log form preserves selective invalidation after an import and a restart?
@@ -45,7 +57,7 @@ See [S-135](../statements.md#s-135) and [0015 Node invalidation](../adr/0015-nod
 | Q-009 | Where do the writable scopes of a profile come from?                          | Each scope of the profile is writable. No read-only set. See S-038.                                                                                | 2026-11-04 |
 | Q-049 | What does a write do in a scope outside the profile?                          | The note becomes `proposed` and waits for a human. See S-039.                                                                                      | 2026-11-04 |
 | Q-050 | Which order does the fold take: `built_at` or `due`?                          | `due` only. The fold and the rebuild use one order. See S-041.                                                                                     | 2026-11-04 |
-| Q-051 | Where do `high` and `low` come from?                                          | `high` is the budget of the part, and `low` is its half. See S-041.                                                                                | 2026-11-04 |
+| Q-051 | Where do `high` and `low` come from?                                          | The part budget is the only fold threshold. The fold stops as soon as rendered lines fit. Updated by S-142. | 2026-11-04 |
 | Q-052 | Does the fold build the parent, or does it wait for a built parent?           | The fold builds nothing. The writer builds each node. See S-041.                                                                                   | 2026-11-04 |
 | Q-053 | Does the store of memlens keep the text of a snapshot?                        | No. The plugin renders the text and the harness keeps the copy. See S-046.                                                                         | 2026-11-04 |
 | Q-054 | Does the store keep the history of snapshots?                                 | No record at all. The store of memlens holds no snapshot. See S-046.                                                                               | 2026-11-04 |
@@ -64,7 +76,7 @@ See [S-135](../statements.md#s-135) and [0015 Node invalidation](../adr/0015-nod
 | Q-063 | Do the two forms of the parallelism apply at one time?                        | One form for one run. The form `parallel` gives 6 calls of one line, and the form `batch` gives one call of 6 lines. See S-052.                    | 2026-11-04 |
 | Q-064 | Is `gen` the `storeRev` or a counter of each block?                           | A counter of each block. An event in the range of the block grows it. See S-052.                                                                   | 2026-11-04 |
 | Q-065 | Which budget does the 1.5 check use?                                          | Each part against its own budget: `here` and `directions`. See S-052.                                                                              | 2026-11-04 |
-| Q-066 | What does a failed job do after the third wait?                               | It waits 300 seconds after each later failure and stays in the queue. See S-052.                                                                   | 2026-11-04 |
+| Q-066 | What does a failed job do after the third wait?                               | Local writer retry waits are ten, sixty, then three hundred seconds. No persistent queue or lease exists. Updated by S-142. | 2026-11-04 |
 | Q-067 | Which idle time starts the compaction?                                        | The key `idle` of the `store` section, and 300 seconds by default. See Q-068 and S-053.                                                            | 2026-11-04 |
 | Q-068 | Which section, key, and default does the idle time have?                      | The key `idle` of the `store` section, and 300 seconds by default. See S-053.                                                                      | 2026-11-04 |
 | Q-069 | What decides the form of the compactor?                                       | The key `writer.mode` of the plugin config, and `auto` by default. See S-067 and S-068.                                                            | 2026-11-04 |
@@ -77,7 +89,7 @@ See [S-135](../statements.md#s-135) and [0015 Node invalidation](../adr/0015-nod
 | Q-077 | How does `reviewIn` become `review_at`?                                       | A period in days, added to the time of the write. See S-059.                                                                                       | 2026-11-04 |
 | Q-078 | Which signal tells the form `auto` that a cache serves the prefix?            | The family of the model. A model in `cacheTtl` gives `parallel`, and another model gives `batch`. See S-062.                                       | 2026-11-04 |
 | Q-079 | What is the one reseed of a broken batch answer?                              | The retry tells the model the error. The size is the likely error. See S-062.                                                                      | 2026-11-04 |
-| Q-080 | Which scope and which effect does `maxCallsPerHour` have?                     | One store. A call above the limit waits, and the job returns to the queue. See S-062.                                                              | 2026-11-04 |
+| Q-080 | Which scope and which effect does `maxCallsPerHour` have?                     | One store. A call above the limit waits while its candidate remains dirty, without queue reinsertion. Updated by S-142. | 2026-11-04 |
 | Q-081 | Which key does the catalog scope have under the new grammar?                  | A hidden technical key. The grammar covers the keys that the agent sees, and `__catalog__` stays outside it. See S-064.                            | 2026-11-04 |
 | Q-084 | Is `workspace:<id>` a scope key?                                              | `workspace:<id> → key` is a rule for the scope, and `workspace` stays out of the kind list. See S-064.                                             | 2026-11-04 |
 | Q-089 | Does the agent type `#2107` or `2107`?                                        | `2107`. The `#` belongs to the render form, and the tool strips it. See S-064.                                                                     | 2026-11-04 |
@@ -109,7 +121,7 @@ See [S-135](../statements.md#s-135) and [0015 Node invalidation](../adr/0015-nod
 | Q-027 | Which rule moves the excess into `longform`: a cut at a word boundary, or the tail as it is? Does the tool make the move, or the model? | The write mechanism cuts the text mechanically at a word boundary and moves the rest into the `longform`. See S-072. | 2026-11-05 |
 | Q-097 | Which field of the `memory_forget` answer holds a proposal? | The answer gives `hidden: 0`. The proposal stays invisible to the agent. See S-072. | 2026-11-05 |
 | Q-030 | How does a merge join a sanitized event and a full event with one `id`? | The events of a record with a `redact` go in the sanitized form, in each order. See S-073 and REQ-384. | 2026-11-05 |
-| Q-019 | What is the export and import format, and how does `redact` block a restore?  | Two formats, `md` and `jsonl`, into a directory. With no flag, the export writes the whole store, one file for each scope. The flag `--scope` writes one scope. See S-075 and S-076. | 2026-11-05 |
+| Q-019 | What is the export and import format, and how does `redact` block a restore?  | Markdown is export-only. JSONL transfers store events. Scope keys map to encoded flat filenames. Updated by S-142. | 2026-11-05 |
 | Q-102 | What does `memlens import --from dsh-sessions` read, and what records does it write? | The writer reads each session and writes new notes into the store. See S-076 and REQ-413. | 2026-11-05 |
 | Q-103 | Does the text of `memlens describe` set the `title` or the `description`? | The CLI has no `describe` command. The tool `memory_scope` lists the scopes only. See Q-117 and S-076. | 2026-11-05 |
 | Q-104 | Must the target of `--into` be one of the two stores of `memlens merge`? | The CLI has no `merge` command. The import makes the merge. See S-076. | 2026-11-05 |
@@ -138,7 +150,7 @@ See [S-135](../statements.md#s-135) and [0015 Node invalidation](../adr/0015-nod
 | Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | The `redact` event is new. The content of the old event becomes empty. See REQ-078 and S-088.                                                      | 2026-11-05 |
 | Q-115 | Does the card render in `<directions>` or in `<here>`?                        | The card is the direction line. `<here>` holds no card line. See S-089.                                                                            | 2026-11-05 |
 | Q-456 | What does the policy text of the slice hold? | The research of the prior art gives the text. The first form was the block of [S-067](../statements.md#s-067). See [S-130](../statements.md#s-130) and [REQ-509](02-requirements.md). | 2026-11-06 |
-| Q-457 | How does a proposal change an existing record? | A proposal is a write op with `proposed`, and the projection ignores it. A decision is a write op with `accepts`, and a `dismiss` closes a proposal. See [S-101](../statements.md#s-101) and [0012 Proposals](../adr/0012-proposals.md). | 2026-11-06 |
+| Q-457 | How does a proposal change an existing record? | An ordinary write operation can carry proposed true. Approval applies the ordinary operation and closes the proposal with dismiss. Updated by S-142. | 2026-11-06 |
 | Q-458 | What happens to one `id` with two payloads at one `at`? | The payload with the greater SHA-256 of its canonical JSON wins, and the sanitized form wins over each payload. See [S-101](../statements.md#s-101), [REQ-383](02-requirements.md), and [REQ-466](02-requirements.md). | 2026-11-06 |
 | Q-459 | When does the index show a note that a write just added? | The index add is part of the append transaction in the SQLite backend and follows the append in the JSONL backend. A rebuild covers the gap. See [S-101](../statements.md#s-101) and [REQ-449](02-requirements.md). | 2026-11-06 |
 | Q-460 | Which tokenizer does the index take for each language? | One value of `language` for the installation. `porter unicode61 remove_diacritics 1` for `en`, `unicode61 remove_diacritics 1` for the other languages with spaces, and `trigram` for `zh` and `ja`. See [S-101](../statements.md#s-101) and [REQ-450](02-requirements.md). | 2026-11-06 |

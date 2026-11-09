@@ -15,7 +15,7 @@ A node is a `node` event. It holds `level`, `start`, `child_a`, `child_b`, `inpu
 a key is the latest candidate whose id has no invalidation. A clean node is built and has clean child nodes.
 Its child revision must equal `input_rev`, but that equality alone does not prove freshness.
 [0015 Node invalidation](0015-node-invalidation.md) defines the invalidation events and the writer check. The
-queue of the writer is the set of nodes that are not clean. The catalog is a tree of the same nodes in the scope
+writer computes dirty range candidates and stores no queue. The catalog is a tree of the same nodes in the scope
 `__catalog__:<profile>`. One position holds one scope, and the content of the position is the top node
 of the tree of that scope. The leaves of the catalog are these top nodes. The direction line is the
 line of that top node. See [S-104](../statements.md#s-104).

@@ -40,12 +40,12 @@ export interface MemoryNoteInput {
 }
 
 /**
- * The answer of a write. A live record gives its address. A proposal gives the `id` only, because a
- * proposal takes no `pos` and no review date.
+ * The answer of a write. A live record gives its address. A proposed write gives the event `id` and
+ * the modifier, because the projection takes no `pos` and no review date for it.
  */
 export type MemoryNoteOutput =
 	| { addr: Address; id: string; state: "live"; review_at: string | null }
-	| { id: string; state: "proposed" };
+	| { id: string; proposed: true };
 
 export interface MemoryFindInput {
 	/** The words. Each word must match, and `-word` excludes. */

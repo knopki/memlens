@@ -51,6 +51,8 @@ export type WriterMode = "parallel" | "batch" | "auto";
 export interface StoreConfig {
 	backend: StoreBackend;
 	path: Path;
+	/** The time without an event that starts the background writer, in seconds. The default is 300. */
+	idle: number;
 }
 
 export interface Budget {

@@ -12,6 +12,7 @@
  *  - An event keeps its structure. Redaction can clear its content. Its `id` is a ULID.
  *  - `at` is the time of the log, and `ts` is the time of the write of a note.
  *  - The payload belongs to the op, and no op takes a field of another op.
+ *  - `proposed` modifies a permitted write op. It is not an event kind or a record state.
  * @keywords event, log, op, note, amend, hide, redact, review, dismiss, node
  * #endregion moduleContract
  */
@@ -44,8 +45,7 @@ export interface EventBase {
 /**
  * A note: one curated fact.
  *
- * A write outside the profile carries `proposed: true`, and the projection ignores a proposed event.
- * A decision on a proposal carries `accepts`, the id of that proposal.
+ * A write outside the profile carries `proposed: true`. The projection ignores a proposed event.
  */
 export interface NoteEvent extends EventBase {
 	readonly op: "note";
@@ -54,11 +54,11 @@ export interface NoteEvent extends EventBase {
 	/** The time of the write of the note. */
 	readonly ts: IsoTime;
 	readonly review_at: IsoDate | null;
-	readonly proposed: boolean;
+	/** True when the event is a proposal. The projection ignores it. */
+	readonly proposed?: true;
 	readonly session: string;
 	readonly turn: string;
 	readonly preset: string;
-	readonly accepts?: Ulid;
 	readonly longform?: string;
 	readonly refs?: readonly string[];
 	/** The ids of the records that the note replaces. */
@@ -71,7 +71,8 @@ export interface AmendEvent extends EventBase {
 	readonly target: Ulid;
 	readonly body?: string;
 	readonly longform?: string;
-	readonly proposed?: boolean;
+	/** True when the event is a proposal. The projection ignores it. */
+	readonly proposed?: true;
 }
 
 /** The removal of a record from the view. The content stays. */
@@ -79,7 +80,8 @@ export interface HideEvent extends EventBase {
 	readonly op: "hide";
 	readonly target: Ulid;
 	readonly reason: string;
-	readonly proposed?: boolean;
+	/** True when the event is a proposal. The projection ignores it. */
+	readonly proposed?: true;
 }
 
 /** The erase of the content of a record. A `redact` is final. */
@@ -94,14 +96,15 @@ export interface ReviewEvent extends EventBase {
 	readonly op: "review";
 	readonly target: Ulid;
 	readonly review_at: IsoDate | null;
+	/** True when the event is a proposal. The projection ignores it. */
+	readonly proposed?: true;
 }
 
-/** The close of a proposal. */
+/** The close of one proposed event. It changes no record. */
 export interface DismissEvent extends EventBase {
 	readonly op: "dismiss";
+	/** The id of the proposed event that this event closes. */
 	readonly target: Ulid;
-	/** The id of the proposal that the event closes. */
-	readonly proposal: Ulid;
 	readonly reason: string;
 }
 

@@ -8,13 +8,19 @@
 
 import type {
 	AmendEvent,
+	DismissEvent,
 	Event,
+	HideEvent,
+	InvalidateEvent,
 	JsonlLine,
 	NodeEvent,
 	NoteEvent,
+	RedactEvent,
+	ReviewEvent,
 	SanitizedAmendEvent,
 	SanitizedNodeEvent,
 	SanitizedNoteEvent,
+	Ulid,
 } from "../../../docs/spec/events.js";
 
 // #region FUNC_assertEventContracts
@@ -27,6 +33,13 @@ export function assertEventContracts(): void {
 			: false;
 	type Replace<T, Fields> = Omit<T, keyof Fields> & Fields;
 	type Rejected<T> = T extends JsonlLine ? false : true;
+	type KeysOf<T> = T extends unknown ? keyof T : never;
+	type OptionalProposed<T> = "proposed" extends keyof T
+		? Record<never, never> extends Pick<T, "proposed">
+			? true
+			: false
+		: false;
+	type Proposed = true | undefined;
 	type NoteContent = "body" | "longform" | "redacted";
 	type NodeContent = "summary" | "chars" | "redacted";
 	type Checks = [
@@ -62,6 +75,26 @@ export function assertEventContracts(): void {
 				? true
 				: false
 		>,
+		Assert<OptionalProposed<NoteEvent>>,
+		Assert<OptionalProposed<AmendEvent>>,
+		Assert<OptionalProposed<HideEvent>>,
+		Assert<OptionalProposed<ReviewEvent>>,
+		Assert<Equal<NoteEvent["proposed"], Proposed>>,
+		Assert<Equal<AmendEvent["proposed"], Proposed>>,
+		Assert<Equal<HideEvent["proposed"], Proposed>>,
+		Assert<Equal<ReviewEvent["proposed"], Proposed>>,
+		Assert<
+			Equal<
+				Extract<
+					KeysOf<RedactEvent | DismissEvent | NodeEvent | InvalidateEvent>,
+					"proposed"
+				>,
+				never
+			>
+		>,
+		Assert<Equal<Extract<KeysOf<Event>, "accepts">, never>>,
+		Assert<Equal<Extract<KeysOf<DismissEvent>, "proposal">, never>>,
+		Assert<Equal<DismissEvent["target"], Ulid>>,
 	];
 	// A scope-only amendment retains its flag and target without gaining body or longform.
 	const metadataOnly: SanitizedAmendEvent = {

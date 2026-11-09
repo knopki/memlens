@@ -157,3 +157,6 @@ live.
 | REQ-481 | A `node` event touches its own range. | FR | S-121 | [tree.d.ts](tree.d.ts) |
 | REQ-206 | At a session start a part above 1.5 times its budget because of nodes that are not built starts a build. | FR | S-051, S-067 | REQ-204 |
 | REQ-215 | The deadline of the build at a session start is 10 seconds. | FR | S-052 | REQ-204 |
+| REQ-201 | A worker holds a job under a lease of 120 seconds. | FR | S-051, S-142 | REQ-200, REQ-210 |
+| REQ-208 | The build has a deadline of 10 seconds, and the render waits for it. | FR | S-051, S-067, S-142 | REQ-205 |
+| REQ-473 | A decision is a write op with the field `accepts`, the id of the proposal. The decision applies as a normal op. | FR | S-101, S-142 | REQ-360, REQ-361 |

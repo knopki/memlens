@@ -58,8 +58,9 @@ op. A `redact` clears the content of its target.
 | `node`    | `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`, `chars`, `truncated`, `ts_from`, `ts_to`                                                  |
 | `invalidate` | `targets`, the ids of node events whose summaries must stay unusable |
 
-A write op carries the optional field `proposed`, and the projection ignores a proposed event. A
-decision carries the field `accepts`, the id of the proposal. See [0012 Proposals](../adr/0012-proposals.md).
+The proposed modifier marks an ordinary write operation, and the projection ignores that operation.
+Approval applies the ordinary operation and closes the selected proposal with a dismiss event.
+No separate acceptance field or event form is necessary. See [0012 Proposals](../adr/0012-proposals.md).
 
 A node is a `node` event. Its `at` is the time of the build.
 The projection takes the latest candidate whose id has no invalidation.
@@ -69,7 +70,7 @@ An event has two times: `at` is the time of the log, and `ts` is the time of the
 the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requirements.md) to
 [REQ-085](02-requirements.md).
 
-`pos` is not a field of an event. It is the ordinal of the creating event in the scope of the record,
+A position is not an event field. It derives from real record entries into a scope in canonical event order,
 and an export holds no `pos`. A sanitized event keeps its operation and structural metadata, with `redacted: true`.
 A note has empty body and null longform. An amendment clears present content fields and retains absent fields.
 A node has empty summary and zero chars. See [0002 Event log](../adr/0002-event-log.md), [0008 Redaction](../adr/0008-redaction.md), and
@@ -87,6 +88,10 @@ The tree reads current records, their states, and their mutation orders. See [tr
 Pass 2 applies the operations in the same order. The order of arrival and a local `pos` change
 nothing. The effects of the operations, the state order, and the supersede rule are in
 [REQ-086](02-requirements.md) to [REQ-106](02-requirements.md).
+
+The applied history identifies each real entry into a scope: an initial note or an actual scope transfer.
+The projection assigns those entry positions in canonical event order. The current record uses its latest entry position.
+Leaving a scope keeps the earlier position empty. A content edit and a proposed operation allocate no new position.
 
 ## Catalog
 
@@ -111,7 +116,7 @@ A live scope with an unready root is non-empty, so the catalog writer waits for 
 See [REQ-463](02-requirements.md) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
 
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
-When the top node is not built, the direction line is the frontier of that scope. A scope with no
+When the top node is not ready, its direction line is temporary and gives the period without summary text. A scope with no
 live note gives no direction line. A shared scope gets one position in each profile where it is
 visible. See [REQ-108](02-requirements.md), [REQ-109](02-requirements.md),
 [REQ-120](02-requirements.md), [REQ-451](02-requirements.md), and [REQ-460](02-requirements.md).
@@ -164,7 +169,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Node             | Target 512 characters, limit 640 characters, a cut with a flag            | The p90 miss is 610 characters.                                  |
 | Input of a merge | Two children, and 1 024 characters of `longform` at level 1               | The input holds no context, so a delete stays derivable.         |
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
-| Fold             | `high` is the budget of the part, and `low` is its half. The order is `(due↓, level↑, start↑)` | The order gives one answer. |
+| Fold             | Stop at the first line-budget fit. The demo orders pairs by jump, due, level, and start. | The order gives one answer. |
 | Writer           | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
 | Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
@@ -181,8 +186,8 @@ A scope is a key in the events. The key has the form `kind:name`, and the store 
 the write. The store holds no record for a scope, and no event describes one. A scope exists because
 a record names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and [REQ-255](02-requirements.md).
 
-The store has two backends of equal rank: sqlite and jsonl. One store test runs against both. The
-queue of the compaction is the set of dirty nodes, so the store keeps no queue. See
+The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.
+Writer candidates derive from dirty ranges, including ranges with no node event. The store keeps no job queue. See
 [0004 Tree and writer](../adr/0004-tree-writer.md).
 
 Each append to the sqlite backend is one transaction, and the backend uses write-ahead logging. The
@@ -204,13 +209,21 @@ A projection rebuild reads each event once, preserves node events and invalidati
 A schema change still uses a migration in one transaction. The render scans no event.
 See [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to [REQ-494](02-requirements.md).
 
-The `md` export writes one directory with one file for each scope, at `<kind>/<name>.md`. Each file
-starts with the scope key and the format version. Each record is a section `## #<pos>` with a YAML
-block of `id`, `at`, `ts`, `kind`, `review_at`, `refs`, and `supersedes`, and then the `body`. The
-`longform` of a record follows as a section `### longform`. A redacted record holds `[redacted]` and
-no `longform`. Its YAML also carries `redacted: true`. The importer reads that flag and stores empty content, not the display placeholder.
-An `md` export holds no `node` event, because a rebuild gives the tree. See
-[REQ-505](02-requirements.md) to [REQ-508](02-requirements.md).
+The Markdown format is export-only. It is a human view and has no import or event recovery contract.
+The JSONL format transfers events. Store import reads JSONL, while the separate session import reads harness sessions.
+
+A Markdown export writes one flat directory. It encodes the complete normalized scope key as a filename and appends `.md`.
+The encoding keeps ASCII lowercase letters, digits, underscore, and hyphen. Every other UTF-8 byte becomes `%HH`, with uppercase hexadecimal digits.
+The percent sign also requires encoding, so distinct normalized keys have distinct encoded names.
+Colon, slash, and period become `%3A`, `%2F`, and `%2E`. Encoded keys contain no path separator or relative path component.
+For example, `project:a/b` becomes `project%3Aa%2Fb.md`, while `project/a:b` becomes `project%2Fa%3Ab.md`.
+The exporter never truncates names or overwrites a different scope on a filename collision. Filesystem limits produce the normal export error.
+
+Each file starts with the scope key and format version. Each record is a section `## #<pos>` with a YAML block and its body.
+The block shows `id`, `at`, `ts`, `kind`, `review_at`, `refs`, and `supersedes`.
+A longform follows under `### longform`. A cleared record shows `[redacted]`, `redacted: true`, and no longform.
+The placeholder is not an event body. Markdown carries no node event.
+See [REQ-505](02-requirements.md) to [REQ-508](02-requirements.md) and [S-142](../statements.md#s-142).
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
 consistent by construction. A per-scope export also holds the top node of that scope. An import unions events by `id`.
@@ -244,8 +257,8 @@ value replaces the whole template, and the placeholders apply in it.
 The `<directions>` part holds the direction line of each scope of the profile. A direction line has
 the form `[<key>] <age> <count> <text>`. The age of the active scope is `active`, and the age of
 another scope is its idle time. The count is the count of live notes. The text is the summary of the
-top node of the scope. When the top node is not built, the lines of the frontier of that scope take
-the place of the line.
+top node of the scope. An unready top node gives one temporary date-only line.
+A scope with no live records gives no line. The catalog follows the same minimal fold and line budget.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
 and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`, or the two dates only for a temporary line.
@@ -258,7 +271,7 @@ the `<directions>` part.
 
 A part above its budget merges one pair at a time, and it stops as soon as the count of lines fits the
 budget. The line of the parent takes the place of the two lines of the pair. Among the pairs, a merge
-keeps the level steps of the neighbours at one. No pair that covers the greatest live position merges.
+minimizes the demo jump penalty before comparing due, level, and start. No pair that covers the greatest live position merges.
 A scope slice therefore ends with its last live record, even when later assigned positions are empty.
 The catalog keeps its greatest non-empty scope leaf unfolded by the same rule.
 
@@ -295,8 +308,10 @@ texts are in [09-prompts.md](09-prompts.md).
 
 ## Addressing
 
-An address is `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. The `pos` is the ordinal in the
-scope and stays the same after an amend. The input holds no `#`, and the tool strips one leading `#`
+An address is `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. A content amendment within one scope keeps the address.
+A scope transfer empties the old position and appends a new position in its destination.
+The old slot stays empty, including after a transfer back to that scope. The original note id remains the log identity.
+A saved textual address is not a permanent record identifier. The input holds no `#`, and the tool strips one leading `#`
 from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requirements.md).
 
 ## Tree
@@ -346,36 +361,34 @@ See [0008 Redaction](../adr/0008-redaction.md) for the backend steps and [REQ-21
 
 ## Fold
 
-The view is a tiling of `[0, total)` with non-overlapping ranges. The fold merges built pairs while
-the view is above `high` and stops at `low = high/2`. A merge needs two neighbors of one level, a
-`start` that is a multiple of `2^(level+1)`, and a built parent with a fresh input. The pair takes the
-priority `due = (total - (start + 2^(level+1) - 1)) / 2^level`. The choice goes by `due`, then
-`level`, then `start`. The fold calls no model for an empty child. The model works only on two
-non-empty children, and the shrink check applies to that merge only. Each batch extends the prefix of
-the view, so the prompt cache survives. The cache key is `epoch = hash(storeRev, sorted built nodes)`.
-See [0004 Tree and writer](../adr/0004-tree-writer.md), [0003 Store](../adr/0003-store.md), and [REQ-161](02-requirements.md) to
-[REQ-177](02-requirements.md).
+The demo defines the fold behavior. The fold does work only while the rendered line count exceeds the budget.
+It stops immediately when the count fits. A ready range gives its summary, and an unready range gives a temporary date-only line.
+The fold calls no model and appends no node event. The render waits for no writer.
+
+A merge needs adjacent aligned ranges of one level. It never covers the greatest non-empty leaf.
+The choice minimizes the demo jump penalty, then compares due, level, and start.
+The fold preserves text outside the selected pairs. Empty ranges count as no rendered line.
+When no pair can merge, the existing slice rule omits the oldest lines until the count fits.
+The cache key remains `epoch = hash(storeRev, sorted built nodes)`.
+See [0013 The tree model](../adr/0013-tree-model.md), [tree.d.ts](tree.d.ts), and [REQ-165](02-requirements.md) to [REQ-177](02-requirements.md).
 
 ## Writer
 
-The writer runs outside the agent loop, from a queue of jobs in the store. A run takes one form.
-`parallel` makes 6 calls of one line with one prefix of the context. `batch` makes one call of up to
-6 lines in the form `#a-b: line`, and a broken answer gives one retry with the error, then
-`parallel`. `auto` follows the family of the model: `batch` without a cache, and `parallel` with
-one. A merge gives the model the two children only. See [0004 Tree and writer](../adr/0004-tree-writer.md).
+The background writer computes candidates from dirty non-empty aligned ranges through the root.
+A missing node event is a dirty candidate. A range waits for clean non-empty children before a build.
+The writer orders candidates by due, level, and start. It stores no queue, job row, or lease.
+A restart derives candidates again from the tree. In-flight attempts and retry delays are local runtime state.
 
-A job holds a lease of 120 seconds, and a failed job waits 10 seconds, then 60 seconds, then 300
-seconds. A job copies its two exact child inputs as `BuildInput`.
-The store compares both current children under the write lock or transaction before it appends the result.
-A changed input, a hidden record, or a dirty child rejects the result. The `input_rev` equality alone does not permit a result.
+A run uses `parallel`, `batch`, or `auto`. Parallel makes six concurrent calls, one line per call.
+Batch makes one call for up to six lines. A broken batch answer retries once, then uses parallel.
+Auto follows the model family. The existing retry waits are ten, sixty, then three hundred seconds.
+The model sees the two child inputs only. One non-empty child copies its text without a model call.
 
-The writer starts a job when the queue holds `writer.batch` dirty nodes, when no event arrives for
-`store.idle` seconds, and at `memlens compact`. It takes the dirty node with the highest `due` first,
-and a node waits for its two children.
-
-The four texts of the calls are in [09-prompts.md](09-prompts.md). See [0004 Tree and writer](../adr/0004-tree-writer.md),
-[REQ-200](02-requirements.md) to [REQ-254](02-requirements.md), and
-[REQ-432](02-requirements.md) to [REQ-438](02-requirements.md).
+Each attempt copies exact child inputs as `BuildInput`. The store compares both current children under the write lock before publication.
+A changed input, a hidden record, or a dirty child rejects the result. The revision equality alone does not permit a result.
+The writer starts when dirty candidates reach `writer.batch`, after `store.idle` seconds without an event, or at `memlens compact`.
+Rendering returns immediately with current clean summaries and temporary lines.
+See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0015 Node invalidation](../adr/0015-node-invalidation.md).
 
 ## Invalidation
 
@@ -430,7 +443,7 @@ orders, so 220 places the memory after each built-in context and before no tool 
 | Tool          | Who        | Effect                                                                  |
 | ------------- | ---------- | ----------------------------------------------------------------------- |
 | memory_note   | main agent | A new note, or the live note with the same four fields.                 |
-| memory_forget | main agent | The records leave the view, and the queues take the rebuilds and the top nodes. |
+| memory_forget | main agent | The records leave the view, and dependent summary ranges become dirty. |
 | memory_find   | main agent | The records with the matching words, each with its `addr`.              |
 | memory_open   | main agent | A record with its `longform`, or the two children of a node.            |
 | memory_review | main agent | The due records, or the count of the reviewed records.                  |

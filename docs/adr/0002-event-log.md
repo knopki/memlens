@@ -16,5 +16,5 @@ Mutable records. A full snapshot for each change. One pass in the order of the l
 
 ## Consequences
 
-`pos` is not a field, and the store counts the creating event in the scope. An import is a union by `id`. The state order is `live`, `hidden`, `deleted`. A proposal is a write with `proposed: true`, and a
+A position is not an event field. The projection counts real entries into each scope, including transfers, in canonical event order. An import is a union by `id`. The state order is `live`, `hidden`, `deleted`. A proposal is a write with `proposed: true`, and a
 `redact` is final. See [0012 Proposals](0012-proposals.md).

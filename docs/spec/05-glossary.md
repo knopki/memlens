@@ -11,7 +11,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | constraint       | A limit that comes from the customer or from the environment, with an identifier `C-nnn`.                                                                                                 | [01-goals-nongoals.md](01-goals-nongoals.md) |
 | non-goal         | An item that the project does not do, with an identifier `NG-nnn`.                                                                                                                        | [01-goals-nongoals.md](01-goals-nongoals.md) |
 | open question    | An item without an answer, with an identifier `Q-nnn`.                                                                                                                                    | [03-open-questions.md](03-open-questions.md) |
-| decision         | A selected option with a record of the alternatives in an ADR.                                                                                                          | [../adr/](../adr/)                           |
 | journal          | The file [../statements.md](../statements.md). It keeps the customer words.                                                                                                               | [0010](../adr/0010-process-stack.md) |
 | headless         | Without a user interface. Other programs start the function.                                                                                                                              | S-002                                        |
 | library          | The package with the main function. It has no terminal interface and no plugin interface.                                                                                                 | REQ-001                                      |
@@ -63,7 +62,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | op | The field that names an event: `note`, `amend`, `hide`, `redact`, `review`, `dismiss`, `node`, or `invalidate`. | S-016, S-101, S-135 |
 | payload          | The fields of an event that belong to the op.                                                                                                                                             | S-016                                        |
 | ULID             | The identifier format of an event. It is unique and it sorts by time.                                                                                                                     | S-016                                        |
-| pos              | The ordinal of the creating event in the scope of the record. It is not a field of the event.                                                                                                | S-016                                        |
+| pos              | The ordinal of a real record entry into one scope. A transfer allocates a fresh destination position and leaves the old slot empty. | S-016, S-142 |
 | target           | The field of an op that names the record or the proposal for a change. | S-016, S-101 |
 | kind             | The class of a note: `decision`, `preference`, `fact`, `task`, or `note`. | S-016, S-065                                 |
 | `live`           | The state of a record after a write with no proposal. | S-016, S-101 |
@@ -98,7 +97,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | here             | The tree slice of the active scope. The budget `here` limits this part.                                                                                                                | S-037                                        |
 | directions       | The tree slice of the catalog. The budget `directions` limits this part.                                                                                                                  | S-037                                        |
 | view             | The tiling of the frontier that the agent reads. Its cache key is `epoch`.                                                                                                                | S-040                                        |
-| fold             | The pass that merges built pairs until the view fits under `high`. It builds no node.                                                                                                     | S-040, S-041                                 |
+| fold             | The pass that merges only until rendered lines fit the budget. Unready summaries give temporary lines, with no model call. | S-040, S-041, S-142 |
 | line             | One item of the view: a record, a node, or a temporary line.                                                                                                                              | S-121, S-124                                 |
 | revision | The latest input order within a non-empty range. A range with no live record gives null. | S-121, S-124, S-137 |
 | tile             | One range of the view. A tile is a node or a record.                                                                                                                                      | S-040                                        |
@@ -109,9 +108,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | storeRev         | The version of the store content. A counter in SQLite and a fingerprint in JSONL.                                                                                                         | S-040                                        |
 | cacheTtl         | The idle time after which a new snapshot replaces the text. The map gives a duration for a model glob.                                                                                    | S-042, S-067                                 |
 | reason           | The cause of a `hide`, `redact`, `dismiss`, or `forget` event.                                                                                                                            | S-042, S-067                                 |
-| `job`            | One dirty node that a worker takes. The store keeps no queue, and the lease lives in the writer.                                                                                               | S-051                                        |
-| `lease`          | The time that a worker holds a job: 120 seconds. After the time, another worker takes the job.                                                                                            | S-051                                        |
-| `backoff`        | The wait after a failed job: 10 seconds, then 60 seconds, then 300 seconds.                                                                                                               | S-051                                        |
+| `job`            | One computed dirty range that a writer attempts. It has no persistent queue row or lease. | S-051, S-142 |
+| `backoff`        | The local retry wait after a failed attempt: ten, sixty, then three hundred seconds. A restart clears it. | S-051, S-142 |
 | rev              | The order of the latest event that touches a range. It is no counter.                                                                                                                     | S-051, S-100, S-121                          |
 | `ancestor`       | A node above another node in a tree. A change of a child makes each ancestor dirty.                                                                                                       | S-054                                        |
 | `form`           | The shape of a run of the writer: `parallel`, `batch`, or `auto`. The key `writer.mode` gives it.                                                                                         | S-052, S-061, S-067                          |
@@ -148,9 +146,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | working budget | The count of nodes that one `memory_open` call visits: 4096 at most. | S-070 |
 | proposal line | The line in the report of the parent about one proposal of the child. | S-070 |
 | UI core | The view models of the console in the core library. It holds no DOM, no transport, and no style. | S-077, S-080 |
-| proposal | A write op with the field `proposed`. The projection ignores it. | S-101 |
-| decision | A write op with the field `accepts`, the id of the proposal. It applies as a normal op. | S-101 |
-| pending proposal | A proposal with no decision and no `dismiss`. | S-101 |
+| proposal | An ordinary write operation with the proposed modifier set to true. The projection ignores that operation. | S-101, S-142 |
+| pending proposal | An operation with proposed true and no dismiss event that targets its id. | S-101, S-142 |
 | tokenizer | The FTS5 search tokenizer of the index. It follows the key `language`. | S-101 |
 | how-to | The section of the slice that holds the policy text and the append text. | S-102 |
 | invalidation | The action that makes a node id unusable. An `invalidate` event holds the target ids, and a rebuild writes a new id. | S-133, S-134, S-135 |
@@ -160,3 +157,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | total | One plus the greatest assigned position, or zero when no position exists. Records in the `hidden` and `deleted` states keep their positions. | S-137 |
 | root range | The aligned range that starts at zero and covers every assigned position. Empty padding completes its power-of-two width. | S-137 |
 | catalog position | The ordinal of a scope when the projection first encounters it in a profile. It does not change the scope tree range. | S-138, S-139 |
+| jump | The sum of max(0, parent_level - 1 - neighbor_level) over the outer neighbors of a fold pair. The demo defines it. | S-142 |

@@ -21,13 +21,16 @@ A clean node is built, has no invalidation, and has clean child nodes. Its child
 An import can change the input without a change of the maximum order. The revision equality alone does not prove freshness.
 [0015 Node invalidation](0015-node-invalidation.md) defines durable invalidation and the writer check.
 
-The slice is the frontier. The fold merges one pair at a time, the pair with the highest `due`, and it
-keeps the level steps of the neighbours at one. It stops as soon as the count of lines is not above
-the budget. A pair merges though its node is not built, and a temporary line takes the place of the
-two lines. Empty ranges do not render or count against the budget.
+The slice is the frontier. The fold merges the minimum number of pairs. It runs only while the
+rendered line count exceeds the budget, and it stops at once when the count fits. It merges one pair
+at a time. The choice minimizes the demo jump penalty, then compares due, level, and start.
+A pair merges though its node is missing or dirty, and a temporary line takes the place of the two
+lines. The render calls no model. Empty ranges do not render or count against the budget.
+
 A temporary line holds the period from its first live record to its last live record, and no text.
 A non-empty slice ends with the greatest live position as a record. No merge covers that position. When no pair merges and the slice is above its budget, the
-oldest lines leave the slice. See [tree.d.ts](../spec/tree.d.ts).
+oldest lines leave the slice. [S-142](../statements.md#s-142) gives the minimal fold and the
+temporary line. See [tree.d.ts](../spec/tree.d.ts).
 
 ## Alternatives
 
@@ -36,4 +39,5 @@ A dirty flag in the store. A tree that the store keeps. The cut of the oldest li
 ## Consequences
 
 The projection derives the invalidated ids from the log. An import that moves an address makes each affected node not built. A rebuild appends an
-event, and a repeated rebuild appends nothing.
+event, and a repeated rebuild appends nothing. The writer derives its candidates from dirty non-empty
+ranges up to the root, including ranges with no node event. This candidate list is ephemeral.

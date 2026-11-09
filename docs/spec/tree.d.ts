@@ -6,7 +6,7 @@
  * @purpose Hold the tree rules in one type file, so the requirements and the code have one source.
  * @scope
  *  - The record positions, the nodes, the revision of a range, and the slice.
- *  - NOT: the log, the store, the writer queue, and the tools.
+ *  - NOT: the log, the store, the writer, and the tools.
  * @invariants
  *  - A node covers `2^level` positions from `start`, and level 1 or more.
  *  - Each child reference matches its half. A null reference denotes only an empty half.
@@ -100,8 +100,8 @@ export interface Tree {
 /**
  * One line of the slice.
  *
- * A record gives its body. A clean node gives its summary. Another node gives no text, and the
- * line shows the period of its range. The line of a node is no part of a summary.
+ * A record gives its body. A clean node gives its summary. A missing or dirty node gives no text,
+ * and the line shows the period of its range. The line of a node is no part of a summary.
  */
 export type SliceLine =
 	| {
@@ -180,7 +180,7 @@ export type BuildChild =
 			readonly ts_to: string;
 	  };
 
-/** A job copies these values. It does not retain mutable references to the projection. */
+/** A background build copies these values. It does not keep mutable references to the projection. */
 export interface BuildInput {
 	readonly range: Range;
 	/** Null means an empty half. At least one half must be non-empty. */
@@ -194,17 +194,34 @@ export interface BuildInput {
  */
 export declare function buildInput(tree: Tree, range: Range): BuildInput | null;
 
-/** Compare both children, including empty halves. A changed live state or a dirty non-empty child fails the check. */
+/**
+ * Give the background build candidates of one tree.
+ *
+ * A candidate is a dirty non-empty dyadic range from level 1 through the root level.
+ * A range with no node event is a candidate. A clean range and an empty range are not candidates.
+ * The result order is the greatest `due`, then the lowest level, then the lowest start.
+ * The function computes the list from the projection, and the list has no persistence.
+ */
+export declare function candidates(tree: Tree): readonly Range[];
+
+/**
+ * Compare both children, including empty halves.
+ * A changed live state or a dirty non-empty child fails the check.
+ * The store runs this check under the write lock or transaction with the append.
+ * Two writers can append a result for one unchanged input.
+ */
 export declare function inputUnchanged(tree: Tree, input: BuildInput): boolean;
 
 /**
  * Give the slice of one scope.
  *
- * The slice is the frontier. The fold takes one pair at a time and stops as soon as the count of
- * lines is not above the budget. Among the pairs, it takes one that keeps the levels of the two
- * neighbours within one step, then the pair with the greatest `due`, then the lowest level, then
- * the lowest start. A pair merges though its node
- * is not built, so a temporary line takes the place of the two lines. Empty ranges do not render or count against the budget.
+ * The slice is the frontier. The fold is minimal. It runs only while the rendered line count
+ * exceeds the budget, and it stops at once when the count fits. The fold takes one pair at a time.
+ * It minimizes the demo jump penalty, then compares greatest `due`, lowest level, and lowest start.
+ * The penalty sums max(0, parentLevel - 1 - neighbourLevel) over the existing outer neighbours. A pair merges
+ * though its node is missing or dirty, so a temporary line takes the place of the two lines.
+ * The temporary line has its dates and no text. The render calls no model. Empty ranges do not
+ * render or count against the budget.
  * A pair that covers the greatest non-empty leaf never merges. A scope ends with a record. A catalog ends with a scope root.
  * When no pair can merge and the count is still above the budget, the oldest lines leave the slice.
  * A scope with no live record gives an empty slice. Dates come from the first and last live records in each range.
@@ -214,8 +231,8 @@ export declare function inputUnchanged(tree: Tree, input: BuildInput): boolean;
 export declare function slice(tree: Tree, budget: Lines): readonly SliceLine[];
 
 /**
- * The priority of a pair. The fold takes the greatest `due` first, then the lowest level, then the
- * lowest start.
+ * The priority of a pair. The fold and the writer take the greatest `due` first, then the lowest
+ * level, then the lowest start.
  *
  * `total` is the count of positions of the scope, so an import that changes `total` changes each
  * `due`.
