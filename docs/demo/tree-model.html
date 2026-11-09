@@ -216,14 +216,14 @@ const MODEL = (() => {
         const childB = occupant(start + half, level - 1);
         if (childA === null || childB === null) continue;
         const id = newId();
+        const at = nextAt();
         const next = {
-          id, start, level,
+          id, atNum: at, start, level,
           child_a: childA, child_b: childB,
           input_rev: maxOrder(rev(start, level - 1), rev(start + half, level - 1)),
-          order: orderOf(state.clock, id),
+          order: orderOf(at, id),
           summary: `сводка ${start}..${start + width - 1} по ${width} записям`,
         };
-        state.clock += 1;
         if (node) state.nodes[state.nodes.indexOf(node)] = next;
         else state.nodes.push(next);
         built.push(addrOf(next));
@@ -292,11 +292,17 @@ const MODEL = (() => {
     });
   }
 
-  /** The clock of a new event stays above each record, so an append is always at the end. */
-  function nextAt() {
+  /** The time of the last event of the log, a record or a node. */
+  function maxEventTime() {
     let max = 0;
     for (const note of state.notes) max = Math.max(max, note.atNum);
-    state.clock = Math.max(state.clock, max + 10);
+    for (const node of state.nodes) max = Math.max(max, node.atNum);
+    return max;
+  }
+
+  /** One clock for each event, so a new event is newer than each record and each node. */
+  function nextAt() {
+    state.clock = Math.max(state.clock, maxEventTime()) + 10;
     return state.clock;
   }
 
@@ -322,7 +328,6 @@ const MODEL = (() => {
     put("предпочтение: без смайлов", 700);
     put("задача: импорт с мерджем", 800);
     rebuild();
-    state.clock = 4000;
   }
 
   function add() {
@@ -367,13 +372,12 @@ const MODEL = (() => {
     const b2 = state.notes.find((note) => note.atNum === 250);
     const id = newId();
     state.nodes.push({
-      id, start: 0, level: 1,
+      id, atNum: 260, start: 0, level: 1,
       child_a: b1.id, child_b: b2.id,
       input_rev: maxOrder(b1.order, b2.order),
       order: orderOf(260, id),
       summary: "[B..0..1]",
     });
-    state.clock = nextAt();
     return "Импорт стора B: union по id, сортировка по order, адреса пересчитаны.";
   }
 
