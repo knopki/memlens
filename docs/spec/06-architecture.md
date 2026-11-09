@@ -174,6 +174,14 @@ jsonl backend takes a lock on each append. Several processes write one store. Se
 The index records the tokenizer of its build. A change of the `language` value rebuilds the index
 from the log, so the store needs no migration. See [REQ-476](02-requirements.md).
 
+The store keeps a projection of the log: the records, the current node of each range, and the count of
+each scope. The projection holds the order of the last event that it applied. The sqlite backend
+changes it in the append transaction, and the jsonl backend changes the sidecar after the append. A
+read with a small gap replays the events after the mark, and a gap above 1 000 events gives a rebuild.
+A rebuild reads each event one time, and the render scans no event. See
+[0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to
+[REQ-491](02-requirements.md).
+
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
 consistent by construction. A per-scope export also holds the top node of that scope. An import unions the events by `id`, a payload conflict keeps the later
 `at`, and the events of a redacted record arrive sanitized. See [0003 Store](../adr/0003-store.md).
@@ -184,7 +192,8 @@ consistent by construction. A per-scope export also holds the top node of that s
 | Data     | `$XDG_DATA_HOME/memlens`                    |
 | Override | `MEMLENS_STORE` gives another data path     |
 | Index    | A separate port over FTS5                   |
-| JSONL    | The sidecar file `index.db` holds the index |
+| JSONL    | The sidecar file `index.db` holds the index and the projection |
+| Projection | The records, the current node of each range, and the scope counts |
 
 ## View
 
