@@ -59,9 +59,9 @@
     <button type="button" id="resetBtn">сброс</button>
   </div>
   <div class="budget">
-    <span>бюджет here</span>
-    <input type="range" id="budget" min="30" max="400" step="10" value="120" />
-    <span id="budgetOut">120</span>
+    <span>бюджет here, строк</span>
+    <input type="range" id="budget" min="1" max="12" step="1" value="6" />
+    <span id="budgetOut">6</span>
   </div>
 </header>
 <main>
@@ -90,7 +90,7 @@
 <script>
 // #region model
 const MODEL = (() => {
-  const state = { notes: [], nodes: [], clock: 400, idc: 0, budget: 120 };
+  const state = { notes: [], nodes: [], clock: 400, idc: 0, budget: 6 };
 
   const atOf = (n) => `T${String(n).padStart(4, "0")}`;
   const orderOf = (n, id) => `${atOf(n)}|${id}`;
@@ -218,16 +218,15 @@ const MODEL = (() => {
     if (block.level === 0) return noteAt(block.start).body;
     return nodeAt(block.start, block.level).summary;
   };
-  const lineSize = (blocks) => blocks.reduce((sum, block) => sum + lineText(block).length, 0);
 
   /**
    * The slice is the frontier: the fold merges the pair with the highest `due` while the view
-   * is above the budget, and the cut takes the oldest lines.
+   * holds more lines than the budget, and the cut takes the oldest lines. The budget counts lines.
    */
   function frontier(budget) {
     const total = state.notes.length;
     let blocks = state.notes.map((note, pos) => ({ start: pos, level: 0 }));
-    while (lineSize(blocks) > budget) {
+    while (blocks.length > budget) {
       const options = [];
       for (let i = 0; i + 1 < blocks.length; i += 1) {
         const left = blocks[i];
@@ -246,7 +245,7 @@ const MODEL = (() => {
       const pick = options[0];
       blocks.splice(pick.index, 2, { start: pick.start, level: pick.level });
     }
-    while (blocks.length > 1 && lineSize(blocks) > budget) blocks = blocks.slice(1);
+    while (blocks.length > 1 && blocks.length > budget) blocks = blocks.slice(1);
     return blocks.map((block) => ({ start: block.start, level: block.level,
       addr: addrOf(block), text: lineText(block) }));
   }
@@ -381,8 +380,7 @@ function renderSlice() {
     item.append(addr, ` ${line.text}`);
     list.appendChild(item);
   }
-  const size = lines.reduce((sum, line) => sum + line.text.length, 0);
-  $("sliceInfo").textContent = `строк ${lines.length}, символов ${size}, бюджет ${MODEL.state.budget}`;
+  $("sliceInfo").textContent = `строк ${lines.length}, бюджет ${MODEL.state.budget}`;
   return lines;
 }
 
