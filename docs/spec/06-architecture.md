@@ -78,8 +78,8 @@ The projection builds the records in two passes over the events ordered by `(at,
 one record for each `note` event and copies its payload. The record takes `recorded_at` from `at`. A
 `node` event changes no record, and a proposed event changes no record and takes no `pos`. The
 current node of a key is the latest `node` event for that key.
-The `rev` of a range is the order of the latest event that touches it. See [REQ-113](02-requirements.md)
-and [REQ-462](02-requirements.md).
+The `rev` of a range is the order of the latest event that touches it. See [tree.d.ts](tree.d.ts) and
+[REQ-113](02-requirements.md).
 Pass 2 applies the operations in the same order. The order of arrival and a local `pos` change
 nothing. The effects of the operations, the state order, and the supersede rule are in
 [REQ-086](02-requirements.md) to [REQ-106](02-requirements.md).
@@ -183,6 +183,13 @@ transaction. A rebuild reads each event one time, and the render scans no event.
 [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to
 [REQ-494](02-requirements.md).
 
+The `md` export writes one directory with one file for each scope, at `<kind>/<name>.md`. Each file
+starts with the scope key and the format version. Each record is a section `## #<pos>` with a YAML
+block of `id`, `at`, `ts`, `kind`, `review_at`, `refs`, and `supersedes`, and then the `body`. The
+`longform` of a record follows as a section `### longform`. A redacted record holds `[redacted]` and
+no `longform`. An `md` export holds no `node` event, because a rebuild gives the tree. See
+[REQ-505](02-requirements.md) to [REQ-508](02-requirements.md).
+
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
 consistent by construction. A per-scope export also holds the top node of that scope. An import unions the events by `id`, a payload conflict keeps the later
 `at`, and the events of a redacted record arrive sanitized. See [0003 Store](../adr/0003-store.md).
@@ -195,6 +202,9 @@ consistent by construction. A per-scope export also holds the top node of that s
 | Index    | A separate port over FTS5                   |
 | JSONL    | The sidecar file `index.db` holds the index and the projection |
 | Projection | The records, the current node of each range, and the scope counts |
+| SQLite file | `memlens.db` |
+| JSONL file | `memlens.jsonl` |
+| Sidecar | `index.db` holds the index and the projection of the jsonl backend |
 
 ## View
 
@@ -428,6 +438,19 @@ that gave the key.
 
 The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
 and `3` a refusal by a policy.
+
+## Errors
+
+An error carries `code` and `message`. The command maps the kind of the error to its exit code.
+
+| Code                  | Kind            | Exit code | When                                             |
+| --------------------- | --------------- | --------- | ------------------------------------------------ |
+| `NotAllowed`          | policy          | 3         | A target outside the profile of `scopes`         |
+| `CrossScopeSupersede` | data            | 1         | A `supersedes` of a record of another scope      |
+| `Usage`               | usage           | 2         | A flag outside the usage, or no command          |
+| `Data`                | data            | 1         | An unknown target, or an event that does not fit |
+
+See [REQ-497](02-requirements.md) to [REQ-500](02-requirements.md).
 
 ## Code markup
 
