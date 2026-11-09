@@ -46,3 +46,5 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0009 | Agent surface | accepted |
 | 0010 | Process and stack | accepted |
 | 0011 | Nodes are events | accepted |
+| 0012 | Proposals | accepted |
+| 0013 | Tree model | accepted |
