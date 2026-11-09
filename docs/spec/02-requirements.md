@@ -370,6 +370,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-506 | Each record of an `md` file is a section `## #<pos>`, with a YAML block of its fields and then its `body`.                                                                            | FR   | accepted | S-128               | A scope of two records gives two sections with one YAML block each.                                                            |
 | REQ-507 | The `md` export carries `id`, `at`, `ts`, `kind`, `review_at`, `refs`, and `supersedes`, so an import reads it.                                                                       | FR   | accepted | S-128               | An import of the export gives the same records.                                                                                |
 | REQ-508 | The `md` export holds no `node` event, because a rebuild gives the tree.                                                                                                              | FR   | accepted | S-128               | An export of a built tree holds no node section.                                                                               |
+| REQ-509 | The policy text names the six tools and the address forms `#pos`, `#a-b`, and `scope#pos`.                                                                                            | FR   | accepted | S-130               | The text holds each tool name and each address form.                                                                           |
 
 ## Rules for new requirements
 

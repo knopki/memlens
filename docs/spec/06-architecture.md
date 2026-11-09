@@ -484,5 +484,5 @@ customer words as given.
 
 ## Remaining work
 
-The policy text is the block of [S-067](../statements.md#s-067), and the customer accepts it. A later
-research of the prior art can replace it. See [Q-456](03-open-questions.md).
+The policy text comes from the research of the prior art. See [S-130](../statements.md#s-130) and
+[09-prompts.md](09-prompts.md).
