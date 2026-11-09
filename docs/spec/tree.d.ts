@@ -67,6 +67,10 @@ export interface NodeEvent {
 	/** The revision of the two children at the time of the build. */
 	readonly input_rev: Rev;
 	readonly summary: string;
+	/** The length of the summary line in characters. */
+	readonly chars: number;
+	/** True when the build cut the line at the limit of characters. */
+	readonly truncated: boolean;
 	readonly ts_from: string;
 	readonly ts_to: string;
 }

@@ -11,7 +11,7 @@ one engine:
 - The catalog of nodes is the level above the notes. It has its own tree and belongs
   to one profile.
 
-The agent reads one map of directions: the catalog in the `<directions>` block.
+The agent reads one map of directions: the catalog in the `<directions>` section.
 
 ## Parts
 
@@ -151,7 +151,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
-| `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 bytes.                   |
+| `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 characters.                   |
 | `cacheTtl`       | `deepseek/*` 2 hours, `anthropic/*` 5 minutes, another model 1 hour        | An idle time above the TTL gives a new snapshot.                 |
 | Context          | 65 536 tokens at least                                                    | The slice and the reserve fit.                                   |
 
@@ -191,7 +191,7 @@ consistent by construction. A per-scope export also holds the top node of that s
 A view is the lines that one render gives. The render takes the records, the built nodes, and
 `storeRev`, and it gives one text.
 
-The text is one `<memory>` block with three parts: `<how-to>`, `<directions>`, and `<here>`. The
+The text is one `<memory>` section with three parts: `<how-to>`, `<directions>`, and `<here>`. The
 template is in [09-prompts.md](09-prompts.md), and each placeholder takes its value.
 
 The `<how-to>` part holds the policy text and the value of `customPromptAppend`. A `customPrompt`
@@ -204,7 +204,7 @@ top node of the scope. When the top node is not built, the lines of the frontier
 the place of the line.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
-and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`.
+and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`, or the two dates only for a temporary line.
 
 The budget counts lines. The `here` value limits the `<here>` part, and the `directions` value limits
 the `<directions>` part. The two values are independent, and the `<how-to>` part is never cut.
@@ -212,19 +212,25 @@ the `<directions>` part. The two values are independent, and the `<how-to>` part
 Each part is a tree. The tree of the active scope gives the `<here>` part, and the catalog tree gives
 the `<directions>` part.
 
-A part above its budget merges the built pair with the highest `due`. The line of the parent takes the
-place of the two lines of the pair. The part merges pairs until it fits its budget.
+A part above its budget merges one pair at a time, and it stops as soon as the count of lines fits the
+budget. The line of the parent takes the place of the two lines of the pair. Among the pairs, a merge
+keeps the level steps of the neighbours at one. The last line of the slice is a record, so the pair of
+the last position never merges.
 
-A part with a node that is not built can stay above its budget, because a pair needs a built parent.
+A pair merges though the node of its range is not built, and a temporary line takes the place of the
+two lines. So the part always reaches its budget. When no pair merges and the part is still above its
+budget, the oldest lines leave the part.
 At a session start the plugin starts a build when a part is above 1.5 times its budget. The build has
 a deadline of 10 seconds, and the render waits for it. The render does not wait for the queue of the
 compaction.
 
 An open of a note gives the note and its `longform`. An open of a node gives the two children of that
 node, as the slice renders them. A range that matches no built node gives one line: the level follows
-the span of the range, and the line holds the first `pos`. A node that is not built gives a temporary
-line of its two children, so the render calls no model. A rebuild keeps each address, because a merge
-with another log is the only change of the order.
+the span of the range, and the line holds the first `pos`.
+
+A range gives a temporary line, unless its node passes both tests: `built` and `clean`. That line
+holds the period of the range and no text, and the render calls no model. A rebuild keeps each address, because a merge with
+another log is the only change of the order.
 
 A `redact` cleans the store. The copy in the session history stays. See
 [0007 Slice and context](../adr/0007-slice-context.md).
@@ -416,7 +422,7 @@ and `3` a refusal by a policy.
 
 ## Code markup
 
-Each source file has one `#region moduleContract` block at the top. The block gives the purpose, the
+Each source file has one `#region moduleContract` region at the top. The region gives the purpose, the
 scope, and the invariants of the module. Each public or non-trivial entity has one region. See
 [C-009](01-goals-nongoals.md).
 

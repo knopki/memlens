@@ -254,9 +254,9 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-316 | `limit` is 50 maximum for each scope. | FR | accepted | S-070 | The value 100 gives 50 hits for one scope. |
 | REQ-319 | `memory_find` gives no record with the state `hidden` or `deleted`. | FR | accepted | S-070, S-101 | Two records, one in each state, are absent from each answer. |
 | REQ-325 | `longform` is `none`, `head`, or `all`, and the default is `head`. | FR | accepted | S-070 | A call with no `longform` gives the head. The tool accepts each of the three values. |
-| REQ-326 | `head` gives 8 192 characters of the document at most. | FR | accepted | S-070 | A document of 24 576 characters gives 8 192 with `head`. |
+| REQ-326 | `head` gives 8 192 characters of the document at most. | FR | accepted | S-070 | A document of 16 384 characters gives 8 192 with `head`. |
 | REQ-327 | `offset` continues the document after the characters of the earlier answer. | FR | accepted | S-070 | A call with the `longformOffset` gives the next 8 192 characters. |
-| REQ-328 | `all` gives 16 384 characters of the document at most. | FR | accepted | S-070 | A document of 24 576 characters gives 16 384 with `all`. |
+| REQ-328 | `all` gives 16 384 characters of the document at most. | FR | accepted | S-070 | A document of 16 384 characters gives 16 384 with `all`. |
 | REQ-337 | A temporary line holds the period from the first record to the last record of its range, and no text.                                                                                 | FR   | accepted | S-070, S-113, S-119 | A temporary line gives the two ends of its range and no summary.                                                               |
 | REQ-342 | Without `scope`, `memory_review` gives the due records of each visible scope. | FR | accepted | S-070 | One call gives the due records of two scopes. |
 | REQ-343 | A numeric `reviewed` without a `scope` gives an error. | FR | accepted | S-070 | The value `[12]` fails. The `addr` succeeds. |
@@ -346,6 +346,7 @@ The requirements that a later requirement replaced are in [02-superseded.md](02-
 | REQ-479 | Among the pairs, the fold takes one that keeps the levels of the neighbours within one step.                                                                                          | FR   | accepted | S-120, S-121        | A frontier of 40 records keeps each level step at one.                                                                         |
 | REQ-480 | When no pair merges and the slice is above its budget, the oldest lines leave the slice.                                                                                              | FR   | accepted | S-120, S-121        | A small budget gives a slice that starts after the first positions.                                                            |
 | REQ-482 | The amend that moves a note makes the top nodes of the two scopes and each node above them in the catalog dirty.                                                                      | FR   | accepted | S-034, S-104, S-123 | Both top nodes and the nodes above them are dirty after the amend.                                                             |
+| REQ-483 | The last line of the slice is a record.                                                                                                                                               | FR   | accepted | S-120, S-123        | The line of the last position is a record in each slice.                                                                       |
 
 ## Rules for new requirements
 

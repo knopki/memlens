@@ -114,13 +114,13 @@ export interface MemoryOpenLine {
 	chars: number;
 }
 
-export interface MemoryOpenBlock {
-	kind: "block";
+export interface MemoryOpenChildren {
+	kind: "children";
 	/** The children of the node: two, or one when a position is empty. */
 	children: MemoryOpenLine[];
 }
 
-export type MemoryOpenOutput = MemoryOpenEntry | MemoryOpenBlock;
+export type MemoryOpenOutput = MemoryOpenEntry | MemoryOpenChildren;
 
 export interface MemoryForgetInput {
 	/** A target is a `pos` of the scope or an `Address`. */

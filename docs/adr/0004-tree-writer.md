@@ -16,4 +16,4 @@ Build the view on each turn. One job at a time. Maintain the tree in the agent l
 
 ## Consequences
 
-One change costs `log2(N)+1` model calls at most. The cache key is `epoch = hash(storeRev, sorted built nodes)`. The wake does not block on the queue.
+One change costs `log2(N)+1` model calls at most. The cache key is `epoch = hash(storeRev, sorted built nodes)`. The render does not block on the queue.

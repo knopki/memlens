@@ -10,17 +10,17 @@ requirement.
 
 | File                                         | Content                                            | Status       |
 | -------------------------------------------- | -------------------------------------------------- | ------------ |
-| [00-overview.md](00-overview.md)             | Problem, users, value, success criteria.           | draft        |
-| [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints.                     | draft        |
-| [02-requirements.md](02-requirements.md)     | Requirements with identifiers and status.          | draft        |
+| [00-overview.md](00-overview.md)             | Problem, users, value, success criteria.           | live         |
+| [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints.                     | live         |
+| [02-requirements.md](02-requirements.md)     | Requirements with identifiers and status.          | live         |
 | [02-superseded.md](02-superseded.md)         | Requirements that a later requirement replaced.     | archive      |
 | [02-slices.md](02-slices.md)                 | The review order for acceptance, in slices.        | live         |
 | [03-open-questions.md](03-open-questions.md) | Open and closed questions.                         | live         |
 | [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                       | live         |
-| [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.                   | draft        |
+| [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.                   | live         |
 | [07-prior-art.md](07-prior-art.md)           | Each claim of the customer table against the code. | archive      |
-| [08-ui.md](08-ui.md)                         | The console, the seven screens, and the two hosts. | draft        |
-| [09-prompts.md](09-prompts.md)               | The four prompts of the writer and the subagent.   | draft        |
+| [08-ui.md](08-ui.md)                         | The console, the seven screens, and the two hosts. | live         |
+| [09-prompts.md](09-prompts.md)               | The four prompts of the writer and the subagent.   | live         |
 | [../adr/](../adr/)                           | The decisions.                                     | live         |
 
 ## Rules

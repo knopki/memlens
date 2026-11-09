@@ -17,7 +17,7 @@ chat is not the answer: each token costs, and the model still loses the old fact
 The memory is a log of curated notes with a tree of retellings above the notes. It is not a chat
 history.
 
-A write makes one note: a `body` of 384 bytes for the tree and a `longform` document of 16 KiB for
+A write makes one note: a `body` of 384 characters for the tree and a `longform` document of 16 384 characters for
 the full text. The `body` becomes a leaf of the tree. The `longform` stays out of the tree.
 
 ## Two levels

@@ -5,7 +5,7 @@ of a word is a change of the product.
 
 ## The slice
 
-The slice is one template. The `how-to` block holds the policy text, and each block holds its own
+The slice is one template. The `how-to` section holds the policy text, and each section holds its own
 guide line. See [REQ-178](02-requirements.md) and [REQ-475](02-requirements.md).
 
 ```text
@@ -27,7 +27,7 @@ The frontier of the active scope: one line for each range, from the oldest to th
 
 ## Policy text
 
-The policy text holds no XML tag and no tool signature. It names a block in backticks. See
+The policy text holds no XML tag and no tool signature. It names a section in backticks. See
 [REQ-179](02-requirements.md).
 
 ```text
