@@ -27,8 +27,10 @@ The frontier of the active scope: one line for each range, from the oldest to th
 
 ## Policy text
 
-The policy text holds no XML tag and no tool signature. It names a section in backticks. See
-[REQ-179](02-requirements.md).
+The policy text holds no XML tag and no tool signature. It names a section in backticks. The text
+below is the block of [S-067](../statements.md#s-067) word for word, and it stays until the research
+of the prior art gives the text. See [Q-456](03-open-questions.md) and
+[06-architecture.md](06-architecture.md).
 
 ```text
 Long-term memory, kept across sessions and across chats in this project. It holds what earlier
