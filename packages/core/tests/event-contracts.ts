@@ -23,6 +23,9 @@ import type {
 	Ulid,
 } from "../../../docs/spec/events.js";
 
+import type { JsonlLine as CoreJsonlLine } from "../src/types/events.js";
+import type { AppendEvent } from "../src/types/store.js";
+
 // #region FUNC_assertEventContracts
 /** @purpose Reject type changes that lose event structure or permit cleared content to return. */
 export function assertEventContracts(): void {
@@ -43,6 +46,13 @@ export function assertEventContracts(): void {
 	type NoteContent = "body" | "longform" | "redacted";
 	type NodeContent = "summary" | "chars" | "redacted";
 	type Checks = [
+		Assert<Equal<CoreJsonlLine, JsonlLine>>,
+		Assert<
+			Extract<AppendEvent, { op: "note" }> extends Omit<NoteEvent, "id" | "at">
+				? true
+				: false
+		>,
+		Assert<Equal<Extract<AppendEvent, { op: "note" }>["body"], string>>,
 		Assert<
 			Equal<Omit<SanitizedNoteEvent, NoteContent>, Omit<NoteEvent, NoteContent>>
 		>,

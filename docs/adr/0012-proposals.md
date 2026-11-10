@@ -38,6 +38,6 @@ field `accepts`. A separate store of proposals.
 
 The projection has one filter and no correlation between events. A proposal takes no position and creates no empty slot. A rejection of a `hide` or of a new note writes a `dismiss`, because the op has
 no old value. The console lists the proposals of the log. The parent accepts a proposal with a normal
-write. See [REQ-360](02-requirements.md), [REQ-361](02-requirements.md),
-[REQ-472](02-requirements.md), [REQ-474](02-requirements.md), and
+write. See [REQ-360](../spec/02-requirements.md), [REQ-361](../spec/02-requirements.md),
+[REQ-474](../spec/02-requirements.md), the [projection contract](../../packages/core/src/domain/projection.ts), and
 [S-142](../statements.md#s-142).

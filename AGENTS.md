@@ -1,15 +1,17 @@
 # Work rules for agents
 
-This repository is in the specification phase. A scaffold of the three packages exists. No part does
-work yet. The specification in `docs/spec/` is the only authority for requirements.
+The core has domain implementations and storage stubs. The CLI and the plugin have scaffolds.
+The specification in `docs/spec/` owns cross-module requirements and pending behavior.
+Code contracts own implemented rules within one module. Read the module contract and the relevant entity contract before a change.
 
 ## Order of work
 
 1. Write the new statement in [docs/statements.md](docs/statements.md). Use the next identifier
    `S-nnn` and add the date. Do not change the words of the statement.
 2. Put the meaning in the correct file:
-   - Testable behavior goes to [02-requirements.md](docs/spec/02-requirements.md) as `REQ-nnn`
-     with status `draft`.
+   - Cross-module behavior and pending behavior go to [02-requirements.md](docs/spec/02-requirements.md) with status `draft`.
+   - Implemented local behavior goes to module invariants or an entity contract beside its implementation.
+   - Keep requirement identifiers out of code contracts. Archive original requirements in [02-superseded.md](docs/spec/02-superseded.md).
    - The product boundary goes to [00-overview.md](docs/spec/00-overview.md) or to
      [01-goals-nongoals.md](docs/spec/01-goals-nongoals.md).
    - A choice with consequences goes to an ADR.

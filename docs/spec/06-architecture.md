@@ -1,6 +1,7 @@
 # Architecture
 
-Status: draft. The specification is the source of truth. The repository has a scaffold only.
+Status: draft. The core has domain implementations and storage stubs. The CLI and the plugin have scaffolds.
+The global requirements define cross-module behavior. Code contracts define implemented local behavior.
 
 ## Shape
 
@@ -78,20 +79,11 @@ A node has empty summary and zero chars. See [0002 Event log](../adr/0002-event-
 
 ## Projection
 
-The projection builds the records in two passes over the events ordered by `(at, id)`. Pass 1 makes
-one record for each `note` event and copies its payload. The record takes `recorded_at` from `at`. A
-`node` event changes no record, and a proposed event changes no record and takes no `pos`. The
-current node is the latest candidate whose id has no invalidation.
-The projection derives the invalidated ids from the log before it selects candidates.
-The `rev` of a range is the latest order that touches it. This maximum alone does not prove freshness.
-The tree reads current records, their states, and their mutation orders. See [tree.d.ts](tree.d.ts) and [REQ-113](02-requirements.md).
-Pass 2 applies the operations in the same order. The order of arrival and a local `pos` change
-nothing. The effects of the operations, the state order, and the supersede rule are in
-[REQ-086](02-requirements.md) to [REQ-106](02-requirements.md).
+The [projection contract](../../packages/core/src/domain/projection.ts) owns canonical replay, record states, supersede effects, and scope positions.
+Its entity contracts define both passes and each operation. The [tree contract](../../packages/core/src/domain/tree.ts) owns range revisions and summary readiness.
 
-The applied history identifies each real entry into a scope: an initial note or an actual scope transfer.
-The projection assigns those entry positions in canonical event order. The current record uses its latest entry position.
-Leaving a scope keeps the earlier position empty. A content edit and a proposed operation allocate no new position.
+The store supplies the resolved event union and durable invalidations before replay.
+Node publication remains a store and writer guarantee under [REQ-113](02-requirements.md).
 
 ## Catalog
 
@@ -102,10 +94,8 @@ the catalog scope. A node of the catalog carries no `review_at`, no `proposed`, 
 `turn`, and no `preset`. See [0011 Nodes are events](../adr/0011-nodes-are-events.md) and
 [S-104](../statements.md#s-104).
 
-The projection derives catalog positions from the resolved log and the profile scope filter.
-Its counter follows the first real appearance of each scope in `(at, id)` order.
-A non-proposed note or an applied scope transfer can introduce a scope. Proposals and derived events do not allocate positions.
-A scope with no live record keeps its historical empty position.
+The [catalogTree contract](../../packages/core/src/domain/projection.ts) owns catalog positions for a resolved profile filter.
+The store derives that filter from configuration before it supplies the projection to the catalog.
 
 An import merges the events and derives the positions again. It does not merge independent counter values.
 The same log and profile filter give the same positions after a restart or either import order.
@@ -113,19 +103,18 @@ A changed leaf identity or position invalidates its old and new catalog paths. T
 At a catalog leaf, child lookup uses that position to find the scope and its current top node.
 The node is the existing scope root, with no synthetic event. Its range belongs to the scope tree, not to the catalog position.
 A live scope with an unready root is non-empty, so the catalog writer waits for it.
-See [REQ-463](02-requirements.md) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
+See the [catalog contracts](../../packages/core/src/domain/projection.ts) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
 
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
 When the top node is not ready, its direction line is temporary and gives the period without summary text. A scope with no
 live note gives no direction line. A shared scope gets one position in each profile where it is
 visible. See [REQ-108](02-requirements.md), [REQ-109](02-requirements.md),
-[REQ-120](02-requirements.md), [REQ-451](02-requirements.md), and [REQ-460](02-requirements.md).
+[REQ-451](02-requirements.md), the [catalog contract](../../packages/core/src/domain/projection.ts), and the [root contract](../../packages/core/src/domain/tree.ts).
 
 A change of a note makes each node above it dirty, and the writer builds the node from its two
 children. A rebuild appends a new `node` event for the same key.
 The projection takes the latest candidate whose id has no invalidation.
-See [REQ-113](02-requirements.md) to [REQ-117](02-requirements.md), [REQ-191](02-requirements.md), and
-[REQ-192](02-requirements.md).
+See [REQ-113](02-requirements.md) to [REQ-117](02-requirements.md), [REQ-192](02-requirements.md), and the [child input contract](../../packages/core/src/domain/tree.ts).
 
 A `redact` clears historical dependent nodes through their child ids, including earlier scope paths and catalog ancestors.
 The placeholder `[redacted]` appears in the console and the view only, and no event holds it.
@@ -184,7 +173,7 @@ One store holds many profiles, scopes, and records.
 
 A scope is a key in the events. The key has the form `kind:name`, and the store lowercases it before
 the write. The store holds no record for a scope, and no event describes one. A scope exists because
-a record names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and [REQ-255](02-requirements.md).
+a record names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and the [scope grammar](../../packages/core/src/domain/scope.ts).
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.
 Writer candidates derive from dirty ranges, including ranges with no node event. The store keeps no job queue. See
@@ -308,29 +297,19 @@ texts are in [09-prompts.md](09-prompts.md).
 
 ## Addressing
 
-An address is `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. A content amendment within one scope keeps the address.
-A scope transfer empties the old position and appends a new position in its destination.
-The old slot stays empty, including after a transfer back to that scope. The original note id remains the log identity.
-A saved textual address is not a permanent record identifier. The input holds no `#`, and the tool strips one leading `#`
-from a copy of the slice. See [REQ-259](02-requirements.md) to [REQ-276](02-requirements.md).
+The [address contract](../../packages/core/src/domain/address.ts) owns parsing and address text.
+The [projection contract](../../packages/core/src/domain/projection.ts) owns scope transfers and position allocation.
+A saved textual address is not a permanent record identifier.
+Tool scope resolution remains in [REQ-260](02-requirements.md), [REQ-261](02-requirements.md), and [REQ-276](02-requirements.md).
 
 ## Tree
 
-A node has the key `(level, start)`. A node of level `L` covers `2^L` consecutive `pos` values, and
-`start` is a multiple of `2^L`. A `node` event holds `summary`, `ts_from`, `ts_to`, `chars`,
-`input_rev`, and `truncated`, and its `at` is the time of the build.
-A clean node is built, has clean non-empty child nodes, and has no invalidation. Its child revision must match `input_rev`.
-The tree has no depth limit and needs no dense prefix. A position with no live record stays empty.
+The [tree contracts](../../packages/core/src/domain/tree.ts) own range geometry, root selection, child readiness, revisions, and live dates.
+The [tree types](../../packages/core/src/types/tree.ts) define the input and output shapes.
+See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
-The root range starts at zero and has level `max(1, ceil(log2(total)))` for positive `total`.
-The total includes hidden and deleted records. A hide keeps their positions, so it does not shrink the root range.
-A total of zero gives no root range. Empty padding completes the last half of a partial root.
-
-A null child means that its half has no live record. A non-empty half with no clean summary must wait for a rebuild.
-Two empty halves need no node event. With one non-empty child, the parent copies its text and dates without a model call.
-Empty ranges do not render or count against the budget. A non-empty slice keeps its last live record as a leaf.
-Dates come from the first and last live records of the range in position order.
-See [0013 The tree model](../adr/0013-tree-model.md) and [REQ-122](02-requirements.md) to [REQ-133](02-requirements.md).
+The writer publishes aligned node events under [REQ-124](02-requirements.md).
+It handles empty halves and single-child copies under [REQ-169](02-requirements.md) and [REQ-170](02-requirements.md).
 
 ## Frontier
 
@@ -342,8 +321,7 @@ holds the address, the range of dates, and the text. See [0004 Tree and writer](
 
 A `hide` or an `amend` makes the ancestors of the position dirty. A dirty node does not
 render, and its children take its place down to a clean node or a record. The rebuild goes bottom-up,
-and one change costs `log2(N)+1` model calls at most. See [REQ-217](02-requirements.md) and
-[REQ-218](02-requirements.md).
+and one change costs `log2(N)+1` model calls at most. See the [slice contract](../../packages/core/src/domain/tree.ts) and [REQ-218](02-requirements.md).
 
 A redaction clears the note, every historical amendment, and every historical node whose child dependencies reach cleared event ids.
 The clearing follows source ids across scopes and catalogs. Current numeric positions do not determine historical dependencies.
@@ -357,20 +335,15 @@ Already delivered session messages stay unchanged.
 Publication uses one exclusive store lock and an atomic source replacement. SQLite journals and the disposable JSONL index cannot accompany the sanitized source with stale content.
 A successful operation leaves no cleared content in store-owned named files or journals.
 A crash leaves either the earlier complete source or the complete sanitized source. Recovery runs before a read.
-See [0008 Redaction](../adr/0008-redaction.md) for the backend steps and [REQ-219](02-requirements.md) to [REQ-222](02-requirements.md).
+See the [sanitization contracts](../../packages/core/src/domain/sanitization.ts) for content closure and [0008 Redaction](../adr/0008-redaction.md) for backend publication.
+[REQ-219](02-requirements.md) and [REQ-222](02-requirements.md) define atomic publication and cache clearing.
 
 ## Fold
 
-The demo defines the fold behavior. The fold does work only while the rendered line count exceeds the budget.
-It stops immediately when the count fits. A ready range gives its summary, and an unready range gives a temporary date-only line.
-The fold calls no model and appends no node event. The render waits for no writer.
-
-A merge needs adjacent aligned ranges of one level. It never covers the greatest non-empty leaf.
-The choice minimizes the demo jump penalty, then compares due, level, and start.
-The fold preserves text outside the selected pairs. Empty ranges count as no rendered line.
-When no pair can merge, the existing slice rule omits the oldest lines until the count fits.
-The cache key remains `epoch = hash(storeRev, sorted built nodes)`.
-See [0013 The tree model](../adr/0013-tree-model.md), [tree.d.ts](tree.d.ts), and [REQ-165](02-requirements.md) to [REQ-177](02-requirements.md).
+The [fold and slice contracts](../../packages/core/src/domain/tree.ts) own pair selection, line budgets, temporary lines, and last-leaf preservation.
+The demo supplies the comparison cases for the existing tree tests.
+The cache key remains `epoch = hash(storeRev, sorted built nodes)` under [REQ-173](02-requirements.md).
+See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
 ## Writer
 
