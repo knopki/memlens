@@ -14,6 +14,7 @@
  */
 
 import {
+	appendFileSync,
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
@@ -296,5 +297,154 @@ describe("@memlens/cli commands", () => {
 		const got = await run(test, "config", "get", "store.idle");
 		expect(got.code).toBe(0);
 		expect(got.out).toContain("store.idle: 60");
+	});
+
+	it("publishes one copy input and gives a compaction job with --max", async () => {
+		const test = makeEnv();
+		await run(test, "note", "Lone note", "--scope", "project:acme/x");
+		const copy = await run(test, "compact", "--scope", "project:acme/x");
+		expect(copy.code).toBe(0);
+		expect(copy.out).toContain("published 1 copies");
+		expect(copy.out).toContain("no merge inputs");
+		for (const body of ["Two", "Three", "Four", "Five"])
+			await run(test, "note", `${body} note`, "--scope", "project:acme/x");
+		const limited = await run(
+			test,
+			"compact",
+			"--scope",
+			"project:acme/x",
+			"--max",
+			"1",
+		);
+		expect(limited.code).toBe(0);
+		expect(limited.out).toContain("#0-1");
+		expect(limited.out).not.toContain("#2-3");
+		const dry = await run(
+			test,
+			"compact",
+			"--scope",
+			"project:acme/x",
+			"--dry-run",
+		);
+		expect(dry.out).toContain("would publish");
+	});
+
+	it("writes the answers of a compaction job as nodes", async () => {
+		const test = makeEnv();
+		await run(test, "note", "First note", "--scope", "project:acme/x");
+		await run(test, "note", "Second note", "--scope", "project:acme/x");
+		const job = await run(test, "compact", "--scope", "project:acme/x");
+		expect(job.out).toContain("#0-1");
+		expect(job.out).toContain("First note");
+		const answer = join(test.home, "answer.txt");
+		writeFileSync(answer, "#0-1: One line over both notes");
+		const applied = await run(
+			test,
+			"compact",
+			"--answer",
+			answer,
+			"--scope",
+			"project:acme/x",
+		);
+		expect(applied.code).toBe(0);
+		expect(applied.out).toContain("built 1 nodes");
+		const out = join(test.home, "out");
+		const exported = await run(
+			test,
+			"export",
+			"--format",
+			"jsonl",
+			"--out",
+			out,
+			"--scope",
+			"project:acme/x",
+		);
+		expect(exported.code).toBe(0);
+		expect(
+			readFileSync(join(out, "project%3Aacme%2Fx.jsonl"), "utf8"),
+		).toContain("One line over both notes");
+	});
+
+	it("refuses a compaction of a scope outside the profile", async () => {
+		const test = makeEnv(WORK_CONFIG);
+		const refused = await run(test, "compact", "--scope", "user:other");
+		expect(refused.code).toBe(3);
+	});
+
+	it("checks a healthy store and repairs an incomplete jsonl tail", async () => {
+		const test = makeEnv(`
+defaultProfile = "default"
+
+[store]
+backend = "jsonl"
+idle = 300
+
+[writer]
+provider = "deepseek"
+model = "deepseek-chat"
+effort = "off"
+mode = "auto"
+batch = 6
+maxCallsPerHour = 120
+
+[profile.default]
+scopes = ["*"]
+
+[profile.default.budget]
+here = 17
+directions = 3
+
+[scope_default]
+default = "user:notes"
+`);
+		await run(test, "note", "Check note", "--scope", "project:acme/x");
+		const clean = await run(test, "check");
+		expect(clean.code).toBe(0);
+		expect(clean.out).toContain("ok");
+		const source = join(test.home, "data", "memlens", "memlens.jsonl");
+		appendFileSync(source, '{"op":"partial"');
+		const dirty = await run(test, "check");
+		expect(dirty.code).toBe(1);
+		expect(dirty.out).toContain("incomplete bytes");
+		const planned = await run(test, "repair", "--dry-run");
+		expect(planned.code).toBe(0);
+		expect(planned.out).toContain("truncate");
+		const repaired = await run(test, "repair");
+		expect(repaired.code).toBe(0);
+		expect(readFileSync(source, "utf8")).not.toContain("partial");
+		const after = await run(test, "check");
+		expect(after.code).toBe(0);
+	});
+
+	it("imports one scope under another key with --as", async () => {
+		const first = makeEnv();
+		await run(first, "note", "Move me", "--scope", "project:acme/x");
+		const out = join(first.home, "out");
+		await run(
+			first,
+			"export",
+			"--format",
+			"jsonl",
+			"--out",
+			out,
+			"--scope",
+			"project:acme/x",
+		);
+		const copy = readFileSync(join(out, "project%3Aacme%2Fx.jsonl"), "utf8");
+		const second = makeEnv();
+		const input = join(second.home, "in.jsonl");
+		writeFileSync(input, copy);
+		const imported = await run(
+			second,
+			"import",
+			"--in",
+			input,
+			"--as",
+			"project:other/y",
+		);
+		expect(imported.code).toBe(0);
+		const found = await run(second, "find", "Move");
+		expect(found.out).toContain("project:other/y#0");
+		expect(found.out).not.toContain("project:acme/x");
 	});
 });

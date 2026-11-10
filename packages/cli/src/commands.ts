@@ -7,8 +7,8 @@
  * harness.
  * @scope
  *  - The commands note, find, open, forget, review, redact, amend, scopes, scope, slice, status,
- *    export, import, and config.
- *  - NOT: argument parsing, the exit code mapping, and the store logic.
+ *    check, repair, export, import, and config.
+ *  - NOT: argument parsing, the exit code mapping, the store logic, and the compaction job.
  * @invariants
  *  - The CLI has no active scope. The command note takes its scope in --scope. A command with a
  *    target takes the scope in the address or in --scope.
@@ -20,22 +20,29 @@
  *  - A redact asks for a confirmation, and --yes skips it.
  *  - An export takes --scope. With no flag, an md export writes one file for each scope and a
  *    jsonl export copies the whole store. With the flag, both write one scope.
+ *  - An import with --as rewrites the scope of each imported non-catalog event to the given key.
+ *    A catalog event keeps its scope.
+ *  - The command check tests the store against its log: each exported event passes validation,
+ *    the stored projection equals one fresh replay, and the jsonl source ends at the replay
+ *    cursor. A finding answers with the exit code 1.
+ *  - The command repair rebuilds the derived state from the log and lists the changes. The flag
+ *    --dry-run lists the changes and writes nothing.
  *  - Each command closes its store before it returns.
- *  - NOT: the commands compact, check, repair, and ui, and the flags --as and --from of import.
- *    The specification holds them as pending work.
+ *  - NOT: the command ui and the import from harness sessions. The specification holds them as
+ *    pending work.
  * @usecases
  *  - Note: user => gives body and --scope => gets the address of the saved record
  *  - Read: user => gives words or a target => gets the matching records
  * @dependencies
  *  USES API: @memlens/core, runtime.ts, export-md.ts, smol-toml
  *  WRITES: the store directory, the export directory, config.toml
- * @keywords command, note, find, open, forget, review, redact, amend, scopes, slice, export, import
+ * @keywords command, note, find, open, forget, review, redact, amend, scopes, check, repair, export, import
  * #endregion moduleContract
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { debuglog } from "node:util";
+import { debuglog, isDeepStrictEqual } from "node:util";
 import type {
 	DirectionScope,
 	DueRecord,
@@ -58,10 +65,12 @@ import {
 	openRange,
 	parseAddress,
 	prepareImport,
+	project,
 	renderContext,
 	scopeLines,
 	scopeTree,
 	toIsoDate,
+	validateEvent,
 	xdgDirs,
 } from "@memlens/core";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
@@ -90,7 +99,11 @@ export interface CommandIo {
 
 const KINDS = ["decision", "preference", "fact", "task", "note"] as const;
 
-function flagValue(flags: ParsedArgs["flags"], name: string): string | null {
+/** The value of one flag, or null when the command did not give it. */
+export function flagValue(
+	flags: ParsedArgs["flags"],
+	name: string,
+): string | null {
 	const value = flags[name];
 	return typeof value === "string" ? value : null;
 }
@@ -102,7 +115,8 @@ function flagList(flags: ParsedArgs["flags"], name: string): string[] {
 	return [];
 }
 
-function countFlag(
+/** The numeric value of one flag, or the fallback. */
+export function countFlag(
 	flags: ParsedArgs["flags"],
 	name: string,
 	fallback: number,
@@ -717,6 +731,97 @@ export async function statusCommand(
 }
 // #endregion FUNC_statusCommand
 
+// #region FUNC_checkCommand
+/**
+ * Test the store against its log.
+ *
+ * @purpose Report each mismatch between the derived state and the log, so a user trusts the
+ * store or runs repair.
+ * @invariants The command validates each exported event, compares the stored projection with one
+ * fresh replay, and checks the end of the jsonl source against the replay cursor. A store with
+ * a finding answers with the exit code 1.
+ */
+export async function checkCommand(
+	args: ParsedArgs,
+	io: CommandIo,
+): Promise<CommandAnswer> {
+	const runtime = await openCommandRuntime(args, io);
+	try {
+		const events = await runtime.store.export(null);
+		for (const event of events) validateEvent(event);
+		const stored = await runtime.store.projection();
+		const replay = project(events, stored.cursor);
+		const findings: string[] = [];
+		if (!isDeepStrictEqual(stored, replay))
+			findings.push("the projection does not match the log");
+		if (runtime.config.store.backend === "jsonl") {
+			const tail =
+				statSync(join(runtime.path, "memlens.jsonl")).size - stored.cursor;
+			if (tail > 0)
+				findings.push(`the source ends with ${tail} incomplete bytes`);
+		}
+		const report = {
+			backend: runtime.config.store.backend,
+			path: runtime.path,
+			events: events.length,
+			records: stored.records.size,
+			scopes: stored.scopeOrder.filter((key) => !isCatalogKey(key)).length,
+			ok: findings.length === 0,
+			findings,
+		};
+		debug("Check answered", {
+			event: "check",
+			ok: report.ok,
+			findings: findings.length,
+		});
+		const text = isJson(args.flags)
+			? print(report)
+			: [
+					`backend: ${report.backend}`,
+					`path: ${report.path}`,
+					`events: ${report.events}`,
+					`records: ${report.records}`,
+					`scopes: ${report.scopes}`,
+					...(report.ok ? ["ok"] : findings),
+				].join("\n");
+		return { text, code: report.ok ? 0 : 1 };
+	} finally {
+		await runtime.close();
+	}
+}
+// #endregion FUNC_checkCommand
+
+// #region FUNC_repairCommand
+/**
+ * Rebuild the derived state of the store from the log.
+ *
+ * @purpose Turn a store with findings into a store that matches its log, so a user recovers
+ * without an editor.
+ * @invariants The command lists each applied change. The flag --dry-run lists the planned changes
+ * and writes nothing.
+ */
+export async function repairCommand(
+	args: ParsedArgs,
+	io: CommandIo,
+): Promise<string> {
+	const runtime = await openCommandRuntime(args, io);
+	try {
+		const dryRun = args.flags["dry-run"] === true;
+		const changes = await runtime.store.repair(dryRun);
+		debug("Repair done", { event: "repair", dryRun, changes: changes.length });
+		return changes.length ? changes.join("\n") : "nothing to repair";
+	} finally {
+		await runtime.close();
+	}
+}
+// #endregion FUNC_repairCommand
+
+/** One command answer with its own exit code. */
+export interface CommandAnswer {
+	readonly text: string;
+	readonly code: number;
+}
+
 // #region FUNC_exportCommand
 /**
  * Export the store to files.
@@ -786,6 +891,7 @@ function encodeStem(scope: ScopeKey): string {
  *
  * @purpose Join the events of one file into the store by id, so a user moves or merges a store.
  * @invariants The import joins by id and applies the erasure evidence of both sides. The flag
+ * --as rewrites the scope of each imported non-catalog event to the given key. The flag
  * --dry-run validates and counts the change and writes nothing.
  */
 export async function importCommand(
@@ -795,7 +901,11 @@ export async function importCommand(
 	const input = flagValue(args.flags, "in");
 	if (input === null)
 		throw new MemlensError("Usage", "The command needs --in.");
-	const incoming = readLines(input);
+	const asRaw = flagValue(args.flags, "as");
+	const as = asRaw === null ? null : (normalizeScopeKey(asRaw) as ScopeKey);
+	const incoming = readLines(input).map((event) =>
+		as !== null && !isCatalogKey(event.scope) ? { ...event, scope: as } : event,
+	);
 	const runtime = await openCommandRuntime(args, io);
 	try {
 		if (args.flags["dry-run"] === true) {

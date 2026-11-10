@@ -15,9 +15,11 @@
  *  - An unknown command or no command is an error of the usage.
  *  - A Data error and a CrossScopeSupersede error exit with 1. A Usage error exits with 2. A
  *    NotAllowed error exits with 3. Another error exits with 1.
+ *  - A command that returns one CommandAnswer sets its own exit code, and the command check uses
+ *    this for a store that fails its test.
  * @usecases
  *  - Command: user => runs the binary => gets the usage text or a result
- * @dependencies USES API: @memlens/core, args.ts, commands.ts
+ * @dependencies USES API: @memlens/core, args.ts, commands.ts, compact.ts
  * @keywords cli, terminal, memlens, dispatch, usage, exit code
  * #endregion moduleContract
  */
@@ -29,9 +31,10 @@ import { debuglog } from "node:util";
 import { MemlensError, NAME } from "@memlens/core";
 import type { ParsedArgs, UsageSpec } from "./args.js";
 import { parseArgs } from "./args.js";
-import type { CommandIo } from "./commands.js";
+import type { CommandAnswer, CommandIo } from "./commands.js";
 import {
 	amendCommand,
+	checkCommand,
 	configCommand,
 	exportCommand,
 	findCommand,
@@ -40,12 +43,14 @@ import {
 	noteCommand,
 	openCommand,
 	redactCommand,
+	repairCommand,
 	reviewCommand,
 	scopeCommand,
 	scopesCommand,
 	sliceCommand,
 	statusCommand,
 } from "./commands.js";
+import { compactCommand } from "./compact.js";
 
 const debug = debuglog("memlens:cli");
 
@@ -63,16 +68,23 @@ export const USAGE = `Usage: ${NAME} <command> [flags]
   scopes [--json]
   scope
   slice [--profile name] [--scope key] [--json]
+  compact [--scope key] [--max 50] [--dry-run]
+  compact --answer path [--scope key]
   status [--json]
+  check [--json]
+  repair [--dry-run]
   export --format md|jsonl --out dir [--scope key]
-  import --in path [--dry-run]
+  import --in path [--as key] [--dry-run]
   config get|set key [value]
 
 A target is <pos>, <pos>-<pos>, <scope>#<pos>, or <scope>#<pos>-<pos>.
 Each command takes --store dir. The exit codes: 0 success, 1 data, 2 usage, 3 policy.`;
 
 type Command = {
-	readonly run: (args: ParsedArgs, io: CommandIo) => Promise<string> | string;
+	readonly run: (
+		args: ParsedArgs,
+		io: CommandIo,
+	) => Promise<string | CommandAnswer> | string | CommandAnswer;
 	readonly spec: UsageSpec;
 };
 
@@ -129,14 +141,26 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 		run: sliceCommand,
 		spec: { positional: [], flags: { profile: 1, scope: 1, json: 0 } },
 	},
+	compact: {
+		run: compactCommand,
+		spec: {
+			positional: [],
+			flags: { scope: 1, max: 1, "dry-run": 0, answer: 1 },
+		},
+	},
 	status: { run: statusCommand, spec: { positional: [], flags: { json: 0 } } },
+	check: { run: checkCommand, spec: { positional: [], flags: { json: 0 } } },
+	repair: {
+		run: repairCommand,
+		spec: { positional: [], flags: { "dry-run": 0 } },
+	},
 	export: {
 		run: exportCommand,
 		spec: { positional: [], flags: { format: 1, out: 1, scope: 1 } },
 	},
 	import: {
 		run: importCommand,
-		spec: { positional: [], flags: { in: 1, "dry-run": 0 } },
+		spec: { positional: [], flags: { in: 1, as: 1, "dry-run": 0 } },
 	},
 	config: {
 		run: (args, io) => configCommand(args, io),
@@ -169,9 +193,11 @@ export async function main(
 	try {
 		const args = parseArgs(argv.slice(1), entry.spec);
 		const answer = await entry.run(args, cliIo(io));
-		if (answer !== "") process.stdout.write(`${answer}\n`);
-		debug("Command done", { event: "end", code: 0, command });
-		return 0;
+		const text = typeof answer === "string" ? answer : answer.text;
+		const code = typeof answer === "string" ? 0 : answer.code;
+		if (text !== "") process.stdout.write(`${text}\n`);
+		debug("Command done", { event: "end", code, command });
+		return code;
 	} catch (error) {
 		const code = exitCode(error);
 		const message =
