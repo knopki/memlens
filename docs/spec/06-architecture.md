@@ -68,8 +68,8 @@ The projection takes the latest candidate whose id has no invalidation.
 An `invalidate` event changes no note and deletes no text. See [0015 Node invalidation](../adr/0015-node-invalidation.md).
 
 An event has two times: `at` is the time of the log, and `ts` is the time of the write of a note. Only
-the `note` event carries `session`, `turn`, and `preset`. See [REQ-060](02-requirements.md) to
-[REQ-085](02-requirements.md).
+the `note` event carries `session`, `turn`, and `preset`.
+The [validation contract](../../packages/core/src/domain/validation.ts) owns required fields, permitted payloads, dates, and target types.
 
 A position is not an event field. It derives from real record entries into a scope in canonical event order,
 and an export holds no `pos`. A sanitized event keeps its operation and structural metadata, with `redacted: true`.
@@ -84,6 +84,14 @@ Its entity contracts define both passes and each operation. The [tree contract](
 
 The store supplies the resolved event union and durable invalidations before replay.
 Node publication remains a store and writer guarantee under [REQ-113](02-requirements.md).
+
+The [validation contract](../../packages/core/src/domain/validation.ts) checks runtime fields and target types.
+The [merge contract](../../packages/core/src/domain/merge.ts) resolves copies and applies all historical erasure evidence.
+It also returns invalidation evidence from losing copies. The write plan persists targets absent from the winning history.
+The [invalidation contract](../../packages/core/src/domain/invalidation.ts) compares exact inputs and both old and new paths.
+The [write contract](../../packages/core/src/domain/write.ts) composes these functions before backend publication.
+Its projection includes planned invalidations. The backend must publish their events with the data under one write lock.
+These pure plans implement no storage durability. See [0016 Write boundary](../adr/0016-write-boundary.md).
 
 ## Catalog
 
@@ -114,7 +122,8 @@ visible. See [REQ-108](02-requirements.md), [REQ-109](02-requirements.md),
 A change of a note makes each node above it dirty, and the writer builds the node from its two
 children. A rebuild appends a new `node` event for the same key.
 The projection takes the latest candidate whose id has no invalidation.
-See [REQ-113](02-requirements.md) to [REQ-117](02-requirements.md), [REQ-192](02-requirements.md), and the [child input contract](../../packages/core/src/domain/tree.ts).
+The [invalidation contract](../../packages/core/src/domain/invalidation.ts) owns affected scope and catalog paths.
+[REQ-113](02-requirements.md), [REQ-117](02-requirements.md), and [REQ-192](02-requirements.md) retain writer publication and build guarantees.
 
 A `redact` clears historical dependent nodes through their child ids, including earlier scope paths and catalog ancestors.
 The placeholder `[redacted]` appears in the console and the view only, and no event holds it.
@@ -308,7 +317,7 @@ The [tree contracts](../../packages/core/src/domain/tree.ts) own range geometry,
 The [tree types](../../packages/core/src/types/tree.ts) define the input and output shapes.
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
-The writer publishes aligned node events under [REQ-124](02-requirements.md).
+The [node validation contract](../../packages/core/src/domain/validation.ts) owns aligned starts and summary metadata checks.
 It handles empty halves and single-child copies under [REQ-169](02-requirements.md) and [REQ-170](02-requirements.md).
 
 ## Frontier
@@ -490,7 +499,8 @@ An error carries `code` and `message`. The command maps the kind of the error to
 | `Usage`               | usage           | 2         | A flag outside the usage, or no command          |
 | `Data`                | data            | 1         | An unknown target, or an event that does not fit |
 
-See [REQ-497](02-requirements.md) to [REQ-500](02-requirements.md).
+The [error contract](../../packages/core/src/types/errors.ts) owns code and message.
+[REQ-498](02-requirements.md) to [REQ-500](02-requirements.md) retain command exit rules.
 
 ## Code markup
 
