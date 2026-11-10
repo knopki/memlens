@@ -18,7 +18,7 @@ The agent reads one map of directions: the catalog in the `<directions>` section
 
 | Path                  | Package               | Role                                                                 |
 | --------------------- | --------------------- | -------------------------------------------------------------------- |
-| `packages/core`       | `@memlens/core`       | The engine: store ports, the projection, the tree build, the slice.  |
+| `packages/core`       | `@memlens/core`       | The engine: the configuration, store ports, the projection, the tree build, the slice. |
 | `packages/cli`        | `@memlens/cli`        | The terminal: the console command, redact, amend, import, export.    |
 | `packages/dsh-plugin` | `@memlens/dsh-plugin` | The harness surface: the entry points `.` and `./preset`, the tools. |
 
@@ -141,6 +141,10 @@ gives the values of one harness profile. The preset gives the values of one agen
 | Preset | the agent preset                           |
 
 [config.d.ts](config.d.ts) gives the type of each layer, and the type holds the keys of that layer.
+The [config contract](../../packages/core/src/domain/config.ts) owns the strict load, the deep merge
+with the defaults, the store path order, and the cache TTL lookup.
+The [active scope contract](../../packages/core/src/domain/active-scope.ts) owns the ordered rules
+and the visible scope list of a profile.
 A key outside the type is an error at load. A scope key outside the shape `segment:segment` is an
 error at load.
 
