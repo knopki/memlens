@@ -1,6 +1,6 @@
 # 0016. Write boundary
 
-Status: accepted. S-147 requests the domain stage. S-149 removes idem.
+Status: accepted. The write boundary follows the accepted requirements. Idem leaves the event model.
 
 ## Context
 
@@ -26,7 +26,7 @@ Resolve copies by sanitized status, then at, then SHA-256 of canonical JSON, eac
 Apply redaction evidence from every copy, including losing copies, after conflict resolution.
 Keep invalidation targets from every copy as evidence, including absent node targets in partial histories.
 The planner emits additional invalidations for targets that conflict resolution removes from the final log.
-This preserves permanent invalidation without a change to the event winner rules. S-150 approves this review fix.
+This preserves permanent invalidation without a change to the event winner rules.
 
 Pure plans return node targets grouped by their node scope. The caller supplies invalidation ids and times.
 A local node publication preserves the new node and invalidates affected ancestors.

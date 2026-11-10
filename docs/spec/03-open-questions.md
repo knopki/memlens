@@ -14,7 +14,7 @@ None.
 
 Does the write boundary keep idem?
 
-S-149 removes the key. Content comparison prevents duplicate live notes without supersedes.
+The write boundary removes the key. Content comparison prevents duplicate live notes without supersedes.
 Imports join events by id. This decision replaces the idem parts of Q-033, Q-098, Q-101, and Q-114.
 The historical answers below retain their original context.
 

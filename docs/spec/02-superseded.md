@@ -6,8 +6,8 @@ The local rules below retain their original words, status, source, and test meth
 
 | ID | Requirement | Type | Source | Replaced by |
 | --- | --- | --- | --- | --- |
-| REQ-307 | A second write with the same `idem` creates no record. | FR | S-070 | S-149 removes idem. |
-| REQ-368 | The tool call sets the `idem` of a write. | FR | S-071 | S-149 removes idem. |
+| REQ-307 | A second write with the same `idem` creates no record. | FR | S-070 | [0016 Write boundary](../adr/0016-write-boundary.md) removes idem. |
+| REQ-368 | The tool call sets the `idem` of a write. | FR | S-071 | [0016 Write boundary](../adr/0016-write-boundary.md) removes idem. |
 | REQ-021 | The slice updates at a new session, at a compaction after success, and at an idle time longer than the TTL. | FR | S-013, S-067 | REQ-300 |
 | REQ-035 | A line about the subagent write goes to the report of the parent. | FR | S-013 | REQ-157 |
 | REQ-036 | A subagent cannot hide a note and cannot review a note. | FR | S-013, S-067 | REQ-356 |
@@ -166,7 +166,7 @@ live.
 
 ## Local rules in code contracts
 
-S-145 moves these local rules beside their implementations. The original columns stay unchanged for history.
+The work rules move these local rules beside their implementations. The original columns stay unchanged for history.
 The last column names the live contract. The original status is historical and grants no active requirement status.
 
 | ID | Requirement | Type | Original status | Source | Test method | Live contract |
@@ -245,7 +245,7 @@ The last column names the live contract. The original status is historical and g
 
 ### Runtime boundary and merge rules
 
-S-151 moves these implemented local rules to their owning contracts. Cross-module guarantees and pending behavior stay in the active list.
+The work rules move these implemented local rules to their owning contracts. Cross-module guarantees and pending behavior stay in the active list.
 
 | ID | Requirement | Type | Original status | Source | Test method | Live contract |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -282,7 +282,7 @@ S-151 moves these implemented local rules to their owning contracts. Cross-modul
 
 ## Persistent backend contracts
 
-S-152 moves these implemented local rules to their code contracts. Cross-module guarantees remain active.
+The work rules move these implemented local rules to their code contracts. Cross-module guarantees remain active.
 
 | ID | Requirement | Type | Status | Source | Test method | Live contract |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -295,7 +295,7 @@ S-152 moves these implemented local rules to their code contracts. Cross-module 
 
 ## Index and read contracts
 
-S-153 moves these implemented local rules to their code contracts. Cross-module guarantees remain active.
+The work rules move these implemented local rules to their code contracts. Cross-module guarantees remain active.
 
 | ID | Requirement | Type | Status | Source | Test method | Live contract |
 | --- | --- | --- | --- | --- | --- | --- |

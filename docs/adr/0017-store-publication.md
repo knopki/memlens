@@ -1,6 +1,6 @@
 # 0017. Store publication
 
-Status: accepted. S-152 requests persistent backends and publication tests.
+Status: accepted. The publication follows the accepted requirements and the store tests.
 
 ## Context
 

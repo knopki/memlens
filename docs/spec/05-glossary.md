@@ -7,9 +7,9 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | memlens          | The project in this repository: a headless library, a CLI frontend, and a DSH plugin.                                                                                                     | S-002                                        |
 | statement        | A customer sentence in the chat, recorded word for word with an identifier `S-nnn`.                                                                                                       | [0010](../adr/0010-process-stack.md) |
-| requirement | A testable rule about system behavior. Global requirements have REQ identifiers. Implemented local rules live in code contracts without those identifiers. | S-145 |
-| module contract | The contract at the start of a source file. Its invariants define rules that apply throughout the module. | S-011, S-145 |
-| entity contract | A contract beside a function, method, class, or type. It defines the local rules of that entity. | S-145 |
+| requirement | A testable rule about system behavior. Global requirements have REQ identifiers. Implemented local rules live in code contracts without those identifiers. | [../../AGENTS.md](../../AGENTS.md) |
+| module contract | The contract at the start of a source file. Its invariants define rules that apply throughout the module. | S-011 |
+| entity contract | A contract beside a function, method, class, or type. It defines the local rules of that entity. | [../../AGENTS.md](../../AGENTS.md) |
 | constraint       | A limit that comes from the customer or from the environment, with an identifier `C-nnn`.                                                                                                 | [01-goals-nongoals.md](01-goals-nongoals.md) |
 | non-goal         | An item that the project does not do, with an identifier `NG-nnn`.                                                                                                                        | [01-goals-nongoals.md](01-goals-nongoals.md) |
 | open question    | An item without an answer, with an identifier `Q-nnn`.                                                                                                                                    | [03-open-questions.md](03-open-questions.md) |
@@ -72,8 +72,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | sanitized form | A content event with `redacted: true` and its structural fields intact. Notes have empty body and null longform. Amendments clear present content fields. Nodes have empty summary and zero chars. | S-016, S-140, S-141 |
 | at               | The time of an event in the log.                                                                                                                                                          | S-017                                        |
 | ts               | The time of the write of a note.                                                                                                                                                          | S-017                                        |
-| canonical JSON | JSON with object keys in lexical order. Array order and string values stay unchanged. | S-147 |
-| invalidation plan | A pure result with affected ranges and node ids that must stay unusable. | S-147 |
+| canonical JSON | JSON with object keys in lexical order. Array order and string values stay unchanged. | [0016 Write boundary](../adr/0016-write-boundary.md) |
+| invalidation plan | A pure result with affected ranges and node ids that must stay unusable. | [0016 Write boundary](../adr/0016-write-boundary.md) |
 | projection       | The hot copy of the log: the records, the current node of each range, and the count of each scope. It holds the version of its schema.                                                    | S-126, S-127                                 |
 | record           | One note after the projection: the copied fields, `recorded_at`, and the flags.                                                                                                           | S-020                                        |
 | `record state`   | The lifecycle value of a record, in the order `live`, `hidden`, `deleted`. A `hide` and a `redact` raise it. | S-020, S-021, S-101 |
