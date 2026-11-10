@@ -10,6 +10,15 @@ None.
 
 ## Closed questions
 
+### Q-463
+
+Does the write boundary keep idem?
+
+S-149 removes the key. Content comparison prevents duplicate live notes without supersedes.
+Imports join events by id. This decision replaces the idem parts of Q-033, Q-098, Q-101, and Q-114.
+The historical answers below retain their original context.
+
+
 ### Q-462
 
 The customer settles these conflicting forms directly in [S-142](../statements.md#s-142). No further selection is pending.

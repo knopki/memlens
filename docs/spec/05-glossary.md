@@ -72,7 +72,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | sanitized form | A content event with `redacted: true` and its structural fields intact. Notes have empty body and null longform. Amendments clear present content fields. Nodes have empty summary and zero chars. | S-016, S-140, S-141 |
 | at               | The time of an event in the log.                                                                                                                                                          | S-017                                        |
 | ts               | The time of the write of a note.                                                                                                                                                          | S-017                                        |
-| idem             | The idempotency key of a write. A second write with one value adds nothing.                                                                                                               | S-018                                        |
+| canonical JSON | JSON with object keys in lexical order. Array order and string values stay unchanged. | S-147 |
+| invalidation plan | A pure result with affected ranges and node ids that must stay unusable. | S-147 |
 | projection       | The hot copy of the log: the records, the current node of each range, and the count of each scope. It holds the version of its schema.                                                    | S-126, S-127                                 |
 | record           | One note after the projection: the copied fields, `recorded_at`, and the flags.                                                                                                           | S-020                                        |
 | `record state`   | The lifecycle value of a record, in the order `live`, `hidden`, `deleted`. A `hide` and a `redact` raise it. | S-020, S-021, S-101 |

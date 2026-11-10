@@ -180,7 +180,6 @@ Use module invariants for module-wide rules. Use entity contracts for rules with
 | REQ-300 | A new turn and a write do not change the context text. A session start, a successful compaction, and an idle time above the TTL give a snapshot.                                      | FR   | accepted | S-067               | A turn and a write give the same text, and each trigger gives a new text.                                                      |
 | REQ-303 | A `body` above 512 characters gives the error `LineTooLong` with the byte count.                                                                                                      | FR   | rejected | S-070, S-071        | Refused by S-072: the text above the limit moves into `longform`.                                                              |
 | REQ-306 | The store turns each target of `supersedes` into an `id` before the write. | FR | accepted | S-070 | A target from an import hides the local record with the same `id`. |
-| REQ-307 | A second write with the same `idem` creates no record. | FR | accepted | S-070 | Two calls with one `idem` give one record and one `addr`. |
 | REQ-309 | A write without `reviewIn` takes the review period of its `kind`. | FR | accepted | S-070 | A write of each kind gives the default `review_at` of that kind. |
 | REQ-310 | A write without `scope` goes to the active scope. | FR | accepted | S-070 | The record appears in the active scope of the session. |
 | REQ-311 | `memory_find` gives a record when each word of `query` matches. | FR | accepted | S-070 | The query `redis cache` gives a record with both words and no record with one word. |
@@ -212,7 +211,6 @@ Use module invariants for module-wide rules. Use entity contracts for rules with
 | REQ-361 | Console approval applies the ordinary operation and dismisses the selected proposal in one logical transaction. | FR | accepted | S-070, S-101, S-142 | The operation applies without proposed true. A dismiss targets the proposal id, and no accepts field links the events. |
 | REQ-362 | A store that opens for a write gives `dismiss` to each proposal of more than 30 days. The `dismiss` holds the reason `expired`. | FR | accepted | S-070, S-101, S-104 | A proposal of 31 days holds a `dismiss` after the next write to the store. |
 | REQ-363 | The event log keeps the content of a dismissed proposal. | FR | accepted | S-070, S-101 | The log gives the `body`, and the view holds no record. |
-| REQ-368 | The tool call sets the `idem` of a write. | FR | accepted | S-071 | The event holds an `idem`, and the agent gives no value. |
 | REQ-370 | The `body` ends on a whole word when the text above its limit moves into the `longform`. | FR | accepted | S-072 | The body of the record ends on a whole word. |
 | REQ-371 | The answer of a `forget` to a record of a scope outside `scopes` gives `hidden: 0`. | FR | accepted | S-072 | The record stays in the view, and the count `hidden` is 0. |
 | REQ-372 | The sqlite backend uses write-ahead logging. | FR | accepted | S-073 | The backend sets the WAL mode, and two processes write one store at the same time. |

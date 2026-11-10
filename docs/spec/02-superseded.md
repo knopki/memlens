@@ -6,6 +6,8 @@ The local rules below retain their original words, status, source, and test meth
 
 | ID | Requirement | Type | Source | Replaced by |
 | --- | --- | --- | --- | --- |
+| REQ-307 | A second write with the same `idem` creates no record. | FR | S-070 | S-149 removes idem. |
+| REQ-368 | The tool call sets the `idem` of a write. | FR | S-071 | S-149 removes idem. |
 | REQ-021 | The slice updates at a new session, at a compaction after success, and at an idle time longer than the TTL. | FR | S-013, S-067 | REQ-300 |
 | REQ-035 | A line about the subagent write goes to the report of the parent. | FR | S-013 | REQ-157 |
 | REQ-036 | A subagent cannot hide a note and cannot review a note. | FR | S-013, S-067 | REQ-356 |
