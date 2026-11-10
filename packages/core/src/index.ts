@@ -19,10 +19,53 @@
 export const NAME = "memlens";
 
 export {
+	type ActiveScope,
+	activeScope,
+	repoName,
+	type ScopeSubject,
+	visibleScopes,
+} from "./domain/active-scope.js";
+export {
 	type ParsedAddress,
 	parseAddress,
 	renderAddress,
 } from "./domain/address.js";
+export {
+	type BaseConfig,
+	type Budget,
+	type CacheTtl,
+	type Days,
+	DEFAULT_CACHE_TTL,
+	DEFAULT_REVIEW_DAYS,
+	type Duration,
+	expandTilde,
+	type Glob,
+	globMatches,
+	loadBaseConfig,
+	loadPatchConfig,
+	loadPresetConfig,
+	NUDGE_TEXTS,
+	type PatchConfig,
+	type Path,
+	type PresetConfig,
+	type ProfileConfig,
+	parseDuration,
+	type ReviewConfig,
+	type Rule,
+	type RuleGitRemote,
+	type RulePath,
+	type RuleWorkspace,
+	resolveConfig,
+	type ScopeDefault,
+	type StoreBackend,
+	type StoreConfig,
+	type SubagentMode,
+	storePath,
+	ttlSeconds,
+	type WriterConfig,
+	type WriterMode,
+	xdgDirs,
+} from "./domain/config.js";
 export {
 	CONTEXT_TEMPLATE,
 	type ContextInput,

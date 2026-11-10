@@ -138,7 +138,7 @@ export interface BaseConfig {
 
 /** The row `memlens` of `cordis.patch.yml`. */
 export interface PatchConfig {
-	store?: StoreConfig;
+	store?: Partial<StoreConfig>;
 	defaultProfile?: string;
 	budget?: Partial<Budget>;
 	writer?: Partial<WriterConfig>;

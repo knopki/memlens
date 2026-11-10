@@ -27,5 +27,8 @@
 	},
 	"engines": {
 		"node": "^22.19.0 || >=24.0.0"
+	},
+	"dependencies": {
+		"smol-toml": "^1.9.1"
 	}
 }
