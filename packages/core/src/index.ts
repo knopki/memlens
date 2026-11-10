@@ -99,6 +99,32 @@ export {
 	prepareImport,
 	type WritePlan,
 } from "./domain/write.js";
+export {
+	autoForm,
+	batchTask,
+	childLine,
+	type LineBuild,
+	MAX_CALLS_PER_HOUR,
+	MERGE_SYSTEM,
+	type MergeModel,
+	mergeLine,
+	mergeTask,
+	NODE_ATTEMPTS,
+	NODE_LIMIT,
+	NODE_TARGET,
+	nodeEvent,
+	type PassResult,
+	parseBatchAnswer,
+	RateWindow,
+	RETRY_FACTOR,
+	RETRY_WAITS,
+	retryDelay,
+	WRITER_BATCH,
+	WRITER_PARALLEL,
+	type WriterForm,
+	type WriterRun,
+	writerPass,
+} from "./domain/writer.js";
 export { FtsIndex } from "./storage/fts.js";
 export { JsonlStore } from "./storage/jsonl.js";
 export { SqliteStore } from "./storage/sqlite.js";
