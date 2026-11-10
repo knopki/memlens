@@ -9,7 +9,8 @@
  *  - Since and until compare against the ts text, and a date-only bound covers that whole day.
  *  - The due filter and the due list take a record with a review date of today or earlier.
  *  - A due list without a scope takes each scope of the supplied list, in scope order.
- *  - An open of one note gives the document of the record. Head gives 8192 characters, and all gives 16384.
+ *  - An open of one note gives the document of the record. The default mode is head.
+ *  - Head gives 8192 characters at most, and all gives 16384.
  *  - The offset continues the document after the earlier answer, and reports the next offset.
  *  - An open of an aligned range gives the non-empty child lines. A clean child gives its text.
  *  - A dirty or missing child gives a temporary line with the period and no text.
