@@ -111,12 +111,8 @@ The local rules below retain their original words, status, source, and test meth
 | REQ-394 | `memlens amend` takes the target argument and the flags `--body` and `--longform`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-395 | `memlens scopes` gives the visible scopes, and the flag `--json` gives the machine form. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-396 | `memlens slice` renders a fresh slice for a profile, and it takes the flags `--profile` and `--json`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
-| REQ-397 | `memlens compact` gives the next compaction job of a scope, and it takes the flags `--scope`, `--max`, and `--dry-run`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-398 | `memlens status` gives the state of the store, and the flag `--json` gives the machine form. | FR | S-075 | [06-architecture.md](06-architecture.md) |
-| REQ-399 | `memlens check` gives the result of the test of the store, and the flag `--json` gives the machine form. | FR | S-075 | [06-architecture.md](06-architecture.md) |
-| REQ-400 | `memlens repair` fixes the store, and the flag `--dry-run` lists the changes only. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-401 | The `--format` of `memlens export` is `md` or `jsonl`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
-| REQ-402 | `memlens import` takes the flags `--in`, `--as`, and `--dry-run`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-403 | `memlens import --from dsh-sessions` reads a directory of harness sessions, and it takes the flags `--since` and `--dry-run`. | FR | S-075, S-076 | [06-architecture.md](06-architecture.md) |
 | REQ-405 | `memlens config` has the actions `get` and `set`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
 | REQ-406 | `memlens ui` starts the console, and it takes the flags `--port` and `--allow-delete`. | FR | S-075 | [06-architecture.md](06-architecture.md) |
@@ -387,6 +383,10 @@ The work rules move these implemented local rules to their code contracts. Cross
 | --- | --- | --- | --- | --- | --- | --- |
 | REQ-385 | The CLI is one binary with the name `memlens`. | FR | accepted | S-075 | The package gives one binary, and it runs each command. | [cli.ts: moduleContract](../../packages/cli/src/cli.ts) |
 | REQ-386 | The CLI needs no harness. | FR | accepted | S-075 | Each command runs on a machine with no harness. | [cli.ts: moduleContract](../../packages/cli/src/cli.ts) |
+| REQ-397 | `memlens compact` gives the next compaction job of a scope, and it takes the flags `--scope`, `--max`, and `--dry-run`. | FR | accepted | S-075 | A scope with two notes gives one job, and `--max` limits the job. | [compact.ts: moduleContract](../../packages/cli/src/compact.ts) |
+| REQ-399 | `memlens check` gives the result of the test of the store, and the flag `--json` gives the machine form. | FR | accepted | S-075 | A healthy store gives ok and the exit code 0. An incomplete jsonl tail gives a finding and the exit code 1. | [commands.ts: checkCommand](../../packages/cli/src/commands.ts) |
+| REQ-400 | `memlens repair` fixes the store, and the flag `--dry-run` lists the changes only. | FR | accepted | S-075 | A dry run lists the incomplete tail and writes nothing. The repair truncates the tail, and the next check passes. | [commands.ts: repairCommand](../../packages/cli/src/commands.ts) |
+| REQ-402 | `memlens import` takes the flags `--in`, `--as`, and `--dry-run`. | FR | accepted | S-075 | An import with `--as` writes the events under the new key, and a dry run writes nothing. | [commands.ts: importCommand](../../packages/cli/src/commands.ts) |
 | REQ-412 | `memlens redact` asks for a confirmation, and the flag `--yes` skips it. | FR | accepted | S-075 | A call with no `--yes` waits for the answer, and `--yes` starts the work. | [commands.ts: redactCommand](../../packages/cli/src/commands.ts) |
 | REQ-414 | `memlens export` takes the optional flag `--scope`. | FR | accepted | S-076 | The command accepts the flag with a scope key. | [commands.ts: exportCommand](../../packages/cli/src/commands.ts) |
 | REQ-415 | An export with no `--scope` writes one file for each scope. | FR | accepted | S-076 | A store of two scopes gives two files, and each file holds one scope. | [commands.ts: exportCommand](../../packages/cli/src/commands.ts) |
@@ -401,3 +401,4 @@ The work rules move these implemented local rules to their code contracts. Cross
 | REQ-506 | Each record of an `md` file is a section `## #<pos>`, with a YAML block of its fields and then its `body`. | FR | accepted | S-128 | A scope of two records gives two sections with one YAML block each. | [export-md.ts: renderScopeMarkdown](../../packages/cli/src/export-md.ts) |
 | REQ-507 | The Markdown export shows id, at, ts, kind, review_at, refs, supersedes, and redacted true for cleared records. | FR | accepted | S-128, S-140, S-141, S-142 | A cleared record shows the redacted marker and no longform. The format is export-only and has no import round-trip guarantee. | [export-md.ts: moduleContract](../../packages/cli/src/export-md.ts) |
 | REQ-508 | The `md` export holds no `node` event, because a rebuild gives the tree. | FR | accepted | S-128 | An export of a built tree holds no node section. | [export-md.ts: moduleContract](../../packages/cli/src/export-md.ts) |
+| REQ-458 | `memlens compact --answer` writes the result of a job, and it takes the path of the answer file. | FR | accepted | S-098 | A job and one answer file give one built node. | [compact.ts: compactCommand](../../packages/cli/src/compact.ts) |

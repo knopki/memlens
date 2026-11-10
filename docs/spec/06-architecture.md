@@ -471,10 +471,17 @@ memlens ui [--port 7788] [--allow-delete]
 
 The [command contracts](../../packages/cli/src/commands.ts) own the command behavior: the target
 resolution, the visible scope rules, the review periods, and the confirmation of a redact. The
-[entry contract](../../packages/cli/src/cli.ts) owns the dispatch and the exit codes.
+[compaction job contract](../../packages/cli/src/compact.ts) owns the job of one scope and the
+application of one answer file. The [entry contract](../../packages/cli/src/cli.ts) owns the dispatch
+and the exit codes.
 
-The commands `compact`, `check`, `repair`, and `ui`, the flag `--as` of `import`, and the import from
-harness sessions are pending work. The usage below gives the target surface.
+The CLI command `compact` publishes each copy input and gives the merge inputs of one scope as one
+job. The flag `--answer` applies one answer file, and the store checks each exact input again. The
+command `check` tests the store against its log, and the command `repair` rebuilds the derived state
+of the store. Each command contract owns its rules.
+
+The command `ui`, the flag `--from` of `import`, and the import from harness sessions are pending
+work. The usage below gives the target surface.
 
 The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
 and `3` a refusal by a policy.
@@ -525,9 +532,8 @@ customer words as given.
 
 ## Remaining work
 
-The CLI owes the commands `compact`, `check`, `repair`, and `ui`, the flag `--as` of `import`, and the
-import from harness sessions. See [REQ-046](02-requirements.md), [REQ-413](02-requirements.md), and
-[REQ-458](02-requirements.md).
+The CLI owes the command `ui` and the import from harness sessions. See [REQ-046](02-requirements.md)
+and [REQ-413](02-requirements.md).
 
 The console and the plugin are pending work. See [08-ui.md](08-ui.md) and
 [REQ-028](02-requirements.md).
