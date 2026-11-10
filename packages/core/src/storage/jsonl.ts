@@ -1,11 +1,14 @@
 /**
  * #region moduleContract
  * @purpose Preserve a portable event source across concurrent processes and interrupted publication.
- * @scope JSONL source, SQLite sidecar, an independent process lock, and recovery.
- * @invariants The source is memlens.jsonl. The rebuildable projection lives in index.db.
+ * @scope JSONL source, SQLite sidecar, an independent process lock, the FTS index, and recovery.
+ * @invariants The source is memlens.jsonl. The rebuildable projection and the index live in index.db.
  * @invariants A stable SQLite lock file serializes reads, preparation, replacement, and recovery.
  * @invariants Publication replaces the complete source atomically, including every planned invalidation.
+ * @invariants The index rows follow the append in one sidecar transaction with no crash guarantee.
  * @invariants A source fingerprint gates each sidecar read. Recovery processes complete lines only.
+ * @invariants Recovery or a language change rewrites the sidecar file with rows from the events.
+ * @invariants An erasure rewrites the sidecar file, so no cleared content stays on a stale page.
  * @invariants The cursor is the byte offset after the last complete line, independent of event time.
  * @invariants A rewrite invalidates the old cursor. A missing or corrupt sidecar changes no event or node state.
  * @invariants Reads of an unchanged source scan no event. No file contains model jobs or retry state.
@@ -45,11 +48,13 @@ import type { Event, JsonlLine, NodeEvent, ScopeKey } from "../types/events.js";
 import type { Projection } from "../types/projection.js";
 import type {
 	AppendEvent,
+	IndexHit,
 	NodeAppendResult,
 	StorePort,
 	StoreRev,
 } from "../types/store.js";
 import type { BuildInput } from "../types/tree.js";
+import { FtsIndex } from "./fts.js";
 import {
 	decodeProjection,
 	encodeProjection,
@@ -72,18 +77,25 @@ export class JsonlStore implements StorePort {
 	private readonly source: string;
 	private readonly sidecar: string;
 	private readonly temporary: string;
+	private readonly index: FtsIndex;
 	private closed = false;
 
 	/** @purpose Open a directory without trusting an earlier process cache. */
 	constructor(
 		private readonly directory: string,
 		private readonly profiles: ProfileScopes = new Map(),
+		language = "en",
 	) {
 		mkdirSync(directory, { recursive: true });
 		this.source = join(directory, "memlens.jsonl");
 		this.sidecar = join(directory, "index.db");
 		this.temporary = join(directory, "memlens.jsonl.tmp");
 		this.lock = new DatabaseSync(join(directory, ".memlens-lock.db"));
+		this.index = new FtsIndex(
+			language,
+			() => new DatabaseSync(this.sidecar),
+			(db) => db.close(),
+		);
 		try {
 			this.lock.exec("PRAGMA busy_timeout = 30000");
 			this.locked(() => {
@@ -146,6 +158,28 @@ export class JsonlStore implements StorePort {
 		return this.locked(() => this.snapshot().revision);
 	}
 	// #endregion METHOD_rev
+
+	// #region METHOD_search
+	/**
+	 * @purpose Query the index tables of a fresh sidecar under the process lock.
+	 * @invariants A snapshot recovery runs first, so a gap from an interrupted append never hides a hit.
+	 */
+	async search(
+		query: string,
+		scope: ScopeKey | null,
+		limit: number,
+	): Promise<readonly IndexHit[]> {
+		return this.locked(() => {
+			this.snapshot();
+			const db = new DatabaseSync(this.sidecar);
+			try {
+				return this.index.query(db, query, scope, limit);
+			} finally {
+				db.close();
+			}
+		});
+	}
+	// #endregion METHOD_search
 
 	// #region METHOD_export
 	/** @purpose Copy a consistent history, including nodes and invalidations in the selected scope. */
@@ -220,8 +254,9 @@ export class JsonlStore implements StorePort {
 	// #region METHOD_snapshot
 	/**
 	 * @purpose Recover a missing projection before any read can expose stale content.
-	 * @invariants The sidecar commits the fingerprint, projection, and byte cursor together.
+	 * @invariants The sidecar commits the fingerprint, projection, index rows, and byte cursor together.
 	 * @invariants A partial final line contributes no event. A malformed complete line fails the read.
+	 * @invariants A stale, missing, or old sidecar index forces a full rebuild from the events.
 	 */
 	private snapshot(): Snapshot {
 		if (existsSync(this.temporary)) unlinkSync(this.temporary);
@@ -236,16 +271,16 @@ export class JsonlStore implements StorePort {
 			const row = db.prepare("SELECT * FROM snapshot").get() as
 				| { fingerprint: string; revision: string; projection: string }
 				| undefined;
-			if (row) {
+			if (row && row.fingerprint === fingerprint && this.index.ready(db)) {
 				previous = { ...row, projection: decodeProjection(row.projection) };
-				if (row.fingerprint === fingerprint) {
-					debug("Projection read", {
-						event: "read",
-						cursor: previous.projection.cursor,
-					});
-					return previous;
-				}
+				debug("Projection read", {
+					event: "read",
+					cursor: previous.projection.cursor,
+				});
+				return previous;
 			}
+			if (row)
+				previous = { ...row, projection: decodeProjection(row.projection) };
 		} catch {
 			debug("Sidecar rejected", { event: "sidecar_rebuild" });
 		} finally {
@@ -282,7 +317,7 @@ export class JsonlStore implements StorePort {
 		const projection = project(events, cursor);
 		const revision = createHash("sha256").update(bytes).digest("hex");
 		const snapshot = { fingerprint, revision, projection };
-		this.save(snapshot);
+		this.save(snapshot, events);
 		debug("Projection recovered", {
 			event: "recovery",
 			cursor,
@@ -336,7 +371,12 @@ export class JsonlStore implements StorePort {
 	}
 	// #endregion METHOD_recoverInvalidations
 
-	private save(snapshot: Snapshot): void {
+	// #region METHOD_save
+	/**
+	 * @purpose Write one fresh sidecar file with the projection and a complete index rebuild.
+	 * @invariants A fresh file keeps no stale page, so an erasure or a language change leaves no old content.
+	 */
+	private save(snapshot: Snapshot, events: readonly JsonlLine[]): void {
 		// The stable lock permits replacement of a corrupt or private cache.
 		if (existsSync(this.sidecar)) unlinkSync(this.sidecar);
 		const db = new DatabaseSync(this.sidecar);
@@ -349,17 +389,66 @@ export class JsonlStore implements StorePort {
 				snapshot.revision,
 				encodeProjection(snapshot.projection),
 			);
+			this.index.mount(db);
+			this.index.replaceRows(db, project(events).records.values());
 			db.exec("COMMIT");
 		} finally {
 			db.close();
 		}
 	}
+	// #endregion METHOD_save
+
+	// #region METHOD_update
+	/**
+	 * @purpose Apply one published plan to the sidecar in one transaction after the source replacement.
+	 * @invariants The index rows and the snapshot row commit together, so no read sees a mixed sidecar.
+	 * @invariants A changed language, a missing table, or a corrupt file falls back to a fresh rebuild.
+	 */
+	private update(
+		snapshot: Snapshot,
+		plan: WritePlan,
+		events: readonly JsonlLine[],
+	): void {
+		let db: DatabaseSync | undefined;
+		try {
+			db = new DatabaseSync(this.sidecar);
+			db.exec(
+				"PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON; BEGIN IMMEDIATE",
+			);
+			if (this.index.mount(db)) {
+				db.exec("ROLLBACK");
+				db.close();
+				this.save(snapshot, events);
+				return;
+			}
+			this.index.syncRows(db, plan.touched, plan.projection.records);
+			db.exec("DELETE FROM snapshot");
+			db.prepare("INSERT INTO snapshot VALUES (?, ?, ?)").run(
+				snapshot.fingerprint,
+				snapshot.revision,
+				encodeProjection(snapshot.projection),
+			);
+			db.exec("COMMIT");
+		} catch {
+			debug("Sidecar update rejected", { event: "sidecar_rebuild" });
+			try {
+				db?.exec("ROLLBACK");
+			} catch {
+				// A failed open or rollback keeps no transaction to undo.
+			}
+			db?.close();
+			this.save(snapshot, events);
+			return;
+		}
+		db.close();
+	}
+	// #endregion METHOD_update
 
 	// #region METHOD_replace
 	/**
 	 * @purpose Publish every event and invalidation with one durable file replacement.
 	 * @invariants A failure before rename retains the old source. A failure after rename retains the complete new source.
-	 * @invariants Discard the old sidecar before publication. Recovery never serves its stale content after a process exit.
+	 * @invariants An erasure discards the old sidecar before the rename, so no cleared content file survives a crash.
 	 */
 	private replace(events: readonly JsonlLine[]): void {
 		const data =
@@ -372,7 +461,11 @@ export class JsonlStore implements StorePort {
 		} finally {
 			closeSync(fd);
 		}
-		if (existsSync(this.sidecar)) unlinkSync(this.sidecar);
+		if (
+			existsSync(this.sidecar) &&
+			events.some((event) => event.op === "redact" || event.redacted === true)
+		)
+			unlinkSync(this.sidecar);
 		debug("Publication ready", {
 			event: "before_publish",
 			events: events.length,
@@ -397,11 +490,16 @@ export class JsonlStore implements StorePort {
 		this.replace(events);
 		const bytes = readFileSync(this.source);
 		const projection = project(events, bytes.length);
-		this.save({
+		const snapshot = {
 			fingerprint: this.fingerprint(),
 			revision: createHash("sha256").update(bytes).digest("hex"),
 			projection,
-		});
+		};
+		if (
+			events.some((event) => event.op === "redact" || event.redacted === true)
+		)
+			this.save(snapshot, events);
+		else this.update(snapshot, plan, events);
 		return projection;
 	}
 }

@@ -14,6 +14,7 @@
  *  - A failure before publication leaves the source unchanged. A cleanup failure preserves the published source.
  *  - SQLite uses a revision counter. JSONL uses a file fingerprint.
  *  - The index accepts projected records and returns complete search hits.
+ *  - Both backends give the same complete hits for the same source and query.
  * @dependencies
  *  USES: events.ts, tree.ts, projection.ts
  * @keywords store, port, append, projection, storeRev, backend
@@ -73,6 +74,16 @@ export interface StorePort {
 
 	/** Read the store revision. The revision changes on each write, including redacts. */
 	rev(): Promise<StoreRev>;
+
+	/**
+	 * Search the store index through the index port.
+	 * A null scope searches each scope. The limit caps the hits of the query.
+	 */
+	search(
+		query: string,
+		scope: ScopeKey | null,
+		limit: number,
+	): Promise<readonly IndexHit[]>;
 
 	/**
 	 * Export the events of one scope, or all events when scope is null.

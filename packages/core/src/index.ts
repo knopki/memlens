@@ -42,6 +42,24 @@ export {
 } from "./domain/note-body.js";
 export { compareOrder, makeOrder, maxOrder } from "./domain/order.js";
 export { catalogTree, project, scopeTree } from "./domain/projection.js";
+export {
+	type DueRecord,
+	dueRecords,
+	FIND_DEFAULT_LIMIT,
+	FIND_MAX_PER_SCOPE,
+	type FindFilter,
+	filterHits,
+	LONGFORM_ALL,
+	LONGFORM_HEAD,
+	type LongformMode,
+	type OpenChildren,
+	type OpenEntry,
+	type OpenLine,
+	openNote,
+	openRange,
+	type ScopeLine,
+	scopeLines,
+} from "./domain/reads.js";
 export { redactionClosure, sanitizeEvent } from "./domain/sanitization.js";
 export {
 	CATALOG_PREFIX,
@@ -81,6 +99,7 @@ export {
 	prepareImport,
 	type WritePlan,
 } from "./domain/write.js";
+export { FtsIndex } from "./storage/fts.js";
 export { JsonlStore } from "./storage/jsonl.js";
 export { SqliteStore } from "./storage/sqlite.js";
 export { type ErrorCode, MemlensError } from "./types/errors.js";

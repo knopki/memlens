@@ -1,9 +1,10 @@
 /**
  * #region moduleContract
  * @purpose Persist each complete domain change and its projection in one SQLite transaction.
- * @scope Local event sequence, write validation, projection snapshots, export, and physical redaction cleanup.
- * @invariants Writers use BEGIN IMMEDIATE. Events, projection, and revision commit together or roll back together.
+ * @scope Local event sequence, write validation, projection snapshots, the FTS index, export, and redaction cleanup.
+ * @invariants Writers use BEGIN IMMEDIATE. Events, projection, index rows, and revision commit together or roll back together.
  * @invariants Reads use the stored projection without event scans. Reopen preserves the same snapshot and revision.
+ * @invariants The index lives in memlens.db. The open mounts it and rebuilds it after a language change or a loss.
  * @invariants The revision starts at zero and increases once per published plan. Duplicate writes preserve the counter.
  * @invariants Redaction clears stored content and truncates the WAL after commit. The transaction remains the source authority.
  * @invariants Close is idempotent. Every other operation rejects after close. Logs contain no event content.
@@ -26,11 +27,13 @@ import type { Event, JsonlLine, NodeEvent, ScopeKey } from "../types/events.js";
 import type { Projection } from "../types/projection.js";
 import type {
 	AppendEvent,
+	IndexHit,
 	NodeAppendResult,
 	StorePort,
 	StoreRev,
 } from "../types/store.js";
 import type { BuildInput } from "../types/tree.js";
+import { FtsIndex } from "./fts.js";
 import {
 	decodeProjection,
 	encodeProjection,
@@ -46,14 +49,24 @@ const debug = debuglog("memlens:sqlite");
 export class SqliteStore implements StorePort {
 	private readonly db: DatabaseSync;
 	private readonly profiles: ProfileScopes;
+	private readonly index: FtsIndex;
 	private closed = false;
 
 	// #region METHOD_constructor
-	/** @purpose Open memlens.db with WAL, secure deletion, and a persistent empty snapshot when necessary. */
-	constructor(directory: string, profiles: ProfileScopes = new Map()) {
+	/**
+	 * @purpose Open memlens.db with WAL, secure deletion, a persistent empty snapshot, and a ready index.
+	 * @invariants The index mounts in the open transaction. A changed language or a lost table with events
+	 * rebuilds every row from the local events.
+	 */
+	constructor(
+		directory: string,
+		profiles: ProfileScopes = new Map(),
+		language = "en",
+	) {
 		mkdirSync(directory, { recursive: true });
 		this.profiles = profiles;
 		this.db = new DatabaseSync(join(directory, "memlens.db"));
+		this.index = new FtsIndex(language, () => this.db);
 		try {
 			this.db.exec(
 				"PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON;",
@@ -78,6 +91,26 @@ export class SqliteStore implements StorePort {
 						"INSERT INTO state (id, projection, revision) VALUES (1, ?, ?) ON CONFLICT(id) DO NOTHING",
 					)
 					.run(encodeProjection(project([])), "0");
+				const events = this.events();
+				if (this.index.mount(this.db)) {
+					this.index.replaceRows(this.db, project(events).records.values());
+					debug("SQLite reindex", { event: "reindex", events: events.length });
+				} else {
+					const found = (
+						this.db
+							.prepare("SELECT EXISTS(SELECT 1 FROM hits) AS found")
+							.get() as {
+							found: number;
+						}
+					).found;
+					if (found === 0 && events.length > 0) {
+						this.index.replaceRows(this.db, project(events).records.values());
+						debug("SQLite reindex", {
+							event: "reindex",
+							events: events.length,
+						});
+					}
+				}
 			}, false);
 			this.cleanup();
 			debug("SQLite open", { event: "reopen" });
@@ -159,6 +192,20 @@ export class SqliteStore implements StorePort {
 		return String(row?.revision);
 	}
 	// #endregion METHOD_rev
+
+	// #region METHOD_search
+	/** @purpose Query the index tables of the same database without an event scan. */
+	async search(
+		query: string,
+		scope: ScopeKey | null,
+		limit: number,
+	): Promise<readonly IndexHit[]> {
+		this.requireOpen();
+		const hits = this.index.query(this.db, query, scope, limit);
+		debug("SQLite read", { event: "read", kind: "search", hits: hits.length });
+		return hits;
+	}
+	// #endregion METHOD_search
 
 	// #region METHOD_export
 	/** @purpose Copy events in local sequence from one consistent read, with an optional scope filter. */
@@ -243,7 +290,7 @@ export class SqliteStore implements StorePort {
 	// #endregion METHOD_transaction
 
 	// #region METHOD_publish
-	/** @purpose Persist every planned event, a complete projection, and a fresh revision without changing local sequence values. */
+	/** @purpose Persist every planned event, a complete projection, fresh index rows, and a fresh revision. */
 	private publish(plan: WritePlan): void {
 		if (plan.changed === 0 && plan.invalidations.length === 0) return;
 		const events = publishPlan(plan);
@@ -282,6 +329,7 @@ export class SqliteStore implements StorePort {
 				revision.toString(),
 				Number(erasure),
 			);
+		this.index.syncRows(this.db, plan.touched, plan.projection.records);
 	}
 	// #endregion METHOD_publish
 

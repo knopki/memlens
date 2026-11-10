@@ -16,7 +16,7 @@ import {
 	type ProfileScopes,
 	planInvalidation,
 } from "./invalidation.js";
-import { mergeEvents } from "./merge.js";
+import { canonicalJson, mergeEvents } from "./merge.js";
 import { BODY_HARD_LIMIT, normalizeBody } from "./note-body.js";
 import { project } from "./projection.js";
 import { redactionClosure } from "./sanitization.js";
@@ -35,6 +35,8 @@ export interface WritePlan extends InvalidationPlan {
 	readonly changed: number;
 	readonly appended: JsonlLine | null;
 	readonly duplicate: JsonlLine | null;
+	/** The record ids whose index rows must change with this plan. */
+	readonly touched: readonly string[];
 }
 
 // #region FUNC_prepareAppend
@@ -72,6 +74,7 @@ export function prepareAppend(
 			duplicate,
 			ranges: [],
 			invalidations: [],
+			touched: [],
 		};
 	}
 	const events = redactionClosure([...local, event]);
@@ -89,6 +92,7 @@ export function prepareAppend(
 		changed: 1,
 		appended: events.find((item) => item.id === event.id) ?? null,
 		duplicate: null,
+		touched: touchedRecords(events, local, (item) => item.id === event.id),
 	};
 }
 // #endregion FUNC_prepareAppend
@@ -130,6 +134,9 @@ export function prepareImport(
 		changed,
 		appended: null,
 		duplicate: null,
+		touched: touchedRecords(merged.events, local, (item) =>
+			changedIds.has(item.id),
+		),
 	};
 }
 // #endregion FUNC_prepareImport
@@ -251,6 +258,43 @@ function findDuplicate(
 	return record ? (local.find((item) => item.id === record.id) ?? null) : null;
 }
 // #endregion FUNC_findDuplicate
+
+// #region FUNC_touchedRecords
+/**
+ * @purpose Name each record whose index row changes with the plan, so the store syncs no extra row.
+ * @invariants A changed event of a note touches its record and its supersede targets.
+ * A changed amend, hide, redact, or review touches its target. A sanitized copy counts as changed.
+ * Unchanged events touch nothing, and node and invalidate events own no record row.
+ */
+function touchedRecords(
+	events: readonly JsonlLine[],
+	local: readonly JsonlLine[],
+	fresh: (event: JsonlLine) => boolean,
+): readonly string[] {
+	const previous = new Map(local.map((event) => [event.id, event]));
+	const ids = new Set<string>();
+	for (const event of events) {
+		const old = previous.get(event.id);
+		const changed =
+			fresh(event) ||
+			old === undefined ||
+			canonicalJson(old) !== canonicalJson(event);
+		if (!changed) continue;
+		if (event.op === "note") {
+			ids.add(event.id);
+			for (const target of event.supersedes ?? []) ids.add(target);
+		} else if (
+			event.op === "amend" ||
+			event.op === "hide" ||
+			event.op === "redact" ||
+			event.op === "review"
+		)
+			ids.add(event.target);
+	}
+	debug("Touched records", { event: "touched", count: ids.size });
+	return [...ids];
+}
+// #endregion FUNC_touchedRecords
 
 // #region FUNC_plannedProjection
 /**
