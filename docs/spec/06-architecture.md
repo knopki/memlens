@@ -1,6 +1,6 @@
 # Architecture
 
-Status: draft. The core has domain implementations and storage stubs. The CLI and the plugin have scaffolds.
+Status: draft. The core has domain implementations and persistent backends. The CLI and the plugin have scaffolds.
 The global requirements define cross-module behavior. Code contracts define implemented local behavior.
 
 ## Shape
@@ -91,7 +91,8 @@ It also returns invalidation evidence from losing copies. The write plan persist
 The [invalidation contract](../../packages/core/src/domain/invalidation.ts) compares exact inputs and both old and new paths.
 The [write contract](../../packages/core/src/domain/write.ts) composes these functions before backend publication.
 Its projection includes planned invalidations. The backend must publish their events with the data under one write lock.
-These pure plans implement no storage durability. See [0016 Write boundary](../adr/0016-write-boundary.md).
+These pure plans implement no storage durability. The backends publish their complete plans under one write lock.
+See [0016 Write boundary](../adr/0016-write-boundary.md) and [0017 Store publication](../adr/0017-store-publication.md).
 
 ## Catalog
 
@@ -190,16 +191,18 @@ Writer candidates derive from dirty ranges, including ranges with no node event.
 
 Each append to the sqlite backend is one transaction, and the backend uses write-ahead logging. The
 jsonl backend takes a lock on each append. Several processes write one store. See
-[REQ-372](02-requirements.md) to [REQ-377](02-requirements.md).
+the [SQLite contract](../../packages/core/src/storage/sqlite.ts), the [JSONL contract](../../packages/core/src/storage/jsonl.ts), and [REQ-375](02-requirements.md).
 
 The index records the tokenizer of its build. A change of the `language` value rebuilds the index
 from the log, so the store needs no migration. See [REQ-476](02-requirements.md).
 
 The store keeps a projection: the records, the current node of each range, the invalidated ids, and the scope counts.
 Its replay cursor marks a local append position. SQLite uses its append sequence, and JSONL uses a byte offset after a complete line.
-The SQLite append transaction changes the projection and cursor together. JSONL changes both in one sidecar transaction after the append.
+The SQLite append transaction changes the projection and cursor together. JSONL replaces the complete source before its sidecar transaction.
+Both backends persist invalidations with the source change. The sidecar fingerprint prevents reads from a stale projection.
 
-Recovery reads complete lines after the JSONL cursor, regardless of event time. It applies events in `(at, id)` order.
+The pending incremental recovery reads complete lines after the JSONL cursor, regardless of event time. It applies events in `(at, id)` order.
+The current JSONL backend rebuilds after each source change. See [0017 Store publication](../adr/0017-store-publication.md).
 An earlier imported event, a changed event payload, or a gap above 1 000 events requires a projection rebuild.
 A JSONL rewrite or replacement invalidates its earlier cursor. The next read rebuilds the projection before it advances the cursor.
 

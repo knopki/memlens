@@ -51,3 +51,4 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0014 | Store projection | accepted |
 | 0015 | Node invalidation | accepted |
 | 0016 | Write boundary | accepted |
+| 0017 | Store publication | accepted |
