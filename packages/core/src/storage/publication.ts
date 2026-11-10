@@ -57,6 +57,7 @@ export function publishPlan(plan: WritePlan): readonly JsonlLine[] {
  * @invariants Compare the exact copied input under the backend lock. Empty input produces no event.
  * @invariants The result range, child ids, revision, and dates match the current input.
  * @invariants Catalog publication requires the resolved profile scopes. No model call occurs under the lock.
+ * @invariants A node event under a catalog scope validates against the catalog tree of its profile. A node above catalog leaves lives in the catalog scope.
  */
 export function nodePlan(
 	events: readonly JsonlLine[],

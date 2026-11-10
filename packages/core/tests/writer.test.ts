@@ -7,7 +7,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { scopeTree } from "../src/domain/projection.js";
+import { catalogTree, scopeTree } from "../src/domain/projection.js";
+import { catalogKey } from "../src/domain/scope.js";
 import { slice } from "../src/domain/tree.js";
 import {
 	autoForm,
@@ -21,8 +22,9 @@ import {
 	writerPass,
 } from "../src/domain/writer.js";
 import { SqliteStore } from "../src/storage/sqlite.js";
+import type { ScopeKey } from "../src/types/events.js";
 import type { AppendEvent } from "../src/types/store.js";
-import type { BuildChild, BuildInput } from "../src/types/tree.js";
+import type { BuildChild, BuildInput, Tree } from "../src/types/tree.js";
 
 const record = (pos: number, body: string): BuildChild => ({
 	kind: "record",
@@ -218,9 +220,12 @@ describe("writerPass", () => {
 		directories.length = 0;
 	});
 
-	const note = (body: string): Extract<AppendEvent, { op: "note" }> => ({
+	const note = (
+		scope: "project:a" | "project:b",
+		body: string,
+	): Extract<AppendEvent, { op: "note" }> => ({
 		op: "note",
-		scope: "project:a",
+		scope,
 		body,
 		kind: "note",
 		ts: "2026-11-10T00:00:00.000Z",
@@ -235,7 +240,7 @@ describe("writerPass", () => {
 		directories.push(directory);
 		const store = new SqliteStore(directory);
 		for (let index = 0; index < 4; index += 1)
-			await store.append(note(`note ${index}`));
+			await store.append(note("project:a", `note ${index}`));
 		const summary = async () => "sum";
 		const pass = async () =>
 			writerPass(
@@ -259,7 +264,9 @@ describe("writerPass", () => {
 		directories.push(directory);
 		const store = new SqliteStore(directory);
 		for (let index = 0; index < 4; index += 1)
-			await store.append(note(`${"long body ".repeat(10)}${index}`));
+			await store.append(
+				note("project:a", `${"long body ".repeat(10)}${index}`),
+			);
 		const batch = async () => "#0-1: sum zero one\n#2-3: sum two three";
 		const result = await writerPass(
 			store,
@@ -274,6 +281,68 @@ describe("writerPass", () => {
 			rejected: 0,
 			failed: 0,
 		});
+		await store.close();
+	});
+
+	it("builds the catalog above the scope roots and rebuilds it after a change", async () => {
+		const directory = await mkdtemp(join(tmpdir(), "memlens-writer-"));
+		directories.push(directory);
+		const scopes = ["project:a", "project:b"] as const;
+		const catalogScope = catalogKey("work");
+		const store = new SqliteStore(directory, new Map([["work", [...scopes]]]));
+		const summary = async () => "sum";
+		const catalog = async (): Promise<Tree> =>
+			catalogTree(
+				await store.projection(),
+				"work",
+				scopes as readonly ScopeKey[],
+			);
+		const pass = async (scope: (typeof scopes)[number] | typeof catalogScope) =>
+			writerPass(
+				store,
+				scope,
+				scope === catalogScope
+					? await catalog()
+					: scopeTree(await store.projection(), scope),
+				summary,
+			);
+
+		for (const scope of scopes) {
+			await store.append(note(scope, "note zero"));
+			await store.append(note(scope, "note one"));
+			expect(await pass(scope)).toMatchObject({ built: 1, calls: 1 });
+		}
+		expect(await pass(catalogScope)).toMatchObject({ built: 1, calls: 1 });
+
+		const catalogEvents = async () =>
+			(await store.export(catalogScope)).filter((event) => event.op === "node");
+		expect(await catalogEvents()).toHaveLength(1);
+		expect(slice(await catalog(), 2)).toEqual([
+			expect.objectContaining({ kind: "summary", summary: "sum" }),
+			expect.objectContaining({ kind: "summary", summary: "sum" }),
+		]);
+		expect(slice(await catalog(), 1)).toEqual([
+			expect.objectContaining({ kind: "summary", summary: "sum" }),
+		]);
+		const firstCatalogEvents = await catalogEvents();
+
+		await store.append(note("project:a", "note two"));
+		expect(await pass("project:a")).toMatchObject({ built: 1, calls: 0 });
+		expect(await pass("project:a")).toMatchObject({ built: 1, calls: 1 });
+		expect(await pass(catalogScope)).toMatchObject({ built: 1, calls: 1 });
+
+		const rebuilt = await catalogEvents();
+		expect(rebuilt).toHaveLength(2);
+		const oldEvent = firstCatalogEvents[0];
+		const unchanged = rebuilt.find((event) => event.id === oldEvent?.id);
+		expect(unchanged).toEqual(oldEvent);
+		const projection = await store.projection();
+		const current = (projection.nodes.get(catalogScope) ?? []).filter(
+			(node) => node.range.start === 0 && node.range.level === 1,
+		);
+		expect(current).toHaveLength(1);
+		expect(current[0]?.id).not.toBe(oldEvent?.id);
+		expect(projection.invalidated.has(oldEvent?.id ?? "")).toBe(true);
 		await store.close();
 	});
 });

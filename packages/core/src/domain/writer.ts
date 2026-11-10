@@ -259,7 +259,8 @@ async function callModel(
 // #region FUNC_mergeLine
 /**
  * @purpose Build one line from a ready input, with retries and the shrink check.
- * @invariants One non-empty child copies without a model call. A model answer of at most 640
+ * @invariants The model writes the summary from the two copied children only.
+ * One non-empty child copies without a model call. A model answer of at most 640
  * characters that is shorter than its source is accepted with no retry. Each retry asks for 0.75
  * times the previous target. Three attempts at most, and the shortest answer wins. A line above
  * the limit cuts at a word boundary and takes truncated. An answer never shorter than its source

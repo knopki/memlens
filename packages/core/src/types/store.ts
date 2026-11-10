@@ -12,6 +12,7 @@
  *  - Writers hold the publication lock through validation and source publication.
  *  - Source events, generated invalidations, projection, and revision publish together.
  *  - A failure before publication leaves the source unchanged. A cleanup failure preserves the published source.
+ *  - A node rebuild appends a new event and rewrites no published event.
  *  - SQLite uses a revision counter. JSONL uses a file fingerprint.
  *  - The index accepts projected records and returns complete search hits.
  *  - Both backends give the same complete hits for the same source and query.

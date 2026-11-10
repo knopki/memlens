@@ -124,6 +124,7 @@ function collectRecords(
 /**
  * @purpose Select the latest surviving candidate for each scope, level, and start.
  * @invariants Invalidated and sanitized nodes never become candidates. A range without a surviving candidate has no current node.
+ * @invariants A rebuild needs no invalidation event for its key. A later node event for the same key replaces the earlier candidate by order.
  */
 function selectNode(state: ReplayState, event: NodeLine, order: Order): void {
 	if (event.redacted || state.invalidated.has(event.id)) {
@@ -427,6 +428,7 @@ export function scopeTree(projection: Projection, scope: ScopeKey): Tree {
  * @purpose Assign one catalog position to each visible scope, with its scope tree as the leaf.
  * @invariants Positions follow the first real appearance of each profile scope in canonical event order. Empty scopes keep their positions.
  * @invariants A shared scope has one position in each profile that includes it. The caller supplies the resolved profile scopes.
+ * @invariants A catalog lists only the resolved scopes of its profile. A scope of another profile enters no catalog node.
  */
 export function catalogTree(
 	projection: Projection,
