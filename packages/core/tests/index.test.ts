@@ -12,6 +12,8 @@ import {
 	type JsonlLine,
 	JsonlStore,
 	NAME,
+	prepareAppend,
+	prepareImport,
 	project,
 	SqliteStore,
 	scopeTree,
@@ -21,6 +23,28 @@ import {
 describe("@memlens/core", () => {
 	it("exports the product name", () => {
 		expect(NAME).toBe("memlens");
+	});
+
+	it("prepares runtime writes and repeat imports through public exports", () => {
+		const plan = prepareAppend(
+			[],
+			{
+				op: "note",
+				scope: "Project:A",
+				body: "  public  note ",
+				kind: "fact",
+				ts: "2026-11-10T00:00:00.000Z",
+				review_at: null,
+				session: "s",
+				turn: "t",
+				preset: "p",
+			},
+			{ id: "00000000000000000000000001", at: "2026-11-10T00:00:00.000Z" },
+		);
+		expect(
+			plan.projection.records.get("00000000000000000000000001"),
+		).toMatchObject({ body: "public note", scope: "project:a" });
+		expect(prepareImport(plan.events, plan.events).changed).toBe(0);
 	});
 
 	it("replays, slices, and prepares writer inputs through public exports", async () => {

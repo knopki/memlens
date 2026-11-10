@@ -533,6 +533,7 @@ function frontier(model: Model, budget: Lines): Range[] {
  * Missing or dirty nodes provide temporary lines with the range period and no text.
  * A catalog leaf uses its clean scope root or a temporary line when that non-empty scope is not ready.
  * An empty scope gives no line. Lines outside selected pairs retain their text.
+ * Uncovered live records remain separate lines until a selected fold merges their ranges.
  */
 export function slice(tree: Tree, budget: Lines): readonly SliceLine[] {
 	const model = new Model(tree);

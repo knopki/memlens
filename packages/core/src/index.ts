@@ -24,6 +24,16 @@ export {
 	renderAddress,
 } from "./domain/address.js";
 export {
+	type InvalidationPlan,
+	type ProfileScopes,
+	planInvalidation,
+} from "./domain/invalidation.js";
+export {
+	canonicalJson,
+	type MergeResult,
+	mergeEvents,
+} from "./domain/merge.js";
+export {
 	BODY_DECLARED_SIZE,
 	BODY_HARD_LIMIT,
 	LONGFORM_LIMIT,
@@ -61,6 +71,16 @@ export {
 	topRange,
 } from "./domain/tree.js";
 export { isUlid, ulid } from "./domain/ulid.js";
+export {
+	normalizeAppend,
+	validateEvent,
+	validateTargets,
+} from "./domain/validation.js";
+export {
+	prepareAppend,
+	prepareImport,
+	type WritePlan,
+} from "./domain/write.js";
 export { JsonlStore } from "./storage/jsonl.js";
 export { SqliteStore } from "./storage/sqlite.js";
 export { type ErrorCode, MemlensError } from "./types/errors.js";

@@ -50,3 +50,4 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0013 | Tree model | accepted |
 | 0014 | Store projection | accepted |
 | 0015 | Node invalidation | accepted |
+| 0016 | Write boundary | accepted |

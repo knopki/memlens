@@ -83,11 +83,17 @@ function recordFromNote(event: NoteLine): MutableRecord {
 }
 
 // #region FUNC_collectRecords
-/** @purpose Create all records and collect invalidations before any operation resolves its targets. */
-function collectRecords(events: readonly JsonlLine[]): ReplayState {
+/**
+ * @purpose Create all records and collect invalidations before any operation resolves its targets.
+ * @invariants Include provisional targets supplied by a write plan before node selection.
+ */
+function collectRecords(
+	events: readonly JsonlLine[],
+	invalidated: readonly Ulid[],
+): ReplayState {
 	const state: ReplayState = {
 		records: new Map(),
-		invalidated: new Set(),
+		invalidated: new Set(invalidated),
 		entries: [],
 		latestEntry: new Map(),
 		nodes: new Map(),
@@ -349,16 +355,22 @@ function groupRecords(
  * @purpose Derive the same projection from any arrival order of the resolved events.
  * @requires Events have valid fields and unique ids after import conflict resolution.
  * @invariants Replay follows (at, id). Pass one creates records. Pass two applies operations, including targets later in that order.
+ * @invariants Additional invalidated ids support a provisional write plan before its event envelopes exist.
+ * @invariants The caller must persist provisional invalidations before publication. Candidate selection includes historical fallbacks.
  * @ensures The snapshot holds records, current range nodes, scope counts, and schema version 1. The supplied cursor stays unchanged.
  */
-export function project(events: readonly JsonlLine[], cursor = 0): Projection {
+export function project(
+	events: readonly JsonlLine[],
+	cursor = 0,
+	invalidated: readonly Ulid[] = [],
+): Projection {
 	const ordered = [...redactionClosure(events)].sort((a, b) => {
 		const left = makeOrder(a.at, a.id);
 		const right = makeOrder(b.at, b.id);
 		return left < right ? -1 : left > right ? 1 : 0;
 	});
 	debug("Replay start", { event: "start", events: ordered.length, cursor });
-	const state = collectRecords(ordered);
+	const state = collectRecords(ordered, invalidated);
 	applyOperations(state, ordered);
 	const positions = assignPositions(state);
 	const byScope = groupRecords(state.records, positions.scopeOrder);
