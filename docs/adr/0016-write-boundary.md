@@ -16,6 +16,7 @@ A repeated request with supersedes has no separate retry guarantee.
 Validate every incoming copy before conflict resolution. Reject fields outside the operation schema.
 Normalize scope and body for local writes. Imported events must already satisfy their content limits.
 Keep imported event values intact so validation does not change conflict hashes or event history.
+UTC times use the fixed form YYYY-MM-DDTHH:mm:ss.sssZ. This form preserves the required lexical time order.
 An import permits absent targets because a scope export can contain only part of a history.
 Reject a known target of the wrong operation. Local writes require their targets to exist.
 
@@ -23,6 +24,9 @@ Canonical JSON sorts object keys by lexical order at every depth. It preserves a
 It uses JSON number and string encoding. It adds no whitespace or Unicode normalization.
 Resolve copies by sanitized status, then at, then SHA-256 of canonical JSON, each in descending priority.
 Apply redaction evidence from every copy, including losing copies, after conflict resolution.
+Keep invalidation targets from every copy as evidence, including absent node targets in partial histories.
+The planner emits additional invalidations for targets that conflict resolution removes from the final log.
+This preserves permanent invalidation without a change to the event winner rules. S-150 approves this review fix.
 
 Pure plans return node targets grouped by their node scope. The caller supplies invalidation ids and times.
 A local node publication preserves the new node and invalidates affected ancestors.
