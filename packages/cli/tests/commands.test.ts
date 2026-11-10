@@ -18,11 +18,12 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { main } from "../src/cli.js";
 import type { CommandIo } from "../src/commands.js";
 
@@ -32,9 +33,17 @@ interface TestEnv {
 	io: CommandIo;
 }
 
+/** Each temporary home of this file, for the cleanup after the last test. */
+const homes: string[] = [];
+
+afterAll(() => {
+	for (const home of homes) rmSync(home, { recursive: true, force: true });
+});
+
 /** Make one temporary home, with one optional base configuration file. */
 function makeEnv(config?: string): TestEnv {
 	const home = mkdtempSync(join(tmpdir(), "memlens-cli-"));
+	homes.push(home);
 	const configDir = join(home, "config");
 	if (config !== undefined) {
 		const memlensDir = join(configDir, "memlens");
