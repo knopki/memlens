@@ -99,6 +99,13 @@ export interface StorePort {
 	 */
 	import(events: readonly JsonlLine[]): Promise<number>;
 
+	/**
+	 * Rebuild the derived state from the log: the stored projection and the index rows.
+	 * With dryRun true, change nothing and return the planned changes.
+	 * Returns the list of applied or planned changes.
+	 */
+	repair(dryRun: boolean): Promise<readonly string[]>;
+
 	/** Close any open handles and flush any pending writes. */
 	close(): Promise<void>;
 }

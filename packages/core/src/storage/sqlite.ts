@@ -14,7 +14,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { debuglog } from "node:util";
+import { debuglog, isDeepStrictEqual } from "node:util";
 import type { ProfileScopes } from "../domain/invalidation.js";
 import { project } from "../domain/projection.js";
 import {
@@ -232,6 +232,53 @@ export class SqliteStore implements StorePort {
 		});
 	}
 	// #endregion METHOD_import
+
+	// #region METHOD_repair
+	/**
+	 * @purpose Rebuild the derived state of the database from its own log in one transaction.
+	 * @invariants The events table is the authority. A stored projection that differs from the
+	 * replay is rewritten with a new revision, and the index rows are rebuilt from the replay.
+	 * A dry run lists the changes and writes nothing.
+	 */
+	async repair(dryRun: boolean): Promise<readonly string[]> {
+		return this.transaction(() => {
+			const events = this.events();
+			const stored = decodeProjection(
+				String(
+					this.db.prepare("SELECT projection FROM state WHERE id = 1").get()
+						?.projection,
+				),
+			);
+			const replay = project(events, stored.cursor);
+			const changes: string[] = [];
+			if (!isDeepStrictEqual(stored, replay)) {
+				changes.push("rewrite the projection from the log");
+				if (!dryRun) {
+					const revision =
+						BigInt(
+							String(
+								this.db.prepare("SELECT revision FROM state WHERE id = 1").get()
+									?.revision,
+							),
+						) + 1n;
+					this.db
+						.prepare(
+							"UPDATE state SET projection = ?, revision = ? WHERE id = 1",
+						)
+						.run(encodeProjection(replay), revision.toString());
+				}
+			}
+			changes.push(`rebuild ${replay.records.size} index rows`);
+			if (!dryRun) this.index.replaceRows(this.db, replay.records.values());
+			debug("SQLite repair", {
+				event: "repair",
+				dryRun,
+				changes: changes.length,
+			});
+			return changes;
+		});
+	}
+	// #endregion METHOD_repair
 
 	// #region METHOD_close
 	/** @purpose Release the database handle once and permit repeated cleanup calls. */

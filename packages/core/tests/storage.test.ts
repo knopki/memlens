@@ -18,11 +18,13 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { scopeTree } from "../src/domain/projection.js";
+import { project, scopeTree } from "../src/domain/projection.js";
 import { buildInput, rev } from "../src/domain/tree.js";
 import { JsonlStore } from "../src/storage/jsonl.js";
+import { encodeProjection } from "../src/storage/publication.js";
 import { SqliteStore } from "../src/storage/sqlite.js";
 import type { JsonlLine, NodeEvent } from "../src/types/events.js";
 import type { AppendEvent, StorePort } from "../src/types/store.js";
@@ -212,6 +214,21 @@ for (const [backend, Store, filename] of [
 			expect(await store.projection()).toEqual(projection);
 			expect(await store.rev()).toBe(durableRev);
 			expect((await stat(join(directory, filename))).size).toBeGreaterThan(0);
+		});
+
+		it("plans a repair in a dry run and rebuilds the index with no source change", async () => {
+			const store = await setup();
+			await store.append(payload("repair source"));
+			const revision = await store.rev();
+			const projection = await store.projection();
+			const planned = await store.repair(true);
+			expect(planned.join("\n")).toContain("index rows");
+			expect(await store.projection()).toEqual(projection);
+			expect(await store.rev()).toBe(revision);
+			const applied = await store.repair(false);
+			expect(applied).toEqual(planned);
+			expect(await store.projection()).toEqual(projection);
+			expect(await store.rev()).toBe(revision);
 		});
 
 		it("rolls back invalid append and whole invalid import, then imports once by id union", async () => {
@@ -652,4 +669,53 @@ describe("JSONL recovery", () => {
 			expect((await stat(sidecar)).size).toBeGreaterThan(0);
 		},
 	);
+});
+
+describe("store repair", () => {
+	it("truncates an incomplete jsonl tail and rebuilds the sidecar", async () => {
+		const directory = await mkdtemp(join(tmpdir(), "memlens-jsonl-repair-"));
+		directories.push(directory);
+		let store = new JsonlStore(directory);
+		stores.push(store);
+		await store.append(payload("tail source"));
+		await store.close();
+		const path = join(directory, "memlens.jsonl");
+		const complete = await readFile(path, "utf8");
+		await appendFile(path, '{"op":"unfinished"');
+		store = new JsonlStore(directory);
+		stores.push(store);
+		const planned = await store.repair(true);
+		expect(planned.join("\n")).toContain("incomplete tail bytes");
+		expect(await readFile(path, "utf8")).toBe(`${complete}{"op":"unfinished"`);
+		const applied = await store.repair(false);
+		expect(applied).toEqual(planned);
+		expect(await readFile(path, "utf8")).toBe(complete);
+		expect((await store.projection()).records.size).toBe(1);
+	});
+
+	it("rewrites a drifted sqlite projection row from the log", async () => {
+		const directory = await mkdtemp(join(tmpdir(), "memlens-sqlite-repair-"));
+		directories.push(directory);
+		let store = new SqliteStore(directory);
+		stores.push(store);
+		await store.append(payload("drift source"));
+		const revision = await store.rev();
+		await store.close();
+		const db = new DatabaseSync(join(directory, "memlens.db"));
+		db.exec("PRAGMA busy_timeout = 5000");
+		db.prepare("UPDATE state SET projection = ? WHERE id = 1").run(
+			encodeProjection(project([])),
+		);
+		db.close();
+		store = new SqliteStore(directory);
+		stores.push(store);
+		expect((await store.projection()).records.size).toBe(0);
+		const planned = await store.repair(true);
+		expect(planned.join("\n")).toContain("rewrite the projection from the log");
+		expect((await store.projection()).records.size).toBe(0);
+		const applied = await store.repair(false);
+		expect(applied).toEqual(planned);
+		expect((await store.projection()).records.size).toBe(1);
+		expect(await store.rev()).not.toBe(revision);
+	});
 });

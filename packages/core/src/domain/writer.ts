@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
  * @purpose Build clean summaries for dirty tree ranges, so the view holds text without waiting.
- * @scope Merge prompts, line attempts, batch answers, form choice, retry pacing, and one writer pass.
+ * @scope Merge prompts, line attempts, batch answers, job answers, form choice, retry pacing, and one writer pass.
  * NOT: triggers, timers, the harness LLM service, and storage locks.
  * @invariants
  * - The writer task stays pure: one input gives one output, and no executor state enters a result.
@@ -9,6 +9,8 @@
  * specific cacheTtl glob and batch for the rest.
  * - A merge input holds the two children only. One non-empty child copies its text and dates with
  * no model call.
+ * - The shrink check applies to a model merge only. An answer of a compaction job takes the limit
+ * cut and no shrink check.
  * - A model answer of 640 characters or less is accepted with no retry. A retry asks for 0.75
  * times the previous target, a run makes 3 attempts at most, and the answer is the shortest.
  * - A line above 640 characters after the attempts cuts at a word boundary and takes truncated.
@@ -189,8 +191,13 @@ function datesOf(input: BuildInput): { ts_from: string; ts_to: string } {
 	};
 }
 
-/** A copy line: the text and dates of one non-empty child, with no model call. */
-function copyBuild(input: BuildInput): Extract<LineBuild, { ok: true }> {
+// #region FUNC_copyBuild
+/**
+ * @purpose Give the copy line of one input with a single non-empty child.
+ * @invariants The copy holds the text and dates of that child, with no model call. An input with
+ * no live child gives an empty line.
+ */
+export function copyBuild(input: BuildInput): Extract<LineBuild, { ok: true }> {
 	const child = live(input)[0];
 	const text = child ? textOf(child) : "";
 	return {
@@ -201,6 +208,7 @@ function copyBuild(input: BuildInput): Extract<LineBuild, { ok: true }> {
 		...datesOf(input),
 	};
 }
+// #endregion FUNC_copyBuild
 
 // #region FUNC_finalizeLine
 /**
@@ -234,6 +242,36 @@ function finalizeLine(input: BuildInput, text: string): LineBuild {
 	};
 }
 // #endregion FUNC_finalizeLine
+
+// #region FUNC_answerLine
+/**
+ * @purpose Finalize one answer of a compaction job from a human or an agent, with no model call.
+ * @invariants The shrink check applies to a model merge only, so an answer needs no retry and no
+ * comparison with its source. An empty answer fails with no_answer. An answer above the node
+ * limit cuts at a word boundary and takes truncated, as a node line does.
+ */
+export function answerLine(input: BuildInput, text: string): LineBuild {
+	const trimmed = text.trim();
+	if (!trimmed) return { ok: false, reason: "no_answer" };
+	if (trimmed.length <= NODE_LIMIT)
+		return {
+			ok: true,
+			summary: trimmed,
+			chars: trimmed.length,
+			truncated: false,
+			...datesOf(input),
+		};
+	const cut = cutAtWord(trimmed, NODE_LIMIT);
+	debug("Answer cut", { limit: NODE_LIMIT, chars: cut.length });
+	return {
+		ok: true,
+		summary: cut,
+		chars: cut.length,
+		truncated: true,
+		...datesOf(input),
+	};
+}
+// #endregion FUNC_answerLine
 
 async function callModel(
 	model: MergeModel,

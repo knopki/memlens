@@ -154,9 +154,11 @@ export {
 	type WritePlan,
 } from "./domain/write.js";
 export {
+	answerLine,
 	autoForm,
 	batchTask,
 	childLine,
+	copyBuild,
 	type LineBuild,
 	MAX_CALLS_PER_HOUR,
 	MERGE_SYSTEM,

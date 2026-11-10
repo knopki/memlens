@@ -205,6 +205,40 @@ export class JsonlStore implements StorePort {
 	}
 	// #endregion METHOD_import
 
+	// #region METHOD_repair
+	/**
+	 * @purpose Remove an incomplete source tail and rebuild the sidecar from the complete log.
+	 * @invariants The complete lines are the authority. A partial final line leaves the source.
+	 * The sidecar file is rewritten with fresh index rows. A dry run lists the changes and writes
+	 * nothing.
+	 */
+	async repair(dryRun: boolean): Promise<readonly string[]> {
+		return this.locked(() => {
+			const changes: string[] = [];
+			const bytes = readFileSync(this.source);
+			const cursor = bytes.lastIndexOf(10) + 1;
+			const tail = bytes.length - cursor;
+			if (tail > 0) changes.push(`truncate ${tail} incomplete tail bytes`);
+			const events = this.history();
+			changes.push(`rebuild ${project(events).records.size} index rows`);
+			debug("JSONL repair planned", {
+				event: "repair",
+				dryRun,
+				tail,
+				changes: changes.length,
+			});
+			if (dryRun) return changes;
+			if (tail > 0) {
+				this.replace(events);
+				this.snapshot();
+			} else {
+				this.save(this.snapshot(), events);
+			}
+			return changes;
+		});
+	}
+	// #endregion METHOD_repair
+
 	// #region METHOD_close
 	/** @purpose Release the process handle after synchronous durable writes. Repeated close has no effect. */
 	async close(): Promise<void> {

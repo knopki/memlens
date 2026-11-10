@@ -1,6 +1,6 @@
 /**
  * #region moduleContract
- * @purpose Check merge attempts, batch answers, form choice, pacing, and one writer pass.
+ * @purpose Check merge attempts, batch answers, job answers, form choice, pacing, and one writer pass.
  * #endregion moduleContract
  */
 import { mkdtemp, rm } from "node:fs/promises";
@@ -11,9 +11,11 @@ import { catalogTree, scopeTree } from "../src/domain/projection.js";
 import { catalogKey } from "../src/domain/scope.js";
 import { slice } from "../src/domain/tree.js";
 import {
+	answerLine,
 	autoForm,
 	batchTask,
 	childLine,
+	copyBuild,
 	mergeLine,
 	mergeTask,
 	parseBatchAnswer,
@@ -185,6 +187,55 @@ describe("batch answers", () => {
 		expect(parseBatchAnswer("#0-1: one\n#9-9: two", inputs)).toBeNull();
 		expect(parseBatchAnswer("#0-1 one\n#2-3: two", inputs)).toBeNull();
 		expect(parseBatchAnswer("#0-1: one\n#0-1: again", inputs)).toBeNull();
+	});
+});
+
+describe("job answers", () => {
+	it("accepts an answer with no shrink check, unlike a model merge", () => {
+		const short = input(record(0, "ab"), record(1, "cd"));
+		const line = answerLine(short, "abcde");
+		expect(line).toEqual({
+			ok: true,
+			summary: "abcde",
+			chars: 5,
+			truncated: false,
+			ts_from: "2026-11-01",
+			ts_to: "2026-11-02",
+		});
+	});
+
+	it("trims the answer and fails on an empty answer", () => {
+		expect(answerLine(input(record(0, "a"), record(1, "b")), " text ").ok).toBe(
+			true,
+		);
+		expect(answerLine(input(record(0, "a"), record(1, "b")), "  ")).toEqual({
+			ok: false,
+			reason: "no_answer",
+		});
+	});
+
+	it("cuts an answer above the node limit and marks it truncated", () => {
+		const line = answerLine(
+			input(record(0, "a"), record(1, "b")),
+			`${"word ".repeat(200)}`,
+		);
+		expect(line.ok).toBe(true);
+		if (line.ok) {
+			expect(line.chars).toBeLessThanOrEqual(640);
+			expect(line.truncated).toBe(true);
+		}
+	});
+
+	it("gives the copy line of one input with a single non-empty child", () => {
+		const line = copyBuild(input(record(2, "only note"), null));
+		expect(line).toEqual({
+			ok: true,
+			summary: "only note",
+			chars: 9,
+			truncated: false,
+			ts_from: "2026-11-03",
+			ts_to: "2026-11-03",
+		});
 	});
 });
 
