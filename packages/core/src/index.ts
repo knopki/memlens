@@ -24,6 +24,16 @@ export {
 	renderAddress,
 } from "./domain/address.js";
 export {
+	CONTEXT_TEMPLATE,
+	type ContextInput,
+	type DirectionScope,
+	directionLines,
+	epoch,
+	hereLines,
+	POLICY,
+	renderContext,
+} from "./domain/context.js";
+export {
 	type InvalidationPlan,
 	type ProfileScopes,
 	planInvalidation,
