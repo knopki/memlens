@@ -50,6 +50,7 @@ export {
 	type PresetConfig,
 	type ProfileConfig,
 	parseDuration,
+	type ResolvedConfig,
 	type ReviewConfig,
 	type Rule,
 	type RuleGitRemote,
