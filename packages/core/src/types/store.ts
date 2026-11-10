@@ -5,19 +5,30 @@
  * @modulecontract
  * @purpose Define the abstract store interface, so the domain and the tree logic depend on no backend.
  * @scope
- *  - The AppendEvent input, the WriteResult, and the StorePort interface.
+ *  - Store operations, revisions, index records, and complete search hits.
  *  - NOT: the backend implementations, the JSONL file, or the SQLite file.
  * @invariants
  *  - A store port gives one projection per read.
- *  - An append is atomic: a failed append leaves no event in the store.
+ *  - Writers hold the publication lock through validation and source publication.
+ *  - Source events, generated invalidations, projection, and revision publish together.
+ *  - A failure before publication leaves the source unchanged. A cleanup failure preserves the published source.
+ *  - SQLite uses a revision counter. JSONL uses a file fingerprint.
+ *  - The index accepts projected records and returns complete search hits.
  * @dependencies
  *  USES: events.ts, tree.ts, projection.ts
  * @keywords store, port, append, projection, storeRev, backend
  * #endregion moduleContract
  */
 
-import type { Event, JsonlLine, NodeEvent, ScopeKey, Ulid } from "./events.js";
-import type { Projection } from "./projection.js";
+import type {
+	Event,
+	JsonlLine,
+	NodeEvent,
+	NoteKind,
+	ScopeKey,
+	Ulid,
+} from "./events.js";
+import type { Projection, ProjectionRecord } from "./projection.js";
 import type { BuildInput, TreeNode } from "./tree.js";
 
 /** A write retains the payload of each operation and lets the store supply its envelope. */
@@ -27,7 +38,7 @@ export type AppendEvent = Event extends infer Operation
 		: never
 	: never;
 
-/** A unique string that identifies the state of the store. */
+/** The SQLite revision counter or the JSONL file fingerprint, as a string. */
 export type StoreRev = string;
 
 /** The result of a node append: either accepted or rejected (input changed). */
@@ -57,7 +68,7 @@ export interface StorePort {
 		node: Omit<NodeEvent, "id" | "at">,
 	): Promise<NodeAppendResult>;
 
-	/** Read the current projection. This call scans no event. */
+	/** Read the current projection. An unchanged source requires no event scan. */
 	projection(): Promise<Projection>;
 
 	/** Read the store revision. The revision changes on each write, including redacts. */
@@ -80,25 +91,40 @@ export interface StorePort {
 	close(): Promise<void>;
 }
 
-/** The FTS index port. Each backend has one implementation. */
+// #region CLASS_IndexHit
+/** @purpose Supply the full record metadata and body for one search result. */
+export interface IndexHit {
+	readonly addr: string;
+	readonly scope: ScopeKey;
+	readonly pos: number;
+	readonly id: string;
+	readonly ts: string;
+	readonly kind: NoteKind;
+	readonly body: string;
+	readonly longformChars: number;
+	readonly review_at: string | null;
+}
+// #endregion CLASS_IndexHit
+
+// #region CLASS_IndexPort
+/**
+ * @purpose Keep search results complete through one backend-independent index contract.
+ * @invariants Add accepts a complete projected record, with metadata and longform. Search returns complete hits without longform content.
+ * @invariants Rebuild derives current records from events. SQLite updates the index within the source transaction.
+ */
 export interface IndexPort {
-	/** Add one record to the index. Part of the append transaction in SQLite. */
-	add(
-		id: Ulid,
-		scope: ScopeKey,
-		body: string,
-		longform: string | null,
-	): Promise<void>;
+	/** Add the current record with its metadata and longform. Part of the SQLite source transaction. */
+	add(record: ProjectionRecord): Promise<void>;
 
 	/** Remove one record from the index. */
 	remove(id: Ulid): Promise<void>;
 
-	/** Search the index for the given query. Returns the matching ids. */
+	/** Search the index for the given query. Return complete hits with each longform length. */
 	search(
 		query: string,
 		scope: ScopeKey | null,
 		limit: number,
-	): Promise<readonly Ulid[]>;
+	): Promise<readonly IndexHit[]>;
 
 	/** Rebuild the index from the given events. Called after a language change or index loss. */
 	rebuild(events: readonly JsonlLine[]): Promise<void>;
@@ -106,3 +132,4 @@ export interface IndexPort {
 	/** Close the index. */
 	close(): Promise<void>;
 }
+// #endregion CLASS_IndexPort

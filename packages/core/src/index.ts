@@ -117,6 +117,7 @@ export type {
 export { PROJECTION_VERSION } from "./types/projection.js";
 export type {
 	AppendEvent,
+	IndexHit,
 	IndexPort,
 	NodeAppendResult,
 	StorePort,

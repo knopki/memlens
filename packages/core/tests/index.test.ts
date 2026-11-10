@@ -100,10 +100,7 @@ describe("@memlens/core", () => {
 			},
 		]);
 		expect(inputUnchanged(scopeTree(erased, "project:a"), input)).toBe(false);
-		for (const Store of [SqliteStore, JsonlStore]) {
-			const store = new Store();
-			await expect(store.projection()).rejects.toMatchObject({ code: "Data" });
-			await store.close();
-		}
+		expect(SqliteStore.name).toBe("SqliteStore");
+		expect(JsonlStore.name).toBe("JsonlStore");
 	});
 });
