@@ -1,7 +1,8 @@
 # Work rules for agents
 
 The core library implements the domain, both persistent backends, the writer, the slice, and
-the configuration. The CLI and the plugin have scaffolds, and the frontends are the remaining work.
+the configuration. The CLI implements the command surface, and it owes the commands `compact`,
+`check`, `repair`, and `ui`, and the session import. The plugin has a scaffold.
 See [06-architecture.md](docs/spec/06-architecture.md) for the current state.
 The specification in `docs/spec/` owns cross-module requirements and pending behavior.
 Code contracts own implemented rules within one module. Read the module contract and the relevant

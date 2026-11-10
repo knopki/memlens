@@ -1,6 +1,6 @@
 # Architecture
 
-Status: draft. The core has domain implementations and persistent backends. The CLI and the plugin have scaffolds.
+Status: draft. The core and the CLI have implementations. The plugin has a scaffold, and the console is pending.
 The global requirements define cross-module behavior. Code contracts define implemented local behavior.
 
 ## Shape
@@ -216,19 +216,7 @@ See [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-re
 
 The Markdown format is export-only. It is a human view and has no import or event recovery contract.
 The JSONL format transfers events. Store import reads JSONL, while the separate session import reads harness sessions.
-
-A Markdown export writes one flat directory. It encodes the complete normalized scope key as a filename and appends `.md`.
-The encoding keeps ASCII lowercase letters, digits, underscore, and hyphen. Every other UTF-8 byte becomes `%HH`, with uppercase hexadecimal digits.
-The percent sign also requires encoding, so distinct normalized keys have distinct encoded names.
-Colon, slash, and period become `%3A`, `%2F`, and `%2E`. Encoded keys contain no path separator or relative path component.
-For example, `project:a/b` becomes `project%3Aa%2Fb.md`, while `project/a:b` becomes `project%2Fa%3Ab.md`.
-The exporter never truncates names or overwrites a different scope on a filename collision. Filesystem limits produce the normal export error.
-
-Each file starts with the scope key and format version. Each record is a section `## #<pos>` with a YAML block and its body.
-The block shows `id`, `at`, `ts`, `kind`, `review_at`, `refs`, and `supersedes`.
-A longform follows under `### longform`. A cleared record shows `[redacted]`, `redacted: true`, and no longform.
-The placeholder is not an event body. Markdown carries no node event.
-See [REQ-505](02-requirements.md) to [REQ-508](02-requirements.md) and [S-142](../statements.md#s-142).
+The [export format contract](../../packages/cli/src/export-md.ts) owns the filename encoding and the file format.
 
 An export copies the whole store under an exclusive lock and one read transaction, so the copy is
 consistent by construction. A per-scope export also holds the top node of that scope. An import unions events by `id`.
@@ -481,16 +469,12 @@ memlens config get|set key [value]
 memlens ui [--port 7788] [--allow-delete]
 ```
 
-The CLI has no active scope. The command `note` takes the scope in `--scope`. A command with a
-target takes the scope in the address, as `scope#pos`, or in `--scope`. The commands `find` and
-`review` take no value, and they use each visible scope.
+The [command contracts](../../packages/cli/src/commands.ts) own the command behavior: the target
+resolution, the visible scope rules, the review periods, and the confirmation of a redact. The
+[entry contract](../../packages/cli/src/cli.ts) owns the dispatch and the exit codes.
 
-The command `slice` is the one exception. It takes the active scope from the rules of `[scope_default]`
-for the directory of the call, and `--scope` replaces the result. The profile comes from `--profile`,
-or from `defaultProfile`.
-
-The command `scope` gives the key of the active scope for the directory of the call. It gives the rule
-that gave the key.
+The commands `compact`, `check`, `repair`, and `ui`, the flag `--as` of `import`, and the import from
+harness sessions are pending work. The usage below gives the target surface.
 
 The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
 and `3` a refusal by a policy.
@@ -507,7 +491,7 @@ An error carries `code` and `message`. The command maps the kind of the error to
 | `Data`                | data            | 1         | An unknown target, or an event that does not fit |
 
 The [error contract](../../packages/core/src/types/errors.ts) owns code and message.
-[REQ-498](02-requirements.md) to [REQ-500](02-requirements.md) retain command exit rules.
+The [entry contract](../../packages/cli/src/cli.ts) owns the command exit rules.
 
 ## Code markup
 
@@ -541,5 +525,9 @@ customer words as given.
 
 ## Remaining work
 
-The policy text comes from the research of the prior art. See [S-130](../statements.md#s-130) and
-[09-prompts.md](09-prompts.md).
+The CLI owes the commands `compact`, `check`, `repair`, and `ui`, the flag `--as` of `import`, and the
+import from harness sessions. See [REQ-046](02-requirements.md), [REQ-413](02-requirements.md), and
+[REQ-458](02-requirements.md).
+
+The console and the plugin are pending work. See [08-ui.md](08-ui.md) and
+[REQ-028](02-requirements.md).
