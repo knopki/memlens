@@ -220,6 +220,18 @@ const rangeAddress = (key: string, range: Range) =>
 	`${key}#${range.start}-${range.start + 2 ** range.level - 1}`;
 const lineAddress = (key: string, line: SliceLine) =>
 	line.kind === "record" ? `${key}#${line.pos}` : rangeAddress(key, line.range);
+/** The date span of one period, with the shared year and month once. */
+function span(from: string, to: string): string {
+	const first = from.slice(0, 10);
+	const last = to.slice(0, 10);
+	if (!first || !last) return `${first}..${last}`;
+	if (first === last) return first;
+	const [yearA, monthA] = first.split("-");
+	const [yearB, monthB, dayB] = last.split("-");
+	if (yearA === yearB && monthA === monthB) return `${first}..${dayB}`;
+	if (yearA === yearB) return `${first}..${monthB}-${dayB}`;
+	return `${first}..${last}`;
+}
 const kindName = (kind: NoteKind | "unavailable") =>
 	kind === "unavailable" ? tr("none") : tr(KIND_KEYS[kind] as keyof Table);
 function message(text: string, error = false) {
@@ -628,13 +640,7 @@ function frontierLine(key: string, line: SliceLine) {
 				: line.text;
 	const node = btn("", () => openTarget(target), `line ${line.kind[0] ?? ""}`);
 	node.append(el("span", target, "id"));
-	node.append(
-		el(
-			"span",
-			text || `${line.from.slice(0, 10)} → ${line.to.slice(0, 10)}`,
-			"tx",
-		),
-	);
+	node.append(el("span", text || span(line.from, line.to), "tx"));
 	if (line.kind === "temporary") node.classList.add("pending");
 	if (state.selection?.target === target) node.classList.add("sel");
 	node.title = text || tr("notBuilt");
@@ -658,9 +664,7 @@ function childLine(child: OpenLine) {
 	node.append(
 		el(
 			"span",
-			child.built
-				? child.text
-				: `${child.ts_from.slice(0, 10)} → ${child.ts_to.slice(0, 10)}`,
+			child.built ? child.text : span(child.ts_from, child.ts_to),
 			"tx",
 		),
 	);
@@ -814,7 +818,7 @@ function catalog(main: HTMLElement, model: View): void {
 			[tr("range"), tr("dates"), tr("chars"), tr("state")],
 			nodes.map((item) => [
 				rangeAddress(item.scope, item.node.range),
-				`${item.node.ts_from.slice(0, 10)} → ${item.node.ts_to.slice(0, 10)}`,
+				span(item.node.ts_from, item.node.ts_to),
 				String(item.node.chars),
 				item.clean ? tr("clean") : tr("dirty"),
 			]),

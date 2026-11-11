@@ -95,20 +95,20 @@ describe("hereLines", () => {
 			invalidated: [],
 		};
 		expect(hereLines(timed, 2)).toBe(
-			"#0-1 2026-11-01..2026-11-02 first pair\n#2 2026-11-03 body 2",
+			"#0-1 2026-11-01..02 first pair\n#2 2026-11-03 body 2",
 		);
 	});
 
 	it("renders a clean node with its period and summary", () => {
 		const tree = scopeTree(3, [node(0, 1, "first pair")]);
 		expect(hereLines(tree, 2)).toBe(
-			"#0-1 2026-11-1..2026-11-2 first pair\n#2 2026-11-3 body 2",
+			"#0-1 2026-11-1..2 first pair\n#2 2026-11-3 body 2",
 		);
 	});
 
 	it("renders a missing node as a temporary line with the assembled text", () => {
 		expect(hereLines(scopeTree(3), 2)).toBe(
-			"#0-1 2026-11-1..2026-11-2 body 0; body 1\n#2 2026-11-3 body 2",
+			"#0-1 2026-11-1..2 body 0; body 1\n#2 2026-11-3 body 2",
 		);
 	});
 });

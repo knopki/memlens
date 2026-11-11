@@ -68,7 +68,7 @@ describe("prompts", () => {
 				ts_from: "2026-11-01",
 				ts_to: "2026-11-02",
 			}),
-		).toBe("#0-3 2026-11-01..2026-11-02\nsum");
+		).toBe("#0-3 2026-11-01..02\nsum");
 		expect(
 			childLine({
 				kind: "node",
@@ -79,7 +79,7 @@ describe("prompts", () => {
 				ts_from: "2026-11-01",
 				ts_to: "2026-11-02",
 			}),
-		).toBe("#2 2026-11-01..2026-11-02\nscope root");
+		).toBe("#2 2026-11-01..02\nscope root");
 	});
 
 	it("fills the merge task text with the target and the words", () => {
@@ -125,8 +125,8 @@ describe("prompts", () => {
 			],
 			["project:a", "project:b"],
 		);
-		expect(task).toContain("[project:a] 2026-11-01..2026-11-02\nalpha");
-		expect(task).toContain("[project:b] 2026-11-03..2026-11-04\nbeta");
+		expect(task).toContain("[project:a] 2026-11-01..02\nalpha");
+		expect(task).toContain("[project:b] 2026-11-03..04\nbeta");
 		expect(task).toContain('<input id="#0-1">');
 	});
 });

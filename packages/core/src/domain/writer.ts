@@ -36,6 +36,7 @@ import type { NodeEvent, ScopeKey } from "../types/events.js";
 import type { StorePort } from "../types/store.js";
 import type { BuildChild, BuildInput, Tree } from "../types/tree.js";
 import { maxOrder } from "./order.js";
+import { dateSpan } from "./time.js";
 import { buildInput, candidates, cutAtWord, LINE_LIMIT, rev } from "./tree.js";
 
 const debug = debuglog("memlens:writer");
@@ -108,23 +109,24 @@ export type LineBuild =
 /**
  * @purpose Render one child as the model reads it.
  * @invariants A record gives its address, date, body, and preview below the body when present.
- * A node gives its address, period, and summary. A catalog child gives its catalog position.
+ * A node gives its address, the date span of the period, and the summary. A catalog child gives its
+ * catalog position. No child line names a time of day.
  */
 export function childLine(child: BuildChild): string {
 	if (child.kind === "record")
-		return `#${child.pos} ${child.ts}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
+		return `#${child.pos} ${child.ts.slice(0, 10)}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
 	if (child.pos !== undefined)
-		return `#${child.pos} ${child.ts_from}..${child.ts_to}\n${child.summary}`;
+		return `#${child.pos} ${dateSpan(child.ts_from, child.ts_to)}\n${child.summary}`;
 	const end = child.range.start + 2 ** child.range.level - 1;
-	return `#${child.range.start}-${end} ${child.ts_from}..${child.ts_to}\n${child.summary}`;
+	return `#${child.range.start}-${end} ${dateSpan(child.ts_from, child.ts_to)}\n${child.summary}`;
 }
 // #endregion FUNC_childLine
 
-/** One child of a catalog range: the scope key, the period, and the text. */
+/** One child of a catalog range: the scope key, the date span, and the text. */
 function scopeChild(key: ScopeKey, child: BuildChild): string {
 	if (child.kind === "record")
-		return `[${key}] ${child.ts}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
-	return `[${key}] ${child.ts_from}..${child.ts_to}\n${child.summary}`;
+		return `[${key}] ${child.ts.slice(0, 10)}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
+	return `[${key}] ${dateSpan(child.ts_from, child.ts_to)}\n${child.summary}`;
 }
 
 /** The address text of a range. */

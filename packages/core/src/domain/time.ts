@@ -7,10 +7,12 @@
  * @scope
  *  - Formatting of at and ts as ISO 8601 UTC with Z.
  *  - Formatting of review_at as YYYY-MM-DD.
- *  - NOT: time zones, local time, or human display.
+ *  - The date span of the view text: the shared year and month appear once.
+ *  - NOT: time zones, local time, or a clock display.
  * @invariants
  *  - The at and ts values end with Z.
  *  - The text of at sorts by time.
+ *  - A date span holds no time of day.
  * @keywords time, iso, utc, format, compare
  * #endregion moduleContract
  */
@@ -70,3 +72,22 @@ export function addDays(d: Date | number, days: number): string {
 export function compareIso(a: string, b: string): number {
 	return a < b ? -1 : a > b ? 1 : 0;
 }
+
+// #region FUNC_dateSpan
+/**
+ * @purpose Put one period into the date form of the view, so a range line names its span once.
+ * @invariants Equal dates give one date. One year and month give 2026-11-01..02. One year gives
+ * 2026-11-28..12-03. Another year gives the two complete dates. A time of day leaves the span.
+ */
+export function dateSpan(from: string, to: string): string {
+	const first = from.slice(0, 10);
+	const last = to.slice(0, 10);
+	if (!first || !last) return `${first}..${last}`;
+	if (first === last) return first;
+	const [yearA, monthA] = first.split("-");
+	const [yearB, monthB, dayB] = last.split("-");
+	if (yearA === yearB && monthA === monthB) return `${first}..${dayB}`;
+	if (yearA === yearB) return `${first}..${monthB}-${dayB}`;
+	return `${first}..${last}`;
+}
+// #endregion FUNC_dateSpan
