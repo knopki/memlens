@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
  * @purpose Prepare complete domain changes before storage publishes any data.
- * @scope Local append normalization, duplicate notes, import merge, and invalidation plans.
+ * @scope Local append normalization, duplicate notes, import merge, invalidation plans, and the proposal expiry scan.
  * @invariants No file access, clocks, random ids, or model calls. The caller supplies each event envelope.
  * @invariants Failed preparation changes no input. Generated invalidations require atomic publication with the data.
  * #endregion moduleContract
@@ -9,7 +9,7 @@
 
 import { debuglog } from "node:util";
 import { MemlensError } from "../types/errors.js";
-import type { Event, JsonlLine } from "../types/events.js";
+import type { Event, JsonlLine, ScopeKey, Ulid } from "../types/events.js";
 import type { Projection } from "../types/projection.js";
 import {
 	type InvalidationPlan,
@@ -27,6 +27,9 @@ import {
 } from "./validation.js";
 
 const debug = debuglog("memlens:write");
+
+/** A store dismisses a pending proposal after this count of days without a human. */
+export const PROPOSAL_GC_DAYS = 30;
 
 /** The projection applies planned invalidations before any later read. */
 export interface WritePlan extends InvalidationPlan {
@@ -140,6 +143,42 @@ export function prepareImport(
 	};
 }
 // #endregion FUNC_prepareImport
+
+/** One proposal that a store must dismiss without a human. */
+export interface ExpiredProposal {
+	readonly scope: ScopeKey;
+	readonly target: Ulid;
+}
+
+// #region FUNC_expiredProposals
+/**
+ * @purpose Name each pending proposal past its expiry, so a write clears the queue with no human.
+ * @invariants A proposal is an event with proposed true. A dismiss targeting its id closes it.
+ * @invariants Only the at value of the proposal gives the age. The caller passes the write time.
+ * @invariants A proposal younger than 30 days stays. The result holds each pending proposal once.
+ */
+export function expiredProposals(
+	events: readonly JsonlLine[],
+	at: string,
+): readonly ExpiredProposal[] {
+	const dismissed = new Set(
+		events.flatMap((event) => (event.op === "dismiss" ? [event.target] : [])),
+	);
+	const now = Date.parse(at);
+	const expired = events.filter(
+		(event) =>
+			"proposed" in event &&
+			event.proposed === true &&
+			!dismissed.has(event.id) &&
+			now - Date.parse(event.at) > PROPOSAL_GC_DAYS * 86_400_000,
+	);
+	debug("Proposal expiry scan", {
+		event: "proposal_scan",
+		pending: expired.length,
+	});
+	return expired.map((event) => ({ scope: event.scope, target: event.id }));
+}
+// #endregion FUNC_expiredProposals
 
 /** @purpose Preserve the existing document when only an amended body overflows its limit. */
 function amendmentInput(value: unknown, projection: Projection): unknown {

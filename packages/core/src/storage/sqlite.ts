@@ -17,11 +17,7 @@ import { DatabaseSync } from "node:sqlite";
 import { debuglog, isDeepStrictEqual } from "node:util";
 import type { ProfileScopes } from "../domain/invalidation.js";
 import { project } from "../domain/projection.js";
-import {
-	prepareAppend,
-	prepareImport,
-	type WritePlan,
-} from "../domain/write.js";
+import type { WritePlan } from "../domain/write.js";
 import { MemlensError } from "../types/errors.js";
 import type { Event, JsonlLine, NodeEvent, ScopeKey } from "../types/events.js";
 import type { Projection } from "../types/projection.js";
@@ -35,9 +31,11 @@ import type {
 import type { BuildInput } from "../types/tree.js";
 import { FtsIndex } from "./fts.js";
 import {
+	appendPlan,
 	decodeProjection,
 	encodeProjection,
 	envelope,
+	importPlan,
 	nodePlan,
 	proposalPlan,
 	publishPlan,
@@ -132,12 +130,7 @@ export class SqliteStore implements StorePort {
 					"Use appendNode to validate a node input.",
 				);
 			const events = this.events();
-			const plan = prepareAppend(
-				events,
-				event,
-				envelope(events),
-				this.profiles,
-			);
+			const plan = appendPlan(events, event, envelope(events), this.profiles);
 			const result = plan.duplicate ?? plan.appended;
 			if (!result)
 				throw new MemlensError("Data", "An append plan has no result.");
@@ -242,7 +235,7 @@ export class SqliteStore implements StorePort {
 	/** @purpose Publish the validated id union and its complete invalidation plan under the write lock. */
 	async import(events: readonly JsonlLine[]): Promise<number> {
 		return this.transaction(() => {
-			const plan = prepareImport(this.events(), events, this.profiles);
+			const plan = importPlan(this.events(), events, this.profiles);
 			this.publish(plan);
 			return plan.changed;
 		});

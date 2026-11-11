@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
  * @purpose Keep publication envelopes and persisted snapshots consistent across both backends.
- * @scope Small publication helpers. No locks, file access, or storage lifecycle.
+ * @scope Small publication helpers, the proposal decision, and the expiry composition of a write. No locks, file access, or storage lifecycle.
  * @invariants The backend owns the lock throughout preparation and publication.
  * @invariants Every planned invalidation becomes an event in the same publication as its source change.
  * #endregion moduleContract
@@ -15,6 +15,7 @@ import { isCatalogKey } from "../domain/scope.js";
 import { inputUnchanged, rev } from "../domain/tree.js";
 import { ulid } from "../domain/ulid.js";
 import {
+	expiredProposals,
 	prepareAppend,
 	prepareImport,
 	type WritePlan,
@@ -28,7 +29,10 @@ import type { BuildInput } from "../types/tree.js";
 const debug = debuglog("memlens:publication");
 
 // #region FUNC_envelope
-/** @purpose Give a local event a unique identity and a time after the current history. */
+/**
+ * @purpose Give a local event a unique identity and a time after the current history.
+ * @invariants The at value is the log time, and no later operation changes it.
+ */
 export function envelope(events: readonly JsonlLine[]): {
 	id: string;
 	at: string;
@@ -184,6 +188,73 @@ export function proposalPlan(
 	return plan;
 }
 // #endregion FUNC_proposalPlan
+
+// #region FUNC_appendPlan
+/**
+ * @purpose Prepare one local write and each proposal dismissal it forces, as one plan.
+ * @invariants Each expired proposal gains one dismiss event with the reason expired.
+ * @invariants The plan keeps the appended event or the duplicate of the caller write. A dismiss
+ * changes no record, no index row, and no invalidation.
+ * @invariants A store that opens for a write dismisses each proposal past its expiry, and a
+ * repeated write adds no second dismiss. The write time is the current clock.
+ */
+export function appendPlan(
+	events: readonly JsonlLine[],
+	value: unknown,
+	envelope: { readonly id: string; readonly at: string },
+	profiles: ProfileScopes = new Map(),
+): WritePlan {
+	const plan = prepareAppend(events, value, envelope, profiles);
+	return withExpiry(plan, profiles);
+}
+// #endregion FUNC_appendPlan
+
+// #region FUNC_importPlan
+/**
+ * @purpose Prepare one import and each proposal dismissal it forces, as one plan.
+ * @invariants The rules of appendPlan apply. The plan keeps the changed count of the import plus
+ * one for each dismissal.
+ */
+export function importPlan(
+	local: readonly JsonlLine[],
+	incoming: readonly unknown[],
+	profiles: ProfileScopes = new Map(),
+): WritePlan {
+	return withExpiry(prepareImport(local, incoming, profiles), profiles);
+}
+// #endregion FUNC_importPlan
+
+// #region FUNC_withExpiry
+/**
+ * @purpose Fold one dismiss event for each expired proposal into a finished plan.
+ * @invariants The caller write keeps its identity. The last projection covers every dismissal.
+ * @invariants The current clock gives the write time, so a future event time ages no proposal.
+ */
+function withExpiry(plan: WritePlan, profiles: ProfileScopes): WritePlan {
+	const expired = expiredProposals(plan.events, new Date().toISOString());
+	if (!expired.length) return plan;
+	let current = plan;
+	for (const item of expired)
+		current = prepareAppend(
+			current.events,
+			{
+				op: "dismiss",
+				scope: item.scope,
+				target: item.target,
+				reason: "expired",
+			},
+			envelope(current.events),
+			profiles,
+		);
+	debug("Proposals expired", { event: "proposal_gc", count: expired.length });
+	return {
+		...current,
+		changed: plan.changed + expired.length,
+		appended: plan.appended,
+		duplicate: plan.duplicate,
+	};
+}
+// #endregion FUNC_withExpiry
 
 // #region FUNC_encodeProjection
 /** @purpose Preserve projection maps and sets without a log scan on a later read. */

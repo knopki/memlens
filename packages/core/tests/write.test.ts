@@ -7,7 +7,12 @@
 
 import { describe, expect, it } from "vitest";
 import { project } from "../src/domain/projection.js";
-import { prepareAppend, prepareImport } from "../src/domain/write.js";
+import {
+	expiredProposals,
+	prepareAppend,
+	prepareImport,
+} from "../src/domain/write.js";
+import { appendPlan, importPlan } from "../src/storage/publication.js";
 import type { JsonlLine, NodeEvent, NoteEvent } from "../src/types/events.js";
 import type { AppendEvent } from "../src/types/store.js";
 
@@ -526,5 +531,62 @@ describe("import plans", () => {
 			prepareImport([source], [note(2), { ...source, op: "unknown" }]),
 		).toThrow(expect.objectContaining({ code: "Data" }));
 		expect(source.body).toBe("body");
+	});
+});
+
+describe("proposal expiry", () => {
+	const later = { id: id(5), at: "2026-12-11T00:00:00.000Z" };
+	it("names each pending proposal past thirty days and no other", () => {
+		const old = { ...note(1), proposed: true };
+		const fresh = {
+			...note(2),
+			proposed: true,
+			at: "2026-12-01T00:00:00.000Z",
+		};
+		const dismissed = { ...note(3), proposed: true };
+		const close = {
+			...envelope(4),
+			op: "dismiss",
+			scope: dismissed.scope,
+			target: dismissed.id,
+			reason: "ui dismiss",
+		} as JsonlLine;
+		expect(expiredProposals([old, fresh, dismissed, close], later.at)).toEqual([
+			{ scope: old.scope, target: old.id },
+		]);
+	});
+	it("adds one dismiss with the reason expired to a write plan", () => {
+		const expired = {
+			...note(1),
+			at: "2020-01-01T00:00:00.000Z",
+			proposed: true,
+		};
+		const plan = appendPlan([expired], payload(), later);
+		const dismisses = plan.events.filter((event) => event.op === "dismiss");
+		expect(dismisses).toHaveLength(1);
+		expect(dismisses[0]).toMatchObject({
+			target: expired.id,
+			reason: "expired",
+		});
+		expect(plan.appended?.op).toBe("note");
+		expect(plan.changed).toBe(2);
+		const again = appendPlan(plan.events, payload("another"), {
+			id: id(6),
+			at: "2026-12-12T00:00:00.000Z",
+		});
+		expect(again.events.filter((event) => event.op === "dismiss")).toHaveLength(
+			1,
+		);
+	});
+	it("dismisses an expired proposal through an import plan", () => {
+		const expired = {
+			...note(1),
+			at: "2020-01-01T00:00:00.000Z",
+			proposed: true,
+		};
+		const plan = importPlan([expired], [note(2)]);
+		expect(plan.events.filter((event) => event.op === "dismiss")).toHaveLength(
+			1,
+		);
 	});
 });

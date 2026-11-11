@@ -38,11 +38,7 @@ import {
 import { project } from "../domain/projection.js";
 import { redactionClosure } from "../domain/sanitization.js";
 import { validateEvent, validateTargets } from "../domain/validation.js";
-import {
-	prepareAppend,
-	prepareImport,
-	type WritePlan,
-} from "../domain/write.js";
+import type { WritePlan } from "../domain/write.js";
 import { MemlensError } from "../types/errors.js";
 import type { Event, JsonlLine, NodeEvent, ScopeKey } from "../types/events.js";
 import type { Projection } from "../types/projection.js";
@@ -56,9 +52,11 @@ import type {
 import type { BuildInput } from "../types/tree.js";
 import { FtsIndex } from "./fts.js";
 import {
+	appendPlan,
 	decodeProjection,
 	encodeProjection,
 	envelope,
+	importPlan,
 	nodePlan,
 	proposalPlan,
 	publishPlan,
@@ -118,7 +116,7 @@ export class JsonlStore implements StorePort {
 				throw new MemlensError("Data", "Use appendNode to publish a node.");
 			this.snapshot();
 			const local = this.history();
-			const plan = prepareAppend(local, event, envelope(local), this.profiles);
+			const plan = appendPlan(local, event, envelope(local), this.profiles);
 			this.publish(plan);
 			return (plan.duplicate ?? plan.appended) as Event;
 		});
@@ -218,7 +216,7 @@ export class JsonlStore implements StorePort {
 	async import(events: readonly JsonlLine[]): Promise<number> {
 		return this.locked(() => {
 			this.snapshot();
-			const plan = prepareImport(this.history(), events, this.profiles);
+			const plan = importPlan(this.history(), events, this.profiles);
 			this.publish(plan);
 			return plan.changed;
 		});
