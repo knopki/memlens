@@ -191,6 +191,8 @@ export interface BuildInput {
  * Copy live records or clean nodes, with null children for empty halves.
  * A dirty non-empty half or two empty halves make this function return null.
  * One non-empty child copies its text and dates without a model call.
+ * Two children whose whole texts fit the line limit with the separator publish their join
+ * without a model call and without a cut.
  */
 export declare function buildInput(tree: Tree, range: Range): BuildInput | null;
 
