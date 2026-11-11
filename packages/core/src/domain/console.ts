@@ -1,9 +1,11 @@
 /**
  * #region moduleContract
  * @purpose Supply shared console models through the store port for each host.
- * @scope Scope panels, context, trees, catalog, build candidates, and due records.
+ * @scope Scope panels, context, trees, catalog, build candidates, and review lists.
  * @invariants Read projection state only through StorePort. Open no file. Import no DOM, transport, or style.
  * @invariants Exclude scopes outside the profile. Return JSON values from one stable projection revision.
+ * @invariants The review list holds the due records. The reviewNext list holds the nearest records
+ * with a future review date, at most ten.
  * @invariants The frontier holds the slice lines of the selected scope, in the same order and with
  * the same fold as the text of the slice. A range line hides the notes inside that range.
  * #endregion moduleContract
@@ -19,7 +21,7 @@ import { visibleScopes } from "./active-scope.js";
 import type { ResolvedConfig } from "./config.js";
 import { directionLines, hereLines, renderContext } from "./context.js";
 import { catalogTree, scopeTree } from "./projection.js";
-import { type DueRecord, dueRecords } from "./reads.js";
+import { type DueRecord, dueRecords, upcomingRecords } from "./reads.js";
 import { catalogKey, validateScopeKey } from "./scope.js";
 import { nowIso } from "./time.js";
 import { buildInput, candidates, isClean, slice } from "./tree.js";
@@ -60,6 +62,7 @@ export interface ConsoleModel {
 	readonly catalog: readonly SliceLine[];
 	readonly frontier: readonly SliceLine[];
 	readonly review: readonly DueRecord[];
+	readonly reviewNext: readonly DueRecord[];
 	readonly revision: string;
 }
 // #endregion CLASS_ConsoleModel
@@ -179,6 +182,7 @@ export async function readConsole(
 		catalog: slice(catalog, config.budget.directions),
 		frontier: slice(hereTree, config.budget.here),
 		review: dueRecords(projection, keys, time.slice(0, 10)),
+		reviewNext: upcomingRecords(projection, keys, time.slice(0, 10), 10),
 		revision,
 	};
 	debug("Console read", {

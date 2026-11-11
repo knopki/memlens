@@ -115,8 +115,10 @@ const en = {
 	matches: "{count} matches",
 	noMatches: "No matches.",
 	searchHint: "Enter words and press Find.",
-	revText: "The notes with a review date of today or earlier.",
+	revText:
+		"The notes with a review date of today or earlier, then the notes that come due next.",
 	due: "Due",
+	next: "Next",
 	address: "Address",
 	text: "Text",
 	reviewDate: "Review date",

@@ -960,22 +960,28 @@ function highlight(body: string) {
 }
 
 // #region FUNC_review
-/** @purpose List the due notes with their review dates and the record actions. */
+/** @purpose List the due notes and the next notes with their review dates and the record actions. */
 function review(main: HTMLElement, model: View): void {
 	main.append(el("p", tr("revText"), "sub"));
+	const rows = (items: View["review"]) =>
+		items.map((item) => [
+			btn(item.addr, () => openInTree(item.addr)),
+			item.body,
+			kindName(item.kind),
+			item.review_at ?? tr("none"),
+			recordActions(item.addr),
+		]);
+	const headers = [
+		tr("address"),
+		tr("text"),
+		tr("kind"),
+		tr("reviewDate"),
+		tr("actions"),
+	];
 	const list = panel(tr("due"), `${model.review.length}`);
-	list.append(
-		tableOf(
-			[tr("address"), tr("text"), tr("kind"), tr("reviewDate"), tr("actions")],
-			model.review.map((item) => [
-				btn(item.addr, () => openInTree(item.addr)),
-				item.body,
-				kindName(item.kind),
-				item.review_at ?? tr("none"),
-				recordActions(item.addr),
-			]),
-		),
-	);
+	list.append(tableOf(headers, rows(model.review)));
+	const next = panel(tr("next"), `${model.reviewNext.length}`);
+	next.append(tableOf(headers, rows(model.reviewNext)));
 	const policy = panel(
 		tr("reviewPeriods"),
 		String(Object.keys(model.reviewPolicy).length),
@@ -988,7 +994,7 @@ function review(main: HTMLElement, model: View): void {
 			]),
 		),
 	);
-	main.append(list, policy);
+	main.append(list, next, policy);
 }
 // #endregion FUNC_review
 

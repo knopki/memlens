@@ -261,17 +261,51 @@ export function dueRecords(
 	scopes: readonly ScopeKey[] | null,
 	today: IsoDate,
 ): readonly DueRecord[] {
+	const due = reviewList(projection, scopes, (review) => review <= today);
+	debug("Review listed", { event: "due", count: due.length });
+	return due;
+}
+// #endregion FUNC_dueRecords
+
+// #region FUNC_upcomingRecords
+/**
+ * @purpose List the records that come due next, so the review screen stays useful before a due date.
+ * @invariants A record is upcoming when its review date is after today. A null review date stays out.
+ * Order by the review date, then the scope, then the position. Keep at most the supplied limit.
+ */
+export function upcomingRecords(
+	projection: Projection,
+	scopes: readonly ScopeKey[] | null,
+	today: IsoDate,
+	limit: number,
+): readonly DueRecord[] {
+	const next = reviewList(projection, scopes, (review) => review > today);
+	debug("Review upcoming listed", {
+		event: "upcoming",
+		count: next.length,
+		limit,
+	});
+	return next.slice(0, limit);
+}
+// #endregion FUNC_upcomingRecords
+
+/** Collect the live records whose review date passes the test, in review date order. */
+function reviewList(
+	projection: Projection,
+	scopes: readonly ScopeKey[] | null,
+	keep: (review_at: IsoDate) => boolean,
+): DueRecord[] {
 	const visible = scopes === null ? projection.scopeOrder : scopes;
-	const due: DueRecord[] = [];
+	const list: DueRecord[] = [];
 	for (const scope of visible) {
 		const records = projection.byScope.get(scope) ?? [];
 		for (const record of records)
 			if (
 				record.state === "live" &&
 				record.review_at !== null &&
-				record.review_at <= today
+				keep(record.review_at)
 			)
-				due.push({
+				list.push({
 					addr: renderAddress(scope, record.pos, null),
 					scope,
 					pos: record.pos,
@@ -281,16 +315,14 @@ export function dueRecords(
 					review_at: record.review_at,
 				});
 	}
-	due.sort(
+	list.sort(
 		(a, b) =>
 			(a.review_at ?? "").localeCompare(b.review_at ?? "") ||
 			a.scope.localeCompare(b.scope) ||
 			a.pos - b.pos,
 	);
-	debug("Review listed", { event: "due", count: due.length });
-	return due;
+	return list;
 }
-// #endregion FUNC_dueRecords
 
 /** One scope line of the scope list. */
 export interface ScopeLine {

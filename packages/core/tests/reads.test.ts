@@ -18,6 +18,7 @@ import {
 	openNote,
 	openRange,
 	scopeLines,
+	upcomingRecords,
 } from "../src/domain/reads.js";
 import type { JsonlLine } from "../src/types/events.js";
 import type { Projection } from "../src/types/projection.js";
@@ -272,6 +273,7 @@ describe("dueRecords and scopeLines", () => {
 			ts: "2026-11-05T00:00:00.000Z",
 		}),
 		note("x:c", "no review"),
+		note("x:a", "later decision", { review_at: "2026-12-15" }),
 	]);
 
 	it("lists the due records of each visible scope in date order", () => {
@@ -292,9 +294,23 @@ describe("dueRecords and scopeLines", () => {
 		expect(dueRecords(projection, null, "2025-12-31")).toEqual([]);
 	});
 
+	it("lists the upcoming records in date order under the limit", () => {
+		expect(
+			upcomingRecords(projection, null, "2026-11-10", 10).map(
+				(item) => item.body,
+			),
+		).toEqual(["fresh task", "later decision"]);
+		expect(
+			upcomingRecords(projection, null, "2026-11-10", 1).map(
+				(item) => item.body,
+			),
+		).toEqual(["fresh task"]);
+		expect(upcomingRecords(projection, null, "2026-12-31", 10)).toEqual([]);
+	});
+
 	it("lists each scope with its live count and its last write date", () => {
 		expect(scopeLines(projection, null)).toEqual([
-			{ key: "x:a", notes: 2, lastSeen: "2026-11-10" },
+			{ key: "x:a", notes: 3, lastSeen: "2026-11-10" },
 			{ key: "x:b", notes: 1, lastSeen: "2026-11-10" },
 			{ key: "x:c", notes: 1, lastSeen: "2026-11-10" },
 		]);

@@ -102,6 +102,7 @@ for (const Backend of [JsonlStore, SqliteStore]) {
 			});
 			expect(model.records).toEqual([]);
 			expect(model.review).toEqual([]);
+			expect(model.reviewNext).toEqual([]);
 			expect(JSON.parse(JSON.stringify(model))).toEqual(model);
 		});
 
@@ -140,6 +141,7 @@ for (const Backend of [JsonlStore, SqliteStore]) {
 				model.records.every((record) => record.scope === "project:a"),
 			).toBe(true);
 			expect(model.review.map((record) => record.pos)).toEqual([0]);
+			expect(model.reviewNext).toEqual([]);
 			expect(model.records[0]?.id).toBe(live.id);
 			expect(model.here).toContain("#0 2026-11-10 visible");
 			expect(model.text).toContain(model.here);
@@ -155,6 +157,28 @@ for (const Backend of [JsonlStore, SqliteStore]) {
 			await expect(
 				readConsole(store, config(), "_catalog:work", now),
 			).rejects.toMatchObject({ code: "NotAllowed" });
+		});
+
+		it("lists the nearest future review records in reviewNext", async () => {
+			const store = await open();
+			await store.append(note());
+			await store.append({
+				op: "note",
+				scope: "project:a",
+				body: "future note",
+				kind: "note",
+				ts: now,
+				review_at: "2099-01-01",
+				session: "s",
+				turn: "t",
+				preset: "p",
+			});
+			const model = await readConsole(store, config(), "project:a", now);
+			expect(model.review.map((record) => record.pos)).toEqual([0]);
+			expect(model.reviewNext.map((record) => record.body)).toEqual([
+				"future note",
+			]);
+			expect(model.reviewNext[0]?.addr).toBe("project:a#1");
 		});
 
 		it("retries when a write separates the projection and revision reads", async () => {
