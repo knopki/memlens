@@ -356,7 +356,7 @@ for (const backend of ["sqlite", "jsonl"])
 						answers: "#0-1: catalog summary",
 					})
 				).json(),
-			).toEqual({ built: 1, rejected: 0 });
+			).toEqual({ built: 1, rejected: 0, rejectedRanges: [] });
 			expect((await get()).nodes).toContainEqual(
 				expect.objectContaining({ scope: "__catalog__:default", clean: true }),
 			);
@@ -397,7 +397,7 @@ for (const backend of ["sqlite", "jsonl"])
 						answers: "#0-1: summary",
 					})
 				).json(),
-			).toEqual({ built: 1, rejected: 0 });
+			).toEqual({ built: 1, rejected: 0, rejectedRanges: [] });
 			expect(
 				(await post({ action: "note", body: "x".repeat(2 * 1024 * 1024) }))
 					.status,
@@ -423,7 +423,11 @@ for (const backend of ["sqlite", "jsonl"])
 					answers: "#0-1: old summary",
 				})
 			).json();
-			expect(stale).toEqual({ built: 0, rejected: 1 });
+			expect(stale).toEqual({
+				built: 0,
+				rejected: 1,
+				rejectedRanges: ["#0-1"],
+			});
 			const fresh = await (await post({ action: "compact" })).json();
 			const applied = await (
 				await post({
@@ -432,7 +436,7 @@ for (const backend of ["sqlite", "jsonl"])
 					answers: "#0-1: fresh summary",
 				})
 			).json();
-			expect(applied).toEqual({ built: 1, rejected: 0 });
+			expect(applied).toEqual({ built: 1, rejected: 0, rejectedRanges: [] });
 			expect(
 				(await get()).nodes.some((entry: { clean: boolean }) => entry.clean),
 			).toBe(true);

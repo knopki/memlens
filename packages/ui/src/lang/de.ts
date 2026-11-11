@@ -121,6 +121,8 @@ export const de: Table = {
 	compaction: "Verdichtung",
 	prepareScope: "Bereichsjob vorbereiten",
 	prepareCatalog: "Katalogjob vorbereiten",
+	noInputsCatalog:
+		"Kein Eingang für das Zusammenführen. Ein Bereich hat noch keinen obersten Knoten.",
 	noInputs:
 		"Keine Eingabe zum Zusammenführen. Jedes offene Intervall wartet auf sein zweites Kind.",
 	mergeTasks: "Aufgaben zum Zusammenführen",
@@ -128,6 +130,7 @@ export const de: Table = {
 	answersHint: "#0-1: eine Zeile für jedes Intervall",
 	applyAnswers: "Antworten anwenden",
 	built: "Erstellt: {built} Zusammenfassungen, abgelehnt: {rejected}.",
+	rejectedRanges: "Abgelehnt: {ranges}. Bereiten Sie den Auftrag erneut vor.",
 	copy: "Kopieren",
 	newTitle: "Neuer Eintrag",
 	amendTitle: "Notiz ändern",

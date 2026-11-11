@@ -121,6 +121,8 @@ export const fr: Table = {
 	compaction: "Compactage",
 	prepareScope: "Préparer une tâche de domaine",
 	prepareCatalog: "Préparer une tâche de catalogue",
+	noInputsCatalog:
+		"Aucune entrée à fusionner. Un domaine n'a pas encore de nœud supérieur.",
 	noInputs:
 		"Aucune entrée de fusion. Chaque intervalle sans résumé attend son second enfant.",
 	mergeTasks: "Tâches de fusion",
@@ -128,6 +130,7 @@ export const fr: Table = {
 	answersHint: "#0-1 : une ligne par intervalle",
 	applyAnswers: "Appliquer les réponses",
 	built: "{built} résumés créés, {rejected} rejetés.",
+	rejectedRanges: "Rejetés : {ranges}. Préparez la tâche à nouveau.",
 	copy: "Copier",
 	newTitle: "Nouvel enregistrement",
 	amendTitle: "Modifier la note",

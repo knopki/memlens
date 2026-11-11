@@ -41,11 +41,11 @@ import type {
 } from "@memlens/core";
 import {
 	answerLine,
+	batchTask,
 	buildInput,
 	candidates,
 	copyBuild,
 	MemlensError,
-	mergeTask,
 	NODE_TARGET,
 	nodeEvent,
 	normalizeScopeKey,
@@ -95,11 +95,6 @@ function readyInputs(tree: Tree): readonly BuildInput[] {
 /** The count of live children of one input. */
 function live(input: BuildInput): number {
 	return input.children.filter((child) => child !== null).length;
-}
-
-/** The address text of the range of one input. */
-function addressOf(input: BuildInput): string {
-	return `#${input.range.start}-${input.range.start + 2 ** input.range.level - 1}`;
 }
 
 /** The scope of the compaction: --scope, or the active scope of the working directory. */
@@ -180,12 +175,7 @@ export async function prepareCompact(
 		}
 	const tree = dryRun ? first : treeOf(await runtime.store.projection());
 	const inputs = mergeInputs(tree).slice(0, max);
-	const job = inputs
-		.map((input) => {
-			const children = input.children as readonly [BuildChild, BuildChild];
-			return `${addressOf(input)}\n${mergeTask(NODE_TARGET, children[0], children[1])}`;
-		})
-		.join("\n\n");
+	const job = inputs.length ? batchTask(NODE_TARGET, inputs) : "";
 	debug("Job prepared", {
 		event: "prepare",
 		copies: copies.length,
@@ -227,7 +217,6 @@ async function compactJob(
 		];
 		const body = job.job
 			? [
-					'Answer one line for each range below, in the form "#a-b: line".',
 					`Then run: memlens compact --answer <path> --scope ${scope}`,
 					"",
 					job.job,
@@ -247,7 +236,7 @@ async function compactJob(
  *
  * @purpose Turn the answers of a job into built nodes through one rule set for both hosts.
  * @invariants An empty answer gives a Data error. The store checks the exact input under the write
- * lock, and a changed input counts as rejected. The shrink check applies to no answer.
+ * lock, and a changed input counts as rejected with its address. The shrink check applies to no answer.
  * A copied job rejects an answer whose current input differs from the copied input.
  */
 export async function applyAnswers(
@@ -256,9 +245,9 @@ export async function applyAnswers(
 	tree: Tree,
 	answers: readonly Answer[],
 	copied: readonly BuildInput[] | null = null,
-): Promise<{ readonly built: number; readonly rejected: number }> {
+): Promise<{ readonly built: number; readonly rejected: readonly string[] }> {
 	let built = 0;
-	let rejected = 0;
+	const rejected: string[] = [];
 	for (const answer of answers) {
 		const input = buildInput(tree, answer.range);
 		if (
@@ -266,7 +255,7 @@ export async function applyAnswers(
 			(copied !== null &&
 				!copied.some((value) => isDeepStrictEqual(value, input)))
 		) {
-			rejected += 1;
+			rejected.push(answer.addr);
 			continue;
 		}
 		const line = answerLine(input, answer.text);
@@ -277,9 +266,13 @@ export async function applyAnswers(
 			nodeEvent(scope, tree, input, line),
 		);
 		if (appended.ok) built += 1;
-		else rejected += 1;
+		else rejected.push(answer.addr);
 	}
-	debug("Answers applied", { event: "answer", built, rejected });
+	debug("Answers applied", {
+		event: "answer",
+		built,
+		rejected: rejected.length,
+	});
 	return { built, rejected };
 }
 // #endregion FUNC_applyAnswers
@@ -309,8 +302,10 @@ async function compactAnswer(
 			answers,
 		);
 		const hint =
-			rejected > 0 ? "\nrun memlens compact again for the rejected ranges" : "";
-		return `built ${built} nodes, rejected ${rejected}${hint}`;
+			rejected.length > 0
+				? `\nrun memlens compact again for the rejected ranges: ${rejected.join(", ")}`
+				: "";
+		return `built ${built} nodes, rejected ${rejected.length}${hint}`;
 	} finally {
 		await runtime.close();
 	}

@@ -120,6 +120,7 @@ export const ru: Table = {
 	compaction: "Уплотнение",
 	prepareScope: "Задание по области",
 	prepareCatalog: "Задание по каталогу",
+	noInputsCatalog: "Нет входов на слияние. У области ещё нет верхнего узла.",
 	noInputs:
 		"Нет входов на слияние. Каждый грязный диапазон ждёт второго ребёнка.",
 	mergeTasks: "Задачи слияния",
@@ -127,6 +128,7 @@ export const ru: Table = {
 	answersHint: "#0-1: одна строка на каждый диапазон",
 	applyAnswers: "Применить ответы",
 	built: "Построено сводок: {built}. Отклонено: {rejected}.",
+	rejectedRanges: "Отклонены диапазоны: {ranges}. Подготовьте задание заново.",
 	copy: "Копировать",
 	newTitle: "Новая запись",
 	amendTitle: "Правка записи",

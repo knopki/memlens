@@ -484,9 +484,9 @@ async function compact(
 		event: "compact-answer",
 		target,
 		built,
-		rejected,
+		rejected: rejected.length,
 	});
-	return { built, rejected };
+	return { built, rejected: rejected.length, rejectedRanges: rejected };
 }
 // #endregion FUNC_compact
 

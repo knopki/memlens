@@ -86,6 +86,7 @@ const state = {
 	limit: "10",
 	searchScope: "",
 	job: undefined as Job | undefined,
+	jobError: "",
 };
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Console root is absent");
@@ -516,6 +517,7 @@ async function reset(nextScope: string) {
 	state.selection = undefined;
 	state.hits = [];
 	state.job = undefined;
+	state.jobError = "";
 	await reload();
 }
 
@@ -1097,6 +1099,7 @@ function compactionPanel(model: View) {
 						profile: state.profile,
 						scope: state.scope,
 					};
+					state.jobError = "";
 					render();
 				},
 				"pri",
@@ -1106,7 +1109,9 @@ function compactionPanel(model: View) {
 	const job = state.job;
 	if (!job) return node;
 	if (!job.inputs.length) {
-		node.append(el("p", tr("noInputs"), "muted"));
+		node.append(
+			el("p", tr(job.catalog ? "noInputsCatalog" : "noInputs"), "muted"),
+		);
 		return node;
 	}
 	const tasks = el("pre", job.job, "slice");
@@ -1118,18 +1123,38 @@ function compactionPanel(model: View) {
 	answers.rows = 5;
 	answers.spellcheck = false;
 	answers.placeholder = tr("answersHint");
+	const failure = el("p", state.jobError, "banner");
+	if (!state.jobError) failure.hidden = true;
 	const apply = btn(
 		tr("applyAnswers"),
 		async () => {
-			if (!answers.value.trim()) throw new Error(tr("enterAnswers"));
-			const result = (await action("compact-answer", {
-				catalog: job.catalog,
-				inputs: job.inputs,
-				answers: answers.value,
-			})) as { built: number; rejected: number };
-			state.job = result.rejected ? job : undefined;
-			render();
-			message(tr("built", result), result.rejected > 0);
+			try {
+				if (!answers.value.trim()) throw new Error(tr("enterAnswers"));
+				const result = (await action("compact-answer", {
+					catalog: job.catalog,
+					inputs: job.inputs,
+					answers: answers.value,
+				})) as { built: number; rejected: number; rejectedRanges: string[] };
+				state.job = result.rejected ? job : undefined;
+				state.jobError = result.rejected
+					? tr("rejectedRanges", {
+							ranges: (result.rejectedRanges ?? []).join(", "),
+						})
+					: "";
+				render();
+				message(
+					result.rejected
+						? state.jobError
+						: tr("built", { built: result.built, rejected: result.rejected }),
+					result.rejected > 0,
+				);
+			} catch (error) {
+				const text = error instanceof Error ? error.message : String(error);
+				state.jobError = text;
+				failure.textContent = text;
+				failure.hidden = false;
+				message(text, true);
+			}
 		},
 		"pri",
 	);
@@ -1141,6 +1166,7 @@ function compactionPanel(model: View) {
 		tasks,
 		field(tr("answers"), answers),
 		apply,
+		failure,
 	);
 	return node;
 }

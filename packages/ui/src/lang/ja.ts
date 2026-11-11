@@ -120,6 +120,8 @@ export const ja: Table = {
 	compaction: "集約",
 	prepareScope: "スコープのジョブを準備",
 	prepareCatalog: "カタログのジョブを準備",
+	noInputsCatalog:
+		"統合の入力がありません。スコープに最上位のノードがまだありません。",
 	noInputs:
 		"統合する入力がありません。未処理の範囲はどれも 2 つ目の子を待っています。",
 	mergeTasks: "統合タスク",
@@ -127,6 +129,7 @@ export const ja: Table = {
 	answersHint: "#0-1: 範囲ごとに 1 行",
 	applyAnswers: "回答を適用",
 	built: "要約を {built} 件作成し、{rejected} 件を却下しました。",
+	rejectedRanges: "拒否: {ranges}。ジョブを再準備してください。",
 	copy: "コピー",
 	newTitle: "新しい記録",
 	amendTitle: "ノートを変更",

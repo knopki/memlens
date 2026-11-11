@@ -121,6 +121,8 @@ export const pt: Table = {
 	compaction: "Compactação",
 	prepareScope: "Preparar tarefa de escopo",
 	prepareCatalog: "Preparar tarefa de catálogo",
+	noInputsCatalog:
+		"Sem entrada de mesclagem. Um escopo ainda não tem nó superior.",
 	noInputs:
 		"Sem dados para mesclar. Cada intervalo pendente aguarda o segundo filho.",
 	mergeTasks: "Tarefas de mesclagem",
@@ -128,6 +130,7 @@ export const pt: Table = {
 	answersHint: "#0-1: uma linha para cada intervalo",
 	applyAnswers: "Aplicar as respostas",
 	built: "{built} resumos criados e {rejected} rejeitados.",
+	rejectedRanges: "Rejeitados: {ranges}. Prepare o trabalho de novo.",
 	copy: "Copiar",
 	newTitle: "Novo registro",
 	amendTitle: "Alterar nota",
