@@ -133,8 +133,8 @@ The placeholder `[redacted]` appears in the console and the view only, and no ev
 
 ## Configuration
 
-The configuration has three layers. The base file gives the values of the machine. The profile patch
-gives the values of one harness profile. The preset gives the values of one agent.
+The [config contract](../../packages/core/src/domain/config.ts) owns the TOML source and the merge of
+the base file, the profile patch, and the preset. The table below gives the source of each layer.
 
 | Layer  | Source                                    |
 | ------ | ----------------------------------------- |
@@ -143,15 +143,14 @@ gives the values of one harness profile. The preset gives the values of one agen
 | Preset | the agent preset                           |
 
 [config.d.ts](config.d.ts) gives the type of each layer, and the type holds the keys of that layer.
-The [config contract](../../packages/core/src/domain/config.ts) owns the strict load, the deep merge
-with the defaults, the store path order, and the cache TTL lookup.
+The [config contract](../../packages/core/src/domain/config.ts) owns the strict load, the XDG
+directories, the store path order, and the cache TTL lookup.
 The [active scope contract](../../packages/core/src/domain/active-scope.ts) owns the ordered rules
 and the visible scope list of a profile.
 A key outside the type is an error at load. A scope key outside the shape `segment:segment` is an
 error at load.
 
-The merge is deep. A later layer wins over an earlier layer. A table merges with a table. A scalar or
-a list replaces the earlier value. The result is the type `ResolvedConfig`.
+The result of the merge is the type `ResolvedConfig`.
 
 The store path comes from `--store` first, then the patch, then `MEMLENS_STORE`, then the base file.
 The CLI has no patch, so its order is `--store`, `MEMLENS_STORE`, the base file.

@@ -11,14 +11,14 @@ are the data path, and they need no model call. A rejected requirement stays out
 | --- | --- | --- | --- | --- |
 | 1 | The events and the notes | 008, 010, 013-014, 026-027, 060-069, 071-072, 074, 079-081, 083, 085, 238-240, 277, 307, 309, 370, 474, 495-496 | 34 | [note-body](../../packages/core/src/domain/note-body.ts), [projection](../../packages/core/src/domain/projection.ts) |
 | 2 | The projection | None | 0 | [projection](../../packages/core/src/domain/projection.ts) |
-| 3 | The store | 043-045, 148, 174-175, 236, 306, 372-376, 467, 471, 484, 486-491, 493-494, 504 | 25 | [projection](../../packages/core/src/domain/projection.ts) |
+| 3 | The store | 043, 045, 148, 174-175, 236, 306, 372-376, 467, 471, 484, 486-491, 493-494, 504 | 24 | [projection](../../packages/core/src/domain/projection.ts), [config](../../packages/core/src/domain/config.ts) |
 | 4 | The redaction | 025, 082, 119, 219, 222 | 5 | [sanitization](../../packages/core/src/domain/sanitization.ts) |
 | 5 | The transfer | 040, 057, 077, 378-379, 381-384, 466, 469, 510-513 | 15 | [export-md](../../packages/cli/src/export-md.ts) |
 | 6 | The index | 041, 449 | 2 | [fts](../../packages/core/src/storage/fts.ts) |
 | 7 | The tree | 009, 049-050, 124, 132, 135-137, 139, 169-170, 172-173, 442, 482 | 15 | [context](../../packages/core/src/domain/context.ts), [tree](../../packages/core/src/domain/tree.ts) |
 | 8 | The writer | 053, 204, 214, 218, 290, 464 | 6 | [tree](../../packages/core/src/domain/tree.ts), [writer](../../packages/core/src/domain/writer.ts), [publication](../../packages/core/src/storage/publication.ts) |
 | 9 | The catalog | 108, 110, 117, 451, 461 | 5 | [projection](../../packages/core/src/domain/projection.ts), [tree](../../packages/core/src/domain/tree.ts), [publication](../../packages/core/src/storage/publication.ts), [writer](../../packages/core/src/domain/writer.ts) |
-| 10 | The scopes and the configuration | 031, 146, 149, 151, 160, 187, 216, 232, 252, 262-266, 268-270, 272, 278, 286, 291, 457 | 22 | [scope](../../packages/core/src/domain/scope.ts), [projection](../../packages/core/src/domain/projection.ts), [context](../../packages/core/src/domain/context.ts) |
+| 10 | The scopes and the configuration | 031, 149, 151, 160, 187, 216, 232, 252, 262-266, 268, 270, 272, 278, 286, 291, 457 | 20 | [scope](../../packages/core/src/domain/scope.ts), [projection](../../packages/core/src/domain/projection.ts), [context](../../packages/core/src/domain/context.ts), [config](../../packages/core/src/domain/config.ts), [active-scope](../../packages/core/src/domain/active-scope.ts) |
 | 11 | The slice and the harness | 019-020, 188-189, 233, 235, 237, 241-242, 280, 285, 300, 377, 445 | 14 | [tree](../../packages/core/src/domain/tree.ts), [context](../../packages/core/src/domain/context.ts) |
 | 12 | The agent tools | 023-024, 030, 039, 260-261, 276, 310, 343-344, 349-350, 352, 368, 371, 477, 497-499 | 19 | [address](../../packages/core/src/domain/address.ts), [reads](../../packages/core/src/domain/reads.ts), [tree](../../packages/core/src/domain/tree.ts), [errors](../../packages/core/src/types/errors.ts) |
 | 13 | The subagents | 034, 158-159, 353-357, 359-360, 362-363, 441 | 13 | None |

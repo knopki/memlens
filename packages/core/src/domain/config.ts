@@ -23,6 +23,7 @@
  *    counters 10 and 10, nudge texts with `{n}`, review 365 days for `decision`, `preference`, and
  *    `note`, 180 days for `fact`, and 7 days for `task`.
  *  - The store path order is `--store`, then `MEMLENS_STORE`, then the base file.
+ *  - The configuration lives in `$XDG_CONFIG_HOME/memlens`. The data lives in `$XDG_DATA_HOME/memlens`.
  *  - The cache TTL lookup takes the most specific matching glob. The glob `*` matches any text.
  * @usecases
  *  - Load: caller => gives TOML text and a default store path => gets the base layer
