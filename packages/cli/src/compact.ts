@@ -158,7 +158,11 @@ export async function prepareCompact(
 	runtime: Runtime,
 	scope: ScopeKey,
 	treeOf: (projection: Projection) => Tree,
-	options: { readonly dryRun?: boolean; readonly max?: number } = {},
+	options: {
+		readonly dryRun?: boolean;
+		readonly max?: number;
+		readonly scopeKeys?: readonly ScopeKey[];
+	} = {},
 ): Promise<CompactJob> {
 	const dryRun = options.dryRun === true;
 	const max = options.max ?? 50;
@@ -175,7 +179,9 @@ export async function prepareCompact(
 		}
 	const tree = dryRun ? first : treeOf(await runtime.store.projection());
 	const inputs = mergeInputs(tree).slice(0, max);
-	const job = inputs.length ? batchTask(NODE_TARGET, inputs) : "";
+	const job = inputs.length
+		? batchTask(NODE_TARGET, inputs, options.scopeKeys)
+		: "";
 	debug("Job prepared", {
 		event: "prepare",
 		copies: copies.length,

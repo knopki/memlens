@@ -108,15 +108,24 @@ export type LineBuild =
 /**
  * @purpose Render one child as the model reads it.
  * @invariants A record gives its address, date, body, and preview below the body when present.
- * A node gives its address, period, and summary.
+ * A node gives its address, period, and summary. A catalog child gives its catalog position.
  */
 export function childLine(child: BuildChild): string {
 	if (child.kind === "record")
 		return `#${child.pos} ${child.ts}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
+	if (child.pos !== undefined)
+		return `#${child.pos} ${child.ts_from}..${child.ts_to}\n${child.summary}`;
 	const end = child.range.start + 2 ** child.range.level - 1;
 	return `#${child.range.start}-${end} ${child.ts_from}..${child.ts_to}\n${child.summary}`;
 }
 // #endregion FUNC_childLine
+
+/** One child of a catalog range: the scope key, the period, and the text. */
+function scopeChild(key: ScopeKey, child: BuildChild): string {
+	if (child.kind === "record")
+		return `[${key}] ${child.ts}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
+	return `[${key}] ${child.ts_from}..${child.ts_to}\n${child.summary}`;
+}
 
 /** The address text of a range. */
 const address = (range: { start: number; level: number }): string =>
@@ -154,17 +163,26 @@ ${childLine(b)}
  * @purpose Ask for up to six lines in one call.
  * @invariants The header keeps the target and the word count. Each input block carries its "#a-b" id.
  * The answer instruction names the form "#a-b: line".
+ * A catalog job gives the scope keys, so each child line names its scope and no range of a scope
+ * tree appears beside the range of the catalog.
  */
 export function batchTask(
 	target: number,
 	inputs: readonly BuildInput[],
+	scopeKeys?: readonly ScopeKey[],
 ): string {
-	const blocks = inputs.map(
-		(input) =>
-			`<input id="${address(input.range)}">\n${live(input)
-				.map(childLine)
-				.join("\n")}\n</input>`,
-	);
+	const blocks = inputs.map((input) => {
+		const half = 2 ** (input.range.level - 1);
+		const lines = input.children
+			.map((child, index) => {
+				if (!child) return "";
+				const key = scopeKeys?.[input.range.start + index * half];
+				return key ? scopeChild(key, child) : childLine(child);
+			})
+			.filter(Boolean)
+			.join("\n");
+		return `<input id="${address(input.range)}">\n${lines}\n</input>`;
+	});
 	return `Merge each pair of adjacent lines into one line of at most ${target} characters (about ${Math.round(target / 6)} words) each.
 Answer one line for each input, in the form "#a-b: line".
 ${blocks.join("\n")}`;

@@ -460,7 +460,9 @@ async function compact(
 			? catalogTree(projection, runtime.config.defaultProfile, keys)
 			: scopeTree(projection, target);
 	if (fields.action === "compact") {
-		const job = await prepareCompact(runtime, target, treeOf);
+		const job = await prepareCompact(runtime, target, treeOf, {
+			...(catalog ? { scopeKeys: keys } : {}),
+		});
 		debug("Job prepared", {
 			event: "compact",
 			target,

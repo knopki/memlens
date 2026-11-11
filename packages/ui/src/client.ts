@@ -1079,7 +1079,11 @@ function bar(name: string, value: { used: number; limit: number }) {
 }
 
 function compactionPanel(model: View) {
-	const node = panel(tr("compaction"));
+	const node = panel(
+		state.job?.catalog
+			? `${tr("compaction")} · ${tr("nav2")}`
+			: tr("compaction"),
+	);
 	const buttons = el("div", "", "actions");
 	for (const catalog of [false, true])
 		buttons.append(

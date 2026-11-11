@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { catalogTree, scopeTree } from "../src/domain/projection.js";
 import { catalogKey } from "../src/domain/scope.js";
-import { slice } from "../src/domain/tree.js";
+import { buildInput, slice } from "../src/domain/tree.js";
 import {
 	answerLine,
 	autoForm,
@@ -85,6 +85,36 @@ describe("prompts", () => {
 		expect(task).toContain('"#a-b: line"');
 		expect(task).toContain('<input id="#0-1">');
 		expect(task).toContain("</input>");
+	});
+
+	it("names the scope of each child in a catalog job", () => {
+		const scopeChild = (
+			id: string,
+			level: number,
+			summary: string,
+			from: string,
+			to: string,
+		): BuildChild => ({
+			kind: "node",
+			id,
+			range: { start: 0, level },
+			summary,
+			ts_from: from,
+			ts_to: to,
+		});
+		const task = batchTask(
+			512,
+			[
+				input(
+					scopeChild("n1", 1, "alpha", "2026-11-01", "2026-11-02"),
+					scopeChild("n2", 2, "beta", "2026-11-03", "2026-11-04"),
+				),
+			],
+			["project:a", "project:b"],
+		);
+		expect(task).toContain("[project:a] 2026-11-01..2026-11-02\nalpha");
+		expect(task).toContain("[project:b] 2026-11-03..2026-11-04\nbeta");
+		expect(task).toContain('<input id="#0-1">');
 	});
 });
 
@@ -363,6 +393,18 @@ describe("writerPass", () => {
 			await store.append(note(scope, "note one"));
 			expect(await pass(scope)).toMatchObject({ built: 1, calls: 1 });
 		}
+		const catalogInput = buildInput(await catalog(), { start: 0, level: 1 });
+		if (!catalogInput) throw new Error("The catalog input is absent");
+		expect(
+			catalogInput.children.map((child) =>
+				child && "pos" in child ? child.pos : undefined,
+			),
+		).toEqual([0, 1]);
+		const catalogTask = batchTask(512, [catalogInput]);
+		expect(catalogTask).toContain('<input id="#0-1">');
+		expect(catalogTask).toContain("\n#0 ");
+		expect(catalogTask).toContain("\n#1 ");
+
 		expect(await pass(catalogScope)).toMatchObject({ built: 1, calls: 1 });
 
 		const catalogEvents = async () =>

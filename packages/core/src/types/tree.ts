@@ -143,6 +143,11 @@ export type BuildChild =
 			readonly summary: string;
 			readonly ts_from: string;
 			readonly ts_to: string;
+			/**
+			 * The catalog position of a scope root. The range of that node belongs to the scope
+			 * tree, and the catalog line names the position.
+			 */
+			readonly pos?: Pos;
 	  };
 
 /** A background build copies these values. It does not keep mutable references to the projection. */

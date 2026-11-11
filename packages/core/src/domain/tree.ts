@@ -272,6 +272,7 @@ class Model {
 				summary: node.summary,
 				ts_from: node.ts_from,
 				ts_to: node.ts_to,
+				...(half.level === 0 ? { pos: half.start } : {}),
 			};
 		}
 		return { range: { ...range }, children };
