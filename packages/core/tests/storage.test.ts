@@ -50,7 +50,7 @@ const payload = (body = "body"): Extract<AppendEvent, { op: "note" }> => ({
 });
 
 // #region FUNC_child
-/** @purpose Start a real writer and preserve its exit status and diagnostic output. */
+/** @purpose Start a real compaction and preserve its exit status and diagnostic output. */
 function child(
 	backend: string,
 	directory: string,
@@ -509,26 +509,23 @@ for (const [backend, Store, filename] of [
 			});
 		});
 
-		it("serializes separate writers without lost events or duplicate positions", async () => {
+		it("serializes two processes without lost events or duplicate positions", async () => {
 			const store = await setup();
 			await store.close();
-			const writers = [
-				child(backend, directory, "writer-a"),
-				child(backend, directory, "writer-b"),
+			const children = [
+				child(backend, directory, "a"),
+				child(backend, directory, "b"),
 			];
-			await Promise.all(writers.map((writer) => writer.ready));
-			for (const writer of writers) writer.process.send("start");
+			await Promise.all(children.map((item) => item.ready));
+			for (const item of children) item.process.send("start");
 			for (const result of await Promise.all(
-				writers.map((writer) => writer.result),
+				children.map((item) => item.result),
 			))
 				expect(result.code, result.stderr).toBe(0);
 			const reopened = open();
 			if (backend === "sqlite") expect(await reopened.rev()).toBe("2");
 			const records = [...(await reopened.projection()).records.values()];
-			expect(records.map((record) => record.body).sort()).toEqual([
-				"writer-a",
-				"writer-b",
-			]);
+			expect(records.map((record) => record.body).sort()).toEqual(["a", "b"]);
 			expect(records.map((record) => record.pos).sort()).toEqual([0, 1]);
 			expect(
 				new Set((await reopened.export(null)).map((line) => line.id)).size,
@@ -546,10 +543,15 @@ for (const [backend, Store, filename] of [
 				const { input, event } = await summary(store);
 				await store.appendNode(input, event);
 				await store.close();
-				const writer = child(backend, directory, `redact:${source.id}`, marker);
-				await writer.ready;
-				writer.process.send("start");
-				const result = await writer.result;
+				const compaction = child(
+					backend,
+					directory,
+					`redact:${source.id}`,
+					marker,
+				);
+				await compaction.ready;
+				compaction.process.send("start");
+				const result = await compaction.result;
 				expect(result.signal, result.stderr).toBe("SIGKILL");
 				store = open();
 				const exported = JSON.stringify(await store.export(null));
@@ -581,10 +583,10 @@ for (const [backend, Store, filename] of [
 				await store.append(payload("baseline"));
 				const revision = await store.rev();
 				await store.close();
-				const writer = child(backend, directory, "crash-write", marker);
-				await writer.ready;
-				writer.process.send("start");
-				const result = await writer.result;
+				const compaction = child(backend, directory, "crash-write", marker);
+				await compaction.ready;
+				compaction.process.send("start");
+				const result = await compaction.result;
 				expect(result.stderr).toContain(marker);
 				expect(result.signal, result.stderr).toBe("SIGKILL");
 				const reopened = open();

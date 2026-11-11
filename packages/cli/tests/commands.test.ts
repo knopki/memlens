@@ -103,7 +103,7 @@ defaultProfile = "work"
 backend = "sqlite"
 idle = 300
 
-[writer]
+[compaction]
 provider = "deepseek"
 model = "deepseek-chat"
 effort = "off"
@@ -407,7 +407,7 @@ defaultProfile = "default"
 backend = "jsonl"
 idle = 300
 
-[writer]
+[compaction]
 provider = "deepseek"
 model = "deepseek-chat"
 effort = "off"

@@ -42,7 +42,7 @@ rules = [
 [nudge]
 tool_calls = 5
 
-[writer]
+[compaction]
 provider = "dsh"
 model = "deepseek/deepseek-chat"
 
@@ -56,7 +56,7 @@ function base() {
 
 /** A minimal valid base file. Each part replaces one section of the text. */
 function configToml(
-	parts: { rules?: string; writer?: string; nudge?: string } = {},
+	parts: { rules?: string; compaction?: string; nudge?: string } = {},
 ): string {
 	return `
 defaultProfile = "default"
@@ -73,8 +73,8 @@ budget = { here = 1, directions = 1 }
 default = "project:misc"
 ${parts.rules === undefined ? "" : `rules = [${parts.rules}]`}
 
-[writer]
-${parts.writer ?? 'provider = "dsh"\nmodel = "m"'}
+[compaction]
+${parts.compaction ?? 'provider = "dsh"\nmodel = "m"'}
 
 ${parts.nudge ?? ""}
 `;
@@ -88,10 +88,10 @@ describe("loadBaseConfig", () => {
 		expect(config.language).toBe("en");
 		expect(config.nudge.turns).toBe(10);
 		expect(config.nudge.tool_calls).toBe(5);
-		expect(config.writer.effort).toBe("off");
-		expect(config.writer.mode).toBe("auto");
-		expect(config.writer.batch).toBe(6);
-		expect(config.writer.maxCallsPerHour).toBe(120);
+		expect(config.compaction.effort).toBe("off");
+		expect(config.compaction.mode).toBe("auto");
+		expect(config.compaction.batch).toBe(6);
+		expect(config.compaction.maxCallsPerHour).toBe(120);
 		expect(config.review).toEqual({
 			decision: 365,
 			preference: 365,
@@ -151,10 +151,10 @@ scopes = ["*"]
 		expect(() => loadBaseConfig(text, "/s")).toThrow(/scope key/);
 	});
 
-	it("rejects a missing writer provider", () => {
+	it("rejects a missing compaction provider", () => {
 		expect(() =>
-			loadBaseConfig(configToml({ writer: 'model = "m"' }), "/s"),
-		).toThrow(/writer.provider/);
+			loadBaseConfig(configToml({ compaction: 'model = "m"' }), "/s"),
+		).toThrow(/compaction.provider/);
 	});
 
 	it("rejects a nudge text without {n}", () => {

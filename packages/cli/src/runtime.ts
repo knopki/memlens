@@ -65,7 +65,7 @@ defaultProfile = "default"
 backend = "sqlite"
 idle = 300
 
-[writer]
+[compaction]
 provider = "deepseek"
 model = "deepseek-chat"
 effort = "off"

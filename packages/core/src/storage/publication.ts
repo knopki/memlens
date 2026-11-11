@@ -57,7 +57,7 @@ export function publishPlan(plan: WritePlan): readonly JsonlLine[] {
 
 // #region FUNC_nodePlan
 /**
- * @purpose Refuse stale writer output before it enters the durable history.
+ * @purpose Refuse stale compaction output before it enters the durable history.
  * @invariants Compare the exact copied input under the backend lock. Empty input produces no event.
  * @invariants The result range, child ids, revision, and dates match the current input.
  * @invariants Catalog publication requires the resolved profile scopes. No model call occurs under the lock.

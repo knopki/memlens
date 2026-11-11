@@ -68,7 +68,7 @@ export interface ConsoleModel {
 /**
  * @purpose Read one console snapshot for the selected visible scope.
  * @invariants Keep explicit empty scopes. Accept an absent selected scope when the profile matches it.
- * @invariants Use the resolved profile name and independent line budgets. Read no event export and call no writer.
+ * @invariants Use the resolved profile name and independent line budgets. Read no event export and call no compaction.
  */
 export async function readConsole(
 	store: StorePort,

@@ -47,7 +47,7 @@ describe("@memlens/core", () => {
 		expect(prepareImport(plan.events, plan.events).changed).toBe(0);
 	});
 
-	it("replays, slices, and prepares writer inputs through public exports", async () => {
+	it("replays, slices, and prepares compaction inputs through public exports", async () => {
 		const events: JsonlLine[] = [0, 1, 2, 3].map((n) => ({
 			id: String(n),
 			at: `2026-11-10T00:00:0${n}.000Z`,

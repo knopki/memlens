@@ -7,7 +7,7 @@
  * answers back as node events, so the tree builds in the terminal with no model.
  * @scope
  *  - The copy publication, the merge inputs of one job, the job text, and the answer application.
- *  - NOT: the background writer, the model calls, and the store logic.
+ *  - NOT: the background compaction, the model calls, and the store logic.
  * @invariants
  *  - The scope comes from --scope or from the active scope of the working directory, and the
  *    profile must list it.

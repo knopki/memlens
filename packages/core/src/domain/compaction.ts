@@ -1,10 +1,12 @@
 /**
  * #region moduleContract
  * @purpose Build clean summaries for dirty tree ranges, so the view holds text without waiting.
- * @scope Merge prompts, line attempts, batch answers, job answers, form choice, retry pacing, and one writer pass.
+ * @scope Merge prompts, line attempts, batch answers, job answers, form choice, retry pacing, and one compaction pass.
  * NOT: triggers, timers, the harness LLM service, and storage locks.
  * @invariants
- * - The writer task stays pure: one input gives one output, and no executor state enters a result.
+ * - One pass takes the candidates of one scope and returns their count. The host owns the trigger,
+ * the timer, the loop, and the model service.
+ * - The compaction task stays pure: one input gives one output, and no executor state enters a result.
  * - A run uses one form only: parallel, batch, or auto. Auto picks parallel for a model under a
  * specific cacheTtl glob and batch for the rest.
  * - A merge input holds the two children only. One non-empty child copies its text and dates with
@@ -21,13 +23,13 @@
  * answer falls back to parallel.
  * - Failed attempts wait 10, 60, then 300 seconds. The waits and in-flight work are local state,
  * and a restart clears them: candidates always derive from the current tree.
- * - A pass calls the model at most maxCallsPerHour times. A writer at the limit defers its calls
+ * - A pass calls the model at most maxCallsPerHour times. A compaction at the limit defers its calls
  * while the affected ranges stay dirty.
  * @dependencies
  * USES API: domain/tree.ts (candidates, buildInput, rev), domain/order.ts
  * READS: Tree, BuildInput
  * WRITES: StorePort.appendNode only, through nodeEvent
- * @keywords writer, merge, retelling, batch, parallel, retry, node, summary
+ * @keywords compaction, merge, retelling, batch, parallel, retry, node, summary
  * #endregion moduleContract
  */
 
@@ -39,7 +41,7 @@ import { maxOrder } from "./order.js";
 import { dateSpan } from "./time.js";
 import { buildInput, candidates, cutAtWord, LINE_LIMIT, rev } from "./tree.js";
 
-const debug = debuglog("memlens:writer");
+const debug = debuglog("memlens:compaction");
 
 /** The merge system prompt. A copy of 09-prompts.md; a change of a word is a change of the product. */
 export const MERGE_SYSTEM = `You write the long-term memory of an AI agent. The agent saves notes across its sessions, one line each,
@@ -78,20 +80,20 @@ export const NODE_LIMIT = LINE_LIMIT;
 export const NODE_ATTEMPTS = 3;
 /** A retry asks for this share of the previous target. */
 export const RETRY_FACTOR = 0.75;
-/** The local waits between failed writer attempts, in seconds. A restart clears them. */
+/** The local waits between failed compaction attempts, in seconds. A restart clears them. */
 export const RETRY_WAITS: readonly number[] = [10, 60, 300];
-/** The default line count of one writer batch. */
-export const WRITER_BATCH = 6;
+/** The default line count of one compaction batch. */
+export const COMPACTION_BATCH = 6;
 /** The concurrent call count of the parallel form. */
-export const WRITER_PARALLEL = 6;
+export const COMPACTION_PARALLEL = 6;
 /** The default model call limit of one hour. */
 export const MAX_CALLS_PER_HOUR = 120;
 
 /** One completion call. The host binds the provider, the model, and the effort setting. */
 export type MergeModel = (system: string, task: string) => Promise<string>;
 
-/** The run form of a writer pass. */
-export type WriterForm = "parallel" | "batch" | "auto";
+/** The run form of a compaction pass. */
+export type CompactionForm = "parallel" | "batch" | "auto";
 
 /** The result of one line build. */
 export type LineBuild =
@@ -425,7 +427,7 @@ export function retryDelay(failures: number): number {
 
 // #region CLASS_RateWindow
 /**
- * @purpose Keep one hour of model call times, so a writer at the limit defers its calls.
+ * @purpose Keep one hour of model call times, so a compaction at the limit defers its calls.
  * @invariants The window keeps the timestamps of the last hour. tryAcquire records a call and
  * returns false at the limit. The window holds no durable state.
  */
@@ -482,14 +484,14 @@ export function nodeEvent(
 }
 // #endregion FUNC_nodeEvent
 
-/** The resolved settings of one writer pass. */
-export interface WriterRun {
+/** The resolved settings of one compaction pass. */
+export interface CompactionRun {
 	readonly form: "parallel" | "batch";
 	readonly batch: number;
 	readonly parallel: number;
 }
 
-/** The counts of one writer pass. */
+/** The counts of one compaction pass. */
 export interface PassResult {
 	readonly built: number;
 	readonly rejected: number;
@@ -497,7 +499,7 @@ export interface PassResult {
 	readonly calls: number;
 }
 
-// #region FUNC_writerPass
+// #region FUNC_compactionPass
 /**
  * @purpose Build and publish the next batch of dirty lines of one tree.
  * @invariants A pass takes at most batch ready inputs and uses one form only. Inputs with one
@@ -506,16 +508,16 @@ export interface PassResult {
  * through appendNode, which rechecks the exact input under the write lock.
  * A pass stores no state and starts no timers.
  */
-export async function writerPass(
+export async function compactionPass(
 	store: StorePort,
 	scope: ScopeKey,
 	tree: Tree,
 	model: MergeModel,
-	run: Partial<WriterRun> = {},
+	run: Partial<CompactionRun> = {},
 ): Promise<PassResult> {
 	const form = run.form ?? "parallel";
-	const batch = run.batch ?? WRITER_BATCH;
-	const parallel = run.parallel ?? WRITER_PARALLEL;
+	const batch = run.batch ?? COMPACTION_BATCH;
+	const parallel = run.parallel ?? COMPACTION_PARALLEL;
 	const inputs = candidates(tree)
 		.map((range) => buildInput(tree, range))
 		.filter((input): input is BuildInput => input !== null)
@@ -537,7 +539,7 @@ export async function writerPass(
 		if (appended.ok) result.built += 1;
 		else result.rejected += 1;
 	};
-	debug("Writer pass", { scope, form, candidates: inputs.length });
+	debug("Compaction pass", { scope, form, candidates: inputs.length });
 	const copies = inputs.filter((input) => live(input).length < 2);
 	const merges = inputs.filter((input) => live(input).length === 2);
 	for (const input of copies) await publish(input, copyBuild(input));
@@ -545,10 +547,10 @@ export async function writerPass(
 		if (form === "batch") await runBatch(merges, counted, publish, parallel);
 		else await runParallel(merges, counted, publish, parallel);
 	}
-	debug("Writer pass complete", { scope, ...result });
+	debug("Compaction pass complete", { scope, ...result });
 	return { ...result };
 }
-// #endregion FUNC_writerPass
+// #endregion FUNC_compactionPass
 
 /** Publish each merge input through one concurrent group of model calls. */
 async function runParallel(

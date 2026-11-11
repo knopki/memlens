@@ -9,7 +9,7 @@
  *  - NOT: the backend implementations, the JSONL file, or the SQLite file.
  * @invariants
  *  - A store port gives one projection per read.
- *  - Writers hold the publication lock through validation and source publication.
+ *  - A write holds the publication lock through validation and source publication.
  *  - Source events, generated invalidations, projection, and revision publish together.
  *  - A failure before publication leaves the source unchanged. A cleanup failure preserves the published source.
  *  - A node rebuild appends a new event and rewrites no published event.

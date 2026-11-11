@@ -19,7 +19,7 @@
  *  - A preset without `profile` is an error at load.
  *  - A profile name that the base file does not list is an error at resolve.
  *  - Defaults at load: language `en`, store idle 300 seconds, store path from the caller, subagents
- *    `propose`, writer mode `auto`, writer effort `off`, writer batch 6, 120 calls an hour, nudge
+ *    `propose`, compaction mode `auto`, compaction effort `off`, compaction batch 6, 120 calls an hour, nudge
  *    counters 10 and 10, nudge texts with `{n}`, review 365 days for `decision`, `preference`, and
  *    `note`, 180 days for `fact`, and 7 days for `task`.
  *  - The store path order is `--store`, then `MEMLENS_STORE`, then the base file.
@@ -66,13 +66,13 @@ export type StoreBackend = "sqlite" | "jsonl";
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
-/** The shape of a run of the writer. */
-export type WriterMode = "parallel" | "batch" | "auto";
+/** The shape of a run of the compaction. */
+export type CompactionMode = "parallel" | "batch" | "auto";
 
 export interface StoreConfig {
 	backend: StoreBackend;
 	path: Path;
-	/** The time without an event that starts the background writer, in seconds. */
+	/** The time without an event that starts the background compaction, in seconds. */
 	idle: number;
 }
 
@@ -126,11 +126,11 @@ export interface NudgeConfig {
 	text: Record<"tool_calls" | "turns", string>;
 }
 
-export interface WriterConfig {
+export interface CompactionConfig {
 	provider: string;
 	model: string;
 	effort: string;
-	mode: WriterMode;
+	mode: CompactionMode;
 	batch: number;
 	maxCallsPerHour: number;
 }
@@ -150,7 +150,7 @@ export interface BaseConfig {
 	profile: Record<string, ProfileConfig>;
 	scope_default: ScopeDefault;
 	nudge: NudgeConfig;
-	writer: WriterConfig;
+	compaction: CompactionConfig;
 	review: ReviewConfig;
 }
 
@@ -159,7 +159,7 @@ export interface PatchConfig {
 	store?: Partial<StoreConfig>;
 	defaultProfile?: string;
 	budget?: Partial<Budget>;
-	writer?: Partial<WriterConfig>;
+	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
 	cacheTtl?: CacheTtl;
 	customPrompt?: string;
@@ -170,7 +170,7 @@ export interface PatchConfig {
 export interface PresetConfig {
 	profile: string;
 	budget?: Partial<Budget>;
-	writer?: Partial<WriterConfig>;
+	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
 	customPrompt?: string;
 	customPromptAppend?: string;
@@ -243,7 +243,7 @@ export function loadBaseConfig(
 			"profile",
 			"scope_default",
 			"nudge",
-			"writer",
+			"compaction",
 			"review",
 		],
 		"config",
@@ -287,7 +287,7 @@ export function loadBaseConfig(
 		profile,
 		scope_default: readScopeDefault(root.scope_default),
 		nudge: readNudge(root.nudge),
-		writer: readWriter(root.writer),
+		compaction: readCompaction(root.compaction),
 		review: readReview(root.review),
 	};
 	debug("Base config loaded", {
@@ -314,7 +314,7 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 			"store",
 			"defaultProfile",
 			"budget",
-			"writer",
+			"compaction",
 			"nudge",
 			"cacheTtl",
 			"customPrompt",
@@ -347,8 +347,11 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 		);
 	if (row.budget !== undefined)
 		patch.budget = readBudget(row.budget, "patch.budget");
-	if (row.writer !== undefined)
-		patch.writer = readPartialWriter(row.writer, "patch.writer");
+	if (row.compaction !== undefined)
+		patch.compaction = readPartialCompaction(
+			row.compaction,
+			"patch.compaction",
+		);
 	if (row.nudge !== undefined)
 		patch.nudge = readPartialNudge(row.nudge, "patch.nudge");
 	if (row.cacheTtl !== undefined) patch.cacheTtl = readCacheTtl(row.cacheTtl);
@@ -378,7 +381,7 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 		[
 			"profile",
 			"budget",
-			"writer",
+			"compaction",
 			"nudge",
 			"customPrompt",
 			"customPromptAppend",
@@ -393,8 +396,11 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 	};
 	if (row.budget !== undefined)
 		preset.budget = readBudget(row.budget, "preset.budget");
-	if (row.writer !== undefined)
-		preset.writer = readPartialWriter(row.writer, "preset.writer");
+	if (row.compaction !== undefined)
+		preset.compaction = readPartialCompaction(
+			row.compaction,
+			"preset.compaction",
+		);
 	if (row.nudge !== undefined)
 		preset.nudge = readPartialNudge(row.nudge, "preset.nudge");
 	if (row.customPrompt !== undefined)
@@ -446,10 +452,10 @@ export function resolveConfig(
 		budget,
 		scope_default: base.scope_default,
 		nudge: { ...base.nudge, ...(patch.nudge ?? {}), ...(preset?.nudge ?? {}) },
-		writer: {
-			...base.writer,
-			...(patch.writer ?? {}),
-			...(preset?.writer ?? {}),
+		compaction: {
+			...base.compaction,
+			...(patch.compaction ?? {}),
+			...(preset?.compaction ?? {}),
 		},
 		review: base.review,
 		cacheTtl: { ...DEFAULT_CACHE_TTL, ...(patch.cacheTtl ?? {}) },
@@ -771,50 +777,50 @@ function readNudgeText(value: unknown): Record<"tool_calls" | "turns", string> {
 	return result;
 }
 
-function readWriter(value: unknown): WriterConfig {
-	const record = expectRecord(value, "writer");
+function readCompaction(value: unknown): CompactionConfig {
+	const record = expectRecord(value, "compaction");
 	expectKeys(
 		record,
 		["provider", "model", "effort", "mode", "batch", "maxCallsPerHour"],
-		"writer",
+		"compaction",
 	);
 	return {
-		provider: requireString(record.provider, "writer.provider"),
-		model: requireString(record.model, "writer.model"),
+		provider: requireString(record.provider, "compaction.provider"),
+		model: requireString(record.model, "compaction.model"),
 		effort:
 			record.effort === undefined
 				? "off"
-				: expectString(record.effort, "writer.effort"),
+				: expectString(record.effort, "compaction.effort"),
 		mode:
 			record.mode === undefined
 				? "auto"
 				: expectOneOf(
 						record.mode,
 						["parallel", "batch", "auto"],
-						"writer.mode",
+						"compaction.mode",
 					),
 		batch:
 			record.batch === undefined
 				? 6
-				: expectCount(record.batch, "writer.batch"),
+				: expectCount(record.batch, "compaction.batch"),
 		maxCallsPerHour:
 			record.maxCallsPerHour === undefined
 				? 120
-				: expectCount(record.maxCallsPerHour, "writer.maxCallsPerHour"),
+				: expectCount(record.maxCallsPerHour, "compaction.maxCallsPerHour"),
 	};
 }
 
-function readPartialWriter(
+function readPartialCompaction(
 	value: unknown,
 	where: string,
-): Partial<WriterConfig> {
+): Partial<CompactionConfig> {
 	const record = expectRecord(value, where);
 	expectKeys(
 		record,
 		["provider", "model", "effort", "mode", "batch", "maxCallsPerHour"],
 		where,
 	);
-	const partial: Partial<WriterConfig> = {};
+	const partial: Partial<CompactionConfig> = {};
 	if (record.provider !== undefined)
 		partial.provider = expectString(record.provider, `${where}.provider`);
 	if (record.model !== undefined)

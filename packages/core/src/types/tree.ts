@@ -6,7 +6,7 @@
  * @purpose Hold the tree rules in one type file, so the requirements and the code have one source.
  * @scope
  *  - The record positions, the nodes, the revision of a range, and the slice.
- *  - NOT: the log, the store, the writer, and the tools.
+ *  - NOT: the log, the store, the compaction, and the tools.
  * @invariants
  *  - A node covers 2^level positions from start, and level is 1 or more.
  *  - Each child reference matches its half. A null reference denotes only an empty half.

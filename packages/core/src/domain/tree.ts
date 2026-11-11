@@ -9,7 +9,7 @@
  * - A clean node gives its summary. A temporary line gives the text of its two children, joined for
  * the render only. No hash check, no model call, and no stored node are involved.
  * - Scope trees and catalogs use the same engine. A catalog leaf resolves its scope tree through scope_roots.
- * - Every read uses the supplied projection. No read waits for a writer or retains state between calls.
+ * - Every read uses the supplied projection. No read waits for a compaction or retains state between calls.
  * #endregion moduleContract
  */
 import { debuglog } from "node:util";

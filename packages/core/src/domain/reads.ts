@@ -15,7 +15,7 @@
  *  - An open of an aligned range gives the non-empty child lines. A clean child gives its text.
  *  - A dirty or missing child gives a temporary line with the period and no text.
  *  - A range that matches no node gives one line, and the line holds the first pos.
- *  - Every read uses the supplied projection and hits. No read scans events or waits for a writer.
+ *  - Every read uses the supplied projection and hits. No read scans events or waits for a compaction.
  * @dependencies
  *  USES API: domain/address.ts, domain/tree.ts
  *  READS: Projection, IndexHit, Tree

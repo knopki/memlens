@@ -649,7 +649,7 @@ function describeRule(rule: unknown): string {
  * session reads.
  * @invariants The profile comes from --profile or defaultProfile. The active scope comes from
  * the rules of scope_default for the working directory, and --scope replaces it. The render calls
- * no model and waits for no writer.
+ * no model and waits for no compaction.
  */
 export async function sliceCommand(
 	args: ParsedArgs,

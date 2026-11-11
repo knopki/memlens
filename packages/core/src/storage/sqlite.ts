@@ -2,7 +2,7 @@
  * #region moduleContract
  * @purpose Persist each complete domain change and its projection in one SQLite transaction.
  * @scope Local event sequence, write validation, projection snapshots, the FTS index, export, and redaction cleanup.
- * @invariants Writers use BEGIN IMMEDIATE. Events, projection, index rows, and revision commit together or roll back together.
+ * @invariants A write uses BEGIN IMMEDIATE. Events, projection, index rows, and revision commit together or roll back together.
  * @invariants Reads use the stored projection without event scans. Reopen preserves the same snapshot and revision.
  * @invariants The index lives in memlens.db. The open mounts it and rebuilds it after a language change or a loss.
  * @invariants The revision starts at zero and increases once per published plan. Duplicate writes preserve the counter.
@@ -46,7 +46,7 @@ import {
 const debug = debuglog("memlens:sqlite");
 
 // #region CLASS_SqliteStore
-/** @purpose Provide durable store operations with one SQLite writer lock per change. */
+/** @purpose Provide durable store operations with one SQLite compaction lock per change. */
 export class SqliteStore implements StorePort {
 	private readonly db: DatabaseSync;
 	private readonly profiles: ProfileScopes;
@@ -320,7 +320,7 @@ export class SqliteStore implements StorePort {
 
 	// #region METHOD_transaction
 	/**
-	 * @purpose Keep validation and publication under one writer lock and preserve committed state after cleanup errors.
+	 * @purpose Keep validation and publication under one compaction lock and preserve committed state after cleanup errors.
 	 * @invariants Failure before commit rolls back. Failure after commit never rolls back the published source.
 	 */
 	private transaction<T>(work: () => T, publication = true): T {

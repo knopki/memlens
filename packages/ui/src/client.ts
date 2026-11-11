@@ -1020,7 +1020,7 @@ function proposals(main: HTMLElement, model: View): void {
 // #region FUNC_maintenance
 /**
  * @purpose Show the build state, the budgets, and the compaction job.
- * @invariants Show no writer state and no session snapshot state. A job without a merge input
+ * @invariants Show no compaction state and no session snapshot state. A job without a merge input
  * states that fact and shows no answer form.
  */
 function maintenance(main: HTMLElement, model: View): void {

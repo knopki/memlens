@@ -13,7 +13,7 @@
  * in minutes, hours, or days. The line holds no count and no active marker.
  * - An unready non-empty range gives a temporary line with the keys, the age, and the text that the
  * tree assembled from its children. The result is immediate: it calls no model and waits for no
- * writer. A ready node gives its summary in place of that text. A scope with no live note gives no line.
+ * compaction. A ready node gives its summary in place of that text. A scope with no live note gives no line.
  * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <start>..<end>
  * <summary>. A temporary line holds the span and the text that the tree assembled from its children.
  * - The here budget limits the here lines and the directions budget limits the direction lines.
@@ -199,7 +199,7 @@ export function directionLines(
 /**
  * @purpose Fill the context template with the policy and the two folded parts.
  * @invariants customPrompt replaces the template and keeps each placeholder. customPromptAppend
- * fills {{append}} before the append value. The render calls no model and waits for no writer.
+ * fills {{append}} before the append value. The render calls no model and waits for no compaction.
  */
 export function renderContext(input: ContextInput): string {
 	const text = (input.customPrompt ?? CONTEXT_TEMPLATE)

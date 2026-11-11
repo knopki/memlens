@@ -1,28 +1,28 @@
 /**
  * #region moduleContract
- * @purpose Check merge attempts, batch answers, job answers, form choice, pacing, and one writer pass.
+ * @purpose Check merge attempts, batch answers, job answers, form choice, pacing, and one compaction pass.
  * #endregion moduleContract
  */
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { catalogTree, scopeTree } from "../src/domain/projection.js";
-import { catalogKey } from "../src/domain/scope.js";
-import { buildInput, slice } from "../src/domain/tree.js";
 import {
 	answerLine,
 	autoForm,
 	batchTask,
 	childLine,
+	compactionPass,
 	copyBuild,
 	mergeLine,
 	mergeTask,
 	parseBatchAnswer,
 	RateWindow,
 	retryDelay,
-	writerPass,
-} from "../src/domain/writer.js";
+} from "../src/domain/compaction.js";
+import { catalogTree, scopeTree } from "../src/domain/projection.js";
+import { catalogKey } from "../src/domain/scope.js";
+import { buildInput, slice } from "../src/domain/tree.js";
 import { SqliteStore } from "../src/storage/sqlite.js";
 import type { ScopeKey } from "../src/types/events.js";
 import type { AppendEvent } from "../src/types/store.js";
@@ -307,7 +307,7 @@ describe("form choice and pacing", () => {
 	});
 });
 
-describe("writerPass", () => {
+describe("compactionPass", () => {
 	const directories: string[] = [];
 	afterEach(async () => {
 		await Promise.all(directories.map((dir) => rm(dir, { recursive: true })));
@@ -330,14 +330,14 @@ describe("writerPass", () => {
 	});
 
 	it("builds dirty nodes bottom-up and repeats to the root", async () => {
-		const directory = await mkdtemp(join(tmpdir(), "memlens-writer-"));
+		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
 		directories.push(directory);
 		const store = new SqliteStore(directory);
 		for (let index = 0; index < 4; index += 1)
 			await store.append(note("project:a", `note ${index}`));
 		const summary = async () => "sum";
 		const pass = async () =>
-			writerPass(
+			compactionPass(
 				store,
 				"project:a",
 				scopeTree(await store.projection(), "project:a"),
@@ -354,7 +354,7 @@ describe("writerPass", () => {
 	});
 
 	it("makes one batch call for several lines and publishes each result", async () => {
-		const directory = await mkdtemp(join(tmpdir(), "memlens-writer-"));
+		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
 		directories.push(directory);
 		const store = new SqliteStore(directory);
 		for (let index = 0; index < 4; index += 1)
@@ -362,7 +362,7 @@ describe("writerPass", () => {
 				note("project:a", `${"long body ".repeat(10)}${index}`),
 			);
 		const batch = async () => "#0-1: sum zero one\n#2-3: sum two three";
-		const result = await writerPass(
+		const result = await compactionPass(
 			store,
 			"project:a",
 			scopeTree(await store.projection(), "project:a"),
@@ -379,7 +379,7 @@ describe("writerPass", () => {
 	});
 
 	it("builds the catalog above the scope roots and rebuilds it after a change", async () => {
-		const directory = await mkdtemp(join(tmpdir(), "memlens-writer-"));
+		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
 		directories.push(directory);
 		const scopes = ["project:a", "project:b"] as const;
 		const catalogScope = catalogKey("work");
@@ -392,7 +392,7 @@ describe("writerPass", () => {
 				scopes as readonly ScopeKey[],
 			);
 		const pass = async (scope: (typeof scopes)[number] | typeof catalogScope) =>
-			writerPass(
+			compactionPass(
 				store,
 				scope,
 				scope === catalogScope
