@@ -199,6 +199,20 @@ for (const Backend of [JsonlStore, SqliteStore]) {
 			const model = await readConsole(store, custom, "project:a", now);
 			expect(model.nodes).toHaveLength(1);
 			expect(model.nodes[0]).toMatchObject({ scope: "project:a", clean: true });
+			expect(model.frontier.length).toBeLessThanOrEqual(2);
+			const wide = config();
+			wide.budget.here = 3;
+			const full = await readConsole(store, wide, "project:a", now);
+			const covered = full.frontier.filter((line) => line.kind === "summary");
+			const leaves = full.frontier
+				.filter((line) => line.kind === "record")
+				.map((line) => line.pos);
+			expect(covered.length).toBeGreaterThan(0);
+			for (const line of covered) {
+				const from = line.range.start;
+				const to = from + 2 ** line.range.level;
+				expect(leaves.some((pos) => pos >= from && pos < to)).toBe(false);
+			}
 			expect(model.candidates).toContainEqual({
 				scope: "project:a",
 				range: { start: 2, level: 1 },

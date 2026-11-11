@@ -4,6 +4,8 @@
  * @scope Scope panels, context, trees, catalog, build candidates, and due records.
  * @invariants Read projection state only through StorePort. Open no file. Import no DOM, transport, or style.
  * @invariants Exclude scopes outside the profile. Return JSON values from one stable projection revision.
+ * @invariants The frontier holds the slice lines of the selected scope, in the same order and with
+ * the same fold as the text of the slice. A range line hides the notes inside that range.
  * #endregion moduleContract
  */
 
@@ -56,6 +58,7 @@ export interface ConsoleModel {
 		readonly ready: boolean;
 	}[];
 	readonly catalog: readonly SliceLine[];
+	readonly frontier: readonly SliceLine[];
 	readonly review: readonly DueRecord[];
 	readonly revision: string;
 }
@@ -176,6 +179,7 @@ export async function readConsole(
 			})),
 		),
 		catalog: slice(catalog, config.budget.directions),
+		frontier: slice(hereTree, config.budget.here),
 		review: dueRecords(projection, keys, time.slice(0, 10)),
 		revision,
 	};
@@ -185,6 +189,7 @@ export async function readConsole(
 		scopes: scopes.length,
 		records: model.records.length,
 		nodes: model.nodes.length,
+		frontier: model.frontier.length,
 	});
 	return model;
 }
