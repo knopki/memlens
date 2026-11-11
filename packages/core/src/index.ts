@@ -42,6 +42,7 @@ export {
 	childLine,
 	compactionPass,
 	copyBuild,
+	joinBuild,
 	type LineBuild,
 	MAX_CALLS_PER_HOUR,
 	MERGE_SYSTEM,

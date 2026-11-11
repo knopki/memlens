@@ -505,9 +505,15 @@ async function compact(
 			event: "compact",
 			target,
 			inputs: job.inputs.length,
-			copies: job.published,
+			copies: job.published - job.joined,
+			joins: job.joined,
 		});
-		return { inputs: job.inputs, job: job.job, copies: job.published };
+		return {
+			inputs: job.inputs,
+			job: job.job,
+			copies: job.published - job.joined,
+			joins: job.joined,
+		};
 	}
 	const answers = parseAnswers(text(fields, "answers"));
 	const copied = Array.isArray(fields.inputs) ? fields.inputs : null;

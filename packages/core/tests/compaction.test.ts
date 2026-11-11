@@ -14,6 +14,7 @@ import {
 	childLine,
 	compactionPass,
 	copyBuild,
+	joinBuild,
 	mergeLine,
 	mergeTask,
 	parseBatchAnswer,
@@ -22,7 +23,13 @@ import {
 } from "../src/domain/compaction.js";
 import { catalogTree, scopeTree } from "../src/domain/projection.js";
 import { catalogKey } from "../src/domain/scope.js";
-import { buildInput, slice } from "../src/domain/tree.js";
+import {
+	buildInput,
+	currentNode,
+	isClean,
+	slice,
+	topRange,
+} from "../src/domain/tree.js";
 import { SqliteStore } from "../src/storage/sqlite.js";
 import type { ScopeKey } from "../src/types/events.js";
 import type { AppendEvent } from "../src/types/store.js";
@@ -280,6 +287,34 @@ describe("job answers", () => {
 			ts_to: "2026-11-03",
 		});
 	});
+
+	it("joins two whole texts with the dates of the two children", () => {
+		const line = joinBuild(input(record(0, "first"), record(1, "second")));
+		expect(line).toEqual({
+			ok: true,
+			summary: "first; second",
+			chars: 13,
+			truncated: false,
+			ts_from: "2026-11-01",
+			ts_to: "2026-11-02",
+		});
+	});
+
+	it("accepts a pair that exactly fills the node limit", () => {
+		const line = joinBuild(
+			input(record(0, "a".repeat(320)), record(1, "b".repeat(318))),
+		);
+		expect(line?.summary).toHaveLength(640);
+		expect(line?.chars).toBe(640);
+		expect(line?.truncated).toBe(false);
+	});
+
+	it("rejects a pair above the limit and an input with one child", () => {
+		expect(
+			joinBuild(input(record(0, "a".repeat(320)), record(1, "b".repeat(319)))),
+		).toBeNull();
+		expect(joinBuild(input(record(0, "only"), null))).toBeNull();
+	});
 });
 
 describe("form choice and pacing", () => {
@@ -334,8 +369,11 @@ describe("compactionPass", () => {
 		directories.push(directory);
 		const store = new SqliteStore(directory);
 		for (let index = 0; index < 4; index += 1)
-			await store.append(note("project:a", `note ${index}`));
-		const summary = async () => "sum";
+			await store.append(
+				note("project:a", `${"long body ".repeat(40)}${index}`),
+			);
+		const retold = "sum pill ".repeat(40).trim();
+		const summary = async () => retold;
 		const pass = async () =>
 			compactionPass(
 				store,
@@ -349,7 +387,45 @@ describe("compactionPass", () => {
 		expect(await pass()).toMatchObject({ built: 0, calls: 0 });
 		const lines = slice(scopeTree(await store.projection(), "project:a"), 3);
 		expect(lines).toHaveLength(3);
-		expect(lines[0]).toMatchObject({ kind: "summary", summary: "sum" });
+		expect(lines[0]).toMatchObject({ kind: "summary", summary: retold });
+		await store.close();
+	});
+
+	it("publishes the join chain with no model call", async () => {
+		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
+		directories.push(directory);
+		const store = new SqliteStore(directory);
+		for (let index = 0; index < 4; index += 1)
+			await store.append(note("project:a", `note ${index}`));
+		const refused = async (): Promise<string> => {
+			throw new Error("The model was called for a fitting pair.");
+		};
+		const pass = async () =>
+			compactionPass(
+				store,
+				"project:a",
+				scopeTree(await store.projection(), "project:a"),
+				refused,
+			);
+		const before = slice(scopeTree(await store.projection(), "project:a"), 3);
+		expect(before[0]).toMatchObject({
+			kind: "temporary",
+			text: "note 0; note 1",
+		});
+		expect(await pass()).toMatchObject({ built: 2, calls: 0 });
+		expect(await pass()).toMatchObject({ built: 1, calls: 0 });
+		expect(await pass()).toMatchObject({ built: 0, calls: 0 });
+		const tree = scopeTree(await store.projection(), "project:a");
+		const lines = slice(tree, 3);
+		expect(lines).toHaveLength(3);
+		expect(lines[0]).toMatchObject({
+			kind: "summary",
+			summary: "note 0; note 1",
+		});
+		const root = topRange(tree);
+		const node = root ? currentNode(tree, root) : null;
+		expect(node?.summary).toBe("note 0; note 1; note 2; note 3");
+		expect(root && node ? isClean(tree, node) : false).toBe(true);
 		await store.close();
 	});
 
@@ -359,7 +435,7 @@ describe("compactionPass", () => {
 		const store = new SqliteStore(directory);
 		for (let index = 0; index < 4; index += 1)
 			await store.append(
-				note("project:a", `${"long body ".repeat(10)}${index}`),
+				note("project:a", `${"long body ".repeat(40)}${index}`),
 			);
 		const batch = async () => "#0-1: sum zero one\n#2-3: sum two three";
 		const result = await compactionPass(
@@ -384,7 +460,8 @@ describe("compactionPass", () => {
 		const scopes = ["project:a", "project:b"] as const;
 		const catalogScope = catalogKey("work");
 		const store = new SqliteStore(directory, new Map([["work", [...scopes]]]));
-		const summary = async () => "sum";
+		const retold = "sum pill ".repeat(40).trim();
+		const summary = async () => retold;
 		const catalog = async (): Promise<Tree> =>
 			catalogTree(
 				await store.projection(),
@@ -402,8 +479,8 @@ describe("compactionPass", () => {
 			);
 
 		for (const scope of scopes) {
-			await store.append(note(scope, "note zero"));
-			await store.append(note(scope, "note one"));
+			await store.append(note(scope, `${"detail ".repeat(60)}zero`));
+			await store.append(note(scope, `${"detail ".repeat(60)}one`));
 			expect(await pass(scope)).toMatchObject({ built: 1, calls: 1 });
 		}
 		const catalogInput = buildInput(await catalog(), { start: 0, level: 1 });
@@ -424,15 +501,15 @@ describe("compactionPass", () => {
 			(await store.export(catalogScope)).filter((event) => event.op === "node");
 		expect(await catalogEvents()).toHaveLength(1);
 		expect(slice(await catalog(), 2)).toEqual([
-			expect.objectContaining({ kind: "summary", summary: "sum" }),
-			expect.objectContaining({ kind: "summary", summary: "sum" }),
+			expect.objectContaining({ kind: "summary", summary: retold }),
+			expect.objectContaining({ kind: "summary", summary: retold }),
 		]);
 		expect(slice(await catalog(), 1)).toEqual([
-			expect.objectContaining({ kind: "summary", summary: "sum" }),
+			expect.objectContaining({ kind: "summary", summary: retold }),
 		]);
 		const firstCatalogEvents = await catalogEvents();
 
-		await store.append(note("project:a", "note two"));
+		await store.append(note("project:a", `${"detail ".repeat(60)}two`));
 		expect(await pass("project:a")).toMatchObject({ built: 1, calls: 0 });
 		expect(await pass("project:a")).toMatchObject({ built: 1, calls: 1 });
 		expect(await pass(catalogScope)).toMatchObject({ built: 1, calls: 1 });

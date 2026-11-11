@@ -10,7 +10,8 @@
  * - A run uses one form only: parallel, batch, or auto. Auto picks parallel for a model under a
  * specific cacheTtl glob and batch for the rest.
  * - A merge input holds the two children only. One non-empty child copies its text and dates with
- * no model call.
+ * no model call. Two children whose whole texts fit the node limit with "; " publish that join
+ * with no model call and no cut.
  * - The shrink check applies to a model merge only. An answer of a compaction job takes the limit
  * cut and no shrink check.
  * - A model answer of 640 characters or less is accepted with no retry. A retry asks for 0.75
@@ -221,6 +222,38 @@ export function copyBuild(input: BuildInput): Extract<LineBuild, { ok: true }> {
 	};
 }
 // #endregion FUNC_copyBuild
+
+// #region FUNC_joinBuild
+/**
+ * @purpose Publish the join of two whole child texts with no model call, when no cut occurs.
+ * @invariants Two children join as "first; rest" when their lengths with the separator stay at
+ * or below the node limit. The line takes truncated false and the dates of the two children.
+ * One null child gives null: the copy rule owns that input. A pair above the limit gives null:
+ * the model merge owns that pair.
+ */
+export function joinBuild(
+	input: BuildInput,
+): Extract<LineBuild, { ok: true }> | null {
+	const [first, second] = input.children;
+	if (!first || !second) return null;
+	const left = textOf(first);
+	const right = textOf(second);
+	if (left.length + right.length + 2 > NODE_LIMIT) return null;
+	const summary = `${left}; ${right}`;
+	debug("Line joined", {
+		start: input.range.start,
+		level: input.range.level,
+		chars: summary.length,
+	});
+	return {
+		ok: true,
+		summary,
+		chars: summary.length,
+		truncated: false,
+		...datesOf(input),
+	};
+}
+// #endregion FUNC_joinBuild
 
 // #region FUNC_finalizeLine
 /**
@@ -503,10 +536,10 @@ export interface PassResult {
 /**
  * @purpose Build and publish the next batch of dirty lines of one tree.
  * @invariants A pass takes at most batch ready inputs and uses one form only. Inputs with one
- * non-empty child publish a copy with no model call. The batch form makes one call, retries a
- * broken answer once with the error text, then falls back to parallel. Each result publishes
- * through appendNode, which rechecks the exact input under the write lock.
- * A pass stores no state and starts no timers.
+ * non-empty child publish a copy with no model call, and fitting pairs publish their join.
+ * The batch form makes one call, retries a broken answer once with the error text, then falls
+ * back to parallel. Each result publishes through appendNode, which rechecks the exact input
+ * under the write lock. A pass stores no state and starts no timers.
  */
 export async function compactionPass(
 	store: StorePort,
@@ -540,9 +573,15 @@ export async function compactionPass(
 		else result.rejected += 1;
 	};
 	debug("Compaction pass", { scope, form, candidates: inputs.length });
-	const copies = inputs.filter((input) => live(input).length < 2);
-	const merges = inputs.filter((input) => live(input).length === 2);
-	for (const input of copies) await publish(input, copyBuild(input));
+	const merges: BuildInput[] = [];
+	for (const input of inputs) {
+		const line = live(input).length < 2 ? copyBuild(input) : joinBuild(input);
+		if (line) {
+			await publish(input, line);
+			continue;
+		}
+		merges.push(input);
+	}
 	if (merges.length) {
 		if (form === "batch") await runBatch(merges, counted, publish, parallel);
 		else await runParallel(merges, counted, publish, parallel);

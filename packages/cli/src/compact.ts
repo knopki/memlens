@@ -11,8 +11,9 @@
  * @invariants
  *  - The scope comes from --scope or from the active scope of the working directory, and the
  *    profile must list it.
- *  - A copy input publishes its copy line with no model call and no answer, before the job lists
- *    the merge inputs from a fresh projection.
+ *  - A copy input or a fitting pair publishes with no model call and no answer. The publication
+ *    repeats in rounds until one round publishes nothing, and the job lists the merge inputs
+ *    from a fresh projection after the last round.
  *  - The job shows the merge task of each input. The flag --max limits the merge inputs of one job.
  *  - The answer file holds one "#a-b: text" line for each range. The flag --answer applies the
  *    answers through the input check of the store.
@@ -33,8 +34,8 @@
 import { readFileSync } from "node:fs";
 import { debuglog, isDeepStrictEqual } from "node:util";
 import type {
-	BuildChild,
 	BuildInput,
+	LineBuild,
 	Projection,
 	ScopeKey,
 	Tree,
@@ -45,6 +46,7 @@ import {
 	buildInput,
 	candidates,
 	copyBuild,
+	joinBuild,
 	MemlensError,
 	NODE_TARGET,
 	nodeEvent,
@@ -69,20 +71,17 @@ export interface CompactJob {
 	readonly inputs: readonly BuildInput[];
 	/** The merge task text, with one block for each input. Empty when no input waits. */
 	readonly job: string;
-	/** The copy inputs that the projection held before the publication. */
+	/** The copy and join inputs that the projection held before the publication. */
 	readonly found: number;
-	/** The copies that the store accepted. */
+	/** The copies and joins that the store accepted. */
 	readonly published: number;
+	/** The joins that the store accepted. This count is part of the published count. */
+	readonly joined: number;
 }
 
 /** The merge inputs with two live children, in candidate order. */
 function mergeInputs(tree: Tree): readonly BuildInput[] {
 	return readyInputs(tree).filter((input) => live(input) === 2);
-}
-
-/** The copy inputs with one live child, in candidate order. */
-function copyInputs(tree: Tree): readonly BuildInput[] {
-	return readyInputs(tree).filter((input) => live(input) === 1);
 }
 
 /** Each ready build input of the dirty ranges of the tree, in candidate order. */
@@ -95,6 +94,27 @@ function readyInputs(tree: Tree): readonly BuildInput[] {
 /** The count of live children of one input. */
 function live(input: BuildInput): number {
 	return input.children.filter((child) => child !== null).length;
+}
+
+/** One input that publishes with no model call: a copy or the join of a fitting pair. */
+interface MechanicalLine {
+	readonly input: BuildInput;
+	readonly line: Extract<LineBuild, { ok: true }>;
+	readonly join: boolean;
+}
+
+/** Each ready input of the tree that publishes with no model call, in candidate order. */
+function mechanicalInputs(tree: Tree): readonly MechanicalLine[] {
+	const result: MechanicalLine[] = [];
+	for (const input of readyInputs(tree)) {
+		if (live(input) < 2) {
+			result.push({ input, line: copyBuild(input), join: false });
+			continue;
+		}
+		const line = joinBuild(input);
+		if (line) result.push({ input, line, join: true });
+	}
+	return result;
 }
 
 /** The scope of the compaction: --scope, or the active scope of the working directory. */
@@ -148,11 +168,13 @@ export async function compactCommand(
 
 // #region FUNC_prepareCompact
 /**
- * Publish the copies of one tree and give the merge inputs that remain.
+ * Publish the copies and joins of one tree and give the merge inputs that remain.
  *
  * @purpose Let a terminal user and a console user start one job with one rule set.
- * @invariants Publish each copy input with no model call. A dry run writes nothing.
- * The merge inputs come from the projection after the copy publication, and the limit applies after that read.
+ * @invariants Publish each copy input and each fitting join with no model call. A dry run writes
+ * nothing. The publication rounds repeat until one round publishes nothing, so one run completes
+ * each chain of joins. The merge inputs come from the projection after the last round, and the
+ * limit applies after that read.
  */
 export async function prepareCompact(
 	runtime: Runtime,
@@ -167,16 +189,36 @@ export async function prepareCompact(
 	const dryRun = options.dryRun === true;
 	const max = options.max ?? 50;
 	const first = treeOf(runtime.projection);
-	const copies = copyInputs(first);
+	const found = mechanicalInputs(first).length;
 	let published = 0;
-	if (!dryRun)
-		for (const input of copies) {
-			const appended = await runtime.store.appendNode(
-				input,
-				nodeEvent(scope, first, input, copyBuild(input)),
-			);
-			if (appended.ok) published += 1;
+	let joined = 0;
+	if (!dryRun) {
+		let current = first;
+		for (let round = 1; ; round += 1) {
+			const ready = mechanicalInputs(current);
+			if (!ready.length) break;
+			let accepted = 0;
+			for (const item of ready) {
+				const appended = await runtime.store.appendNode(
+					item.input,
+					nodeEvent(scope, current, item.input, item.line),
+				);
+				if (appended.ok) {
+					accepted += 1;
+					published += 1;
+					if (item.join) joined += 1;
+				}
+			}
+			debug("Mechanical round", {
+				event: "round",
+				round,
+				found: ready.length,
+				accepted,
+			});
+			if (!accepted) break;
+			current = treeOf(await runtime.store.projection());
 		}
+	}
 	const tree = dryRun ? first : treeOf(await runtime.store.projection());
 	const inputs = mergeInputs(tree).slice(0, max);
 	const job = inputs.length
@@ -184,11 +226,12 @@ export async function prepareCompact(
 		: "";
 	debug("Job prepared", {
 		event: "prepare",
-		copies: copies.length,
+		copies: found,
 		published,
+		joins: joined,
 		merges: inputs.length,
 	});
-	return { inputs, job, found: copies.length, published };
+	return { inputs, job, found, published, joined };
 }
 // #endregion FUNC_prepareCompact
 
@@ -218,8 +261,8 @@ async function compactJob(
 		const head = [
 			`scope: ${scope}`,
 			dryRun
-				? `would publish ${job.found} copies`
-				: `published ${job.published} copies`,
+				? `would publish ${job.found} copies and joins`
+				: `published ${job.published - job.joined} copies, ${job.joined} joins`,
 		];
 		const body = job.job
 			? [

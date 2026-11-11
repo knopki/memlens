@@ -377,7 +377,11 @@ for (const backend of ["sqlite", "jsonl"])
 		it("compacts catalog roots through the same answer boundary", async () => {
 			const { get, post } = await fixture(backend);
 			for (const scope of ["project:a", "project:b"]) {
-				await post({ action: "note", scope, body: scope });
+				await post({
+					action: "note",
+					scope,
+					body: `${scope} ${"detail ".repeat(80)}`,
+				});
 				await post({ action: "compact", scope });
 			}
 			const job = await (
@@ -443,14 +447,14 @@ for (const backend of ["sqlite", "jsonl"])
 
 		it("rejects stale compaction answers after an amendment", async () => {
 			const { get, post } = await fixture(backend);
-			await post({ action: "note", body: "first note" });
-			await post({ action: "note", body: "second note" });
+			await post({ action: "note", body: `first ${"detail ".repeat(90)}` });
+			await post({ action: "note", body: `second ${"detail ".repeat(90)}` });
 			const job = await (await post({ action: "compact" })).json();
 			expect(job.inputs).toHaveLength(1);
 			await post({
 				action: "amend",
 				target: "0",
-				body: "changed first",
+				body: `changed ${"detail ".repeat(80)}`,
 				longform: "",
 			});
 			const stale = await (

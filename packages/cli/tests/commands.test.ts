@@ -329,13 +329,25 @@ describe("@memlens/cli commands", () => {
 
 	it("publishes one copy input and gives a compaction job with --max", async () => {
 		const test = makeEnv();
-		await run(test, "note", "Lone note", "--scope", "project:acme/x");
+		await run(
+			test,
+			"note",
+			`Lone ${"detail ".repeat(80)}`,
+			"--scope",
+			"project:acme/x",
+		);
 		const copy = await run(test, "compact", "--scope", "project:acme/x");
 		expect(copy.code).toBe(0);
 		expect(copy.out).toContain("published 1 copies");
 		expect(copy.out).toContain("no merge inputs");
 		for (const body of ["Two", "Three", "Four", "Five"])
-			await run(test, "note", `${body} note`, "--scope", "project:acme/x");
+			await run(
+				test,
+				"note",
+				`${body} ${"detail ".repeat(80)}`,
+				"--scope",
+				"project:acme/x",
+			);
 		const limited = await run(
 			test,
 			"compact",
@@ -357,13 +369,37 @@ describe("@memlens/cli commands", () => {
 		expect(dry.out).toContain("would publish");
 	});
 
+	it("completes the join chain of fitting pairs in one run", async () => {
+		const test = makeEnv();
+		for (const body of ["Alpha", "Beta", "Gamma", "Delta"])
+			await run(test, "note", body, "--scope", "project:acme/x");
+		const joined = await run(test, "compact", "--scope", "project:acme/x");
+		expect(joined.code).toBe(0);
+		expect(joined.out).toContain("published 0 copies, 3 joins");
+		expect(joined.out).toContain("no merge inputs");
+		const settled = await run(test, "compact", "--scope", "project:acme/x");
+		expect(settled.out).toContain("published 0 copies, 0 joins");
+	});
+
 	it("writes the answers of a compaction job as nodes", async () => {
 		const test = makeEnv();
-		await run(test, "note", "First note", "--scope", "project:acme/x");
-		await run(test, "note", "Second note", "--scope", "project:acme/x");
+		await run(
+			test,
+			"note",
+			`First ${"detail ".repeat(80)}`,
+			"--scope",
+			"project:acme/x",
+		);
+		await run(
+			test,
+			"note",
+			`Second ${"detail ".repeat(80)}`,
+			"--scope",
+			"project:acme/x",
+		);
 		const job = await run(test, "compact", "--scope", "project:acme/x");
 		expect(job.out).toContain("#0-1");
-		expect(job.out).toContain("First note");
+		expect(job.out).toContain("First");
 		const answer = join(test.home, "answer.txt");
 		writeFileSync(answer, "#0-1: One line over both notes");
 		const applied = await run(
