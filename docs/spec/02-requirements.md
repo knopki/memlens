@@ -156,6 +156,12 @@ Use module invariants for module-wide rules. Use entity contracts for rules with
 | REQ-511 | An import makes each summary above a changed record or position unusable before the next read. | FR | accepted | S-133, S-134, S-135 | An imported amend at time 150 changes a note at time 100. A neighbour at time 200 does not keep the old summary clean. |
 | REQ-512 | A restart or a rebuild of the projection does not restore a summary that an import made unusable. | FR | accepted | S-134, S-135 | Import an old amend, restart, and rebuild the projection. The affected summary stays unusable until its rebuild. |
 | REQ-513 | A repeated import with no new event or payload change makes no additional summary unusable. | FR | accepted | S-133, S-134, S-135 | Import the same file twice. The second import changes no node state and adds no invalidation. |
+| REQ-514 | The console offers the theme settings light, dark, and system. | FR | accepted | S-144 | Each setting changes the page colors. The choice survives a reload, and the system setting follows the system. |
+| REQ-515 | The console text supports the eight languages of the DSH set, and the language list gives each language in its own words. | FR | accepted | S-144 | Each screen holds no English phrase in the Russian setting. The list holds eight names. |
+| REQ-516 | The console shows the frontier of the selected scope as the lines of its slice. | FR | accepted | S-144 | A built range shows one line, and the console shows no second line for a note inside that range. |
+| REQ-517 | The console files an amendment to the body, the document, or the scope of a note. | FR | accepted | S-144 | An amendment with another scope moves the note to that scope with a new position. |
+| REQ-518 | A compaction job without a merge input states that fact and opens no answer form. | FR | accepted | S-144 | Prepare a job in a settled scope. The console shows the state and no form. |
+| REQ-519 | The standalone console shows no writer state and no session snapshot state. | FR | accepted | S-144 | The console shows no such text. It names the store, the revision, and the backend only. |
 
 ## Rules for new requirements
 
