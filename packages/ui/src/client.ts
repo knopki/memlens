@@ -1,9 +1,16 @@
 /**
  * #region moduleContract
- * @purpose Let a human inspect and maintain memory through seven dense console screens.
- * @scope Native DOM controls and the standalone HTTP API only.
- * @invariants Render store text as text. Keep destructive actions explicit. Never claim unavailable session state.
- * @dependencies GET view, search, open and POST action from the CLI host.
+ * @purpose Let a human read the memory and maintain it from seven console screens in one of the
+ * eight languages of the DSH set.
+ * @scope Native DOM controls, the language and theme choice, and the local HTTP API. NOT: the store
+ * rules, the slice, and the tree.
+ * @invariants Put each store text into a text node. Keep a destructive action behind a confirmation.
+ * Show no state that this host does not hold.
+ * @invariants The tree screen shows the frontier of the model, so a range line and the notes inside
+ * that range never appear together.
+ * @invariants The theme choice is light, dark, or system, and it survives a reload.
+ * @dependencies GET view, search, open and POST action from the CLI host. i18n.ts for the text.
+ * @keywords console, ui, screen, theme, language, frontier, search, review, proposal, compaction
  * #endregion moduleContract
  */
 
@@ -19,7 +26,20 @@ import type {
 } from "../../core/src/types/events.js";
 import type { ProjectionRecord } from "../../core/src/types/projection.js";
 import type { IndexHit } from "../../core/src/types/store.js";
-import type { BuildInput, Range } from "../../core/src/types/tree.js";
+import type {
+	BuildInput,
+	Range,
+	SliceLine,
+} from "../../core/src/types/tree.js";
+import {
+	fill,
+	KIND_KEYS,
+	LANG_NAMES,
+	LANGS,
+	type Lang,
+	messages,
+	type Table,
+} from "./i18n.js";
 
 type View = ConsoleModel & {
 	profiles: string[];
@@ -29,33 +49,18 @@ type View = ConsoleModel & {
 	reviewPolicy: Record<NoteKind, number>;
 	proposals: MemoryEvent[];
 };
-const labels = {
-	en: "Directions|Tree|Catalog map|Search|Review|Proposals|Maintenance|New record|Add|Forget|Delete|Profile".split(
-		"|",
-	),
-	de: "Übersicht|Baum|Katalog|Suche|Prüfung|Vorschläge|Wartung|Neuer Eintrag|Hinzufügen|Ausblenden|Löschen|Profil".split(
-		"|",
-	),
-	es: "Direcciones|Árbol|Catálogo|Buscar|Revisión|Propuestas|Mantenimiento|Nueva nota|Añadir|Ocultar|Eliminar|Perfil".split(
-		"|",
-	),
-	fr: "Directions|Arbre|Catalogue|Recherche|Révision|Propositions|Maintenance|Nouvelle note|Ajouter|Masquer|Supprimer|Profil".split(
-		"|",
-	),
-	ja: "概要|ツリー|カタログ|検索|レビュー|提案|保守|新規ノート|追加|非表示|削除|プロファイル".split(
-		"|",
-	),
-	pt: "Direções|Árvore|Catálogo|Pesquisa|Revisão|Propostas|Manutenção|Nova nota|Adicionar|Ocultar|Excluir|Perfil".split(
-		"|",
-	),
-	ru: "Обзор|Дерево|Каталог|Поиск|Проверка|Предложения|Обслуживание|Новая запись|Добавить|Скрыть|Удалить|Профиль".split(
-		"|",
-	),
-	zh: "概览|树|目录|搜索|复核|提案|维护|新建记录|添加|隐藏|删除|配置".split(
-		"|",
-	),
+type Job = {
+	inputs: BuildInput[];
+	job: string;
+	catalog: boolean;
+	profile: string;
+	scope: string;
 };
-const icons = [
+type Selection = { target: string; result: OpenEntry | OpenChildren };
+type Choice = "system" | "light" | "dark";
+
+const KINDS = ["decision", "preference", "fact", "task", "note"] as const;
+const ICONS = [
 	"M2 3h12M2 8h12M2 13h7",
 	"M8 14V9M8 9L4 6M8 9l4-3M4 6V3M12 6V3",
 	"M2 12l3-5 3 2 3-6 3 3",
@@ -64,56 +69,45 @@ const icons = [
 	"M3 4h10M3 8h10M3 12h6",
 	"M2 8h3l2-4 2 8 2-4h3",
 ];
-type Locale = keyof typeof labels;
-let locale: Locale = (
-	navigator.language.slice(0, 2) in labels
-		? navigator.language.slice(0, 2)
-		: "en"
-) as Locale;
-let model: View | undefined;
-let profile = "",
-	scope = "",
-	screen = 0,
-	generation = 0,
-	busy = false;
-let hits: readonly IndexHit[] = [],
-	query = "",
-	kind = "",
-	since = "",
-	limit = "10";
-let selected: { target: string; result: OpenEntry | OpenChildren } | undefined;
-let compact:
-	| {
-			job: string;
-			inputs: BuildInput[];
-			profile: string;
-			scope: string;
-			catalog: boolean;
-	  }
-	| undefined;
+const state = {
+	model: undefined as View | undefined,
+	profile: "",
+	scope: "",
+	screen: 0,
+	lang: "en" as Lang,
+	theme: "system" as Choice,
+	busy: false,
+	generation: 0,
+	selection: undefined as Selection | undefined,
+	hits: [] as readonly IndexHit[],
+	query: "",
+	kind: "",
+	since: "",
+	limit: "10",
+	searchScope: "",
+	job: undefined as Job | undefined,
+};
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Console root is absent");
-const status = element("div");
+const status = el("div");
 status.id = "status";
 status.setAttribute("role", "status");
 status.setAttribute("aria-live", "polite");
-const shell = element("div", "", "shell");
+const shell = el("div", "", "shell");
 app.append(status, shell);
-const t = (index: number) => labels[locale][index] ?? labels.en[index] ?? "";
-const address = (record: { scope: string; pos: number }) =>
-	`${record.scope}#${record.pos}`;
-const rangeAddress = (key: string, range: Range) =>
-	`${key}#${range.start}-${range.start + 2 ** range.level - 1}`;
-const age = (iso: string) =>
-	`${Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 86400000))} d`;
-const HUES = ["#46c98b", "#5b9dff", "#8b96a8", "#a78bfa", "#e0a54a", "#e0605e"];
-const hue = (key: string) => {
-	let hash = 0;
-	for (const item of key) hash = (hash * 31 + item.charCodeAt(0)) | 0;
-	return HUES[Math.abs(hash) % HUES.length] ?? "#8b96a8";
+const chosen = (key: string, fallback: string) => {
+	try {
+		return localStorage.getItem(key) ?? fallback;
+	} catch {
+		return fallback;
+	}
 };
+state.lang = language(chosen("memlens.lang", navigator.language));
+state.theme = theme(chosen("memlens.theme", "system"));
+let table: Table = messages(state.lang);
 
-function element<K extends keyof HTMLElementTagNameMap>(
+// #region BLOCK_helpers
+function el<K extends keyof HTMLElementTagNameMap>(
 	tag: K,
 	text = "",
 	className = "",
@@ -123,30 +117,28 @@ function element<K extends keyof HTMLElementTagNameMap>(
 	node.className = className;
 	return node;
 }
+const tr = (key: keyof Table, values: Record<string, string | number> = {}) =>
+	fill(table[key], values);
 function append(parent: HTMLElement, ...children: HTMLElement[]) {
 	parent.append(...children);
 	return parent;
 }
-function button(
-	text: string,
-	fn: () => unknown,
-	className = "",
-): HTMLButtonElement {
-	const node = element("button", text, `btn ${className}`.trim());
+function btn(text: string, fn: () => unknown, className = "") {
+	const node = el("button", text, `btn ${className}`.trim());
 	node.type = "button";
 	node.addEventListener("click", () => run(fn));
 	return node;
 }
 function input(value = "", type = "text") {
-	const node = element("input");
+	const node = el("input");
 	node.type = type;
 	node.value = value;
 	return node;
 }
-function select(values: readonly string[], value: string) {
-	const node = element("select");
+function select(values: readonly string[], value: string, label?: string) {
+	const node = el("select");
 	for (const item of values) {
-		const option = element("option", item || "All");
+		const option = el("option", label && !item ? label : item, "");
 		option.value = item;
 		node.append(option);
 	}
@@ -154,87 +146,116 @@ function select(values: readonly string[], value: string) {
 	return node;
 }
 function field(text: string, control: HTMLElement) {
-	const wrap = element("div", "", "field");
-	wrap.append(element("label", text), control);
+	const wrap = el("div", "", "field");
+	const label = el("label", text);
+	label.append(control);
+	wrap.append(label);
 	return wrap;
 }
 function pill(label: string, value: HTMLElement | string, warn = false) {
-	const node = element("span", "", warn ? "pill warn" : "pill");
-	node.append(element("span", label));
-	node.append(typeof value === "string" ? element("b", value) : value);
+	const node = el("span", "", warn ? "pill warn" : "pill");
+	node.append(
+		el("span", label, "k"),
+		typeof value === "string" ? el("b", value) : value,
+	);
 	return node;
 }
 function panel(title: string, right = "") {
-	const node = element("section", "", "panel");
-	const head = element("div", "", "head");
-	head.append(element("span", title, "t"));
-	if (right) head.append(element("span", right, "r"));
+	const node = el("section", "", "panel");
+	const head = el("div", "", "head");
+	head.append(el("span", title, "t"));
+	if (right) head.append(el("span", right, "r"));
 	node.append(head);
 	return node;
 }
 function kv(rows: [string, string][]) {
-	const node = element("div", "", "kv");
-	for (const [key, value] of rows) {
-		node.append(element("b", key), element("span", value));
+	const node = el("div", "", "kv");
+	for (const [key, value] of rows) node.append(el("b", key), el("span", value));
+	return node;
+}
+function tableOf(headers: string[], rows: (string | HTMLElement)[][]) {
+	const wrap = el("div", "", "table-wrap");
+	const node = el("table");
+	const head = el("tr");
+	for (const name of headers) head.append(el("th", name));
+	node.append(append(el("thead"), head));
+	const body = el("tbody");
+	for (const row of rows) {
+		const line = el("tr");
+		for (const cell of row) {
+			const td = el("td");
+			if (typeof cell === "string") td.textContent = cell;
+			else td.append(cell);
+			line.append(td);
+		}
+		body.append(line);
 	}
+	node.append(body);
+	wrap.append(node);
+	if (!rows.length) wrap.append(el("p", tr("none"), "muted"));
+	return wrap;
+}
+function meter(used: number, limit: number) {
+	const node = el("div", "", "meter");
+	const bar = el("i");
+	bar.style.width = `${Math.min(100, (100 * used) / Math.max(1, limit))}%`;
+	node.append(bar);
 	return node;
 }
-function tile(value: string, label: string, warn = false) {
-	const node = element("div", "", warn ? "tile warn" : "tile");
-	node.append(element("div", value, "n"), element("div", label, "l"));
-	return node;
+function icon(path: string) {
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("viewBox", "0 0 16 16");
+	svg.setAttribute("fill", "none");
+	svg.setAttribute("stroke", "currentColor");
+	svg.setAttribute("aria-hidden", "true");
+	const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
+	shape.setAttribute("d", path);
+	svg.append(shape);
+	return svg;
 }
-function bar(name: string, value: { used: number; limit: number }) {
-	const fill = element("i");
-	fill.style.width = `${Math.min(100, (100 * value.used) / Math.max(1, value.limit))}%`;
-	const node = element("div", "", "bar");
-	node.append(
-		element("span", name),
-		append(element("div", "", "track"), fill),
-		element("span", `${value.used} / ${value.limit}`),
-	);
-	return node;
-}
+const address = (record: { scope: string; pos: number }) =>
+	`${record.scope}#${record.pos}`;
+const rangeAddress = (key: string, range: Range) =>
+	`${key}#${range.start}-${range.start + 2 ** range.level - 1}`;
+const lineAddress = (key: string, line: SliceLine) =>
+	line.kind === "record" ? `${key}#${line.pos}` : rangeAddress(key, line.range);
+const kindName = (kind: NoteKind | "unavailable") =>
+	kind === "unavailable" ? tr("none") : tr(KIND_KEYS[kind] as keyof Table);
 function message(text: string, error = false) {
 	status.textContent = text;
 	status.className = error ? "error" : "";
 }
-async function run(fn: () => unknown) {
+function language(code: string): Lang {
+	const short = code.slice(0, 2) as Lang;
+	return LANGS.includes(short) ? short : "en";
+}
+function theme(code: string): Choice {
+	return code === "light" || code === "dark" ? code : "system";
+}
+function remember(key: string, value: string) {
 	try {
-		await fn();
-	} catch (error) {
-		console.debug("Console action failed", {
-			event: "error",
-			message: String(error),
-		});
-		message(error instanceof Error ? error.message : String(error), true);
+		localStorage.setItem(key, value);
+	} catch {
+		// A blocked storage keeps the choice for this page only.
 	}
 }
-function params(extra: Record<string, string> = {}) {
-	return new URLSearchParams({ profile, scope, ...extra }).toString();
+// #endregion BLOCK_helpers
+
+// #region FUNC_applyTheme
+/**
+ * @purpose Put the chosen theme on the page and follow the system setting.
+ * @invariants The attribute holds the resolved theme, so the stylesheet needs two palettes only.
+ * A system change repaints the page without a reload.
+ */
+function applyTheme(): void {
+	const dark =
+		state.theme === "dark" ||
+		(state.theme === "system" &&
+			window.matchMedia("(prefers-color-scheme: dark)").matches);
+	document.documentElement.dataset.theme = dark ? "dark" : "light";
+	console.debug("Console theme", { event: "theme", choice: state.theme, dark });
 }
-function table(headers: string[], rows: (string | HTMLElement)[][]) {
-	const wrap = element("div", "", "table-wrap"),
-		node = element("table");
-	const head = element("tr");
-	for (const name of headers) head.append(element("th", name));
-	node.append(append(element("thead"), head));
-	const body = element("tbody");
-	for (const row of rows) {
-		const tr = element("tr");
-		for (const cell of row) {
-			const td = element("td");
-			if (typeof cell === "string") td.textContent = cell;
-			else td.append(cell);
-			tr.append(td);
-		}
-		body.append(tr);
-	}
-	node.append(body);
-	wrap.append(node);
-	if (!rows.length) wrap.append(element("p", "No entries.", "muted body"));
-	return wrap;
-}
+// #endregion FUNC_applyTheme
 
 // #region FUNC_request
 /** @purpose Surface API errors and return successful JSON results. */
@@ -254,7 +275,7 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 	try {
 		value = text ? JSON.parse(text) : null;
 	} catch {
-		throw new Error(`HTTP ${response.status}: Invalid JSON response`);
+		throw new Error(`HTTP ${response.status}: invalid JSON`);
 	}
 	if (!response.ok)
 		throw new Error(
@@ -268,33 +289,31 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 
 // #region FUNC_action
 /** @purpose Apply one user action once and refresh its visible result. */
-async function action(
-	actionName: string,
-	extra: Record<string, unknown> = {},
-): Promise<unknown> {
-	if (busy) throw new Error("Another action is in progress.");
-	busy = true;
-	message("Saving…");
-	const context = { profile, scope };
+async function action(name: string, extra: Record<string, unknown> = {}) {
+	if (state.busy) throw new Error(tr("busyAction"));
+	state.busy = true;
+	message(tr("saving"));
 	try {
 		console.debug("Console action", {
 			event: "action",
-			action: actionName,
-			...context,
+			action: name,
+			profile: state.profile,
+			scope: state.scope,
 		});
 		const result = await request<unknown>("/api/action", {
-			...context,
-			action: actionName,
+			profile: state.profile,
+			scope: state.scope,
+			action: name,
 			...extra,
 		});
 		for (const dialog of document.querySelectorAll("dialog[open]"))
 			(dialog as HTMLDialogElement).close();
-		selected = undefined;
+		state.selection = undefined;
 		await reload();
-		message("Saved.");
+		message(tr("saved"));
 		return result;
 	} finally {
-		busy = false;
+		state.busy = false;
 	}
 }
 // #endregion FUNC_action
@@ -302,672 +321,602 @@ async function action(
 // #region FUNC_reload
 /** @purpose Refresh the console after a profile, scope, or store change. */
 async function reload(): Promise<void> {
-	const token = ++generation;
-	message("Loading…");
-	const value = await request<View>(`/api/view?${params()}`);
-	if (token !== generation) return;
-	if (!value || !Array.isArray(value.scopes) || !Array.isArray(value.records))
-		throw new Error("Invalid console response.");
-	model = value;
-	profile = value.profile;
-	scope = value.scope;
+	const token = ++state.generation;
+	message(tr("loading"));
+	const params = new URLSearchParams({
+		profile: state.profile,
+		scope: state.scope,
+	});
+	const view = await request<View>(`/api/view?${params.toString()}`);
+	if (token !== state.generation) return;
+	if (!view || !Array.isArray(view.scopes) || !Array.isArray(view.records))
+		throw new Error("The console gave an invalid view.");
+	state.model = view;
+	state.profile = view.profile;
+	state.scope = view.scope;
 	console.debug("Console loaded", {
 		event: "view",
-		profile,
-		scope,
-		records: value.records.length,
-		revision: value.revision,
+		profile: state.profile,
+		scope: state.scope,
+		records: view.records.length,
+		frontier: view.frontier.length,
+		revision: view.revision,
 	});
 	message("");
 	render();
 }
 // #endregion FUNC_reload
 
+// #region FUNC_run
+/** @purpose Keep one failed action from blocking the next one. */
+async function run(fn: () => unknown): Promise<void> {
+	try {
+		await fn();
+	} catch (error) {
+		console.debug("Console action failed", {
+			event: "error",
+			message: String(error),
+		});
+		message(error instanceof Error ? error.message : String(error), true);
+	}
+}
+// #endregion FUNC_run
+
 // #region FUNC_render
 /**
  * @purpose Keep the chrome and the current screen consistent with the latest model.
- * @invariants Show the profile, backend, dirty ranges, and both budgets in the header.
- * Show seven numbered screens, scopes, and scope actions in the rail. Disable delete without host permission.
- * Show the store path, revision, and unavailable session and writer state in the footer.
+ * @invariants The header holds the profile, the language, the theme, the here budget, and the create
+ * action. The rail holds the seven screens and the scopes. The footer holds the store, the revision,
+ * and the backend.
  */
 function render(): void {
-	if (!model) return;
-	document.documentElement.lang = locale;
+	if (!state.model) return;
+	const model = state.model;
+	table = messages(state.lang);
+	document.documentElement.lang = state.lang;
+	document.title = tr("title");
+	const skip = document.querySelector<HTMLAnchorElement>(".skip");
+	if (skip) skip.textContent = tr("skip");
 	shell.replaceChildren();
-	const header = append(element("header"), element("div", "", "brand"));
-	header.firstElementChild?.append(element("b", "memlens"));
-	const profiles = select(model.profiles, profile);
-	profiles.onchange = () =>
-		run(async () => {
-			profile = profiles.value;
-			await reset("");
-		});
-	const languages = select(Object.keys(labels), locale);
-	languages.setAttribute("aria-label", "Language");
-	languages.onchange = () => {
-		locale = languages.value as Locale;
-		render();
-	};
-	const profilePill = pill(t(11), profiles);
-	header.append(
-		profilePill,
-		pill("backend", model.backend),
-		pill("lang", languages),
-	);
-	if (model.candidates.length)
-		header.append(pill("dirty", String(model.candidates.length), true));
-	const meter = element("div", "", "meter");
-	const hereFill = element("i");
-	hereFill.style.background = "#5b9dff";
-	hereFill.style.width = `${Math.min(100, (100 * model.budgets.here.used) / Math.max(1, model.budgets.here.limit))}%`;
-	meter.append(hereFill);
-	const meterLabel = append(
-		element("div", "", "meter-lbl"),
-		element(
-			"span",
-			`here ${model.budgets.here.used} / ${model.budgets.here.limit} lines`,
-		),
-		meter,
-	);
-	header.append(element("span", "", "hspacer"), meterLabel);
-	const create = button(t(7), () => noteDialog(), "pri");
-	header.append(create);
-	const layout = element("div", "", "layout"),
-		rail = element("aside");
-	const nav = element("nav");
-	nav.setAttribute("aria-label", "Screens");
-	rail.append(element("div", "View", "rail-title"));
-	for (let index = 0; index < 7; index++) rail.append(navItem(index));
-	rail.append(element("div", "", "rail-sep"));
-	const scopeList = append(
-		element("div"),
-		element("div", "Scopes", "rail-title"),
-	);
-	const scopes = element("div", "", "scopes");
-	scopes.setAttribute("aria-label", "Scopes");
-	for (const item of model.scopes) {
-		const dot = element("i");
-		dot.style.background = hue(item.key);
-		const node = append(
-			button(
-				"",
-				async () => {
-					await reset(item.key);
-				},
-				item.key === scope ? "sc on" : "sc",
-			),
-			dot,
-		);
-		node.append(document.createTextNode(item.key));
-		node.title = item.key;
-		scopes.append(node);
-	}
-	scopeList.append(scopes);
-	rail.append(
-		scopeList,
-		element("div", "", "rail-sep"),
-		element("div", "Actions", "rail-title"),
-		railAction("M8 3v10M3 8h10", t(8), () => noteDialog(undefined, "", true)),
-		railAction("M3 8h10", t(9), () => scopeAction(false)),
-		railAction("M4 4l8 8M12 4l-8 8", t(10), () => scopeAction(true), true),
-	);
-	const main = element("main");
-	main.id = "main";
-	main.tabIndex = -1;
-	main.append(element("h1", t(screen)));
-	const screens = [
-		renderDirections,
-		renderTree,
-		renderMap,
-		renderSearch,
-		renderReview,
-		renderProposals,
-		renderMaintenance,
-	];
-	screens[screen]?.(main);
-	layout.append(rail, main);
-	shell.append(
-		header,
-		layout,
-		append(
-			element("footer"),
-			element("span", model.path),
-			element("span", `rev ${model.revision.slice(0, 12)}`),
-			element("span", "session snapshot: unavailable"),
-			element("span", "writer: unavailable", "fill"),
-		),
-	);
+	shell.append(header(model), layout(model), footer(model));
 }
 // #endregion FUNC_render
 
-function navItem(index: number) {
-	const node = button(
-		"",
-		() => {
-			screen = index;
-			render();
-		},
-		screen === index ? "nav on" : "nav",
+function header(model: View) {
+	const node = el("header");
+	const brand = el("div", "", "brand");
+	brand.append(el("b", "memlens"));
+	const profiles = select(model.profiles, state.profile);
+	profiles.id = "profile";
+	profiles.onchange = () =>
+		run(async () => {
+			state.profile = profiles.value;
+			await reset("");
+		});
+	const langs = select([...LANGS], state.lang, "");
+	for (const option of langs.options)
+		option.textContent = LANG_NAMES[option.value as Lang] ?? option.value;
+	langs.id = "lang";
+	langs.onchange = () => {
+		state.lang = language(langs.value);
+		remember("memlens.lang", state.lang);
+		render();
+	};
+	const themes = select(["system", "light", "dark"], state.theme, "");
+	themes.id = "theme";
+	for (const option of themes.options)
+		option.textContent = tr(
+			`theme${option.value[0]?.toUpperCase()}${option.value.slice(1)}` as keyof Table,
+		);
+	themes.onchange = () => {
+		state.theme = theme(themes.value);
+		remember("memlens.theme", state.theme);
+		applyTheme();
+	};
+	const budget = el("div", "", "budget");
+	budget.append(
+		el(
+			"span",
+			tr("lines", {
+				used: model.budgets.here.used,
+				limit: model.budgets.here.limit,
+			}),
+		),
+		meter(model.budgets.here.used, model.budgets.here.limit),
 	);
-	if (screen === index) node.setAttribute("aria-current", "page");
-	node.append(icon(icons[index] ?? ""), element("span", t(index)));
-	node.append(element("span", String(index + 1), "kbd"));
+	node.append(
+		brand,
+		pill(tr("profile"), profiles),
+		pill(tr("language"), langs),
+		pill(tr("theme"), themes),
+		pill(tr("backend"), model.backend),
+	);
+	if (model.candidates.length)
+		node.append(pill(tr("dirty"), String(model.candidates.length), true));
+	node.append(
+		el("span", "", "hspacer"),
+		budget,
+		btn(tr("newRecord"), noteDialog, "pri"),
+	);
 	return node;
 }
-function railAction(
-	path: string,
-	text: string,
-	fn: () => unknown,
-	danger = false,
-) {
-	const node = button("", fn, `nav${danger ? " danger" : ""}`);
-	node.append(icon(path), element("span", text));
+
+function layout(model: View) {
+	const rail = el("aside");
+	const nav = el("nav");
+	nav.setAttribute("aria-label", tr("screens"));
+	const titles = [
+		tr("nav0"),
+		tr("nav1"),
+		tr("nav2"),
+		tr("nav3"),
+		tr("nav4"),
+		tr("nav5"),
+		tr("nav6"),
+	];
+	for (let index = 0; index < titles.length; index++) {
+		const item = btn(
+			"",
+			() => {
+				state.screen = index;
+				render();
+			},
+			state.screen === index ? "nav on" : "nav",
+		);
+		if (state.screen === index) item.setAttribute("aria-current", "page");
+		item.append(icon(ICONS[index] ?? ""), el("span", titles[index] ?? ""));
+		nav.append(item);
+	}
+	const scopes = el("div", "", "scopes");
+	scopes.setAttribute("aria-label", tr("scopes"));
+	for (const item of model.scopes)
+		scopes.append(
+			btn(
+				item.key,
+				() => reset(item.key),
+				item.key === state.scope ? "sc on" : "sc",
+			),
+		);
+	rail.append(
+		el("div", tr("screens"), "rail-title"),
+		nav,
+		el("div", tr("scopes"), "rail-title"),
+		scopes,
+	);
+	const main = el("main");
+	main.id = "main";
+	main.tabIndex = -1;
+	main.append(el("h1", titles[state.screen] ?? ""));
+	const screens = [
+		overview,
+		tree,
+		catalog,
+		search,
+		review,
+		proposals,
+		maintenance,
+	];
+	screens[state.screen]?.(main, model);
+	const body = el("div", "", "layout");
+	body.append(rail, main);
+	return body;
+}
+
+function footer(model: View) {
+	const node = el("footer");
+	node.append(
+		el("span", `${tr("store")}: ${model.path}`),
+		el("span", `${tr("revision")}: ${model.revision.slice(0, 12)}`),
+		el("span", `${tr("backend")}: ${model.backend}`),
+	);
 	return node;
 }
-function icon(path: string) {
-	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-	svg.setAttribute("viewBox", "0 0 16 16");
-	svg.setAttribute("fill", "none");
-	svg.setAttribute("stroke", "currentColor");
-	svg.setAttribute("aria-hidden", "true");
-	const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
-	shape.setAttribute("d", path);
-	svg.append(shape);
-	return svg;
-}
+
 async function reset(nextScope: string) {
-	scope = nextScope;
-	selected = undefined;
-	hits = [];
+	state.scope = nextScope;
+	state.selection = undefined;
+	state.hits = [];
+	state.job = undefined;
 	await reload();
 }
 
-// #region FUNC_renderDirections
+// #region FUNC_overview
 /**
- * @purpose Show each visible scope as a card and the assembled slice text below.
- * @invariants Keep empty scope cards with their four counts. Mark the selected scope. Quote the slice as text.
+ * @purpose Show each visible scope as one card and the assembled slice below.
+ * @invariants Keep a card for a scope with no live note. Quote the slice as text.
  */
-function renderDirections(main: HTMLElement): void {
-	if (!model) return;
-	main.append(
-		element(
-			"p",
-			"Session snapshot, materialization time, and the next trigger are unavailable in the standalone console.",
-			"sub",
-		),
-	);
-	const cards = element("div", "", "grid cards");
+function overview(main: HTMLElement, model: View): void {
+	main.append(el("p", tr("ovText"), "sub"));
+	const cards = el("div", "", "cards");
 	for (const item of model.scopes) {
-		const card = element(
+		const card = el(
 			"section",
 			"",
-			item.key === scope ? "card active" : "card",
+			item.key === state.scope ? "card active" : "card",
 		);
-		if (item.key === scope) card.append(element("span", "active", "tag"));
-		card.append(element("div", item.key, "key"));
-		const mini = element("div", "", "mini");
-		const lines = item.frontier.split("\n").filter(Boolean);
-		if (lines.length)
-			for (const line of lines.slice(0, 3)) {
-				const row = element("div");
-				const at = line.indexOf(" ");
-				row.append(
-					element("b", at > 0 ? line.slice(0, at) : line),
-					document.createTextNode(at > 0 ? line.slice(at) : ""),
-				);
-				mini.append(row);
-			}
-		else mini.append(element("div", "no frontier text"));
-		const stats = element("div", "", "stats");
+		const head = el("div", "", "card-head");
+		head.append(el("span", item.key, "key"));
+		if (item.key === state.scope) head.append(el("span", tr("live"), "tag"));
+		const stats = el("div", "", "stats");
 		for (const [name, value] of [
-			["total", item.total],
-			["live", item.live],
-			["hidden", item.hidden],
-			["deleted", item.deleted],
+			[tr("live"), item.live],
+			[tr("hidden"), item.hidden],
+			[tr("deleted"), item.deleted],
 		] as const)
-			stats.append(element("span", `${value} ${name}`));
+			stats.append(el("span", `${value} ${name}`, ""));
+		const lines = item.frontier.split("\n").filter(Boolean);
+		const mini = el("div", "", "mini");
+		for (const text of lines.slice(0, 3)) mini.append(el("div", text, ""));
+		if (!lines.length) mini.append(el("div", tr("noFrontier"), "muted"));
 		card.append(
-			mini,
+			head,
 			stats,
-			button("Open scope", async () => {
-				await reset(item.key);
-			}),
+			mini,
+			btn(tr("openScope"), () => reset(item.key)),
 		);
 		cards.append(card);
 	}
 	main.append(cards);
 	const slice = panel(
-		"<memory> · assembled slice",
-		`${model.budgets.here.used} lines here`,
+		tr("slice"),
+		tr("lines", {
+			used: model.budgets.here.used,
+			limit: model.budgets.here.limit,
+		}),
 	);
-	const body = element("div", "", "body");
-	const text = element("pre", model.text, "slice");
-	body.append(text);
-	slice.append(body);
+	const text = el("pre", model.text, "slice");
+	slice.append(text);
 	main.append(slice);
 }
-// #endregion FUNC_renderDirections
+// #endregion FUNC_overview
 
-// #region FUNC_renderTree
+// #region FUNC_tree
 /**
- * @purpose Show the frontier lines beside one inspector panel.
- * @invariants Coverage marks clean, dirty, and outside ranges. A range line opens its two children.
- * A record line opens the note inspector. The selected line stays marked.
+ * @purpose Show the frontier of the selected scope beside the inspector.
+ * @invariants Draw every line from the model frontier. A range line opens its children, and a note
+ * line opens its record. A temporary line shows its period only.
  */
-function renderTree(main: HTMLElement): void {
-	if (!model) return;
+function tree(main: HTMLElement, model: View): void {
 	const heading = main.querySelector("h1");
-	if (heading) heading.textContent = `${t(1)} · ${scope}`;
-	main.append(
-		element(
-			"p",
-			"Click a range line to open its two children. Click a record line to inspect the note.",
-			"sub",
-		),
-	);
-	const nodes = model.nodes
-		.filter((item) => item.scope === scope)
-		.sort(
-			(a, b) =>
-				b.node.range.level - a.node.range.level ||
-				a.node.range.start - b.node.range.start,
-		);
+	if (heading) heading.textContent = `${tr("nav1")} · ${state.scope}`;
+	main.append(el("p", tr("treeText"), "sub"));
+	const lines = model.frontier;
 	const live = model.records.filter(
-		(record) => record.scope === scope && record.state === "live",
+		(record) => record.scope === state.scope && record.state === "live",
 	);
-	const covered = (pos: number) =>
-		nodes.some(
-			(item) =>
-				item.clean &&
-				pos >= item.node.range.start &&
-				pos < item.node.range.start + 2 ** item.node.range.level,
-		);
-	const outside = live.filter((record) => !covered(record.pos));
-	const frontier = panel(
-		"Frontier",
-		`${nodes.length} nodes · ${live.length} live`,
+	const panelNode = panel(
+		tr("frontier"),
+		tr("frontierMeta", { ranges: lines.length, live: live.length }),
 	);
-	const body = element("div", "", "body");
-	const coverage = element("div", "", "coverage");
-	for (const item of nodes) {
-		const cell = element("i", "", item.clean ? "b" : "d");
-		cell.title = `${rangeAddress(item.scope, item.node.range)} · ${item.clean ? "clean" : "dirty"}`;
-		coverage.append(cell);
+	const strip = el("div", "", "coverage");
+	const legend = el("div", "", "legend");
+	for (const kind of ["record", "summary", "temporary"] as const) {
+		const name =
+			kind === "record"
+				? tr("record")
+				: kind === "summary"
+					? tr("clean")
+					: tr("pending");
+		strip.append(el("i", "", kind[0] ?? ""));
+		legend.append(el("span", name, `lg ${kind[0] ?? ""}`));
 	}
-	for (const record of outside) {
-		const cell = element("i");
-		cell.title = `${address(record)} · outside`;
-		coverage.append(cell);
-	}
-	body.append(
-		coverage,
-		append(
-			element("div", "", "legend"),
-			element("span", "clean", "lr"),
-			element("span", "dirty", "ld"),
-			element("span", "outside"),
-		),
-	);
-	for (const item of nodes) {
-		const target = rangeAddress(item.scope, item.node.range);
-		const line = frontierLine(
-			target,
-			item.node.summary,
-			item.node.chars,
-			item.node.range.level,
-		);
-		if (!item.clean) line.classList.add("pending");
-		if (selected?.target === target) line.classList.add("sel");
-		body.append(line);
-	}
-	for (const record of live) {
-		const target = address(record);
-		const line = frontierLine(
-			target,
-			record.body,
-			record.body.length,
-			0,
-			`line${outside.some((item) => item.pos === record.pos) ? " dim" : ""}`,
-		);
-		if (selected?.target === target) line.classList.add("sel");
-		body.append(line);
-	}
-	frontier.append(body);
-	const layout = element("div", "", "split");
-	layout.append(frontier, inspector());
-	main.append(layout);
-	if (selected?.result.kind === "children")
-		renderKids(main, selected.target, selected.result);
+	panelNode.append(strip, legend);
+	const list = el("div", "", "lines");
+	for (const line of lines) list.append(frontierLine(state.scope, line));
+	if (!lines.length) list.append(el("p", tr("noFrontier"), "muted"));
+	panelNode.append(list);
+	const children =
+		state.selection?.result.kind === "children"
+			? childrenPanel(state.selection.target, state.selection.result)
+			: undefined;
+	const column = el("div", "", "column");
+	if (children) column.append(children);
+	const split = el("div", "", "split");
+	split.append(panelNode, inspector());
+	main.append(split, column);
 }
-// #endregion FUNC_renderTree
+// #endregion FUNC_tree
 
-function frontierLine(
-	target: string,
-	text: string,
-	chars: number,
-	level: number,
-	extra = "",
-) {
-	const node = button(
-		"",
-		() => openTarget(target),
-		`line l${Math.min(level, 5)}${extra}`,
-	);
+function frontierLine(key: string, line: SliceLine) {
+	const target = lineAddress(key, line);
+	const text =
+		line.kind === "record"
+			? line.body
+			: line.kind === "summary"
+				? line.summary
+				: "";
+	const node = btn("", () => openTarget(target), `line ${line.kind[0] ?? ""}`);
+	node.append(el("span", target, "id"));
 	node.append(
-		element("span", target, "id"),
-		element("span", text || "not summarized yet", "tx"),
-		element("span", `${chars}`, "len"),
-	);
-	node.title = text;
-	return node;
-}
-function renderKids(main: HTMLElement, target: string, result: OpenChildren) {
-	const kids = panel(`Children · ${target}`, `${result.children.length} lines`);
-	const body = element("div", "", "body");
-	for (const child of result.children) body.append(childLine(child));
-	kids.append(body);
-	main.append(kids);
-}
-function childLine(child: OpenLine) {
-	const node = button("", () => openTarget(child.addr), "line range");
-	node.append(
-		element("span", child.addr, "id"),
-		element(
+		el(
 			"span",
-			child.built ? child.text : `${child.ts_from} → ${child.ts_to}`,
+			text || `${line.from.slice(0, 10)} → ${line.to.slice(0, 10)}`,
 			"tx",
 		),
-		element("span", String(child.chars), "len"),
+	);
+	if (line.kind === "temporary") node.classList.add("pending");
+	if (state.selection?.target === target) node.classList.add("sel");
+	node.title = text || tr("notBuilt");
+	return node;
+}
+
+function childrenPanel(target: string, result: OpenChildren) {
+	const node = panel(
+		`${tr("children")} · ${target}`,
+		String(result.children.length),
+	);
+	const list = el("div", "", "lines");
+	for (const child of result.children) list.append(childLine(child));
+	node.append(list);
+	return node;
+}
+
+function childLine(child: OpenLine) {
+	const node = btn("", () => openTarget(child.addr), "line");
+	node.append(el("span", child.addr, "id"));
+	node.append(
+		el(
+			"span",
+			child.built
+				? child.text
+				: `${child.ts_from.slice(0, 10)} → ${child.ts_to.slice(0, 10)}`,
+			"tx",
+		),
 	);
 	if (!child.built) node.classList.add("pending");
-	node.title = child.text;
+	node.title = child.built ? child.text : tr("notBuilt");
 	return node;
 }
 
 // #region FUNC_inspector
 /**
- * @purpose Show the selected note or range with provenance and record actions in one panel.
- * @invariants Quote the body and the document as text. Show the provenance keys. Disable delete without host permission.
+ * @purpose Show the selected note or range with its provenance and its record actions.
+ * @invariants Put the body and the document into text nodes. Disable delete without host permission.
  */
 function inspector(): HTMLElement {
 	const node = panel(
-		selected?.target ?? "Inspector",
-		selected ? "" : "select a line",
+		state.selection
+			? `${tr("inspector")} · ${state.selection.target}`
+			: tr("inspector"),
 	);
 	node.classList.add("ins");
-	if (!selected) {
-		node.append(
-			append(
-				element("div", "", "body"),
-				element(
-					"p",
-					"Click a frontier line, a record, or a search hit to open it here.",
-					"muted",
-				),
-			),
-		);
+	if (!state.selection) {
+		node.append(el("p", tr("selectLine"), "muted"));
 		return node;
 	}
-	const { result } = selected;
-	const body = element("div", "", "body");
+	const { result } = state.selection;
 	if (result.kind === "children") {
-		body.append(element("p", "This range has no built summary.", "muted"));
-		for (const child of result.children) body.append(childLine(child));
-		node.append(body);
+		node.append(el("p", tr("noSummary"), "muted"));
 		return node;
 	}
-	const record = model?.records.find((item) => item.id === result.id);
-	const head = node.querySelector(".head .t");
-	if (head) head.textContent = result.addr;
-	const quote = element("div", "", "quote");
+	const record = state.model?.records.find((item) => item.id === result.id);
+	const quote = el("div", "", "quote");
 	quote.append(document.createTextNode(result.body));
-	if (result.longform) quote.append(element("div", result.longform, "bodydoc"));
-	body.append(quote);
-	if (result.longformTruncated)
-		body.append(
-			element(
-				"p",
-				`The document is partial: ${result.longformOffset} of ${result.longformChars} characters. Select its scope to edit this record.`,
-				"banner",
-			),
-		);
-	body.append(element("div", "Provenance", "lbl"));
-	body.append(
+	if (result.longform) quote.append(el("div", result.longform, "doc"));
+	node.append(quote);
+	node.append(
 		kv([
-			["id", result.id],
-			["ts", result.ts],
-			["kind", record?.kind ?? "unavailable"],
-			["session", record?.session ?? "unavailable"],
-			["preset", record?.preset ?? "unavailable"],
-			["refs", result.refs.join(", ") || "none"],
-			["supersedes", record?.supersedes.join(", ") || "none"],
-			["superseded by", record?.superseded_by ?? "none"],
-			["review at", result.review_at ?? "none"],
+			[tr("id"), result.id],
+			[tr("time"), result.ts],
+			[tr("kind"), kindName(record?.kind ?? "unavailable")],
+			[tr("session"), record?.session ?? tr("none")],
+			[tr("preset"), record?.preset ?? tr("none")],
+			[tr("refs"), result.refs.join(", ") || tr("none")],
+			[tr("supersedes"), record?.supersedes.join(", ") || tr("none")],
+			[tr("supersededBy"), record?.superseded_by ?? tr("none")],
+			[tr("reviewAt"), result.review_at ?? tr("none")],
 		]),
 	);
-	body.append(recordActions(result.addr, record));
-	body.append(
-		append(
-			element("div", "", "actions"),
-			button("Copy the id", async () => {
-				await navigator.clipboard.writeText(result.id);
-				message("ID copied.");
-			}),
-			button("Open in the tree", async () => {
-				if (scope !== result.scope) await reset(result.scope);
-				screen = 1;
-				render();
-			}),
-		),
+	node.append(recordActions(result.addr, record));
+	const extra = el("div", "", "actions");
+	extra.append(
+		btn(tr("copyId"), async () => {
+			await navigator.clipboard.writeText(result.id);
+			message(tr("copied"));
+		}),
 	);
-	node.append(body);
+	if (state.screen !== 1)
+		extra.append(btn(tr("openInTree"), () => openInTree(result.addr)));
+	node.append(extra);
 	return node;
 }
 // #endregion FUNC_inspector
 
 function recordActions(target: string, record?: ProjectionRecord) {
-	const row = element("div", "", "actions");
+	const row = el("div", "", "actions");
 	row.append(
-		button("Reviewed", () => action("review", { target })),
-		button("Amend", () => editTarget(target, false)),
-		button("Supersede", () => editTarget(target, true)),
-		button("Forget", async () => {
-			if (confirm(`Forget ${target}?`)) await action("forget", { target });
+		btn(tr("actReviewed"), () => action("review", { target })),
+		btn(tr("actAmend"), () => editTarget(target, false)),
+		btn(tr("actSupersede"), () => editTarget(target, true)),
+		btn(tr("actForget"), async () => {
+			if (confirm(tr("confirmForget", { target })))
+				await action("forget", { target });
 		}),
 	);
-	const remove = button(
-		"Delete",
+	const remove = btn(
+		tr("actDelete"),
 		async () => {
-			if (confirm(`Permanently erase the content of ${target}?`))
+			if (confirm(tr("confirmDelete", { target })))
 				await action("delete", { target, confirm: true });
 		},
 		"danger",
 	);
-	remove.disabled = !model?.allowDelete || record?.state === "deleted";
+	remove.disabled = !state.model?.allowDelete || record?.state === "deleted";
 	row.append(remove);
 	return row;
 }
+
 async function editTarget(target: string, supersede: boolean) {
-	const record = model?.records.find((item) => address(item) === target);
+	const record = state.model?.records.find((item) => address(item) === target);
 	if (record) {
 		noteDialog(record, supersede ? target : "");
 		return;
 	}
 	const result = await request<OpenEntry | OpenChildren>(
-		`/api/open?${params({ target })}`,
+		`/api/open?${new URLSearchParams({ profile: state.profile, scope: state.scope, target })}`,
 	);
-	if (result.kind !== "entry") throw new Error("Select a record.");
-	if (result.longformTruncated)
-		throw new Error(
-			"The document is partial. Select its scope before you edit this record.",
-		);
+	if (result.kind !== "entry") throw new Error(tr("selectLine"));
 	noteDialog(result, supersede ? target : "");
 }
 
 // #region FUNC_openTarget
 /** @purpose Expand a range or inspect a note, and keep the selection for the inspector. */
 async function openTarget(target: string): Promise<void> {
-	const token = generation;
+	const token = state.generation;
 	const result = await request<OpenEntry | OpenChildren>(
-		`/api/open?${params({ target })}`,
+		`/api/open?${new URLSearchParams({ profile: state.profile, scope: state.scope, target })}`,
 	);
-	if (token !== generation) return;
+	if (token !== state.generation) return;
 	console.debug("Console target opened", {
 		event: "open",
 		target,
 		kind: result.kind,
 	});
-	selected = { target, result };
-	if (result.kind === "children" && screen !== 1 && screen !== 3) screen = 1;
+	state.selection = { target, result };
 	render();
 }
 // #endregion FUNC_openTarget
 
-// #region FUNC_renderMap
-/** @purpose Show the catalog lines as a timeline beside the catalog nodes and their budget. */
-function renderMap(main: HTMLElement): void {
-	if (!model) return;
-	main.append(
-		element(
-			"p",
-			"Catalog lines use the shared directions budget. The rule that reduces old node groups is not exposed by this API.",
-			"sub",
-		),
+// #region FUNC_openInTree
+/** @purpose Select the tree screen and open one record in its inspector. */
+async function openInTree(target: string): Promise<void> {
+	await openTarget(target);
+	state.screen = 1;
+	render();
+}
+// #endregion FUNC_openInTree
+
+// #region FUNC_catalog
+/**
+ * @purpose Show the catalog lines of the visible scopes with the directions budget.
+ * @invariants The panel holds the direction lines of the model, so each line names its scope.
+ * State no rule that the store does not hold.
+ */
+function catalog(main: HTMLElement, model: View): void {
+	main.append(el("p", tr("catText"), "sub"));
+	const lines = panel(
+		tr("catLines"),
+		tr("lines", {
+			used: model.budgets.directions.used,
+			limit: model.budgets.directions.limit,
+		}),
 	);
-	const layout = element("div", "", "split");
-	const list = panel(
-		"Catalog frontier",
-		`${model.budgets.directions.used} / ${model.budgets.directions.limit} lines`,
-	);
-	const body = element("div", "", "body");
-	const timeline = element("div", "", "timeline");
-	for (const line of model.catalog) {
-		const row = element("div", "", "tl");
-		const label =
-			line.kind === "record"
-				? `#${line.pos}`
-				: `#${line.range.start}-${line.range.start + 2 ** line.range.level - 1}`;
-		const when = element("div", "", "when");
-		when.append(
-			document.createTextNode(`${label} `),
-			element("span", `${line.from.slice(0, 10)} → ${line.to.slice(0, 10)}`),
-		);
-		const what = element("div", "", "what");
-		const text =
-			line.kind === "record"
-				? line.body
-				: line.kind === "summary"
-					? line.summary
-					: "";
-		what.append(text || element("span", "unbuilt range", "dim"));
-		row.append(when, what);
-		timeline.append(row);
-	}
-	if (!model.catalog.length)
-		body.append(element("p", "The catalog is empty.", "muted"));
-	body.append(timeline);
-	list.append(body);
+	const pre = el("pre", model.directions, "slice");
+	if (!model.directions) pre.textContent = tr("emptyCatalog");
+	lines.append(pre, bar("directions", model.budgets.directions));
 	const nodes = model.nodes.filter((item) =>
 		item.scope.startsWith("__catalog__:"),
 	);
-	const detail = panel("Catalog nodes", String(nodes.length));
-	const detailBody = append(
-		element("div", "", "body"),
-		bar("directions", model.budgets.directions),
-		element("div", "", "rail-sep"),
-		table(
-			["Range", "Dates", "Chars", "State"],
+	const detail = panel(tr("catNodes"), String(nodes.length));
+	detail.append(
+		tableOf(
+			[tr("range"), tr("dates"), tr("chars"), tr("state")],
 			nodes.map((item) => [
 				rangeAddress(item.scope, item.node.range),
-				`${item.node.ts_from} → ${item.node.ts_to}`,
+				`${item.node.ts_from.slice(0, 10)} → ${item.node.ts_to.slice(0, 10)}`,
 				String(item.node.chars),
-				item.clean ? "clean" : "dirty",
+				item.clean ? tr("clean") : tr("dirty"),
 			]),
 		),
 	);
-	detail.append(detailBody);
-	layout.append(list, detail);
-	main.append(layout);
+	const split = el("div", "", "split");
+	split.append(lines, detail);
+	main.append(split);
 }
-// #endregion FUNC_renderMap
+// #endregion FUNC_catalog
 
-// #region FUNC_renderSearch
+// #region FUNC_search
 /**
- * @purpose Keep search filters explicit and highlight query words without HTML injection.
- * @invariants Show the hit count. Open one hit in the inspector beside the result list.
+ * @purpose Find notes by words in one scope or in every visible scope.
+ * @invariants The default scope filter is every visible scope. Show the hit count and keep the
+ * selection beside the results.
  */
-function renderSearch(main: HTMLElement): void {
-	if (!model) return;
-	const words = input(query);
+function search(main: HTMLElement, model: View): void {
+	main.append(el("p", tr("searchText"), "sub"));
+	const words = input(state.query);
 	words.spellcheck = false;
+	words.placeholder = tr("searchText");
 	const scopes = select(
-		model.scopes.map((item) => item.key),
-		scope,
+		["", ...model.scopes.map((item) => item.key)],
+		state.searchScope,
+		tr("allScopes"),
 	);
-	const kinds = select(
-		["", "decision", "preference", "fact", "task", "note"],
-		kind,
-	);
-	const date = input(since, "date");
-	const cap = input(limit, "number");
+	const kinds = select(["", ...KINDS], state.kind, tr("allKinds"));
+	for (const option of kinds.options)
+		option.textContent = option.value
+			? tr(KIND_KEYS[option.value as NoteKind] as keyof Table)
+			: tr("allKinds");
+	const date = input(state.since, "date");
+	const cap = input(state.limit, "number");
 	cap.min = "1";
 	cap.max = "50";
-	const find = button("Find", search, "pri");
-	const searchbar = element("div", "", "searchbar");
-	searchbar.append(words, find);
+	const find = btn(tr("find"), search, "pri");
+	const bar = el("div", "", "searchbar");
+	bar.append(words, find);
 	words.addEventListener("keydown", (event) => {
 		if (event.key === "Enter") run(search);
 	});
 	async function search() {
-		query = words.value;
-		kind = kinds.value;
-		since = date.value;
-		limit = cap.value;
-		const token = generation;
-		const found = await request<IndexHit[]>(
-			`/api/search?${params({ scope: scopes.value, query, kind, since, limit })}`,
-		);
-		if (token !== generation) return;
-		hits = found;
-		console.debug("Console search", { event: "search", hits: hits.length });
+		state.query = words.value.trim();
+		state.kind = kinds.value;
+		state.since = date.value;
+		state.limit = cap.value;
+		state.searchScope = scopes.value;
+		if (!state.query) {
+			message(tr("searchHint"));
+			return;
+		}
+		const token = state.generation;
+		const params = new URLSearchParams({
+			profile: state.profile,
+			scope: state.searchScope,
+			query: state.query,
+			kind: state.kind,
+			since: state.since,
+			limit: state.limit,
+		});
+		const found = await request<IndexHit[]>(`/api/search?${params.toString()}`);
+		if (token !== state.generation) return;
+		state.hits = found;
+		console.debug("Console search", { event: "search", hits: found.length });
 		render();
 	}
-	const filters = element("div", "", "filters");
+	const filters = el("div", "", "filters");
 	for (const [name, control] of [
-		["scope", scopes],
-		["kind", kinds],
-		["since", date],
-		["limit", cap],
+		[tr("scope"), scopes],
+		[tr("kindLabel"), kinds],
+		[tr("since"), date],
+		[tr("limit"), cap],
 	] as const) {
-		const wrap = element("label");
-		wrap.append(element("span", name), control);
+		const wrap = el("label", "", "");
+		wrap.append(el("span", name), control);
 		filters.append(wrap);
 	}
-	main.append(searchbar, filters);
-	const layout = element("div", "", "split");
+	main.append(bar, filters);
 	const list = panel(
-		`${hits.length} matches`,
-		`${scopes.value || "all scopes"}`,
+		tr("matches", { count: state.hits.length }),
+		state.searchScope || tr("allScopes"),
 	);
-	for (const hit of hits) {
-		const node = button("", () => openTarget(hit.addr), "hit");
+	for (const hit of state.hits) {
+		const node = btn("", () => openTarget(hit.addr), "hit");
 		node.append(
-			element("span", hit.addr, "id"),
-			element("span", hit.kind, "kind"),
+			el("span", hit.addr, "id"),
+			el("span", kindName(hit.kind), "kind"),
 			highlight(hit.body),
-			element("span", hit.ts.slice(0, 10), "when"),
+			el("span", hit.ts.slice(0, 10), "when"),
 		);
 		list.append(node);
 	}
-	if (!hits.length) list.append(element("p", "No matches yet.", "muted body"));
-	layout.append(list, inspector());
-	main.append(layout);
+	if (!state.hits.length) list.append(el("p", tr("noMatches"), "muted"));
+	const split = el("div", "", "split");
+	split.append(list, inspector());
+	main.append(split);
 }
-// #endregion FUNC_renderSearch
+// #endregion FUNC_search
 
 function highlight(body: string) {
-	const node = element("span", "", "tx");
-	const tokens = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+	const node = el("span", "", "tx");
+	const tokens = state.query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
 	const lower = body.toLocaleLowerCase();
 	let offset = 0;
 	while (offset < body.length) {
@@ -981,326 +930,308 @@ function highlight(body: string) {
 		}
 		node.append(
 			document.createTextNode(body.slice(offset, match.at)),
-			element("mark", body.slice(match.at, match.at + match.word.length)),
+			el("mark", body.slice(match.at, match.at + match.word.length)),
 		);
 		offset = match.at + match.word.length;
 	}
 	return node;
 }
 
-// #region FUNC_renderReview
-/** @purpose List the due records with their review dates, periods, and record actions. */
-function renderReview(main: HTMLElement): void {
-	if (!model) return;
-	main.append(
-		element(
-			"p",
-			"Review work is for a human. These records stay out of the session slice.",
-			"sub",
-		),
-	);
-	const list = panel(`Due · ${model.review.length}`, "review_at <= today");
+// #region FUNC_review
+/** @purpose List the due notes with their review dates and the record actions. */
+function review(main: HTMLElement, model: View): void {
+	main.append(el("p", tr("revText"), "sub"));
+	const list = panel(tr("due"), `${model.review.length}`);
 	list.append(
-		table(
-			["Address", "Text", "Kind", "Review date", "Actions"],
+		tableOf(
+			[tr("address"), tr("text"), tr("kind"), tr("reviewDate"), tr("actions")],
 			model.review.map((item) => [
-				button(item.addr, () => openTarget(item.addr)),
+				btn(item.addr, () => openInTree(item.addr)),
 				item.body,
-				item.kind,
-				item.review_at ?? "none",
+				kindName(item.kind),
+				item.review_at ?? tr("none"),
 				recordActions(item.addr),
 			]),
 		),
 	);
-	main.append(list);
 	const policy = panel(
-		"Review periods",
-		`${Object.keys(model.reviewPolicy).length} kinds`,
+		tr("reviewPeriods"),
+		String(Object.keys(model.reviewPolicy).length),
 	);
 	policy.append(
-		append(
-			element("div", "", "body"),
-			kv(
-				Object.entries(model.reviewPolicy).map(([name, days]) => [
-					name,
-					`${days} days`,
-				]),
-			),
+		kv(
+			Object.entries(model.reviewPolicy).map(([name, days]) => [
+				kindName(name as NoteKind),
+				tr("days", { count: days }),
+			]),
 		),
 	);
-	main.append(policy);
+	main.append(list, policy);
 }
-// #endregion FUNC_renderReview
+// #endregion FUNC_review
 
-// #region FUNC_renderProposals
-/** @purpose Show each pending proposal with its session, scope, age, and explicit decision. */
-function renderProposals(main: HTMLElement): void {
-	main.append(
-		element(
-			"p",
-			"Accept applies the proposed change through the ordinary write rules. Dismiss closes the proposal and changes no record.",
-			"sub",
-		),
-	);
-	const list = panel(`Waiting · ${model?.proposals.length ?? 0}`, "proposed");
+// #region FUNC_proposals
+/** @purpose Show each pending proposal with its session, scope, age, and decision. */
+function proposals(main: HTMLElement, model: View): void {
+	main.append(el("p", tr("propText"), "sub"));
+	const list = panel(tr("waiting"), String(model.proposals.length));
 	list.append(
-		table(
-			["ID", "Child session", "Text", "Scope", "Age", "Decision"],
-			(model?.proposals ?? []).map((item) => [
+		tableOf(
+			[tr("id"), tr("session"), tr("text"), tr("scope"), tr("decision")],
+			model.proposals.map((item) => [
 				item.id,
-				"session" in item ? item.session : "unavailable",
+				"session" in item ? item.session : tr("none"),
 				"body" in item ? (item.body ?? "") : item.op,
 				item.scope,
-				age(item.at),
 				append(
-					element("div", "", "actions"),
-					button("Accept", () => action("accept", { target: item.id }), "pri"),
-					button("Dismiss", () => action("dismiss", { target: item.id })),
+					el("div", "", "actions"),
+					btn(tr("accept"), () => action("accept", { target: item.id }), "pri"),
+					btn(tr("dismiss"), () => action("dismiss", { target: item.id })),
 				),
 			]),
 		),
 	);
 	main.append(list);
 }
-// #endregion FUNC_renderProposals
+// #endregion FUNC_proposals
 
-// #region FUNC_renderMaintenance
-/** @purpose Expose build candidates and let a user submit scope and catalog answers. */
-function renderMaintenance(main: HTMLElement): void {
-	if (!model) return;
-	main.append(
-		element(
-			"p",
-			"The tree is a cache. Writer runtime, local attempts, and backoff are unavailable in this host.",
-			"sub",
-		),
-	);
-	const tiles = element("div", "", "tiles");
-	tiles.append(
-		tile(String(model.records.length), "records"),
-		tile(String(model.nodes.length), "tree nodes"),
-		tile(
-			String(model.candidates.length),
-			"merge candidates",
-			model.candidates.length > 0,
-		),
-		tile("0", "failed builds"),
-	);
-	main.append(tiles);
-	const budgets = panel("Line budgets");
+// #region FUNC_maintenance
+/**
+ * @purpose Show the build state, the budgets, and the compaction job.
+ * @invariants Show no writer state and no session state. A job without a merge input states that
+ * fact and shows no answer form.
+ */
+function maintenance(main: HTMLElement, model: View): void {
+	main.append(el("p", tr("maintText"), "sub"));
+	const tiles = el("div", "", "tiles");
+	for (const [value, name] of [
+		[model.records.length, tr("records")],
+		[model.nodes.length, tr("treeNodes")],
+		[model.candidates.length, tr("mergeCandidates")],
+	] as const) {
+		const tile = el("div", "", "tile");
+		tile.append(el("div", String(value), "n"), el("div", name, "l"));
+		tiles.append(tile);
+	}
+	const budgets = panel(tr("lineBudgets"));
 	budgets.append(
-		append(
-			element("div", "", "body bars"),
-			bar("here", model.budgets.here),
-			bar("directions", model.budgets.directions),
-		),
+		bar("here", model.budgets.here),
+		bar("directions", model.budgets.directions),
 	);
-	main.append(budgets);
-	const list = panel("Merge candidates", "dirty ranges");
-	list.append(
-		table(
-			["Scope", "Range", "Level", "State"],
+	const candidates = panel(
+		tr("mergeCandidates"),
+		String(model.candidates.length),
+	);
+	candidates.append(
+		tableOf(
+			[tr("scope"), tr("range"), tr("level"), tr("state")],
 			model.candidates.map((item) => [
 				item.scope,
 				rangeAddress(item.scope, item.range),
 				String(item.range.level),
-				item.ready ? "ready" : "waiting for children",
+				item.ready ? tr("ready") : tr("waits"),
 			]),
 		),
 	);
-	main.append(list);
 	const levels = [
 		...new Set([
 			...model.nodes.map((item) => item.node.range.level),
 			...model.candidates.map((item) => item.range.level),
 		]),
 	].sort((a, b) => a - b);
-	const data = model;
-	const perLevel = panel("Nodes by level");
+	const perLevel = panel(tr("nodesByLevel"));
 	perLevel.append(
-		table(
-			["Level", "Nodes", "Dirty", "Candidate holes"],
+		tableOf(
+			[tr("level"), tr("nodes"), tr("dirty"), tr("candidates")],
 			levels.map((level) => [
 				String(level),
 				String(
-					data.nodes.filter((item) => item.node.range.level === level).length,
+					model.nodes.filter((item) => item.node.range.level === level).length,
 				),
 				String(
-					data.nodes.filter(
+					model.nodes.filter(
 						(item) => item.node.range.level === level && !item.clean,
 					).length,
 				),
 				String(
-					data.candidates.filter((item) => item.range.level === level).length,
+					model.candidates.filter((item) => item.range.level === level).length,
 				),
 			]),
 		),
 	);
-	main.append(perLevel);
-	const jobs = panel("Compaction", "answers go through store validation");
-	const jobBody = element("div", "", "body");
+	main.append(tiles, budgets, candidates, perLevel, compactionPanel(model));
+}
+// #endregion FUNC_maintenance
+
+function bar(name: string, value: { used: number; limit: number }) {
+	const node = el("div", "", "bar");
+	const track = el("div", "", "track");
+	const fillNode = el("i");
+	fillNode.style.width = `${Math.min(100, (100 * value.used) / Math.max(1, value.limit))}%`;
+	track.append(fillNode);
+	node.append(
+		el("span", name),
+		track,
+		el("span", tr("lines", { used: value.used, limit: value.limit })),
+	);
+	return node;
+}
+
+function compactionPanel(model: View) {
+	const node = panel(tr("compaction"));
+	const buttons = el("div", "", "actions");
 	for (const catalog of [false, true])
-		jobBody.append(
-			button(
-				catalog ? "Prepare catalog job" : "Prepare scope job",
+		buttons.append(
+			btn(
+				catalog ? tr("prepareCatalog") : tr("prepareScope"),
 				async () => {
-					const context = { profile, scope, catalog };
 					const result = (await action("compact", { catalog })) as {
-						job: string;
 						inputs: BuildInput[];
+						job: string;
 					};
 					if (!result || !Array.isArray(result.inputs))
-						throw new Error("Invalid compact response.");
-					compact = { ...result, ...context };
+						throw new Error("The console gave an invalid job.");
+					state.job = {
+						inputs: result.inputs,
+						job: result.job,
+						catalog,
+						profile: state.profile,
+						scope: state.scope,
+					};
 					render();
 				},
 				"pri",
 			),
 		);
-	jobs.append(jobBody);
-	main.append(jobs);
-	if (compact) {
-		const job = compact;
-		const task = panel(
-			`Compact job · ${job.job.slice(0, 24)}…`,
-			`${job.inputs.length} inputs`,
-		);
-		const body = element("div", "", "body");
-		const inputs = element("details");
-		inputs.append(element("summary", "Copied inputs"));
-		inputs.append(element("pre", JSON.stringify(job.inputs, null, 2)));
-		const answers = element("textarea");
-		answers.rows = 6;
-		answers.spellcheck = false;
-		answers.placeholder = "#0-1: Summary text\n#2-3: Summary text";
-		const apply = button(
-			"Apply compact answers",
-			async () => {
-				if (!answers.value.trim()) throw new Error("Enter compact answers.");
-				if (profile !== job.profile || scope !== job.scope)
-					throw new Error("Select the profile and scope of this job first.");
-				const result = (await action("compact-answer", {
-					catalog: job.catalog,
-					inputs: job.inputs,
-					answers: answers.value,
-				})) as { built: number; rejected: number };
-				compact = result.rejected ? job : undefined;
-				render();
-				message(
-					`Built ${result.built} summaries. Rejected ${result.rejected} answers.${result.rejected ? " Prepare a new job from the current tree." : ""}`,
-					result.rejected > 0,
-				);
-			},
-			"pri",
-		);
-		apply.disabled = profile !== job.profile || scope !== job.scope;
-		body.append(
-			inputs,
-			field(`Answers · ${job.profile} · ${job.scope}`, answers),
-			apply,
-		);
-		task.append(body);
-		main.append(task);
+	node.append(buttons);
+	const job = state.job;
+	if (!job) return node;
+	if (!job.inputs.length) {
+		node.append(el("p", tr("noInputs"), "muted"));
+		return node;
 	}
-}
-// #endregion FUNC_renderMaintenance
-
-async function scopeAction(remove: boolean) {
-	if (
-		!confirm(
-			`${remove ? "Permanently delete all content in" : "Forget all records in"} ${scope}?`,
-		)
-	)
-		return;
-	await action(remove ? "scope-delete" : "scope-forget", { confirm: true });
+	const tasks = el("pre", job.job, "slice");
+	const copy = btn(tr("copy"), async () => {
+		await navigator.clipboard.writeText(job.job);
+		message(tr("copied"));
+	});
+	const answers = el("textarea");
+	answers.rows = 5;
+	answers.spellcheck = false;
+	answers.placeholder = tr("answersHint");
+	const apply = btn(
+		tr("applyAnswers"),
+		async () => {
+			if (!answers.value.trim()) throw new Error(tr("enterAnswers"));
+			const result = (await action("compact-answer", {
+				catalog: job.catalog,
+				inputs: job.inputs,
+				answers: answers.value,
+			})) as { built: number; rejected: number };
+			state.job = result.rejected ? job : undefined;
+			render();
+			message(tr("built", result), result.rejected > 0);
+		},
+		"pri",
+	);
+	apply.disabled = job.profile !== state.profile || job.scope !== state.scope;
+	node.append(
+		el("div", "", "actions"),
+		el("span", tr("mergeTasks"), "lbl"),
+		copy,
+		tasks,
+		field(tr("answers"), answers),
+		apply,
+	);
+	return node;
 }
 
 // #region FUNC_noteDialog
 /**
  * @purpose Create, amend, or supersede a record with explicit user input.
- * @invariants Show body, character count, longform, scope, kind, and comma-separated supersedes addresses.
- * New scopes start with a note. Amend keeps the record kind and scope. The native dialog handles focus and Escape.
+ * @invariants Show the body, the document, the scope, the kind, and the addresses that the record
+ * replaces. An amendment keeps the kind and can move the record to another scope.
  */
 function noteDialog(
 	record?: ProjectionRecord | OpenEntry,
 	supersedes = "",
-	newScope = false,
+	fresh = false,
 ): void {
-	const dialog = element("dialog"),
-		form = element("form");
+	const dialog = el("dialog");
+	const form = el("form");
 	const amend = record !== undefined && !supersedes;
-	dialog.append(
-		append(
-			element("div", "", "head"),
-			element("span", amend ? "Amend record" : t(7), "t"),
-		),
-	);
-	const note = element("textarea");
+	const head = el("div", "", "head");
+	head.append(el("span", amend ? tr("amendTitle") : tr("newTitle"), "t"));
+	dialog.append(head);
+	const note = el("textarea");
 	note.value = record?.body ?? "";
 	note.required = true;
 	note.rows = 3;
 	note.spellcheck = false;
-	const counter = element("div", "0 characters", "counter");
+	const counter = el("div", "", "counter");
 	const update = () => {
-		counter.textContent = `${note.value.length} characters`;
+		counter.textContent = tr("characters", { count: note.value.length });
 	};
 	note.oninput = update;
 	update();
-	const longform = element("textarea");
+	const longform = el("textarea");
 	longform.value = record?.longform ?? "";
-	longform.rows = 6;
+	longform.rows = 5;
 	longform.spellcheck = false;
-	const scopeInput = input(newScope ? "" : (record?.scope ?? scope));
+	const scopeInput = input(fresh ? "" : (record?.scope ?? state.scope));
 	scopeInput.required = true;
 	scopeInput.pattern = "[^:]+:[^:]+";
 	scopeInput.placeholder = "project:example";
-	scopeInput.disabled = amend;
 	const kindInput = select(
-		["decision", "preference", "fact", "task", "note"],
-		record && "state" in record ? record.kind : "note",
+		[...KINDS],
+		record && "kind" in record ? record.kind : "note",
 	);
+	for (const option of kindInput.options)
+		option.textContent = tr(KIND_KEYS[option.value as NoteKind] as keyof Table);
 	kindInput.disabled = amend;
 	const replace = input(supersedes);
 	replace.spellcheck = false;
 	replace.disabled = amend;
-	const noteField = field("Body · one line", note);
-	noteField.append(counter);
-	const scopeField = field("Scope", scopeInput);
+	const scopeField = field(tr("scopeField"), scopeInput);
 	scopeField.append(
-		element("div", "A new scope starts with this note.", "hint"),
+		el("div", amend ? tr("kindFixed") : tr("newScopeHint"), "hint"),
 	);
-	const replaceField = field("Supersedes · comma-separated addresses", replace);
+	const replaceField = field(tr("supersedesField"), replace);
+	const row = el("div", "", "row2");
+	row.append(scopeField, field(tr("kindField"), kindInput));
 	form.append(
-		noteField,
-		field("Longform document", longform),
-		append(element("div", "", "row2"), scopeField, field("Kind", kindInput)),
-		replaceField,
+		field(tr("body"), note),
+		counter,
+		field(tr("longform"), longform),
+		row,
 	);
-	const save = button(
-		amend ? "Save changes" : "Create record",
-		() => {},
-		"pri",
-	);
+	if (!amend) form.append(replaceField);
+	const save = btn(amend ? tr("save") : tr("create"), () => {}, "pri");
 	save.type = "submit";
-	form.append(
-		append(
-			element("div", "", "dlg-foot"),
-			button("Cancel", () => dialog.close(), "ghost"),
-			save,
-		),
+	const foot = el("div", "", "dlg-foot");
+	foot.append(
+		btn(tr("cancel"), () => dialog.close(), "ghost"),
+		save,
 	);
+	form.append(foot);
 	form.onsubmit = (event) => {
 		event.preventDefault();
 		run(async () => {
 			save.disabled = true;
 			try {
 				await action(amend ? "amend" : "note", {
-					scope: scopeInput.value,
 					body: note.value,
 					longform: longform.value,
 					...(amend
-						? { target: address(record) }
-						: { kind: kindInput.value as NoteKind, supersedes: replace.value }),
+						? {
+								target: `${record.scope}#${record.pos}`,
+								dest: scopeInput.value,
+							}
+						: {
+								scope: scopeInput.value,
+								kind: kindInput.value as NoteKind,
+								supersedes: replace.value,
+							}),
 				});
 				dialog.close();
 			} finally {
@@ -1325,9 +1256,15 @@ document.addEventListener("keydown", (event) => {
 			(document.activeElement as HTMLElement | null)?.tagName ?? "",
 		)
 	) {
-		screen = Number(event.key) - 1;
+		state.screen = Number(event.key) - 1;
 		render();
 	}
 });
+window
+	.matchMedia("(prefers-color-scheme: dark)")
+	.addEventListener("change", () => {
+		if (state.theme === "system") applyTheme();
+	});
 
+applyTheme();
 run(reload);

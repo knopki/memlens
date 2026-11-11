@@ -1,12 +1,13 @@
 <!-- #region moduleContract -->
 <!-- @purpose Host the standalone memory console with native browser controls. -->
+<!-- @invariants The page holds no inline script and no inline style, so the host policy stays strict. -->
 <!-- #endregion moduleContract -->
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="color-scheme" content="dark">
+	<meta name="color-scheme" content="light dark">
 	<title>memlens · memory console</title>
 	<link rel="stylesheet" href="/style.css">
 	<script type="module" src="/client.js"></script>

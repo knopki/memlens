@@ -28,7 +28,6 @@ import {
 	catalogTree,
 	type Event,
 	filterHits,
-	globMatches,
 	isCatalogKey,
 	MemlensError,
 	type NoteKind,
