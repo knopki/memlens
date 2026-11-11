@@ -744,11 +744,19 @@ function overview(main: HTMLElement, model: View): void {
 }
 // #endregion FUNC_overview
 
+/** Each line kind of the frontier, with the message key that the legend reads. */
+const LINE_KINDS: readonly (readonly [SliceLine["kind"], keyof Table])[] = [
+	["record", "record"],
+	["summary", "clean"],
+	["temporary", "pending"],
+];
+
 // #region FUNC_tree
 /**
  * @purpose Show the frontier of the selected scope beside the inspector.
  * @invariants Draw every line from the model frontier. A range line opens its children, and a note
  * line opens its record. A temporary line shows its period only.
+ * @invariants The legend names the three line kinds, and a line takes the color of its own kind.
  */
 function tree(main: HTMLElement, model: View): void {
 	const heading = main.querySelector("h1");
@@ -762,19 +770,10 @@ function tree(main: HTMLElement, model: View): void {
 		tr("frontier"),
 		tr("frontierMeta", { ranges: lines.length, live: live.length }),
 	);
-	const strip = el("div", "", "coverage");
 	const legend = el("div", "", "legend");
-	for (const kind of ["record", "summary", "temporary"] as const) {
-		const name =
-			kind === "record"
-				? tr("record")
-				: kind === "summary"
-					? tr("clean")
-					: tr("pending");
-		strip.append(el("i", "", kind[0] ?? ""));
-		legend.append(el("span", name, `lg ${kind[0] ?? ""}`));
-	}
-	panelNode.append(strip, legend);
+	for (const [kind, key] of LINE_KINDS)
+		legend.append(el("span", tr(key), `lg ${kind[0]}`));
+	panelNode.append(legend);
 	const list = el("div", "", "lines");
 	for (const line of lines) list.append(frontierLine(state.scope, line));
 	if (!lines.length) list.append(el("p", tr("noFrontier"), "muted"));

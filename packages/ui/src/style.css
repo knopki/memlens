@@ -7,6 +7,7 @@
  * The text of a slice renders in full. The page scrolls, and the slice holds no inner scroll.
  * Two fields in one form row hold one width, and their single-line controls hold one height.
  * The status line floats above the page, so a message and a load state move no screen.
+ * A line kind of the frontier keeps one palette color, and the legend shows the same color.
  * Below 860 pixels the rail lies horizontal, the page scrolls, and no screen scrolls inside itself.
  * The stylesheet holds no layout decision of a screen. The attribute data-theme selects the palette.
  * #endregion moduleContract
@@ -408,26 +409,6 @@ main h1 {
 	display: grid;
 	gap: 14px;
 }
-.coverage {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 3px;
-}
-.coverage i {
-	width: 12px;
-	height: 12px;
-	border-radius: 3px;
-	background: var(--line2);
-}
-.coverage i.r {
-	background: var(--green);
-}
-.coverage i.s {
-	background: var(--accent);
-}
-.coverage i.t {
-	background: var(--amber);
-}
 .legend {
 	display: flex;
 	flex-wrap: wrap;
@@ -482,6 +463,15 @@ main h1 {
 }
 .line .id {
 	color: var(--muted);
+}
+.line.r .id {
+	color: var(--green);
+}
+.line.s .id {
+	color: var(--accent);
+}
+.line.t .id {
+	color: var(--amber);
 }
 .line .tx {
 	overflow: hidden;
