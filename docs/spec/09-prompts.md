@@ -100,6 +100,25 @@ the length of this ruler:
 </input>
 ```
 
+## Batch task
+
+One call of the batch form holds up to six inputs. It names the form of the answer, so the answer
+needs no guess.
+
+```text
+Merge each pair of adjacent lines into one line of at most {TARGET} characters (about {TARGET/6} words) each,
+the length of this ruler:
+{RULER = '-' * TARGET}
+Answer one line for each input, in the form "#a-b: line".
+<input id="{range}">
+{child_a}
+{child_b}
+</input>
+```
+
+The console job and the command job print this task. A job of several inputs holds one ruler, and
+each input block carries its own `#a-b` id.
+
 ## The input of the merge
 
 The input holds the two children only. It holds no frontier and no `<context>`. A summary that reads a
