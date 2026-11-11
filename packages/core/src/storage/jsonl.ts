@@ -60,6 +60,7 @@ import {
 	encodeProjection,
 	envelope,
 	nodePlan,
+	proposalPlan,
 	publishPlan,
 } from "./publication.js";
 
@@ -144,6 +145,22 @@ export class JsonlStore implements StorePort {
 		});
 	}
 	// #endregion METHOD_appendNode
+
+	// #region METHOD_decideProposal
+	/** @purpose Publish a current human decision and its dismissal under one process lock. */
+	async decideProposal(
+		proposal: Event,
+		accept: boolean,
+		scopes: readonly ScopeKey[],
+	): Promise<void> {
+		this.locked(() => {
+			this.snapshot();
+			this.publish(
+				proposalPlan(this.history(), proposal, accept, scopes, this.profiles),
+			);
+		});
+	}
+	// #endregion METHOD_decideProposal
 
 	// #region METHOD_projection
 	/** @purpose Return a detached snapshot after source recovery without an unchanged log scan. */

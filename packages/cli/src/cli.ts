@@ -51,6 +51,7 @@ import {
 	statusCommand,
 } from "./commands.js";
 import { compactCommand } from "./compact.js";
+import { uiCommand } from "./ui.js";
 
 const debug = debuglog("memlens:cli");
 
@@ -76,6 +77,7 @@ export const USAGE = `Usage: ${NAME} <command> [flags]
   export --format md|jsonl --out dir [--scope key]
   import --in path [--as key] [--dry-run]
   config get|set key [value]
+  ui [--port 7788] [--allow-delete]
 
 A target is <pos>, <pos>-<pos>, <scope>#<pos>, or <scope>#<pos>-<pos>.
 Each command takes --store dir. The exit codes: 0 success, 1 data, 2 usage, 3 policy.`;
@@ -161,6 +163,10 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 	import: {
 		run: importCommand,
 		spec: { positional: [], flags: { in: 1, as: 1, "dry-run": 0 } },
+	},
+	ui: {
+		run: uiCommand,
+		spec: { positional: [], flags: { port: 1, "allow-delete": 0 } },
 	},
 	config: {
 		run: (args, io) => configCommand(args, io),

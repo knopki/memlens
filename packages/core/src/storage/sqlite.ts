@@ -39,6 +39,7 @@ import {
 	encodeProjection,
 	envelope,
 	nodePlan,
+	proposalPlan,
 	publishPlan,
 } from "./publication.js";
 
@@ -168,6 +169,21 @@ export class SqliteStore implements StorePort {
 		});
 	}
 	// #endregion METHOD_appendNode
+
+	// #region METHOD_decideProposal
+	/** @purpose Publish a current human decision and its dismissal in one SQLite transaction. */
+	async decideProposal(
+		proposal: Event,
+		accept: boolean,
+		scopes: readonly ScopeKey[],
+	): Promise<void> {
+		this.transaction(() => {
+			this.publish(
+				proposalPlan(this.events(), proposal, accept, scopes, this.profiles),
+			);
+		});
+	}
+	// #endregion METHOD_decideProposal
 
 	// #region METHOD_projection
 	/** @purpose Read an independent snapshot from the projection row without an event scan. */

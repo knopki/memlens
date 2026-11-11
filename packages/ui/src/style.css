@@ -1,0 +1,359 @@
+/* #region moduleContract
+ * @purpose Keep the memory console readable across desktop and mobile screens.
+ * @invariants Preserve native controls, visible focus, and readable text at narrow widths.
+ * #endregion moduleContract */
+:root {
+	color-scheme: light dark;
+	font:
+		15px / 1.6 system-ui,
+		sans-serif;
+	--bg: #f4f5f7;
+	--panel: #fff;
+	--text: #202b39;
+	--muted: #526174;
+	--line: #d8dfe7;
+	--accent: #155b76;
+	--soft: #e7f1f5;
+	--danger: #a72e35;
+}
+* {
+	box-sizing: border-box;
+}
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+}
+button,
+input,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+}
+button,
+input,
+select,
+textarea {
+	border: 1px solid var(--line);
+	border-radius: 7px;
+	background: var(--panel);
+	padding: 0.45rem 0.7rem;
+	min-height: 44px;
+}
+button {
+	cursor: pointer;
+	min-height: 44px;
+}
+button:hover {
+	background: var(--soft);
+	border-color: var(--accent);
+}
+button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+:focus-visible {
+	outline: 3px solid var(--accent);
+	outline-offset: 3px;
+}
+button.active,
+button.primary {
+	background: var(--accent);
+	color: #fff;
+	border-color: var(--accent);
+}
+button.danger {
+	color: var(--danger);
+}
+h1,
+h2,
+h3,
+p {
+	margin: 0 0 0.8rem;
+}
+h1 {
+	font-size: 1.35rem;
+	letter-spacing: -0.04em;
+}
+h2 {
+	font-size: 1.6rem;
+	letter-spacing: -0.035em;
+}
+h3 {
+	font-size: 1.05rem;
+}
+small,
+.muted {
+	color: var(--muted);
+}
+header {
+	padding: 1rem 1.5rem;
+	background: var(--panel);
+	border-bottom: 1px solid var(--line);
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+header h1 {
+	margin: 0 auto 0 0;
+}
+.layout {
+	display: grid;
+	grid-template-columns: 225px minmax(0, 1fr);
+	min-height: calc(100vh - 150px);
+}
+aside {
+	min-width: 0;
+	border-right: 1px solid var(--line);
+	padding: 1.4rem 1rem;
+}
+nav {
+	display: grid;
+	gap: 0.35rem;
+	margin-bottom: 1.7rem;
+}
+nav button {
+	text-align: left;
+	border-color: transparent;
+	background: transparent;
+}
+.scope-list {
+	display: grid;
+	gap: 0.4rem;
+	margin-bottom: 1rem;
+}
+.scope-list button {
+	text-align: left;
+	overflow-wrap: anywhere;
+}
+main {
+	max-width: 1500px;
+	width: 100%;
+	padding: 1.8rem 2rem;
+	min-width: 0;
+}
+footer {
+	background: var(--panel);
+	border-top: 1px solid var(--line);
+	padding: 0.8rem 1.5rem;
+	overflow-wrap: anywhere;
+	font-size: 0.85rem;
+}
+.row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem;
+}
+.stack {
+	display: grid;
+	gap: 1rem;
+}
+.cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr));
+	gap: 1rem;
+}
+.card,
+.notice {
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--panel);
+	padding: 1.15rem;
+	margin-bottom: 1rem;
+}
+.card.selected {
+	border-color: var(--accent);
+	box-shadow: inset 3px 0 var(--accent);
+}
+.notice {
+	background: var(--soft);
+}
+pre {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	font:
+		0.9rem / 1.65 ui-monospace,
+		monospace;
+	margin: 0.5rem 0;
+}
+.table-wrap {
+	overflow-x: auto;
+	margin-bottom: 1rem;
+}
+table {
+	border-collapse: collapse;
+	width: 100%;
+	background: var(--panel);
+	font-size: 0.9rem;
+}
+th,
+td {
+	padding: 0.7rem 0.8rem;
+	border-bottom: 1px solid var(--line);
+	text-align: left;
+	vertical-align: top;
+}
+th {
+	color: var(--muted);
+	font-weight: 600;
+	white-space: nowrap;
+}
+td {
+	overflow-wrap: anywhere;
+	min-width: 90px;
+}
+td .row {
+	min-width: 200px;
+}
+label {
+	display: grid;
+	gap: 0.25rem;
+	font-size: 0.9rem;
+}
+input,
+textarea {
+	width: 100%;
+}
+textarea {
+	resize: vertical;
+	min-height: 100px;
+}
+.filters {
+	display: flex;
+	align-items: end;
+	flex-wrap: wrap;
+	gap: 0.8rem;
+	margin-bottom: 1.2rem;
+}
+.filters label:first-child {
+	flex: 1 1 240px;
+}
+.budget {
+	display: grid;
+	min-width: 160px;
+	font-size: 0.8rem;
+}
+meter {
+	width: 100%;
+	height: 0.7rem;
+	accent-color: var(--accent);
+}
+.coverage {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin: 0.7rem 0 1rem;
+}
+.clean {
+	border-color: #4a8c72;
+}
+.dirty {
+	border-color: #b37630;
+	background: #b376301a;
+}
+.outside {
+	border-style: dashed;
+}
+.line {
+	display: block;
+	text-align: left;
+	width: 100%;
+	margin-bottom: 0.4rem;
+	white-space: pre-wrap;
+}
+details {
+	margin: 0.5rem 0;
+}
+summary {
+	cursor: pointer;
+}
+mark {
+	background: #ffe282;
+	color: #2c260f;
+}
+dialog {
+	width: min(760px, calc(100% - 2rem));
+	max-height: 90vh;
+	overflow: auto;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	background: var(--panel);
+	color: var(--text);
+	padding: 1.5rem;
+}
+dialog::backdrop {
+	background: #12212d88;
+}
+dialog form {
+	display: grid;
+	gap: 0.9rem;
+}
+dialog .row {
+	justify-content: flex-end;
+}
+#status {
+	padding: 0.6rem 1.5rem;
+	min-height: 2.7rem;
+}
+#status.error {
+	color: var(--danger);
+}
+.skip {
+	position: absolute;
+	left: -1000px;
+}
+.skip:focus {
+	left: 1rem;
+	top: 1rem;
+	background: var(--panel);
+	padding: 0.5rem;
+	z-index: 10;
+}
+@media (max-width: 800px) {
+	.layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	aside {
+		border-right: 0;
+		border-bottom: 1px solid var(--line);
+		padding: 0.8rem;
+	}
+	nav {
+		display: flex;
+		overflow-x: auto;
+		margin-bottom: 0.6rem;
+	}
+	nav button {
+		white-space: nowrap;
+	}
+	.scope-list {
+		display: flex;
+		overflow-x: auto;
+	}
+	main {
+		padding: 1.1rem;
+	}
+	header {
+		padding: 0.9rem;
+		gap: 0.6rem;
+	}
+	header .budget {
+		min-width: 120px;
+		flex: 1;
+	}
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #121a23;
+		--panel: #1b2632;
+		--text: #e4eaf1;
+		--muted: #a6b6c7;
+		--line: #344252;
+		--accent: #3184a4;
+		--soft: #223d49;
+		--danger: #ff9b9f;
+	}
+}

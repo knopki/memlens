@@ -143,8 +143,6 @@ Use module invariants for module-wide rules. Use entity contracts for rules with
 | REQ-411 | A successful `memlens redact` leaves no cleared content in store files, active journals, sidecars, or store temporary files. | FR | accepted | S-075, S-140, S-141 | A unique content marker is absent from all store-owned named files after success, including SQLite WAL and the JSONL index. |
 | REQ-413 | The import from the sessions writes new notes of each session into the store. | FR | accepted | S-076 | A session with a decision gives a note after the import, and the writer makes the text. |
 | REQ-417 | The UI core is in the core library. | FR | accepted | S-077 | The core package exports the view models of the console. |
-| REQ-418 | The UI core holds no DOM, no transport, and no style. | NFR | accepted | S-077 | No file of the UI core imports a DOM, a socket, or a style sheet. |
-| REQ-419 | The UI core reads the store through one port. | FR | accepted | S-077 | Each view model imports the port, and no view model opens a file. |
 | REQ-423 | The console gives each action on a note: mark reviewed, amend, supersede, forget, and delete. | FR | accepted | S-078 | Each of the five actions changes the record as the CLI does. |
 | REQ-427 | The plugin supports DeepSeek Harness 0.2.1 and later, and it counts a prerelease and an alpha version. | C | accepted | S-081 | The plugin loads in `0.2.1-rc.5`. |
 | REQ-428 | The plugin uses the functions of the core library. | FR | accepted | S-081 | The manifest names `@memlens/core`, and each source file imports that package. |

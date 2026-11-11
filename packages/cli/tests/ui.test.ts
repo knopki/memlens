@@ -1,0 +1,305 @@
+/**
+ * #region moduleContract
+ * @purpose Verify console actions and the HTTP trust boundary against both persistent backends.
+ * @invariants Tests use temporary stores and ephemeral loopback ports.
+ * #endregion moduleContract
+ */
+
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { DEFAULT_CONFIG_TOML, openRuntime } from "../src/runtime.js";
+import { startUi } from "../src/ui.js";
+
+const cleanups: (() => Promise<unknown>)[] = [];
+afterEach(async () => {
+	for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
+});
+
+// #region FUNC_fixture
+/** @purpose Open an isolated console with its own configuration and store. */
+async function fixture(backend: string, allowDelete = false) {
+	const root = await mkdtemp(join(tmpdir(), "memlens-ui-"));
+	cleanups.push(() => rm(root, { recursive: true, force: true }));
+	const config = join(root, "config", "memlens");
+	await mkdir(config, { recursive: true });
+	await writeFile(
+		join(config, "config.toml"),
+		DEFAULT_CONFIG_TOML.replace('backend = "sqlite"', `backend = "${backend}"`),
+	);
+	const env = {
+		XDG_CONFIG_HOME: join(root, "config"),
+		XDG_DATA_HOME: join(root, "data"),
+	};
+	const host = await startUi({
+		storeFlag: join(root, "store"),
+		env,
+		port: 0,
+		allowDelete,
+	});
+	cleanups.push(host.close);
+	const get = async (path = "/api/view") => {
+		const response = await fetch(`${host.url}${path}`);
+		expect(response.status).toBe(200);
+		return response.json();
+	};
+	const post = (fields: Record<string, unknown>) =>
+		fetch(`${host.url}/api/action`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ scope: "user:notes", ...fields }),
+		});
+	return { host, env, root, get, post };
+}
+// #endregion FUNC_fixture
+
+for (const backend of ["sqlite", "jsonl"])
+	describe(`console ${backend}`, () => {
+		it("creates, amends, finds, reviews, supersedes, hides, and clears notes", async () => {
+			const { get, post } = await fixture(backend, true);
+			expect(
+				(
+					await post({
+						action: "note",
+						body: "alpha memory",
+						longform: "document",
+						kind: "fact",
+					})
+				).status,
+			).toBe(200);
+			let view = await get();
+			expect(view.records).toHaveLength(1);
+			expect(view.here).toContain("alpha memory");
+			const target = `user:notes#${view.records[0].pos}`;
+			expect(
+				(await get(`/api/open?target=${encodeURIComponent(target)}`)).longform,
+			).toBe("document");
+			expect(
+				(
+					await post({
+						action: "amend",
+						target,
+						body: "beta memory",
+						longform: "changed document",
+					})
+				).status,
+			).toBe(200);
+			expect((await get("/api/search?query=beta")).length).toBe(1);
+			expect((await post({ action: "review", target })).status).toBe(200);
+			expect(
+				(await post({ action: "note", body: "new fact", supersedes: target }))
+					.status,
+			).toBe(200);
+			view = await get();
+			expect(view.records[0].state).toBe("hidden");
+			const next = `user:notes#${view.records[1].pos}`;
+			expect((await post({ action: "forget", target: next })).status).toBe(200);
+			expect((await post({ action: "delete", target: next })).status).toBe(403);
+			expect(
+				(await post({ action: "delete", target: next, confirm: true })).status,
+			).toBe(200);
+			view = await get();
+			expect(view.records[1].body).toBe("");
+			expect(view.records[1].content_cleared).toBe(true);
+		});
+
+		it("rejects foreign origins, invalid JSON, unlisted profiles, and disabled deletion", async () => {
+			const { host, post } = await fixture(backend);
+			expect(
+				(
+					await fetch(`${host.url}/api/view`, {
+						headers: { origin: "https://foreign.invalid" },
+					})
+				).status,
+			).toBe(403);
+			expect(
+				(
+					await fetch(
+						`${host.url}/api/action?action=note&body=wrong&scope=user:notes`,
+					)
+				).status,
+			).toBe(405);
+			expect(
+				(await fetch(`${host.url}/api/action`, { method: "POST", body: "{}" }))
+					.status,
+			).toBe(400);
+			expect((await fetch(`${host.url}/api/view?profile=missing`)).status).toBe(
+				422,
+			);
+			expect(
+				(await post({ action: "delete", target: "0", confirm: true })).status,
+			).toBe(403);
+		});
+
+		it("publishes proposal approval and dismissal together", async () => {
+			const { root, env, get, post } = await fixture(backend);
+			const runtime = await openRuntime({
+				storeFlag: join(root, "store"),
+				env,
+			});
+			try {
+				await runtime.store.append({
+					op: "note",
+					scope: "user:notes",
+					body: "suggestion",
+					kind: "note",
+					ts: "2026-11-10T00:00:00.000Z",
+					review_at: null,
+					session: "child",
+					turn: "1",
+					preset: "test",
+					proposed: true,
+				});
+			} finally {
+				await runtime.close();
+			}
+			const proposal = (await get()).proposals[0];
+			expect(
+				(await post({ action: "accept", target: proposal.id })).status,
+			).toBe(200);
+			const view = await get();
+			expect(view.proposals).toHaveLength(0);
+			expect(view.records[0].body).toBe("suggestion");
+			expect(
+				(await post({ action: "accept", target: proposal.id })).status,
+			).toBe(422);
+		});
+
+		it("approves a duplicate note through ordinary write rules", async () => {
+			const { root, env, get, post } = await fixture(backend);
+			const runtime = await openRuntime({
+				storeFlag: join(root, "store"),
+				env,
+			});
+			try {
+				const note = {
+					op: "note" as const,
+					scope: "user:notes" as const,
+					body: "same note",
+					kind: "note" as const,
+					ts: "2026-11-10T00:00:00.000Z",
+					review_at: null,
+					session: "child",
+					turn: "1",
+					preset: "test",
+				};
+				await runtime.store.append(note);
+				await runtime.store.append({ ...note, proposed: true });
+			} finally {
+				await runtime.close();
+			}
+			const proposal = (await get()).proposals[0];
+			const responses = await Promise.all([
+				post({ action: "accept", target: proposal.id }),
+				post({ action: "accept", target: proposal.id }),
+			]);
+			expect(responses.map((response) => response.status).sort()).toEqual([
+				200, 422,
+			]);
+			const view = await get();
+			expect(view.records).toHaveLength(1);
+			expect(view.proposals).toHaveLength(0);
+		});
+
+		it("compacts catalog roots through the same answer boundary", async () => {
+			const { get, post } = await fixture(backend);
+			for (const scope of ["project:a", "project:b"]) {
+				await post({ action: "note", scope, body: scope });
+				await post({ action: "compact", scope });
+			}
+			const job = await (
+				await post({ action: "compact", catalog: true })
+			).json();
+			expect(job.inputs).toHaveLength(1);
+			expect(
+				await (
+					await post({
+						action: "compact-answer",
+						catalog: true,
+						inputs: job.inputs,
+						answers: "#0-1: catalog summary",
+					})
+				).json(),
+			).toEqual({ built: 1, rejected: 0 });
+			expect((await get()).nodes).toContainEqual(
+				expect.objectContaining({ scope: "__catalog__:default", clean: true }),
+			);
+		});
+
+		it("accepts large copied jobs and rejects bodies above the host limit", async () => {
+			const { root, env, post } = await fixture(backend);
+			const runtime = await openRuntime({
+				storeFlag: join(root, "store"),
+				env,
+			});
+			try {
+				for (let index = 0; index < 64; index++)
+					await runtime.store.append({
+						op: "note",
+						scope: "user:notes",
+						body: `${index} ${"ж".repeat(500)}`,
+						longform: "д".repeat(1024),
+						kind: "note",
+						ts: "2026-11-10T00:00:00.000Z",
+						review_at: null,
+						session: "s",
+						turn: "t",
+						preset: "p",
+					});
+			} finally {
+				await runtime.close();
+			}
+			const job = await (await post({ action: "compact" })).json();
+			expect(Buffer.byteLength(JSON.stringify(job.inputs))).toBeGreaterThan(
+				96 * 1024,
+			);
+			expect(
+				await (
+					await post({
+						action: "compact-answer",
+						inputs: job.inputs,
+						answers: "#0-1: summary",
+					})
+				).json(),
+			).toEqual({ built: 1, rejected: 0 });
+			expect(
+				(await post({ action: "note", body: "x".repeat(2 * 1024 * 1024) }))
+					.status,
+			).toBe(400);
+		});
+
+		it("rejects stale compaction answers after an amendment", async () => {
+			const { get, post } = await fixture(backend);
+			await post({ action: "note", body: "first note" });
+			await post({ action: "note", body: "second note" });
+			const job = await (await post({ action: "compact" })).json();
+			expect(job.inputs).toHaveLength(1);
+			await post({
+				action: "amend",
+				target: "0",
+				body: "changed first",
+				longform: "",
+			});
+			const stale = await (
+				await post({
+					action: "compact-answer",
+					inputs: job.inputs,
+					answers: "#0-1: old summary",
+				})
+			).json();
+			expect(stale).toEqual({ built: 0, rejected: 1 });
+			const fresh = await (await post({ action: "compact" })).json();
+			const applied = await (
+				await post({
+					action: "compact-answer",
+					inputs: fresh.inputs,
+					answers: "#0-1: fresh summary",
+				})
+			).json();
+			expect(applied).toEqual({ built: 1, rejected: 0 });
+			expect(
+				(await get()).nodes.some((entry: { clean: boolean }) => entry.clean),
+			).toBe(true);
+		});
+	});

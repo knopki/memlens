@@ -70,6 +70,20 @@ export interface StorePort {
 		node: Omit<NodeEvent, "id" | "at">,
 	): Promise<NodeAppendResult>;
 
+	// #region METHOD_decideProposal
+	/**
+	 * @purpose Apply a human decision once without partial writes or stale proposal content.
+	 * @invariants Recheck the exact pending proposal and visible target scopes under the write lock.
+	 * Approval uses ordinary append rules. Publish its operation and dismissal together.
+	 * A stale or closed proposal fails without a write. Dismissal changes no record.
+	 */
+	decideProposal(
+		proposal: Event,
+		accept: boolean,
+		scopes: readonly ScopeKey[],
+	): Promise<void>;
+	// #endregion METHOD_decideProposal
+
 	/** Read the current projection. An unchanged source requires no event scan. */
 	projection(): Promise<Projection>;
 

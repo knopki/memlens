@@ -7,16 +7,20 @@
  * #endregion moduleContract
  */
 
-import { debuglog } from "node:util";
+import { debuglog, isDeepStrictEqual } from "node:util";
 import type { ProfileScopes } from "../domain/invalidation.js";
 import { maxOrder } from "../domain/order.js";
 import { catalogTree, project, scopeTree } from "../domain/projection.js";
 import { isCatalogKey } from "../domain/scope.js";
 import { inputUnchanged, rev } from "../domain/tree.js";
 import { ulid } from "../domain/ulid.js";
-import { prepareAppend, type WritePlan } from "../domain/write.js";
+import {
+	prepareAppend,
+	prepareImport,
+	type WritePlan,
+} from "../domain/write.js";
 import { MemlensError } from "../types/errors.js";
-import type { JsonlLine, NodeEvent } from "../types/events.js";
+import type { Event, JsonlLine, NodeEvent, ScopeKey } from "../types/events.js";
 import type { Projection } from "../types/projection.js";
 import type { NodeAppendResult } from "../types/store.js";
 import type { BuildInput } from "../types/tree.js";
@@ -108,6 +112,79 @@ export function nodePlan(
 	return prepareAppend(events, node, envelope(events), profiles);
 }
 // #endregion FUNC_nodePlan
+
+// #region FUNC_proposalPlan
+/**
+ * @purpose Prepare one human decision against the current history before atomic publication.
+ * @invariants Reject changed, sanitized, or closed proposals. Require visible scopes for the proposal and every affected record.
+ * @invariants Approval uses ordinary append validation, deduplication, and a log time after the current history.
+ * @invariants The plan contains the ordinary operation and dismissal, or the dismissal alone. Failure changes nothing.
+ */
+export function proposalPlan(
+	events: readonly JsonlLine[],
+	proposal: Event,
+	accept: boolean,
+	scopes: readonly ScopeKey[],
+	profiles: ProfileScopes,
+): WritePlan {
+	if (
+		!("proposed" in proposal && proposal.proposed === true) ||
+		!isDeepStrictEqual(
+			events.find((event) => event.id === proposal.id),
+			proposal,
+		) ||
+		events.some(
+			(event) => event.op === "dismiss" && event.target === proposal.id,
+		)
+	) {
+		debug("Proposal rejected", { event: "stale", id: proposal.id });
+		throw new MemlensError(
+			"Data",
+			"The proposal is no longer pending or has changed.",
+		);
+	}
+	const projection = project(events);
+	const targets =
+		"target" in proposal
+			? [proposal.target]
+			: proposal.op === "note"
+				? (proposal.supersedes ?? [])
+				: [];
+	const affected = [
+		proposal.scope,
+		...(accept ? targets.map((id) => projection.records.get(id)?.scope) : []),
+	];
+	if (affected.some((scope) => scope === undefined || !scopes.includes(scope)))
+		throw new MemlensError(
+			"NotAllowed",
+			"The proposal affects a scope outside this profile.",
+		);
+	let next = events;
+	if (accept) {
+		const { id: _id, at: _at, proposed: _proposed, ...payload } = proposal;
+		next = prepareAppend(events, payload, envelope(events), profiles).events;
+	}
+	next = prepareAppend(
+		next,
+		{
+			op: "dismiss",
+			scope: proposal.scope,
+			target: proposal.id,
+			reason: accept ? "accepted" : "ui dismiss",
+		},
+		envelope(next),
+		profiles,
+	).events;
+	const plan = prepareImport(events, next, profiles);
+	debug("Proposal decided", {
+		event: "decision",
+		id: proposal.id,
+		accept,
+		changed: plan.changed,
+	});
+	return plan;
+}
+// #endregion FUNC_proposalPlan
 
 // #region FUNC_encodeProjection
 /** @purpose Preserve projection maps and sets without a log scan on a later read. */

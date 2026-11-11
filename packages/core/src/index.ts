@@ -67,6 +67,7 @@ export {
 	type WriterMode,
 	xdgDirs,
 } from "./domain/config.js";
+export { type ConsoleModel, readConsole } from "./domain/console.js";
 export {
 	CONTEXT_TEMPLATE,
 	type ContextInput,

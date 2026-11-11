@@ -216,6 +216,106 @@ for (const [backend, Store, filename] of [
 			expect((await stat(join(directory, filename))).size).toBeGreaterThan(0);
 		});
 
+		it("decides a proposal once across store handles and uses ordinary deduplication", async () => {
+			const store = await setup();
+			await store.append(payload());
+			const proposal = await store.append({ ...payload(), proposed: true });
+			const other = open();
+			const results = await Promise.allSettled([
+				store.decideProposal(proposal, true, ["project:a"]),
+				other.decideProposal(proposal, true, ["project:a"]),
+			]);
+			expect(results.map((result) => result.status).sort()).toEqual([
+				"fulfilled",
+				"rejected",
+			]);
+			expect((await store.projection()).records.size).toBe(1);
+			expect(
+				(await store.export(null)).filter((event) => event.op === "dismiss"),
+			).toHaveLength(1);
+		});
+
+		it("rejects changed proposals and invisible targets without a partial decision", async () => {
+			const store = await setup();
+			const note = await store.append(payload());
+			const proposal = await store.append({
+				op: "hide",
+				scope: "project:a",
+				target: note.id,
+				reason: "suggestion",
+				proposed: true,
+			});
+			const revision = await store.rev();
+			await expect(
+				store.decideProposal(proposal, true, ["project:b"]),
+			).rejects.toMatchObject({ code: "NotAllowed" });
+			expect(await store.rev()).toBe(revision);
+			await store.append({ op: "amend", scope: "project:b", target: note.id });
+			const movedRev = await store.rev();
+			await expect(
+				store.decideProposal(proposal, true, ["project:a"]),
+			).rejects.toMatchObject({ code: "NotAllowed" });
+			expect(await store.rev()).toBe(movedRev);
+			await store.import([
+				{ ...proposal, reason: "changed", at: "2099-01-01T00:00:00.000Z" },
+			]);
+			const changedRev = await store.rev();
+			await expect(
+				store.decideProposal(proposal, false, ["project:a"]),
+			).rejects.toMatchObject({ code: "Data" });
+			expect(await store.rev()).toBe(changedRev);
+			await store.decideProposal(
+				{
+					...proposal,
+					reason: "changed",
+					at: "2099-01-01T00:00:00.000Z",
+				} as typeof proposal,
+				false,
+				["project:a"],
+			);
+			expect((await store.projection()).records.get(note.id)?.state).toBe(
+				"live",
+			);
+		});
+
+		it("applies an accepted amendment after future history and preserves failures", async () => {
+			const store = await setup();
+			const note = await store.append(payload());
+			const proposal = await store.append({
+				op: "amend",
+				scope: "project:a",
+				target: note.id,
+				body: "approved",
+				proposed: true,
+			});
+			await store.import([
+				{
+					op: "amend",
+					scope: "project:a",
+					target: note.id,
+					body: "future",
+					id: "00000000000000000000000001",
+					at: "2099-01-01T00:00:00.000Z",
+				},
+			]);
+			await store.decideProposal(proposal, true, ["project:a"]);
+			expect((await store.projection()).records.get(note.id)?.body).toBe(
+				"approved",
+			);
+			const transfer = await store.append({
+				op: "amend",
+				scope: "project:b",
+				target: note.id,
+				proposed: true,
+			});
+			await store.append({ op: "amend", scope: "project:b", target: note.id });
+			const before = await store.export(null);
+			await expect(
+				store.decideProposal(transfer, true, ["project:a", "project:b"]),
+			).rejects.toMatchObject({ code: "Data" });
+			expect(await store.export(null)).toEqual(before);
+		});
+
 		it("plans a repair in a dry run and rebuilds the index with no source change", async () => {
 			const store = await setup();
 			await store.append(payload("repair source"));

@@ -1,6 +1,6 @@
 # Architecture
 
-Status: draft. The core and the CLI have implementations. The plugin has a scaffold, and the console is pending.
+Status: draft. The core, CLI, and standalone console have implementations. The plugin has a scaffold.
 The global requirements define cross-module behavior. Code contracts define implemented local behavior.
 
 ## Shape
@@ -19,7 +19,8 @@ The agent reads one map of directions: the catalog in the `<directions>` section
 | Path                  | Package               | Role                                                                 |
 | --------------------- | --------------------- | -------------------------------------------------------------------- |
 | `packages/core`       | `@memlens/core`       | The engine: the configuration, store ports, the projection, the tree build, the slice. |
-| `packages/cli`        | `@memlens/cli`        | The terminal: the console command, redact, amend, import, export.    |
+| `packages/cli`        | `@memlens/cli`        | The terminal and HTTP host: the console command, redact, amend, import, export. |
+| `packages/ui`         | `@memlens/ui`         | The browser client: seven screens with native DOM controls. |
 | `packages/dsh-plugin` | `@memlens/dsh-plugin` | The harness surface: the entry points `.` and `./preset`, the tools. |
 
 The CLI depends on the library. The plugin depends on the library. The library depends on nothing.
@@ -37,6 +38,7 @@ makes the bundles. prek runs the git hooks. See [0010 Process and stack](../adr/
 | ------- | ------- | ------------------------------------------ |
 | core    | `tsc`   | `dist/index.js` and `dist/index.d.ts`      |
 | cli     | esbuild | `dist/cli.js`, one bundle with a shebang   |
+| ui      | CLI esbuild | `packages/cli/dist/ui/client.js`, with HTML and CSS assets |
 | plugin  | esbuild | `lib/index.js`, one bundle                 |
 | plugin  | `tsc`   | `lib/index.d.ts` in a declaration-only run |
 
@@ -480,8 +482,12 @@ job. The flag `--answer` applies one answer file, and the store checks each exac
 command `check` tests the store against its log, and the command `repair` rebuilds the derived state
 of the store. Each command contract owns its rules.
 
-The command `ui`, the flag `--from` of `import`, and the import from harness sessions are pending
-work. The usage below gives the target surface.
+The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui` and its local HTTP boundary.
+The [decision contract](../../packages/core/src/storage/publication.ts) owns approval validation under the backend lock.
+The console gives separate compaction jobs for scope trees and the profile catalog.
+The [console models](../../packages/core/src/domain/console.ts) supply the shared view through the store port.
+The [browser client](../../packages/ui/src/client.ts) supplies seven screens in a separate bundle.
+The flag `--from` of `import` and the import from harness sessions remain pending.
 
 The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
 and `3` a refusal by a policy.
@@ -532,8 +538,6 @@ customer words as given.
 
 ## Remaining work
 
-The CLI owes the command `ui` and the import from harness sessions. See [REQ-046](02-requirements.md)
-and [REQ-413](02-requirements.md).
-
-The console and the plugin are pending work. See [08-ui.md](08-ui.md) and
-[REQ-028](02-requirements.md).
+The CLI owes the import from harness sessions. See [REQ-413](02-requirements.md).
+The plugin and its session tab remain pending. See [08-ui.md](08-ui.md) and [REQ-028](02-requirements.md).
+The standalone console marks unavailable session and writer state explicitly.

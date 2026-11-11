@@ -149,6 +149,14 @@ it("exposes replay, erasure, fold, build, and storage outcomes without content",
 	const store = new JsonlStore(directory);
 	try {
 		await store.append(noteInput as Parameters<typeof store.append>[0]);
+		const proposal = await store.append({
+			...noteInput,
+			proposed: true,
+		} as Parameters<typeof store.append>[0]);
+		await store.decideProposal(proposal, true, ["project:a"]);
+		await expect(
+			store.decideProposal(proposal, true, ["project:a"]),
+		).rejects.toMatchObject({ code: "Data" });
 		const publication = logs
 			.filter((entry) => entry[0] === "memlens:jsonl")
 			.map((entry) => entry[2] as { event?: string });
@@ -174,6 +182,8 @@ it("exposes replay, erasure, fold, build, and storage outcomes without content",
 		"Duplicate note",
 		"Validation failed",
 		"Invalidation complete",
+		"Proposal decided",
+		"Proposal rejected",
 	]) {
 		expect(logs.some((entry) => entry[1] === message)).toBe(true);
 	}
