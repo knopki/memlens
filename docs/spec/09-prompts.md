@@ -15,7 +15,7 @@ guide line. See [REQ-178](02-requirements.md) and [REQ-475](02-requirements.md).
 {{append}}
 </how-to>
 <directions>
-One line for each scope of the profile: the key, the age, the count, and the summary.
+One line for each range of scopes: the keys, the age, and the summary.
 {{directions}}
 </directions>
 <here scope="{{scope}}">
