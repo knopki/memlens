@@ -462,7 +462,6 @@ function railAction(
 ) {
 	const node = button("", fn, `nav${danger ? " danger" : ""}`);
 	node.append(icon(path), element("span", text));
-	if (danger) (node.lastElementChild as HTMLElement).style.color = "";
 	return node;
 }
 function icon(path: string) {
