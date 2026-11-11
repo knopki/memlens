@@ -541,4 +541,4 @@ customer words as given.
 
 The CLI owes the import from harness sessions. See [REQ-413](02-requirements.md).
 The plugin and its session tab remain pending. See [08-ui.md](08-ui.md) and [REQ-028](02-requirements.md).
-The standalone console marks unavailable session and writer state explicitly.
+The standalone console states no writer state and no session snapshot state. See [REQ-519](02-requirements.md).
