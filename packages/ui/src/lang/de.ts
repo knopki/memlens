@@ -137,7 +137,6 @@ export const de: Table = {
 	kindField: "Art",
 	supersedesField: "Ersetzt · Adressen durch Kommas getrennt",
 	newScopeHint: "Ein neuer Bereich beginnt mit dieser Notiz.",
-	kindFixed: "Die Art ändert sich nicht.",
 	characters: "{count} Zeichen",
 	cancel: "Abbrechen",
 	create: "Eintrag erstellen",

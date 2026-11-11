@@ -137,7 +137,6 @@ export const fr: Table = {
 	kindField: "Type",
 	supersedesField: "Remplace · adresses séparées par des virgules",
 	newScopeHint: "Un nouveau domaine commence avec cette note.",
-	kindFixed: "Le type ne change pas.",
 	characters: "{count} caractères",
 	cancel: "Annuler",
 	create: "Créer l’enregistrement",

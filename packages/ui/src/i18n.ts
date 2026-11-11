@@ -160,7 +160,6 @@ const en = {
 	kindField: "Kind",
 	supersedesField: "Supersedes · comma-separated addresses",
 	newScopeHint: "A new scope starts with this note.",
-	kindFixed: "The kind does not change.",
 	characters: "{count} characters",
 	cancel: "Cancel",
 	create: "Create record",

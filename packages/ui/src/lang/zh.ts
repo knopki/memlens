@@ -132,7 +132,6 @@ export const zh: Table = {
 	kindField: "种类",
 	supersedesField: "替换 · 用逗号分隔的地址",
 	newScopeHint: "新范围以这条笔记开始。",
-	kindFixed: "种类不会改变。",
 	characters: "{count} 个字符",
 	cancel: "取消",
 	create: "创建记录",

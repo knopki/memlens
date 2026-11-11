@@ -1149,8 +1149,8 @@ function compactionPanel(model: View) {
 // #region FUNC_noteDialog
 /**
  * @purpose Create, amend, or supersede a record with explicit user input.
- * @invariants Show the body, the document, the scope, the kind, and the addresses that the record
- * replaces. An amendment keeps the kind and can move the record to another scope.
+ * @invariants Show the body, the document, the scope, the kind, and the addresses that the note
+ * replaces. An amendment changes each of these fields, and it can move the record to another scope.
  */
 function noteDialog(
 	record?: ProjectionRecord | OpenEntry,
@@ -1188,14 +1188,10 @@ function noteDialog(
 	);
 	for (const option of kindInput.options)
 		option.textContent = tr(KIND_KEYS[option.value as NoteKind] as keyof Table);
-	kindInput.disabled = amend;
 	const replace = input(supersedes);
 	replace.spellcheck = false;
-	replace.disabled = amend;
 	const scopeField = field(tr("scopeField"), scopeInput);
-	scopeField.append(
-		el("div", amend ? tr("kindFixed") : tr("newScopeHint"), "hint"),
-	);
+	if (!amend) scopeField.append(el("div", tr("newScopeHint"), "hint"));
 	const replaceField = field(tr("supersedesField"), replace);
 	const row = el("div", "", "row2");
 	row.append(scopeField, field(tr("kindField"), kindInput));
@@ -1205,7 +1201,7 @@ function noteDialog(
 		field(tr("longform"), longform),
 		row,
 	);
-	if (!amend) form.append(replaceField);
+	form.append(replaceField);
 	const save = btn(amend ? tr("save") : tr("create"), () => {}, "pri");
 	save.type = "submit";
 	const foot = el("div", "", "dlg-foot");
@@ -1222,16 +1218,14 @@ function noteDialog(
 				await action(amend ? "amend" : "note", {
 					body: note.value,
 					longform: longform.value,
+					kind: kindInput.value as NoteKind,
+					supersedes: replace.value,
 					...(amend
 						? {
 								target: `${record.scope}#${record.pos}`,
 								dest: scopeInput.value,
 							}
-						: {
-								scope: scopeInput.value,
-								kind: kindInput.value as NoteKind,
-								supersedes: replace.value,
-							}),
+						: { scope: scopeInput.value }),
 				});
 				dialog.close();
 			} finally {

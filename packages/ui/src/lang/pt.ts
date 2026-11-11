@@ -137,7 +137,6 @@ export const pt: Table = {
 	kindField: "Tipo",
 	supersedesField: "Substitui · endereços separados por vírgulas",
 	newScopeHint: "Um novo escopo começa com esta nota.",
-	kindFixed: "O tipo não muda.",
 	characters: "{count} caracteres",
 	cancel: "Cancelar",
 	create: "Criar registro",

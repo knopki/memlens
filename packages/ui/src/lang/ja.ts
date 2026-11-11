@@ -136,7 +136,6 @@ export const ja: Table = {
 	kindField: "種類",
 	supersedesField: "置き換え元 · カンマ区切りのアドレス",
 	newScopeHint: "新しいスコープはこのノートから始まります。",
-	kindFixed: "種類は変わりません。",
 	characters: "{count} 文字",
 	cancel: "キャンセル",
 	create: "記録を作成",

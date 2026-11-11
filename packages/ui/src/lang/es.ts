@@ -137,7 +137,6 @@ export const es: Table = {
 	kindField: "Tipo",
 	supersedesField: "Reemplaza · direcciones separadas por comas",
 	newScopeHint: "Un ámbito nuevo empieza con esta nota.",
-	kindFixed: "El tipo no cambia.",
 	characters: "{count} caracteres",
 	cancel: "Cancelar",
 	create: "Crear entrada",

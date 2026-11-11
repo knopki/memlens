@@ -136,7 +136,6 @@ export const ru: Table = {
 	kindField: "Вид",
 	supersedesField: "Заменяет · адреса через запятую",
 	newScopeHint: "Новая область начинается с этой записи.",
-	kindFixed: "Вид не меняется.",
 	characters: "{count} символов",
 	cancel: "Отмена",
 	create: "Создать запись",
