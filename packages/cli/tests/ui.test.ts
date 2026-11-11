@@ -135,6 +135,27 @@ for (const backend of ["sqlite", "jsonl"])
 			).toBe(403);
 		});
 
+		it("narrows the review lists of a view by the scope and the kind", async () => {
+			const { host, get, post } = await fixture(backend);
+			await post({ action: "note", body: "task here", kind: "task" });
+			await post({ action: "note", body: "fact here", kind: "fact" });
+			await post({
+				action: "note",
+				body: "task there",
+				kind: "task",
+				scope: "user:other",
+			});
+			const view = await get("/api/view?scope=user:notes");
+			expect(
+				view.reviewNext.map((record: { body: string }) => record.body),
+			).toEqual(["task here", "fact here"]);
+			expect(view.reviewNextTotal).toBe(2);
+			const task = await get("/api/view?scope=user:notes&kind=task");
+			expect(task.reviewNext).toHaveLength(1);
+			expect(task.reviewNextTotal).toBe(1);
+			expect((await fetch(`${host.url}/api/view?kind=wrong`)).status).toBe(400);
+		});
+
 		it("publishes proposal approval and dismissal together", async () => {
 			const { root, env, get, post } = await fixture(backend);
 			const runtime = await openRuntime({

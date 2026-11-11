@@ -32,6 +32,7 @@ const note = (
 		ts: string;
 		review_at: string | null;
 		longform: string;
+		kind: JsonlLine["kind"];
 	}> = {},
 ): JsonlLine => {
 	counter += 1;
@@ -41,7 +42,7 @@ const note = (
 		scope: scope as `x:${string}`,
 		op: "note",
 		body,
-		kind: "note",
+		kind: extra.kind ?? "note",
 		ts: extra.ts ?? "2026-11-01T00:00:00.000Z",
 		review_at: extra.review_at ?? null,
 		session: "s",
@@ -267,10 +268,11 @@ describe("openRange", () => {
 describe("dueRecords and scopeLines", () => {
 	const projection = project([
 		note("x:a", "old decision", { review_at: "2026-01-01" }),
-		note("x:a", "fresh task", { review_at: "2026-12-01" }),
+		note("x:a", "fresh task", { review_at: "2026-12-01", kind: "task" }),
 		note("x:b", "due fact", {
 			review_at: "2026-11-10",
 			ts: "2026-11-05T00:00:00.000Z",
+			kind: "fact",
 		}),
 		note("x:c", "no review"),
 		note("x:a", "later decision", { review_at: "2026-12-15" }),
@@ -286,7 +288,7 @@ describe("dueRecords and scopeLines", () => {
 				scope: "x:b",
 				pos: 0,
 				ts: "2026-11-05T00:00:00.000Z",
-				kind: "note",
+				kind: "fact",
 				body: "due fact",
 				review_at: "2026-11-10",
 			},
@@ -294,18 +296,31 @@ describe("dueRecords and scopeLines", () => {
 		expect(dueRecords(projection, null, "2025-12-31")).toEqual([]);
 	});
 
+	it("keeps one kind through the due and upcoming lists", () => {
+		expect(
+			dueRecords(projection, null, "2026-11-10", "fact").map(
+				(item) => item.body,
+			),
+		).toEqual(["due fact"]);
+		expect(dueRecords(projection, null, "2026-11-10", "task")).toEqual([]);
+		const task = upcomingRecords(projection, null, "2026-11-10", 10, "task");
+		expect(task.records.map((item) => item.body)).toEqual(["fresh task"]);
+		expect(task.total).toBe(1);
+	});
+
 	it("lists the upcoming records in date order under the limit", () => {
 		expect(
-			upcomingRecords(projection, null, "2026-11-10", 10).map(
+			upcomingRecords(projection, null, "2026-11-10", 10).records.map(
 				(item) => item.body,
 			),
 		).toEqual(["fresh task", "later decision"]);
-		expect(
-			upcomingRecords(projection, null, "2026-11-10", 1).map(
-				(item) => item.body,
-			),
-		).toEqual(["fresh task"]);
-		expect(upcomingRecords(projection, null, "2026-12-31", 10)).toEqual([]);
+		const one = upcomingRecords(projection, null, "2026-11-10", 1);
+		expect(one.records.map((item) => item.body)).toEqual(["fresh task"]);
+		expect(one.total).toBe(2);
+		expect(upcomingRecords(projection, null, "2026-12-31", 10)).toEqual({
+			records: [],
+			total: 0,
+		});
 	});
 
 	it("compares an older date value with a full review time", () => {
@@ -319,7 +334,7 @@ describe("dueRecords and scopeLines", () => {
 			),
 		).toEqual(["date due", "time due"]);
 		expect(
-			upcomingRecords(mixed, null, "2026-11-10T08:00:00.000Z", 10).map(
+			upcomingRecords(mixed, null, "2026-11-10T08:00:00.000Z", 10).records.map(
 				(item) => item.body,
 			),
 		).toEqual(["time due"]);

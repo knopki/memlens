@@ -8,6 +8,7 @@
  * @invariants An amend takes a destination scope, a kind, and supersede targets of that scope.
  * @invariants Each request opens its selected profile and closes its store, including on failure.
  * @invariants A view combines its projection, proposals, and revision without an intervening write.
+ * @invariants A view reads the review lists of its scope, and an absent kind keeps each kind.
  * @invariants Proposal approval uses ordinary write rules and publishes its dismiss event under the same store lock.
  * @invariants Compaction supports scope and catalog trees. Answers retain copied inputs. The store rejects changed inputs before publication.
  * @invariants Log request paths, result codes, and operation counts, without note content.
@@ -223,8 +224,16 @@ async function route(
 		let result: unknown;
 		switch (url.pathname) {
 			case "/api/view": {
+				const kind = text(fields, "kind");
+				const review = kind ? noteKind(kind) : null;
 				for (;;) {
-					const view = await readConsole(runtime.store, runtime.config, scope);
+					const view = await readConsole(
+						runtime.store,
+						runtime.config,
+						scope,
+						undefined,
+						review,
+					);
 					const proposals = await pendingProposals(runtime);
 					if (view.revision !== (await runtime.store.rev())) {
 						debug("View retry", { event: "retry", scope });

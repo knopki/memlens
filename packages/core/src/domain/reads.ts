@@ -7,8 +7,9 @@
  * @invariants
  *  - Find keeps at most 50 hits for each scope and at most 10 hits in total by default.
  *  - Since and until compare against the ts text, and a date-only bound covers that whole day.
- *  - The due filter and the due list take a record with a review date of today or earlier.
+ *  - The due filter and the due list take a record with a review time of now or earlier.
  *  - A due list without a scope takes each scope of the supplied list, in scope order.
+ *  - A kind filter keeps the records of one kind. An upcoming count ignores the limit.
  *  - An open of one note gives the document of the record. The default mode is head.
  *  - Head gives 8192 characters at most, and all gives 16384.
  *  - The offset continues the document after the earlier answer, and reports the next offset.
@@ -255,47 +256,59 @@ export interface DueRecord {
 // #region FUNC_dueRecords
 /**
  * @purpose List the due records of the supplied scopes, so a review answers without a log scan.
- * @invariants A record is due when its review value is now or earlier. A null scope list takes each scope.
- * A record with no review value is never due. Order by the review value, then the scope, then the position.
+ * @invariants A record is due when its review time is now or earlier. A null scope list takes each scope.
+ * A record with no review value is never due. A null kind keeps each kind.
+ * Order by the review value, then the scope, then the position.
  */
 export function dueRecords(
 	projection: Projection,
 	scopes: readonly ScopeKey[] | null,
 	now: IsoTime,
+	kind: NoteKind | null = null,
 ): readonly DueRecord[] {
-	const due = reviewList(projection, scopes, (review) => review <= now);
-	debug("Review listed", { event: "due", count: due.length });
+	const due = reviewList(projection, scopes, (review) => review <= now, kind);
+	debug("Review listed", { event: "due", count: due.length, kind });
 	return due;
 }
 // #endregion FUNC_dueRecords
 
+/** One page of the records that come due next, with the count of the whole list. */
+export interface UpcomingPage {
+	readonly records: readonly DueRecord[];
+	readonly total: number;
+}
+
 // #region FUNC_upcomingRecords
 /**
  * @purpose List the records that come due next, so the review screen stays useful before a due time.
- * @invariants A record is upcoming when its review value is after now. A null review value stays out.
- * Order by the review value, then the scope, then the position. Keep at most the supplied limit.
+ * @invariants A record is upcoming when its review time is after now. A null review value stays out.
+ * The limit caps the records, and the total counts each record of the kind before the cap.
+ * Order by the review value, then the scope, then the position.
  */
 export function upcomingRecords(
 	projection: Projection,
 	scopes: readonly ScopeKey[] | null,
 	now: IsoTime,
 	limit: number,
-): readonly DueRecord[] {
-	const next = reviewList(projection, scopes, (review) => review > now);
+	kind: NoteKind | null = null,
+): UpcomingPage {
+	const next = reviewList(projection, scopes, (review) => review > now, kind);
 	debug("Review upcoming listed", {
 		event: "upcoming",
 		count: next.length,
 		limit,
+		kind,
 	});
-	return next.slice(0, limit);
+	return { records: next.slice(0, limit), total: next.length };
 }
 // #endregion FUNC_upcomingRecords
 
-/** Collect the live records whose review value passes the test, in review value order. */
+/** Collect the live records that pass the kind test and the review test, in review value order. */
 function reviewList(
 	projection: Projection,
 	scopes: readonly ScopeKey[] | null,
 	keep: (review_at: string) => boolean,
+	kind: NoteKind | null,
 ): DueRecord[] {
 	const visible = scopes === null ? projection.scopeOrder : scopes;
 	const list: DueRecord[] = [];
@@ -305,6 +318,7 @@ function reviewList(
 			if (
 				record.state === "live" &&
 				record.review_at !== null &&
+				(kind === null || record.kind === kind) &&
 				keep(record.review_at)
 			)
 				list.push({

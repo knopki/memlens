@@ -9,6 +9,8 @@
  *    Show no state that this host does not hold.
  *  - The tree screen shows the frontier of the model, so a range line and the notes inside that
  *    range never appear together.
+ *  - The search screen opens on the selected scope. The review screen holds the records of the
+ *    selected scope and one kind at most, and it states the count that the ten-record cap hides.
  *  - The theme choice is light, dark, or system, and it survives a reload.
  *  - A status message and a load state float above the screens and never move them. An open form
  *    takes the message in its own row. The message clears itself, and an error stays longer than a
@@ -88,7 +90,8 @@ const state = {
 	kind: "",
 	since: "",
 	limit: "10",
-	searchScope: "",
+	searchScope: null as string | null,
+	reviewKind: "",
 	job: undefined as Job | undefined,
 	jobError: "",
 };
@@ -148,6 +151,25 @@ function select(values: readonly string[], value: string, label?: string) {
 		node.append(option);
 	}
 	node.value = value;
+	return node;
+}
+/** Build the kind filter of a screen, with the translated names of the kinds. */
+function kindSelect(value: string) {
+	const node = select(["", ...KINDS], value, tr("allKinds"));
+	for (const option of node.options)
+		option.textContent = option.value
+			? tr(KIND_KEYS[option.value as NoteKind] as keyof Table)
+			: tr("allKinds");
+	return node;
+}
+/** Group the named filters of a screen in one row. */
+function filterBar(items: [string, HTMLElement][]) {
+	const node = el("div", "", "filters");
+	for (const [name, control] of items) {
+		const wrap = el("label");
+		wrap.append(el("span", name), control);
+		node.append(wrap);
+	}
 	return node;
 }
 function field(text: string, control: HTMLElement) {
@@ -355,6 +377,7 @@ async function reload(): Promise<void> {
 	const params = new URLSearchParams({
 		profile: state.profile,
 		scope: state.scope,
+		kind: state.reviewKind,
 	});
 	const view = await request<View>(`/api/view?${params.toString()}`);
 	if (token !== state.generation) return;
@@ -544,6 +567,7 @@ async function reset(nextScope: string) {
 	state.scope = nextScope;
 	state.selection = undefined;
 	state.hits = [];
+	state.searchScope = null;
 	state.job = undefined;
 	state.jobError = "";
 	await reload();
@@ -850,8 +874,8 @@ function catalog(main: HTMLElement, model: View): void {
 
 // #region FUNC_search
 /**
- * @purpose Find notes by words in one scope or in every visible scope.
- * @invariants The default scope filter is every visible scope. Show the hit count and keep the
+ * @purpose Find notes by words in the selected scope or in every visible scope.
+ * @invariants The scope filter opens on the selected scope. Show the hit count and keep the
  * selection beside the results.
  */
 function search(main: HTMLElement, model: View): void {
@@ -861,14 +885,10 @@ function search(main: HTMLElement, model: View): void {
 	words.placeholder = tr("searchText");
 	const scopes = select(
 		["", ...model.scopes.map((item) => item.key)],
-		state.searchScope,
+		state.searchScope ?? model.scope,
 		tr("allScopes"),
 	);
-	const kinds = select(["", ...KINDS], state.kind, tr("allKinds"));
-	for (const option of kinds.options)
-		option.textContent = option.value
-			? tr(KIND_KEYS[option.value as NoteKind] as keyof Table)
-			: tr("allKinds");
+	const kinds = kindSelect(state.kind);
 	const date = input(state.since, "date");
 	const cap = input(state.limit, "number");
 	cap.min = "1";
@@ -904,21 +924,16 @@ function search(main: HTMLElement, model: View): void {
 		console.debug("Console search", { event: "search", hits: found.length });
 		render();
 	}
-	const filters = el("div", "", "filters");
-	for (const [name, control] of [
+	const filters = filterBar([
 		[tr("scope"), scopes],
 		[tr("kindLabel"), kinds],
 		[tr("since"), date],
 		[tr("limit"), cap],
-	] as const) {
-		const wrap = el("label", "", "");
-		wrap.append(el("span", name), control);
-		filters.append(wrap);
-	}
+	]);
 	main.append(bar, filters);
 	const list = panel(
 		tr("matches", { count: state.hits.length }),
-		state.searchScope || tr("allScopes"),
+		scopes.value || tr("allScopes"),
 	);
 	for (const hit of state.hits) {
 		const node = btn("", () => openTarget(hit.addr), "hit");
@@ -961,9 +976,21 @@ function highlight(body: string) {
 }
 
 // #region FUNC_review
-/** @purpose List the due notes and the next notes with their review dates and the record actions. */
+/**
+ * @purpose List the due notes of the selected scope and the next notes with their review dates and
+ * the record actions.
+ * @invariants The kind filter keeps one kind in both lists. The next list states its shown count
+ * and the count before the cap.
+ */
 function review(main: HTMLElement, model: View): void {
 	main.append(el("p", tr("revText"), "sub"));
+	const kinds = kindSelect(state.reviewKind);
+	kinds.onchange = () =>
+		run(async () => {
+			state.reviewKind = kinds.value;
+			await reload();
+		});
+	main.append(filterBar([[tr("kindLabel"), kinds]]));
 	const rows = (items: View["review"]) =>
 		items.map((item) => [
 			btn(item.addr, () => openInTree(item.addr)),
@@ -981,7 +1008,10 @@ function review(main: HTMLElement, model: View): void {
 	];
 	const list = panel(tr("due"), `${model.review.length}`);
 	list.append(tableOf(headers, rows(model.review)));
-	const next = panel(tr("next"), `${model.reviewNext.length}`);
+	const next = panel(
+		tr("next"),
+		`${model.reviewNext.length} / ${model.reviewNextTotal}`,
+	);
 	next.append(tableOf(headers, rows(model.reviewNext)));
 	const policy = panel(
 		tr("reviewPeriods"),

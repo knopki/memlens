@@ -4,8 +4,9 @@
  * @scope Scope panels, context, trees, catalog, build candidates, and review lists.
  * @invariants Read projection state only through StorePort. Open no file. Import no DOM, transport, or style.
  * @invariants Exclude scopes outside the profile. Return JSON values from one stable projection revision.
- * @invariants The review list holds the due records. The reviewNext list holds the nearest records
- * with a future review date, at most ten.
+ * @invariants The review list holds the due records of the selected scope. The reviewNext list holds
+ * the nearest records of the selected scope with a later review time, at most ten, and reviewNextTotal
+ * counts them before the cap. A kind selects one kind and null takes each kind.
  * @invariants The frontier holds the slice lines of the selected scope, in the same order and with
  * the same fold as the text of the slice. A range line hides the notes inside that range.
  * #endregion moduleContract
@@ -13,7 +14,7 @@
 
 import { debuglog } from "node:util";
 import { MemlensError } from "../types/errors.js";
-import type { ScopeKey } from "../types/events.js";
+import type { NoteKind, ScopeKey } from "../types/events.js";
 import type { Projection, ProjectionRecord } from "../types/projection.js";
 import type { StorePort } from "../types/store.js";
 import type { Range, SliceLine, TreeNode } from "../types/tree.js";
@@ -27,6 +28,9 @@ import { nowIso } from "./time.js";
 import { buildInput, candidates, isClean, slice } from "./tree.js";
 
 const debug = debuglog("memlens:console");
+
+/** The number of the nearest records that the review screen shows at most. */
+const NEXT_LIMIT = 10;
 
 // #region CLASS_ConsoleModel
 /** @purpose Give console hosts one serializable view of the visible memory. */
@@ -63,6 +67,7 @@ export interface ConsoleModel {
 	readonly frontier: readonly SliceLine[];
 	readonly review: readonly DueRecord[];
 	readonly reviewNext: readonly DueRecord[];
+	readonly reviewNextTotal: number;
 	readonly revision: string;
 }
 // #endregion CLASS_ConsoleModel
@@ -71,6 +76,8 @@ export interface ConsoleModel {
 /**
  * @purpose Read one console snapshot for the selected visible scope.
  * @invariants Keep explicit empty scopes. Accept an absent selected scope when the profile matches it.
+ * @invariants The review lists hold the records of the selected scope only, so a scope choice narrows
+ * the review screen. A null kind keeps each kind.
  * @invariants Use the resolved profile name and independent line budgets. Read no event export and call no compaction.
  */
 export async function readConsole(
@@ -78,6 +85,7 @@ export async function readConsole(
 	config: ResolvedConfig,
 	scope: ScopeKey,
 	now?: string,
+	kind: NoteKind | null = null,
 ): Promise<ConsoleModel> {
 	debug("Console read start", { event: "start", scope });
 	let revision: string;
@@ -128,6 +136,7 @@ export async function readConsole(
 		frontier: hereLines(tree, config.budget.here),
 	}));
 	const allTrees = [...trees, { scope: catalogKey(profile), tree: catalog }];
+	const next = upcomingRecords(projection, [scope], time, NEXT_LIMIT, kind);
 	const model: ConsoleModel = {
 		profile,
 		scope,
@@ -181,8 +190,9 @@ export async function readConsole(
 		),
 		catalog: slice(catalog, config.budget.directions),
 		frontier: slice(hereTree, config.budget.here),
-		review: dueRecords(projection, keys, time),
-		reviewNext: upcomingRecords(projection, keys, time, 10),
+		review: dueRecords(projection, [scope], time, kind),
+		reviewNext: next.records,
+		reviewNextTotal: next.total,
 		revision,
 	};
 	debug("Console read", {
@@ -192,6 +202,9 @@ export async function readConsole(
 		records: model.records.length,
 		nodes: model.nodes.length,
 		frontier: model.frontier.length,
+		kind,
+		due: model.review.length,
+		next: `${model.reviewNext.length}/${model.reviewNextTotal}`,
 	});
 	return model;
 }

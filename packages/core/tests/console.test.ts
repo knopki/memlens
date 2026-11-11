@@ -179,6 +179,39 @@ for (const Backend of [JsonlStore, SqliteStore]) {
 				"future note",
 			]);
 			expect(model.reviewNext[0]?.addr).toBe("project:a#1");
+			expect(model.reviewNextTotal).toBe(1);
+		});
+
+		it("keeps the review lists in the selected scope and the kind", async () => {
+			const store = await open();
+			const future = (
+				scope: "project:a" | "project:b",
+				kind: "task" | "fact",
+			) =>
+				store.append({
+					op: "note",
+					scope,
+					body: `${kind} of ${scope}`,
+					kind,
+					ts: now,
+					review_at: "2099-01-01",
+					session: "s",
+					turn: "t",
+					preset: "p",
+				});
+			await store.append(note("project:a", "due here"));
+			await store.append(note("project:b", "due there"));
+			await future("project:a", "task");
+			await future("project:a", "fact");
+			await future("project:b", "task");
+			const model = await readConsole(store, config(), "project:a", now);
+			expect(model.review.map((record) => record.body)).toEqual(["due here"]);
+			expect(model.reviewNextTotal).toBe(2);
+			const task = await readConsole(store, config(), "project:a", now, "task");
+			expect(task.reviewNext.map((record) => record.body)).toEqual([
+				"task of project:a",
+			]);
+			expect(task.reviewNextTotal).toBe(1);
 		});
 
 		it("keeps a published node clean through a review", async () => {
