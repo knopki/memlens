@@ -25,7 +25,7 @@ export type Ulid = string;
 /** The time in ISO 8601, in UTC with `Z`. The text sorts by time. */
 export type IsoTime = string;
 
-/** The date of a review, as `YYYY-MM-DD`. */
+/** The date form of an older review value, as `YYYY-MM-DD`. */
 export type IsoDate = string;
 
 /** The fields of each event. */
@@ -53,7 +53,8 @@ export interface NoteEvent extends EventBase {
 	readonly kind: NoteKind;
 	/** The time of the write of the note. */
 	readonly ts: IsoTime;
-	readonly review_at: IsoDate | null;
+	/** The next review time. The log keeps older values of the date form `YYYY-MM-DD`. */
+	readonly review_at: IsoTime | null;
 	/** True when the event is a proposal. The projection ignores it. */
 	readonly proposed?: true;
 	readonly session: string;
@@ -95,11 +96,12 @@ export interface RedactEvent extends EventBase {
 	readonly reason: string;
 }
 
-/** The record of a check by a human, and the date of the next check. */
+/** The record of a check by a human, and the time of the next check. */
 export interface ReviewEvent extends EventBase {
 	readonly op: "review";
 	readonly target: Ulid;
-	readonly review_at: IsoDate | null;
+	/** The next review time. The log keeps older values of the date form `YYYY-MM-DD`. */
+	readonly review_at: IsoTime | null;
 	/** True when the event is a proposal. The projection ignores it. */
 	readonly proposed?: true;
 }
