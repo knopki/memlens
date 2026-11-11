@@ -429,7 +429,6 @@ function header(model: View) {
 		pill(tr("profile"), profiles),
 		pill(tr("language"), langs),
 		pill(tr("theme"), themes),
-		pill(tr("backend"), model.backend),
 	);
 	if (model.candidates.length)
 		node.append(pill(tr("dirty"), String(model.candidates.length), true));
