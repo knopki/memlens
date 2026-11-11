@@ -19,7 +19,8 @@
  *  - The supersedes targets resolve from addresses to ids before the write.
  *  - A redact asks for a confirmation, and --yes skips it.
  *  - An export takes --scope. With no flag, an md export writes one file for each scope and a
- *    jsonl export copies the whole store. With the flag, both write one scope.
+ *    jsonl export copies the whole store. With the flag, both write one scope, and a per-scope
+ *    jsonl export also holds the top node of that scope.
  *  - An import with --as rewrites the scope of each imported non-catalog event to the given key.
  *    A catalog event keeps its scope.
  *  - The command check tests the store against its log: each exported event passes validation,

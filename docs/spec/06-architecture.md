@@ -310,7 +310,8 @@ texts are in [09-prompts.md](09-prompts.md).
 The [address contract](../../packages/core/src/domain/address.ts) owns parsing and address text.
 The [projection contract](../../packages/core/src/domain/projection.ts) owns scope transfers and position allocation.
 A saved textual address is not a permanent record identifier.
-Tool scope resolution remains in [REQ-260](02-requirements.md), [REQ-261](02-requirements.md), and [REQ-276](02-requirements.md).
+The [target contract](../../packages/core/src/domain/targets.ts) owns record lookup and scope visibility.
+An address with no scope waits for the tool input rules in [REQ-260](02-requirements.md) and [REQ-261](02-requirements.md).
 
 ## Tree
 
@@ -388,14 +389,16 @@ SQLite appends ordinary data changes and invalidations in one transaction. JSONL
 An import that clears stored content uses the redaction publication protocol in [0008 Redaction](../adr/0008-redaction.md).
 A crash can leave an unnecessary rebuild, but it must not leave changed data with a usable stale summary.
 The projection derives invalidation from the log after a restart or a rebuild. A rebuilt node has a new id.
-See [0015 Node invalidation](../adr/0015-node-invalidation.md) and [REQ-510](02-requirements.md) to [REQ-513](02-requirements.md).
+See [0015 Node invalidation](../adr/0015-node-invalidation.md), the
+[invalidation contract](../../packages/core/src/domain/invalidation.ts), and [REQ-512](02-requirements.md) to
+[REQ-513](02-requirements.md).
 
 ## Session and store
 
 A session writes the store. The export and the import move the records between stores. An import is
 a union of events by `id`. A note can supersede an earlier note. The index is a cache over the log:
-the store rebuilds it from the log after a loss. See [REQ-057](02-requirements.md) to
-[REQ-059](02-requirements.md) and [REQ-373](02-requirements.md) to [REQ-377](02-requirements.md).
+the store rebuilds it from the log after a loss. See the [merge contract](../../packages/core/src/domain/merge.ts),
+[REQ-375](02-requirements.md), and [REQ-377](02-requirements.md).
 
 ## Harness surface
 
@@ -437,7 +440,8 @@ orders, so 220 places the memory after each built-in context and before no tool 
 
 The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 [REQ-352](02-requirements.md). The subagent modes are in [REQ-353](02-requirements.md) to
-[REQ-363](02-requirements.md). The nudge is in [REQ-232](02-requirements.md) to
+[REQ-362](02-requirements.md), and the log keeps the content of a dismissed proposal in the
+[projection contract](../../packages/core/src/domain/projection.ts). The nudge is in [REQ-232](02-requirements.md) to
 [REQ-246](02-requirements.md). See [0009 Agent surface](../adr/0009-agent-surface.md).
 
 ## Human surface
@@ -546,6 +550,8 @@ customer words as given.
 
 ## Remaining work
 
-The CLI owes the import from harness sessions. See [REQ-413](02-requirements.md).
+The CLI owes the import from harness sessions. See [REQ-413](02-requirements.md) and
+[Q-514](03-open-questions.md#q-514).
 The plugin and its session tab remain pending. See [08-ui.md](08-ui.md) and [REQ-028](02-requirements.md).
-The standalone console states no compaction state and no session snapshot state. See [REQ-519](02-requirements.md).
+The standalone console states no compaction state and no session snapshot state. See the
+[client contract](../../packages/ui/src/client.ts).

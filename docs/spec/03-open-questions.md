@@ -2,11 +2,19 @@
 
 A blocking question stops the current portion of the specification until the customer answers it.
 
-No question is open.
-
 ## Open questions
 
-None.
+### Q-514
+
+Which rule turns a harness session into notes at `import --from dsh-sessions`?
+
+The requirement [REQ-413](02-requirements.md) says that the import writes new notes of each
+session. The rule that selects the note text is open.
+
+- Option A: The import gives the session text to the model with the compaction prompt. The answer
+  of the model becomes the notes.
+- Option B: The import reads the user messages of the session only. Each message becomes one note
+  body, and the import calls no model.
 
 ## Closed questions
 

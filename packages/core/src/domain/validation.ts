@@ -12,6 +12,8 @@
  * @invariants
  *  - A validated import keeps every supplied field value and copies the event and its arrays.
  *  - A local append normalizes the scope and note or amendment body and keeps absent amendment fields absent.
+ *  - A local append keeps the ts value of the write as given, and at stays the log time of the envelope.
+ *  - A note requires a body with a longform, and no node payload holds longform text.
  *  - A missing target is permitted only for an import.
  *  - Every error is a Data MemlensError with a field name as its message.
  *  - UTC times use YYYY-MM-DDTHH:mm:ss.sssZ so lexical order equals time order.
