@@ -353,7 +353,8 @@ See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
 The background writer computes candidates from dirty non-empty aligned ranges through the root.
 A missing node event is a dirty candidate. A range waits for clean non-empty children before a build.
-The writer orders candidates by due, level, and start. It stores no queue, job row, or lease.
+The [tree contract](../../packages/core/src/domain/tree.ts) owns the candidate order. The writer
+stores no queue, job row, or lease.
 A restart derives candidates again from the tree. In-flight attempts and retry delays are local runtime state.
 
 A run uses `parallel`, `batch`, or `auto`. Parallel makes six concurrent calls, one line per call.
