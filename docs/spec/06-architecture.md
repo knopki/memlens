@@ -214,7 +214,7 @@ A JSONL rewrite or replacement invalidates its earlier cursor. The next read reb
 
 A projection rebuild reads each event once, preserves node events and invalidations, and calls no model.
 A schema change still uses a migration in one transaction. The render scans no event.
-See [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to [REQ-494](02-requirements.md).
+See [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to [REQ-493](02-requirements.md).
 
 The Markdown format is export-only. It is a human view and has no import or event recovery contract.
 The JSONL format transfers events. Store import reads JSONL, while the separate session import reads harness sessions.

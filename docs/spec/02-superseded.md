@@ -10,6 +10,7 @@ The local rules below retain their original words, status, source, and test meth
 | REQ-368 | The tool call sets the `idem` of a write. | FR | S-071 | [0016 Write boundary](../adr/0016-write-boundary.md) removes idem. |
 | REQ-021 | The slice updates at a new session, at a compaction after success, and at an idle time longer than the TTL. | FR | S-013, S-067 | REQ-300 |
 | REQ-035 | A line about the subagent write goes to the report of the parent. | FR | S-013 | REQ-157 |
+| REQ-494 | A migration is one transaction, and a failed migration leaves the earlier version. | FR | S-127 | REQ-493 holds one schema rule for the log and the projection. |
 | REQ-036 | A subagent cannot hide a note and cannot review a note. | FR | S-013, S-067 | REQ-356 |
 | REQ-055 | A session is a branch of a profile, and an import joins the records of the branch to the trunk. | FR | S-014, S-076 | REQ-375, REQ-057 |
 | REQ-112 | A record with the state `proposed`, `hidden`, or `deleted` does not enter the card. | FR | S-023 | REQ-191 |
