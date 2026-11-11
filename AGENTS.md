@@ -45,8 +45,7 @@ entity contract before a change.
    `debuglog` from `node:util`.
 6. Write code only from an accepted requirement or a direct customer request. An unknown item is
    `TBD` or an open question.
-7. Prefer the smallest implementation that meets the contract. Keep the source small: the OptMem
-   stopgap fits in 1000 lines.
+7. Prefer the smallest implementation that meets the contract.
 8. Write tests with each module. Run `pnpm run verify` before you finish a change. Run
    `pnpm run format` for the format.
 9. A change of the console needs the build and the page. Run `pnpm run verify`, then open
