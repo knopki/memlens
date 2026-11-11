@@ -536,7 +536,8 @@ async function reset(nextScope: string) {
 // #region FUNC_overview
 /**
  * @purpose Show each visible scope as one card and the assembled slice below.
- * @invariants Keep a card for a scope with no live note. Quote the slice as text.
+ * @invariants Keep a card for a scope with no live note. Quote the whole slice as text: the page
+ * scrolls, and the slice holds no height limit and no inner scroll.
  */
 function overview(main: HTMLElement, model: View): void {
 	main.append(el("p", tr("ovText"), "sub"));

@@ -3,6 +3,7 @@
  * @scope The page shell, the panels, the tables, the forms, and the two palettes.
  * @invariants Each card, panel, and row keeps a gap to its neighbour and to both edges.
  * A scroll container reserves the scrollbar gutter, so a shown scrollbar moves no content.
+ * The text of a slice renders in full. The page scrolls, and the slice holds no inner scroll.
  * The stylesheet holds no layout decision of a screen. The attribute data-theme selects the palette.
  * #endregion moduleContract
  */
@@ -653,9 +654,6 @@ pre.slice {
 	line-height: 1.5;
 	white-space: pre-wrap;
 	word-break: break-word;
-	max-height: 46vh;
-	overflow: auto;
-	scrollbar-gutter: stable;
 }
 .field {
 	display: grid;
