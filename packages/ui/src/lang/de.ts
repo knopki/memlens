@@ -74,11 +74,8 @@ export const de: Table = {
 	catText:
 		"Eine Zeile für jedes Intervall von Bereichen. Das Budget directions begrenzt die Katalogzeilen.",
 	catLines: "Katalogzeilen",
-	catNodes: "Katalogknoten",
 	emptyCatalog: "Der Katalog ist leer.",
 	range: "Intervall",
-	dates: "Zeitraum",
-	chars: "Zeichen",
 	state: "Status",
 	searchText:
 		"Notizen nach Wörtern durchsuchen. Gesucht wird im Inhalt der Notiz.",

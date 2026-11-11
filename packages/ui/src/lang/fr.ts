@@ -74,11 +74,8 @@ export const fr: Table = {
 	catText:
 		"Une ligne pour chaque intervalle de domaines visibles. Le budget directions limite les lignes du catalogue.",
 	catLines: "Lignes du catalogue",
-	catNodes: "Nœuds du catalogue",
 	emptyCatalog: "Le catalogue est vide.",
 	range: "Intervalle",
-	dates: "Dates",
-	chars: "Caractères",
 	state: "État",
 	searchText:
 		"Trouver des notes par mots. Les mots sont cherchés dans le corps de la note.",

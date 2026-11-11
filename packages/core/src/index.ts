@@ -165,6 +165,7 @@ export {
 export {
 	buildInput,
 	candidates,
+	catalogChildren,
 	currentNode,
 	due,
 	fold,

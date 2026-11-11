@@ -464,6 +464,13 @@ main h1 {
 .line .id {
 	color: var(--muted);
 }
+/* An address that names a scope list can be long, so the column keeps a limit. */
+.keys .line .id {
+	overflow: hidden;
+	max-width: 26ch;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
 .line.r .id {
 	color: var(--green);
 }

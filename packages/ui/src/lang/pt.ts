@@ -74,11 +74,8 @@ export const pt: Table = {
 	catText:
 		"Uma linha para cada intervalo de escopos visíveis. O orçamento directions limita as linhas do catálogo.",
 	catLines: "Linhas do catálogo",
-	catNodes: "Nós do catálogo",
 	emptyCatalog: "O catálogo está vazio.",
 	range: "Intervalo",
-	dates: "Datas",
-	chars: "Caracteres",
 	state: "Estado",
 	searchText:
 		"Buscar notas por palavras. As palavras são procuradas no corpo da nota.",

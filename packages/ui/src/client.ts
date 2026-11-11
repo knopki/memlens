@@ -9,6 +9,9 @@
  *    Show no state that this host does not hold.
  *  - The tree screen shows the frontier of the model, so a range line and the notes inside that
  *    range never appear together.
+ *  - The catalog screen shows the direction lines of the visible scopes with their budget. A range
+ *    line opens its two halves beside the list, and a line over one scope opens the tree of that
+ *    scope.
  *  - The search screen opens on the selected scope. The review screen holds the records of the
  *    selected scope and one kind at most, and it states the count that the ten-record cap hides.
  *  - The theme choice is light, dark, or system, and it survives a reload.
@@ -76,7 +79,12 @@ type Job = {
 	profile: string;
 	scope: string;
 };
-type Selection = { target: string; result: OpenEntry | OpenChildren };
+type Selection = { target: string; result: Opened };
+/** The answer of one open: a note, the children of a range, or the lines below a catalog range. */
+type Opened =
+	| OpenEntry
+	| OpenChildren
+	| { readonly kind: "catalog"; readonly children: readonly SliceLine[] };
 type Choice = "system" | "light" | "dark";
 /** How a state change meets the browser history: a new entry, the current entry, or no write. */
 type Step = "push" | "replace" | "none";
@@ -257,10 +265,23 @@ function icon(path: string) {
 }
 const address = (record: { scope: string; pos: number }) =>
 	`${record.scope}#${record.pos}`;
-const rangeAddress = (key: string, range: Range) =>
-	`${key}#${range.start}-${range.start + 2 ** range.level - 1}`;
+const rangeId = (range: Range) =>
+	`#${range.start}-${range.start + 2 ** range.level - 1}`;
+/** Read a range id back into its range, so a reload restores one open catalog line. */
+const rangeOf = (id: string): Range => {
+	const [start = 0, end = 0] = id.replace(/^#/, "").split("-").map(Number);
+	return { start, level: Math.max(0, Math.log2(end - start + 1)) };
+};
+const rangeAddress = (key: string, range: Range) => `${key}${rangeId(range)}`;
 const lineAddress = (key: string, line: SliceLine) =>
 	line.kind === "record" ? `${key}#${line.pos}` : rangeAddress(key, line.range);
+/** The text of one line: the body of a note, the summary of a node, or the assembled text. */
+const lineText = (line: SliceLine) =>
+	line.kind === "record"
+		? line.body
+		: line.kind === "summary"
+			? line.summary
+			: line.text;
 /** The date span of one period, with the shared year and month once. */
 function span(from: string, to: string): string {
 	const first = from.slice(0, 10);
@@ -384,7 +405,10 @@ async function restore(route: Route, retry = true): Promise<void> {
 		return;
 	}
 	if (state.query) await find("none");
-	if (target) await openTarget(target, "none");
+	if (target)
+		await (route.screen === "catalog"
+			? openCatalog(rangeOf(target), "none")
+			: openTarget(target, "none"));
 	enter("replace");
 }
 // #endregion FUNC_restore
@@ -744,12 +768,27 @@ function overview(main: HTMLElement, model: View): void {
 }
 // #endregion FUNC_overview
 
-/** Each line kind of the frontier, with the message key that the legend reads. */
-const LINE_KINDS: readonly (readonly [SliceLine["kind"], keyof Table])[] = [
-	["record", "record"],
-	["summary", "clean"],
-	["temporary", "pending"],
-];
+/** The message key of each line kind, so a line and its legend name the kind in one way. */
+const KIND_LABELS: Record<SliceLine["kind"], keyof Table> = {
+	record: "record",
+	summary: "clean",
+	temporary: "pending",
+};
+
+/** Build the legend of a screen from the kinds that its lines can hold. */
+function legendOf(kinds: readonly SliceLine["kind"][]) {
+	const node = el("div", "", "legend");
+	for (const kind of kinds)
+		node.append(el("span", tr(KIND_LABELS[kind]), `lg ${kind[0]}`));
+	return node;
+}
+
+/** The panel of a screen with no open line. */
+function hintPanel() {
+	const node = panel(tr("children"));
+	node.append(el("p", tr("selectLine"), "muted"));
+	return node;
+}
 
 // #region FUNC_tree
 /**
@@ -770,17 +809,17 @@ function tree(main: HTMLElement, model: View): void {
 		tr("frontier"),
 		tr("frontierMeta", { ranges: lines.length, live: live.length }),
 	);
-	const legend = el("div", "", "legend");
-	for (const [kind, key] of LINE_KINDS)
-		legend.append(el("span", tr(key), `lg ${kind[0]}`));
-	panelNode.append(legend);
+	panelNode.append(legendOf(["record", "summary", "temporary"]));
 	const list = el("div", "", "lines");
 	for (const line of lines) list.append(frontierLine(state.scope, line));
 	if (!lines.length) list.append(el("p", tr("noFrontier"), "muted"));
 	panelNode.append(list);
 	const children =
 		state.selection?.result.kind === "children"
-			? childrenPanel(state.selection.target, state.selection.result)
+			? childrenPanel(
+					`${tr("children")} · ${state.selection.target}`,
+					state.selection.result.children.map((child) => childLine(child)),
+				)
 			: undefined;
 	const column = el("div", "", "column");
 	if (children) column.append(children);
@@ -792,12 +831,7 @@ function tree(main: HTMLElement, model: View): void {
 
 function frontierLine(key: string, line: SliceLine) {
 	const target = lineAddress(key, line);
-	const text =
-		line.kind === "record"
-			? line.body
-			: line.kind === "summary"
-				? line.summary
-				: line.text;
+	const text = lineText(line);
 	const node = btn("", () => openTarget(target), `line ${line.kind[0] ?? ""}`);
 	node.append(el("span", target, "id"));
 	node.append(el("span", text || span(line.from, line.to), "tx"));
@@ -807,13 +841,11 @@ function frontierLine(key: string, line: SliceLine) {
 	return node;
 }
 
-function childrenPanel(target: string, result: OpenChildren) {
-	const node = panel(
-		`${tr("children")} · ${target}`,
-		String(result.children.length),
-	);
+function childrenPanel(title: string, rows: readonly HTMLElement[]) {
+	const node = panel(title, String(rows.length));
 	const list = el("div", "", "lines");
-	for (const child of result.children) list.append(childLine(child));
+	for (const row of rows) list.append(row);
+	if (!rows.length) list.append(el("p", tr("none"), "muted"));
 	node.append(list);
 	return node;
 }
@@ -850,7 +882,7 @@ function inspector(): HTMLElement {
 		return node;
 	}
 	const { result } = state.selection;
-	if (result.kind === "children") {
+	if (result.kind !== "entry") {
 		node.append(el("p", tr("noSummary"), "muted"));
 		return node;
 	}
@@ -956,11 +988,53 @@ async function openInTree(target: string): Promise<void> {
 }
 // #endregion FUNC_openInTree
 
+// #region FUNC_openCatalog
+/**
+ * @purpose Expand one catalog range into the two lines below it, and keep the selection.
+ * @invariants Write the address only after the host answers.
+ */
+async function openCatalog(range: Range, step: Step = "push"): Promise<void> {
+	const token = state.generation;
+	const params = new URLSearchParams({
+		profile: state.profile,
+		scope: state.scope,
+		start: String(range.start),
+		level: String(range.level),
+	});
+	const children = await request<SliceLine[]>(
+		`/api/catalog?${params.toString()}`,
+	);
+	if (token !== state.generation) return;
+	console.debug("Console catalog opened", {
+		event: "catalog",
+		start: range.start,
+		level: range.level,
+		lines: children.length,
+	});
+	state.selection = {
+		target: rangeId(range),
+		result: { kind: "catalog", children },
+	};
+	enter(step);
+	render();
+}
+// #endregion FUNC_openCatalog
+
+// #region FUNC_openScopeTree
+/** @purpose Open the tree screen of one scope as one place. */
+async function openScopeTree(key: string): Promise<void> {
+	state.screen = "tree";
+	await reset(key);
+}
+// #endregion FUNC_openScopeTree
+
 // #region FUNC_catalog
 /**
- * @purpose Show the catalog lines of the visible scopes with the directions budget.
- * @invariants The panel holds the direction lines of the model, so each line names its scope.
- * State no rule that the store does not hold.
+ * @purpose Show the direction lines of the visible scopes with their budget, and open one part.
+ * @invariants The list holds one line for each catalog range of the model, with the legend of the
+ * two kinds that a catalog line can hold.
+ * A range line opens its two halves in the panel beside the list. A line over one scope opens the
+ * tree of that scope. State no rule that the store does not hold.
  */
 function catalog(main: HTMLElement, model: View): void {
 	main.append(el("p", tr("catText"), "sub"));
@@ -971,29 +1045,53 @@ function catalog(main: HTMLElement, model: View): void {
 			limit: model.budgets.directions.limit,
 		}),
 	);
-	const pre = el("pre", model.directions, "slice");
-	if (!model.directions) pre.textContent = tr("emptyCatalog");
-	lines.append(pre, bar("directions", model.budgets.directions));
-	const nodes = model.nodes.filter((item) =>
-		item.scope.startsWith("__catalog__:"),
-	);
-	const detail = panel(tr("catNodes"), String(nodes.length));
-	detail.append(
-		tableOf(
-			[tr("range"), tr("dates"), tr("chars"), tr("state")],
-			nodes.map((item) => [
-				rangeAddress(item.scope, item.node.range),
-				span(item.node.ts_from, item.node.ts_to),
-				String(item.node.chars),
-				item.clean ? tr("clean") : tr("dirty"),
-			]),
-		),
-	);
-	const split = el("div", "", "split");
+	lines.append(legendOf(["summary", "temporary"]));
+	const list = el("div", "", "lines");
+	for (const line of model.catalog) list.append(catalogLine(model, line));
+	if (!model.catalog.length) list.append(el("p", tr("emptyCatalog"), "muted"));
+	lines.append(list);
+	const selected = state.selection;
+	const detail =
+		selected?.result.kind === "catalog"
+			? childrenPanel(
+					`${tr("children")} · ${catalogName(model, rangeOf(selected.target))}`,
+					selected.result.children.map((line) => catalogLine(model, line)),
+				)
+			: hintPanel();
+	const split = el("div", "", "split keys");
 	split.append(lines, detail);
 	main.append(split);
 }
 // #endregion FUNC_catalog
+
+/** The name of one catalog range for a human: the scope keys it covers, or its range id. */
+function catalogName(model: View, range: Range): string {
+	const covered = model.catalogScopes.slice(
+		range.start,
+		range.start + 2 ** range.level,
+	);
+	return covered.join(",") || rangeId(range);
+}
+
+function catalogLine(model: View, line: SliceLine) {
+	const range =
+		line.kind === "record" ? { start: line.pos, level: 0 } : line.range;
+	const scope =
+		range.level === 0 ? model.catalogScopes[range.start] : undefined;
+	const target = rangeId(range);
+	const node = btn(
+		"",
+		() => (scope ? openScopeTree(scope) : openCatalog(range)),
+		`line ${line.kind[0] ?? ""}`,
+	);
+	node.append(el("span", catalogName(model, range), "id"));
+	const text = lineText(line);
+	node.append(el("span", text || span(line.from, line.to), "tx"));
+	if (line.kind === "temporary") node.classList.add("pending");
+	if (state.selection?.target === target) node.classList.add("sel");
+	node.title = text || tr("notBuilt");
+	return node;
+}
 
 // #region FUNC_search
 /**

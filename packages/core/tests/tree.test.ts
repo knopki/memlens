@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
 	buildInput,
 	candidates,
+	catalogChildren,
 	currentNode,
 	due,
 	fold,
@@ -426,6 +427,36 @@ describe("catalogs", () => {
 				text: "body 0",
 			},
 		]);
+	});
+
+	it("gives the two lines below one catalog range and no line below a leaf", () => {
+		const catalog: Tree = {
+			total: 2,
+			notes: [],
+			nodes: [],
+			invalidated: [],
+			scope_roots: new Map([
+				[0, built(1)],
+				[1, tree(1)],
+			]),
+		};
+		expect(catalogChildren(catalog, range(0, 1))).toEqual([
+			{
+				kind: "summary",
+				range: range(0, 0),
+				from: "date 0",
+				to: "date 0",
+				summary: "summary 0:1",
+			},
+			{
+				kind: "temporary",
+				range: range(1, 0),
+				from: "date 0",
+				to: "date 0",
+				text: "body 0",
+			},
+		]);
+		expect(catalogChildren(catalog, range(0, 0))).toEqual([]);
 	});
 });
 

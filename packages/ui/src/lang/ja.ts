@@ -74,11 +74,8 @@ export const ja: Table = {
 	catText:
 		"表示中のスコープの範囲ごとに 1 行です。directions の予算がカタログの行数を制限します。",
 	catLines: "カタログの行",
-	catNodes: "カタログのノード",
 	emptyCatalog: "カタログは空です。",
 	range: "範囲",
-	dates: "日付",
-	chars: "文字数",
 	state: "状態",
 	searchText: "単語でノートを検索します。単語はノートの本文と照合されます。",
 	find: "検索",

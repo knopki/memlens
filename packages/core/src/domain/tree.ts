@@ -605,6 +605,41 @@ function joinBody(first: string, rest: string, limit: number): string {
 // #endregion FUNC_joinBody
 // #endregion FUNC_rangeBody
 
+// #region FUNC_lineOf
+/**
+ * @purpose Render one line of a range, so the fold and a single-level read share one rule.
+ * @invariants A live record gives its body. A clean node or a clean scope root gives a summary.
+ * Another range gives a temporary line with the range period and the assembled text of its two
+ * children, joined for this render only and cut at the line limit.
+ */
+function lineOf(model: Model, range: Range): SliceLine {
+	const period = model.period(range);
+	if (range.level === 0) {
+		const leaf = model.live(range)[0];
+		if (leaf?.record)
+			return {
+				kind: "record",
+				pos: range.start,
+				...period,
+				body: leaf.record.body,
+			};
+		const root = leaf?.scope?.root();
+		if (root && leaf?.scope?.isClean(root))
+			return { kind: "summary", range, ...period, summary: root.summary };
+	} else {
+		const node = model.node(range);
+		if (node && model.isClean(node))
+			return { kind: "summary", range, ...period, summary: node.summary };
+	}
+	return {
+		kind: "temporary",
+		range,
+		...period,
+		text: cutAtWord(rangeBody(model, range, LINE_LIMIT), LINE_LIMIT),
+	};
+}
+// #endregion FUNC_lineOf
+
 // #region FUNC_slice
 /**
  * @purpose Render the minimal fold while preserving the greatest live leaf.
@@ -617,34 +652,29 @@ function joinBody(first: string, rest: string, limit: number): string {
  */
 export function slice(tree: Tree, budget: Lines): readonly SliceLine[] {
 	const model = new Model(tree);
-	return frontier(model, budget).map((range): SliceLine => {
-		const period = model.period(range);
-		if (range.level === 0) {
-			const leaf = model.live(range)[0];
-			if (leaf?.record)
-				return {
-					kind: "record",
-					pos: range.start,
-					...period,
-					body: leaf.record.body,
-				};
-			const root = leaf?.scope?.root();
-			if (root && leaf?.scope?.isClean(root))
-				return { kind: "summary", range, ...period, summary: root.summary };
-		} else {
-			const node = model.node(range);
-			if (node && model.isClean(node))
-				return { kind: "summary", range, ...period, summary: node.summary };
-		}
-		return {
-			kind: "temporary",
-			range,
-			...period,
-			text: cutAtWord(rangeBody(model, range, LINE_LIMIT), LINE_LIMIT),
-		};
-	});
+	return frontier(model, budget).map((range) => lineOf(model, range));
 }
 // #endregion FUNC_slice
+
+// #region FUNC_catalogChildren
+/**
+ * @purpose Give the two lines below one catalog range, so a human reads the map of directions.
+ * @invariants Split the range into its two halves. A half with no live scope gives no line.
+ * A half takes the line of the fold rule for its own range: a clean node gives its summary, and
+ * an unready half gives a temporary line with its assembled text.
+ * A range below level one gives no line, because a leaf of the catalog is one scope.
+ */
+export function catalogChildren(
+	tree: Tree,
+	range: Range,
+): readonly SliceLine[] {
+	if (range.level < 1) return [];
+	const model = new Model(tree);
+	return halves(range)
+		.filter((half) => model.live(half).length > 0)
+		.map((half) => lineOf(model, half));
+}
+// #endregion FUNC_catalogChildren
 
 // #region FUNC_due
 /**

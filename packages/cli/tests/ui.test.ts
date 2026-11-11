@@ -156,6 +156,22 @@ for (const backend of ["sqlite", "jsonl"])
 			expect((await fetch(`${host.url}/api/view?kind=wrong`)).status).toBe(400);
 		});
 
+		it("gives the two lines below one catalog range", async () => {
+			const { host, get, post } = await fixture(backend);
+			await post({ action: "note", body: "alpha memory" });
+			await post({ action: "note", body: "beta memory", scope: "user:other" });
+			const lines = await get("/api/catalog?start=0&level=1");
+			expect(lines.map((line: { kind: string }) => line.kind)).toEqual([
+				"temporary",
+				"temporary",
+			]);
+			expect(lines[0].text).toContain("alpha memory");
+			expect(lines[1].text).toContain("beta memory");
+			expect(
+				(await fetch(`${host.url}/api/catalog?start=0&level=0`)).status,
+			).toBe(400);
+		});
+
 		it("publishes proposal approval and dismissal together", async () => {
 			const { root, env, get, post } = await fixture(backend);
 			const runtime = await openRuntime({

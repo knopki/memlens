@@ -9,6 +9,8 @@
  * @invariants Each request opens its selected profile and closes its store, including on failure.
  * @invariants A view combines its projection, proposals, and revision without an intervening write.
  * @invariants A view reads the review lists of its scope, and an absent kind keeps each kind.
+ * @invariants The catalog route reads the catalog tree of the default profile, so a console shows
+ * the two lines below one catalog range.
  * @invariants Proposal approval uses ordinary write rules and publishes its dismiss event under the same store lock.
  * @invariants Compaction supports scope and catalog trees. Answers retain copied inputs. The store rejects changed inputs before publication.
  * @invariants Log request paths, result codes, and operation counts, without note content.
@@ -26,6 +28,7 @@ import { debuglog } from "node:util";
 import {
 	addDaysAtTime,
 	type BuildInput,
+	catalogChildren,
 	catalogKey,
 	catalogTree,
 	type Event,
@@ -300,6 +303,30 @@ async function route(
 						throw new MemlensError("Data", "The note does not exist.");
 					result = openNote(key, record, "all");
 				}
+				break;
+			}
+			case "/api/catalog": {
+				const start = Number(text(fields, "start"));
+				const level = Number(text(fields, "level"));
+				if (
+					!Number.isInteger(start) ||
+					start < 0 ||
+					!Number.isInteger(level) ||
+					level < 1 ||
+					level > 31
+				)
+					throw new MemlensError(
+						"Usage",
+						"The catalog target must be a range.",
+					);
+				result = catalogChildren(
+					catalogTree(
+						runtime.projection,
+						runtime.config.defaultProfile,
+						visible,
+					),
+					{ start, level },
+				);
 				break;
 			}
 			case "/api/action":

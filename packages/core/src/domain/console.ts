@@ -64,6 +64,8 @@ export interface ConsoleModel {
 		readonly ready: boolean;
 	}[];
 	readonly catalog: readonly SliceLine[];
+	/** The scope of each catalog position, in the order of the catalog tree. */
+	readonly catalogScopes: readonly ScopeKey[];
 	readonly frontier: readonly SliceLine[];
 	readonly review: readonly DueRecord[];
 	readonly reviewNext: readonly DueRecord[];
@@ -79,6 +81,8 @@ export interface ConsoleModel {
  * @invariants The review lists hold the records of the selected scope only, so a scope choice narrows
  * the review screen. A null kind keeps each kind.
  * @invariants Use the resolved profile name and independent line budgets. Read no event export and call no compaction.
+ * @invariants The catalog scopes hold the scope of each catalog position, in the order of the catalog
+ * tree, so a host maps a line position to its scope.
  */
 export async function readConsole(
 	store: StorePort,
@@ -189,6 +193,7 @@ export async function readConsole(
 			})),
 		),
 		catalog: slice(catalog, config.budget.directions),
+		catalogScopes: catalogScopes.map((item) => item.key),
 		frontier: slice(hereTree, config.budget.here),
 		review: dueRecords(projection, [scope], time, kind),
 		reviewNext: next.records,

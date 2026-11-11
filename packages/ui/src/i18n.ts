@@ -98,11 +98,8 @@ const en = {
 	catText:
 		"A line for each range of visible scopes. The directions budget limits the catalog lines.",
 	catLines: "Catalog lines",
-	catNodes: "Catalog nodes",
 	emptyCatalog: "The catalog is empty.",
 	range: "Range",
-	dates: "Dates",
-	chars: "Chars",
 	state: "State",
 	searchText: "Find notes by words. The words match the note body.",
 	find: "Find",
