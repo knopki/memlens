@@ -53,7 +53,7 @@ op. A `redact` clears the content of its target.
 | Op        | Payload                                                                                                                                                   |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes` |
-| `amend`   | `target`, and one or more of `body`, `longform`, and `scope`                                                                                              |
+| `amend`   | `target`, and one or more of `body`, `longform`, `scope`, `kind`, and `supersedes`                                                                         |
 | `hide`    | `target`, `reason`                                                                                                                                        |
 | `redact`  | `target`, `reason`                                                                                                                                        |
 | `review`  | `target`, `review_at`                                                                                                                                     |
@@ -456,7 +456,7 @@ memlens forget <target> [--scope key] [--reason "text"]
 memlens review [--scope key]... [--limit 50] [--json]
 memlens review --mark <target>,<target> [--scope key] [--for 180d]
 memlens redact <target> [--scope key] [--reason "text"] [--yes]
-memlens amend <target> [--scope key] [--body "text"] [--longform file.md]
+memlens amend <target> [--scope key] [--body "text"] [--longform file.md] [--kind kind] [--supersedes 12,14]
 memlens scopes [--json]
 memlens scope
 memlens slice [--profile name] [--scope key] [--json]

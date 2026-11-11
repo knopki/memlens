@@ -148,6 +148,8 @@ Use module invariants for module-wide rules. Use entity contracts for rules with
 | REQ-517 | The console files an amendment to the body, the document, or the scope of a note. | FR | accepted | S-144 | An amendment with another scope moves the note to that scope with a new position. |
 | REQ-518 | A compaction job without a merge input states that fact and opens no answer form. | FR | accepted | S-144 | Prepare a job in a settled scope. The console shows the state and no form. |
 | REQ-519 | The standalone console shows no writer state and no session snapshot state. | FR | accepted | S-144 | The console shows no such text. It names the store, the revision, and the backend only. |
+| REQ-520 | An amendment changes the kind of a note. | FR | accepted | S-145 | Amend a note with another kind. The record holds the new kind, and its time and review date stay. |
+| REQ-521 | An amendment adds the named records to the supersedes of a note. | FR | accepted | S-145 | Amend a note with one target of its scope. The target leaves the view, and the record names it. |
 
 ## Rules for new requirements
 

@@ -9,7 +9,7 @@ are the data path, and they need no model call. A rejected requirement stays out
 
 | Slice | Subject | Global requirements | Count | Local contracts |
 | --- | --- | --- | --- | --- |
-| 1 | The events and the notes | 008, 010, 013-014, 026-027, 060, 062, 064, 067-069, 074, 080-081, 277, 309, 474 | 18 | [note-body](../../packages/core/src/domain/note-body.ts), [projection](../../packages/core/src/domain/projection.ts) |
+| 1 | The events and the notes | 008, 010, 013-014, 026-027, 060, 062, 064, 067-069, 074, 080-081, 277, 309, 474, 520-521 | 20 | [note-body](../../packages/core/src/domain/note-body.ts), [projection](../../packages/core/src/domain/projection.ts), [validation](../../packages/core/src/domain/validation.ts) |
 | 2 | The projection | None | 0 | [projection](../../packages/core/src/domain/projection.ts) |
 | 3 | The store | 043, 045, 175, 236, 306, 375, 484, 486, 488-491, 493-494 | 14 | [projection](../../packages/core/src/domain/projection.ts), [config](../../packages/core/src/domain/config.ts) |
 | 4 | The redaction | 025, 082, 119, 219, 222 | 5 | [sanitization](../../packages/core/src/domain/sanitization.ts) |
