@@ -121,8 +121,8 @@ An answer above 640 characters after the attempts cuts at a word boundary, and t
 `truncated: true`. See [REQ-438](02-requirements.md).
 
 The check "the line is shorter than the two children" applies to a model merge of two non-empty children
-only. The fold takes the length of each line from the field `chars`. See
-[REQ-172](02-requirements.md).
+only. The fold takes the length of each line from the field `chars`. See the
+[writer contract](../../packages/core/src/domain/writer.ts).
 
 ## Nudge texts
 

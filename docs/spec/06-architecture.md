@@ -119,8 +119,8 @@ See the [catalog contracts](../../packages/core/src/domain/projection.ts) and [0
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
 When the top node is not ready, its direction line is temporary and gives the period without summary text. A scope with no
 live note gives no direction line. A shared scope gets one position in each profile where it is
-visible. See [REQ-108](02-requirements.md), [REQ-109](02-requirements.md),
-[REQ-451](02-requirements.md), the [catalog contract](../../packages/core/src/domain/projection.ts), and the [root contract](../../packages/core/src/domain/tree.ts).
+visible. See [REQ-108](02-requirements.md), the [context contract](../../packages/core/src/domain/context.ts),
+the [catalog contract](../../packages/core/src/domain/projection.ts), and the [root contract](../../packages/core/src/domain/tree.ts).
 
 A change of a note makes each node above it dirty, and the writer builds the node from its two
 children. A rebuild appends a new `node` event for the same key.
@@ -315,7 +315,7 @@ The [tree types](../../packages/core/src/types/tree.ts) define the input and out
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
 The [node validation contract](../../packages/core/src/domain/validation.ts) owns aligned starts and summary metadata checks.
-It handles empty halves and single-child copies under [REQ-169](02-requirements.md) and [REQ-170](02-requirements.md).
+It handles empty halves and single-child copies under the [build input contract](../../packages/core/src/domain/tree.ts) and the [writer contract](../../packages/core/src/domain/writer.ts).
 
 ## Frontier
 
