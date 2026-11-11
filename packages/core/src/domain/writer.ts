@@ -36,7 +36,7 @@ import type { NodeEvent, ScopeKey } from "../types/events.js";
 import type { StorePort } from "../types/store.js";
 import type { BuildChild, BuildInput, Tree } from "../types/tree.js";
 import { maxOrder } from "./order.js";
-import { buildInput, candidates, rev } from "./tree.js";
+import { buildInput, candidates, cutAtWord, LINE_LIMIT, rev } from "./tree.js";
 
 const debug = debuglog("memlens:writer");
 
@@ -71,7 +71,8 @@ further along than it was. If told the line is too long, shorten it.`;
 /** The summary target of a merge, in characters. */
 export const NODE_TARGET = 512;
 /** The summary limit of a merge, in characters. */
-export const NODE_LIMIT = 640;
+/** The line limit of the view. One line holds this many characters at most. */
+export const NODE_LIMIT = LINE_LIMIT;
 /** The greatest attempt count of one merge. */
 export const NODE_ATTEMPTS = 3;
 /** A retry asks for this share of the previous target. */
@@ -173,13 +174,6 @@ Answer one line for each input, in the form "#a-b: line".
 ${blocks.join("\n")}`;
 }
 // #endregion FUNC_batchTask
-
-function cutAtWord(text: string, limit: number): string {
-	if (text.length <= limit) return text;
-	const cut = text.slice(0, limit);
-	const space = cut.lastIndexOf(" ");
-	return space > 0 ? cut.slice(0, space) : cut;
-}
 
 function datesOf(input: BuildInput): { ts_from: string; ts_to: string } {
 	const children = live(input);

@@ -99,8 +99,8 @@ export interface Tree {
 /**
  * One line of the slice.
  *
- * A record gives its body. A clean node gives its summary. A missing or dirty node gives no text,
- * and the line shows the period of its range. The line of a node is no part of a summary.
+ * A record gives its body. A clean node gives its summary. A missing or dirty node gives the text
+ * of its two children, joined for the render only. The line of a node is no part of a summary.
  */
 export type SliceLine =
 	| {
@@ -122,6 +122,8 @@ export type SliceLine =
 			readonly range: Range;
 			readonly from: string;
 			readonly to: string;
+			/** The text of the range, assembled from its children for this render only. */
+			readonly text: string;
 	  };
 
 /** The values of one non-empty child that a model call reads. */

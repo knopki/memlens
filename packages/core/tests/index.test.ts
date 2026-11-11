@@ -68,6 +68,7 @@ describe("@memlens/core", () => {
 				range: { start: 0, level: 1 },
 				from: events[0]?.at,
 				to: events[0]?.at,
+				text: "note 0; note 1",
 			},
 			{
 				kind: "record",

@@ -85,9 +85,9 @@ describe("hereLines", () => {
 		);
 	});
 
-	it("renders a missing node as a temporary line with the period only", () => {
+	it("renders a missing node as a temporary line with the assembled text", () => {
 		expect(hereLines(scopeTree(3), 2)).toBe(
-			"#0-1 2026-11-1..2026-11-2\n#2 2026-11-3 body 2",
+			"#0-1 2026-11-1..2026-11-2 body 0; body 1\n#2 2026-11-3 body 2",
 		);
 	});
 });
@@ -107,7 +107,9 @@ describe("directionLines", () => {
 			4,
 			now,
 		);
-		expect(lines).toBe("[project:a] 6h scope a summary\n[global:prefs] 3d");
+		expect(lines).toBe(
+			"[project:a] 6h scope a summary\n[global:prefs] 3d body 0; body 1",
+		);
 	});
 
 	it("joins the keys and the counts of a merged catalog line", () => {
@@ -134,7 +136,7 @@ describe("directionLines", () => {
 			now,
 		);
 		expect(lines).toBe(
-			"[project:a,global:prefs] 30m..3d both scopes\n[project:c] 15m",
+			"[project:a,global:prefs] 30m..3d both scopes\n[project:c] 15m body 0; body 1",
 		);
 	});
 

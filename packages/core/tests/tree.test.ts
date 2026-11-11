@@ -220,6 +220,7 @@ describe("tree geometry and freshness", () => {
 			range: pair.range,
 			from: "date 0",
 			to: "date 1",
+			text: "old imported amend; body 1",
 		});
 	});
 
@@ -416,7 +417,13 @@ describe("catalogs", () => {
 		expect(buildInput(catalog, range(2, 1))).toBeNull();
 		expect(candidates(catalog)).toEqual([range(2, 1), range(0, 2)]);
 		expect(slice(catalog, 1)).toEqual([
-			{ kind: "temporary", range: range(2, 0), from: "date 0", to: "date 0" },
+			{
+				kind: "temporary",
+				range: range(2, 0),
+				from: "date 0",
+				to: "date 0",
+				text: "body 0",
+			},
 		]);
 	});
 });
@@ -436,7 +443,7 @@ describe("minimal fold", () => {
 		}
 	});
 
-	it("renders dirty ranges with dates and no text; hidden tails keep the last live leaf", () => {
+	it("renders dirty ranges with dates and the assembled text; hidden tails keep the last live leaf", () => {
 		const input = {
 			...tree(8),
 			notes: tree(8).notes.map((n) => (n.pos === 7 ? record(7, "hidden") : n)),
@@ -447,6 +454,7 @@ describe("minimal fold", () => {
 			range: range(0, 1),
 			from: "date 0",
 			to: "date 1",
+			text: "body 0; body 1",
 		});
 		expect(lines.at(-1)).toMatchObject({ kind: "record", pos: 6 });
 		expect(lines.every((line) => line.from !== "" && line.to !== "")).toBe(

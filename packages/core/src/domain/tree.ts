@@ -6,6 +6,8 @@
  * - A node key is (level, start). A level covers 2^level positions; node levels start at one.
  * - The tree has no depth limit: the levels grow with the highest live position.
  * - A record is a leaf at its position. Hidden and deleted records leave empty positions without a shift.
+ * - A clean node gives its summary. A temporary line gives the text of its two children, joined for
+ * the render only. No hash check, no model call, and no stored node are involved.
  * - Scope trees and catalogs use the same engine. A catalog leaf resolves its scope tree through scope_roots.
  * - Every read uses the supplied projection. No read waits for a writer or retains state between calls.
  * #endregion moduleContract
@@ -25,6 +27,9 @@ import type {
 } from "../types/tree.js";
 
 const debug = debuglog("memlens:tree");
+
+/** The greatest character count of one line of the view. */
+export const LINE_LIMIT = 640;
 const key = (range: Range) => `${range.start}:${range.level}`;
 const contains = (range: Range, pos: Pos) =>
 	pos >= range.start && pos < range.start + 2 ** range.level;
@@ -34,6 +39,20 @@ const halves = (range: Range): [Range, Range] => [
 	{ start: range.start, level: range.level - 1 },
 	{ start: range.start + 2 ** (range.level - 1), level: range.level - 1 },
 ];
+
+// #region FUNC_cutAtWord
+/**
+ * @purpose Keep one text within a character limit and end it at a word boundary.
+ * @invariants A text at or below the limit stays unchanged. A longer text cuts at its last space
+ * before the limit, or at the limit when it holds no space.
+ */
+export function cutAtWord(text: string, limit: number): string {
+	if (text.length <= limit) return text;
+	const cut = text.slice(0, limit);
+	const space = cut.lastIndexOf(" ");
+	return space > 0 ? cut.slice(0, space) : cut;
+}
+// #endregion FUNC_cutAtWord
 
 type Leaf = {
 	pos: Pos;
@@ -527,11 +546,46 @@ function frontier(model: Model, budget: Lines): Range[] {
 }
 // #endregion FUNC_frontier
 
+// #region FUNC_rangeBody
+/**
+ * @purpose Give the body text of one range without a model call, for the line of a temporary range.
+ * @invariants A clean node gives its summary. A record gives its body and then its longform. Other
+ * ranges join the two halves with "; ". The result holds at most the limit in characters.
+ * A hidden or deleted record gives no text. A catalog leaf resolves its scope root.
+ */
+function rangeBody(model: Model, range: Range, limit: number): string {
+	if (limit <= 0) return "";
+	if (range.level === 0) {
+		const leaf = model.live(range)[0];
+		if (!leaf) return "";
+		if (leaf.record) {
+			const text = leaf.record.longform
+				? `${leaf.record.body}\n${leaf.record.longform}`
+				: leaf.record.body;
+			return text.slice(0, limit);
+		}
+		if (!leaf.scope) return "";
+		const root = topRange(leaf.scope.tree);
+		return root ? rangeBody(leaf.scope, root, limit) : "";
+	}
+	const node = model.node(range);
+	if (node && model.isClean(node)) return node.summary.slice(0, limit);
+	const [left, right] = halves(range);
+	const first = rangeBody(model, left, limit);
+	if (first.length >= limit) return first;
+	const rest = rangeBody(model, right, limit - first.length - 2);
+	if (!first) return rest;
+	if (!rest) return first;
+	return `${first}; ${rest}`;
+}
+// #endregion FUNC_rangeBody
+
 // #region FUNC_slice
 /**
  * @purpose Render the minimal fold while preserving the greatest live leaf.
  * @invariants Lines follow position order. Records retain their bodies; clean nodes provide summaries.
- * Missing or dirty nodes provide temporary lines with the range period and no text.
+ * A missing or dirty node gives a temporary line with the range period and the text of its two
+ * children, joined for this render only and cut at the line limit.
  * A catalog leaf uses its clean scope root or a temporary line when that non-empty scope is not ready.
  * An empty scope gives no line. Lines outside selected pairs retain their text.
  * Uncovered live records remain separate lines until a selected fold merges their ranges.
@@ -557,7 +611,12 @@ export function slice(tree: Tree, budget: Lines): readonly SliceLine[] {
 			if (node && model.isClean(node))
 				return { kind: "summary", range, ...period, summary: node.summary };
 		}
-		return { kind: "temporary", range, ...period };
+		return {
+			kind: "temporary",
+			range,
+			...period,
+			text: cutAtWord(rangeBody(model, range, LINE_LIMIT), LINE_LIMIT),
+		};
 	});
 }
 // #endregion FUNC_slice
