@@ -708,16 +708,14 @@ function directionScopes(
 	return runtime.projection.scopeOrder
 		.filter((scope) => set.has(scope))
 		.map((scope) => {
-			const live = (runtime.projection.byScope.get(scope) ?? []).filter(
-				(record) => record.state === "live",
-			);
-			const lastWrite =
-				live.reduce(
+			const lastWrite = (runtime.projection.byScope.get(scope) ?? [])
+				.filter((record) => record.state === "live")
+				.reduce(
 					(max, record) =>
 						record.recorded_at > max ? record.recorded_at : max,
 					"",
-				) || nowIso();
-			return { key: scope, live: live.length, lastWrite };
+				);
+			return { key: scope, lastWrite: lastWrite || nowIso() };
 		});
 }
 
