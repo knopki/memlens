@@ -436,3 +436,4 @@ The work rules move these implemented local rules to their code contracts. Cross
 | REQ-049 | A note has the address `pos`, and a range of notes has the address `pos-pos`. | FR | accepted | S-029, S-064 | `2107` names one note, and `1024-2047` names a range. | [address contract](../../packages/core/src/domain/address.ts) |
 | REQ-050 | The rebuild of a dirty node takes the order of the fold. | FR | accepted | S-041 | A dirty node with a higher `due` goes first. | [tree contract](../../packages/core/src/domain/tree.ts) |
 | REQ-376 | The `pos` of a new record is greater than each earlier `pos`. | FR | accepted | S-073 | Two writes from two sessions give two `pos` values in one order. | [projection contract](../../packages/core/src/domain/projection.ts) |
+| REQ-378 | An export with no `scope` copies the whole store. | FR | accepted | S-073 | The export of a store with two scopes holds both scopes. | [commands.ts: exportCommand](../../packages/cli/src/commands.ts) |

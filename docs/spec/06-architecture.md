@@ -219,8 +219,9 @@ The Markdown format is export-only. It is a human view and has no import or even
 The JSONL format transfers events. Store import reads JSONL, while the separate session import reads harness sessions.
 The [export format contract](../../packages/cli/src/export-md.ts) owns the filename encoding and the file format.
 
-An export copies the whole store under an exclusive lock and one read transaction, so the copy is
-consistent by construction. A per-scope export also holds the top node of that scope. An import unions events by `id`.
+An export reads one transaction under an exclusive lock, so the copy is consistent by construction.
+The [export command contract](../../packages/cli/src/commands.ts) owns the scope selection of an
+export. A per-scope export also holds the top node of that scope. An import unions events by `id`.
 A sanitized copy takes priority. Equal sanitized status compares `at`, then the canonical JSON hash.
 The import collects erasure evidence from both sides and clears the merged dependencies before publication.
 See [0003 Store](../adr/0003-store.md) and [0008 Redaction](../adr/0008-redaction.md).

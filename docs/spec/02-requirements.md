@@ -114,7 +114,6 @@ Use module invariants for module-wide rules. Use entity contracts for rules with
 | REQ-371 | The answer of a `forget` to a record of a scope outside `scopes` gives `hidden: 0`. | FR | accepted | S-072 | The record stays in the view, and the count `hidden` is 0. |
 | REQ-375 | Two sessions write to one scope with no error. | FR | accepted | S-073 | Two sessions write one scope, and the store holds both records. |
 | REQ-377 | Each session renders its own snapshot. | FR | accepted | S-073 | Two sessions of one store open with their own text. |
-| REQ-378 | An export with no `scope` copies the whole store. | FR | accepted | S-073 | The export of a store with two scopes holds both scopes. |
 | REQ-379 | An export reads one transaction under an exclusive lock. | FR | accepted | S-073 | A write that starts during the export waits for the lock. |
 | REQ-380 | An export holds each card with its source records.                                                                                                                                    | FR   | rejected | S-073, S-074        | Refused by S-074: the export holds the whole store, and the import rebuilds the cards.                                         |
 | REQ-384 | An import applies redaction evidence from local and incoming data to the merged events before publication. | FR | accepted | S-073, S-140, S-141 | Import an old full store into a cleared store, then reverse the direction. Notes, amendments, and historical summaries stay cleared. |

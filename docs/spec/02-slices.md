@@ -13,7 +13,7 @@ are the data path, and they need no model call. A rejected requirement stays out
 | 2 | The projection | None | 0 | [projection](../../packages/core/src/domain/projection.ts) |
 | 3 | The store | 043, 045, 148, 174-175, 236, 306, 372-375, 467, 471, 484, 486-491, 493-494, 504 | 23 | [projection](../../packages/core/src/domain/projection.ts), [config](../../packages/core/src/domain/config.ts) |
 | 4 | The redaction | 025, 082, 119, 219, 222 | 5 | [sanitization](../../packages/core/src/domain/sanitization.ts) |
-| 5 | The transfer | 040, 057, 077, 378-379, 381-384, 466, 469, 510-513 | 15 | [export-md](../../packages/cli/src/export-md.ts) |
+| 5 | The transfer | 040, 057, 077, 379, 381-384, 466, 469, 510-513 | 14 | [commands](../../packages/cli/src/commands.ts), [export-md](../../packages/cli/src/export-md.ts) |
 | 6 | The index | 041, 449 | 2 | [fts](../../packages/core/src/storage/fts.ts) |
 | 7 | The tree | 009, 124, 132, 135-137, 139, 169-170, 172-173, 442, 482 | 13 | [address](../../packages/core/src/domain/address.ts), [context](../../packages/core/src/domain/context.ts), [tree](../../packages/core/src/domain/tree.ts) |
 | 8 | The writer | 053, 204, 214, 218, 290, 464 | 6 | [tree](../../packages/core/src/domain/tree.ts), [writer](../../packages/core/src/domain/writer.ts), [publication](../../packages/core/src/storage/publication.ts) |
