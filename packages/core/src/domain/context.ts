@@ -8,11 +8,11 @@
  * text, and a process restart gives the same text.
  * - The template holds the how-to, directions, and here parts, and each part holds its guide line
  * before the content.
- * - A direction line is [<key>] <age> <count> <text>. A line above one scope joins each covered
- * key with a comma. The age of the line of the active scope is active. Another line gives its idle
- * time in minutes, hours, or days. The count is the count of live notes of the covered scopes.
- * - An unready non-empty scope gives the key, the age, and the count, and no summary text. The
- * line names no period. A scope with no live note gives no line.
+ * - A direction line is [<keys>] <age> <summary>. A line above one scope joins each covered key
+ * with a comma and gives the range of their idle times, as 10..20d. One scope gives its idle time
+ * in minutes, hours, or days. The line holds no count and no active marker.
+ * - An unready non-empty scope gives the keys and the age, and no summary text. The line names no
+ * period. A scope with no live note gives no line.
  * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <ts_from>..<ts_to>
  * <summary>. A temporary line holds the period only.
  * - The here budget limits the here lines and the directions budget limits the direction lines.
@@ -67,7 +67,7 @@ export const CONTEXT_TEMPLATE = `<memory>
 {{append}}
 </how-to>
 <directions>
-One line for each scope of the profile: the key, the age, the count, and the summary.
+One line for each range of scopes: the keys, the age, and the summary.
 {{directions}}
 </directions>
 <here scope="{{scope}}">
@@ -79,7 +79,6 @@ The frontier of the active scope: one line for each range, from the oldest to th
 /** One scope of the catalog, in catalog position order. */
 export interface DirectionScope {
 	readonly key: ScopeKey;
-	readonly live: number;
 	/** The latest write time of a live note of the scope. */
 	readonly lastWrite: string;
 }
@@ -120,27 +119,48 @@ export function hereLines(tree: Tree, budget: Lines): string {
 // #endregion FUNC_hereLines
 
 /** The idle age of the newest write of a scope group, in minutes, hours, or days. */
-function idleAge(latest: string, now: IsoTime): string {
-	const minutes = Math.max(
-		0,
-		Math.floor((Date.parse(now) - Date.parse(latest)) / 60_000),
-	);
-	if (minutes < 60) return `${minutes}m`;
-	if (minutes < 1440) return `${Math.floor(minutes / 60)}h`;
-	return `${Math.floor(minutes / 1440)}d`;
+function idleAge(latest: string, now: IsoTime): number {
+	const value = Date.parse(latest);
+	return Number.isNaN(value)
+		? 0
+		: Math.max(0, Math.floor((Date.parse(now) - value) / 60_000));
+}
+
+/** One age value with its unit, in whole minutes, hours, or days. */
+function ageUnit(minutes: number): { unit: "m" | "h" | "d"; value: number } {
+	if (minutes < 60) return { unit: "m", value: minutes };
+	if (minutes < 1440) return { unit: "h", value: Math.floor(minutes / 60) };
+	return { unit: "d", value: Math.floor(minutes / 1440) };
+}
+
+/**
+ * @purpose Give the idle time of one scope, or the range of the idle times of a range of scopes.
+ * @invariants One value gives one text. Two values of one unit give 10..20d. Two units give 30m..3d.
+ */
+function ageSpan(minutes: readonly number[]): string {
+	const low = Math.min(...minutes);
+	const high = Math.max(...minutes);
+	if (low === high) {
+		const one = ageUnit(low);
+		return `${one.value}${one.unit}`;
+	}
+	const first = ageUnit(low);
+	const last = ageUnit(high);
+	return first.unit === last.unit
+		? `${first.value}..${last.value}${last.unit}`
+		: `${first.value}${first.unit}..${last.value}${last.unit}`;
 }
 
 // #region FUNC_directionLines
 /**
- * @purpose Render one direction line for each visible scope of the catalog fold.
+ * @purpose Render one direction line for each range of visible scopes of the catalog fold.
  * @invariants The scopes come in catalog position order. A line above one scope joins each covered
- * key with a comma. The active scope gives the age active. The count is the sum of live notes.
- * An unready scope gives the key, the age, and the count, and no summary text.
+ * key with a comma and gives the range of their idle times. The line holds no count and no active
+ * marker. An unready range gives the keys and the age, and no summary text.
  */
 export function directionLines(
 	catalog: Tree,
 	scopes: readonly DirectionScope[],
-	active: ScopeKey,
 	budget: Lines,
 	now: IsoTime,
 ): string {
@@ -150,20 +170,16 @@ export function directionLines(
 			const width = line.kind === "record" ? 1 : 2 ** line.range.level;
 			const covered = scopes.slice(start, start + width);
 			const keys = covered.map((scope) => scope.key).join(",");
-			const count = covered.reduce((sum, scope) => sum + scope.live, 0);
-			const latest =
-				covered
-					.map((scope) => scope.lastWrite)
-					.sort()
-					.at(-1) ?? now;
-			const age = covered.some((scope) => scope.key === active)
-				? "active"
-				: idleAge(latest, now);
-			const head = `[${keys}] ${age} ${count}`;
+			const ages = covered.map((scope) => idleAge(scope.lastWrite, now));
+			const head = `[${keys}] ${ageSpan(ages)}`;
 			return line.kind === "summary" ? `${head} ${line.summary}` : head;
 		})
 		.join("\n");
-	debug("Directions rendered", { budget, scopes: scopes.length });
+	debug("Directions rendered", {
+		budget,
+		scopes: scopes.length,
+		lines: text === "" ? 0 : text.split("\n").length,
+	});
 	return text;
 }
 // #endregion FUNC_directionLines
@@ -184,7 +200,6 @@ export function renderContext(input: ContextInput): string {
 			directionLines(
 				input.catalog,
 				input.catalogScopes,
-				input.scope,
 				input.directionsBudget,
 				input.now,
 			),

@@ -109,7 +109,6 @@ export async function readConsole(
 			);
 			return {
 				key,
-				live: live.length,
 				lastWrite:
 					live
 						.map((record) => record.recorded_at)
@@ -134,7 +133,6 @@ export async function readConsole(
 		directions: directionLines(
 			catalog,
 			catalogScopes,
-			scope,
 			config.budget.directions,
 			time,
 		),

@@ -93,7 +93,7 @@ describe("hereLines", () => {
 });
 
 describe("directionLines", () => {
-	it("gives the active scope the age active and an unready scope no summary text", () => {
+	it("gives a range of scopes the range of their idle times", () => {
 		const tree = catalog([
 			scopeTree(2, [node(0, 1, "scope a summary")]),
 			scopeTree(2),
@@ -104,13 +104,10 @@ describe("directionLines", () => {
 				scope("project:a", 2, "2026-11-10T12:00:00.000Z"),
 				scope("global:prefs", 2, "2026-11-07T12:00:00.000Z"),
 			],
-			"project:a",
 			4,
 			now,
 		);
-		expect(lines).toBe(
-			"[project:a] active 2 scope a summary\n[global:prefs] 3d 2",
-		);
+		expect(lines).toBe("[project:a] 6h scope a summary\n[global:prefs] 3d");
 	});
 
 	it("joins the keys and the counts of a merged catalog line", () => {
@@ -133,12 +130,11 @@ describe("directionLines", () => {
 				scope("global:prefs", 2, "2026-11-07T12:00:00.000Z"),
 				scope("project:c", 2, "2026-11-10T17:45:00.000Z"),
 			],
-			"other:x",
 			2,
 			now,
 		);
 		expect(lines).toBe(
-			"[project:a,global:prefs] 30m 4 both scopes\n[project:c] 15m 2",
+			"[project:a,global:prefs] 30m..3d both scopes\n[project:c] 15m",
 		);
 	});
 
@@ -157,11 +153,10 @@ describe("directionLines", () => {
 			directionLines(
 				tree,
 				[scope("project:a", 2, "2026-11-10T12:00:00.000Z")],
-				"project:a",
 				4,
 				now,
 			),
-		).toBe("[project:a] active 2 scope a summary");
+		).toBe("[project:a] 6h scope a summary");
 	});
 });
 
@@ -181,9 +176,9 @@ describe("renderContext", () => {
 		expect(text).toContain("<memory>\n<how-to>\n");
 		expect(text).toContain(POLICY);
 		expect(text).toContain(
-			"One line for each scope of the profile: the key, the age, the count, and the summary.",
+			"One line for each range of scopes: the keys, the age, and the summary.",
 		);
-		expect(text).toContain("[project:a] active 2 root summary");
+		expect(text).toContain("[project:a] 6h root summary");
 		expect(text).toContain('<here scope="project:a">');
 		expect(text).toContain("#0 2026-11-1 body 0");
 		expect(text).not.toContain("{{");

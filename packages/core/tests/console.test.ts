@@ -143,7 +143,7 @@ for (const Backend of [JsonlStore, SqliteStore]) {
 			expect(model.records[0]?.id).toBe(live.id);
 			expect(model.here).toContain("#0 2026-11-10 visible");
 			expect(model.text).toContain(model.here);
-			expect(model.directions).toContain("[project:a] active 1");
+			expect(model.directions).toContain("[project:a] 0m");
 			expect(model.revision).toBe(await store.rev());
 			expect(JSON.stringify(model)).not.toContain("private");
 			await expect(
