@@ -2,6 +2,7 @@
  * @purpose Keep the console readable on a desktop screen in a light and a dark theme.
  * @scope The page shell, the panels, the tables, the forms, and the two palettes.
  * @invariants Each card, panel, and row keeps a gap to its neighbour and to both edges.
+ * A scroll container reserves the scrollbar gutter, so a shown scrollbar moves no content.
  * The stylesheet holds no layout decision of a screen. The attribute data-theme selects the palette.
  * #endregion moduleContract
  */
@@ -212,6 +213,7 @@ aside {
 	border-right: 1px solid var(--line);
 	background: var(--panel);
 	overflow: auto;
+	scrollbar-gutter: stable;
 }
 .rail-title {
 	margin: 8px 6px 2px;
@@ -277,6 +279,7 @@ main {
 	min-height: 0;
 	padding: 18px 22px 26px;
 	overflow: auto;
+	scrollbar-gutter: stable;
 }
 main h1 {
 	margin: 0;
@@ -652,6 +655,7 @@ pre.slice {
 	word-break: break-word;
 	max-height: 46vh;
 	overflow: auto;
+	scrollbar-gutter: stable;
 }
 .field {
 	display: grid;
