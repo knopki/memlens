@@ -117,7 +117,7 @@ A live scope with an unready root is non-empty, so the catalog writer waits for 
 See the [catalog contracts](../../packages/core/src/domain/projection.ts) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
 
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
-When the top node is not ready, its direction line is temporary and gives the period without summary text. A scope with no
+When the top node is not ready, its direction line gives the key, the age, and the count, and no summary text. A scope with no
 live note gives no direction line. A shared scope gets one position in each profile where it is
 visible. See [REQ-108](02-requirements.md), the [context contract](../../packages/core/src/domain/context.ts),
 the [catalog contract](../../packages/core/src/domain/projection.ts), and the [root contract](../../packages/core/src/domain/tree.ts).
@@ -251,7 +251,7 @@ value replaces the whole template, and the placeholders apply in it.
 The `<directions>` part holds the direction line of each scope of the profile. A direction line has
 the form `[<key>] <age> <count> <text>`. The age of the active scope is `active`, and the age of
 another scope is its idle time. The count is the count of live notes. The text is the summary of the
-top node of the scope. An unready top node gives one temporary date-only line.
+top node of the scope. An unready top node gives no text, and the line names no period.
 A scope with no live records gives no line. The catalog follows the same minimal fold and line budget.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
