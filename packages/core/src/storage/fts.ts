@@ -7,7 +7,8 @@
  * @invariants
  *  - The table holds one row for each live record with no cleared content.
  *  - A hidden, deleted, or cleared record has no row, so no answer returns it or its text.
- *  - Each query word must match, and a word with a leading minus keeps a record out.
+ *  - Each query word matches any token that starts with it, so one word form finds its inflections,
+ *    and a word with a leading minus keeps each such record out.
  *  - A query with exclusion words only gives no hit. An empty query matches each row.
  *  - The tokenizer is porter unicode61 remove_diacritics 1, and trigram for zh and ja.
  *  - The meta table records the language of the build. A change of the language drops the table.
@@ -39,19 +40,28 @@ const TOKENIZERS: Record<string, string> = {
 // #region FUNC_matchExpr
 /**
  * @purpose Turn the tool query into one FTS5 match expression, so both backends read one grammar.
- * @invariants Split the query on whitespace. Each word must match. A leading minus makes an exclusion.
- * Quote each word as one phrase, so no word injects FTS5 syntax. An exclusion-only query gives null.
+ * @invariants Split the query on whitespace. Each positive word matches any token that starts with
+ * it. A leading minus makes an exclusion by the same prefix rule.
+ * @invariants Quote each word as one phrase and put the star outside the quotes, so no word injects
+ * FTS5 syntax and a typed star stays inert text. An exclusion-only query gives null.
  * @returns The match expression, or null when no positive word can match.
  */
 function matchExpr(query: string): string | null {
 	const words = query.split(/\s+/).filter(Boolean);
 	const required: string[] = [];
 	const excluded: string[] = [];
-	for (const word of words)
+	for (const word of words) {
+		const phrase = `"${word.replaceAll('"', '""')}"*`;
 		(word.startsWith("-") && word.length > 1 ? excluded : required).push(
-			`"${word.replaceAll('"', '""')}"`,
+			phrase,
 		);
+	}
 	if (!required.length) return null;
+	debug("Query grammar", {
+		event: "grammar",
+		required: required.length,
+		excluded: excluded.length,
+	});
 	const expr = `(${required.join(" AND ")})`;
 	return excluded.length ? `${expr} NOT (${excluded.join(" OR ")})` : expr;
 }

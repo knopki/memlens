@@ -137,6 +137,21 @@ for (const [backend, Store] of [
 			expect(await store.search("-redis", null, 10)).toEqual([]);
 		});
 
+		it("matches a word form through its stem or prefix", async () => {
+			const store = await open();
+			await store.append(note("Запусков было пять"));
+			await store.append(note("Конвейер остановлен"));
+			expect(
+				(await store.search("запуск", null, 10)).map((hit) => hit.body),
+			).toEqual(["Запусков было пять"]);
+			expect(
+				(await store.search("конвей", null, 10)).map((hit) => hit.body),
+			).toEqual(["Конвейер остановлен"]);
+			expect(
+				(await store.search("запуск -конвей", null, 10)).map((hit) => hit.body),
+			).toEqual(["Запусков было пять"]);
+		});
+
 		it("matches a longform word and applies the scope filter", async () => {
 			const store = await open();
 			await seed(store);
