@@ -11,6 +11,7 @@
  * @invariants
  *  - The module imports no CLI, plugin, or user interface package.
  *  - The library does not know the CLI, the plugin, or the user interface.
+ *  - The entry point exports the console view models, and the UI core lives in the core library.
  * @keywords memlens, library, name, types
  * #endregion moduleContract
  */

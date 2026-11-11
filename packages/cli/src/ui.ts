@@ -2,6 +2,7 @@
  * #region moduleContract
  * @purpose Give a human a local console without the harness.
  * @scope Loopback HTTP, static assets, profile reads, note actions, proposals, and compaction answers.
+ * @invariants The command `ui` starts the console with no harness.
  * @invariants Bind only to 127.0.0.1. Reject foreign hosts and origins. Never enable CORS.
  * @invariants Writes require JSON. Delete requires --allow-delete and explicit confirmation.
  * @invariants Each request opens its selected profile and closes its store, including on failure.

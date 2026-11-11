@@ -437,3 +437,5 @@ The work rules move these implemented local rules to their code contracts. Cross
 | REQ-050 | The rebuild of a dirty node takes the order of the fold. | FR | accepted | S-041 | A dirty node with a higher `due` goes first. | [tree contract](../../packages/core/src/domain/tree.ts) |
 | REQ-376 | The `pos` of a new record is greater than each earlier `pos`. | FR | accepted | S-073 | Two writes from two sessions give two `pos` values in one order. | [projection contract](../../packages/core/src/domain/projection.ts) |
 | REQ-378 | An export with no `scope` copies the whole store. | FR | accepted | S-073 | The export of a store with two scopes holds both scopes. | [commands.ts: exportCommand](../../packages/cli/src/commands.ts) |
+| REQ-046 | `memlens ui` is a standalone console. | FR | accepted | S-013 | The command starts outside the harness. | [console host contract](../../packages/cli/src/ui.ts) |
+| REQ-417 | The UI core is in the core library. | FR | accepted | S-077 | The core package exports the view models of the console. | [core entry contract](../../packages/core/src/index.ts) |

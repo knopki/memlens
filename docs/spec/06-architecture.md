@@ -438,7 +438,8 @@ The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 Only the CLI or the GUI can redact and amend. Review uses the `review` event and stays out of the
 slice. See [0002 Event log](../adr/0002-event-log.md) and [REQ-024](02-requirements.md).
 
-The console command works alone. The UI core is in the library, and it holds no DOM, no transport, and no style. The console
+The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui`, and the [core entry
+contract](../../packages/core/src/index.ts) exports the console models. The console
 gives its own styles, and the plugin uses the components of the harness UI. The plugin mounts the tab
 `Memory` on the session page and narrows it to one profile. See [08-ui.md](08-ui.md).
 
