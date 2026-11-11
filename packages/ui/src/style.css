@@ -2,7 +2,8 @@
  * @purpose Keep the console readable on a desktop screen in a light and a dark theme.
  * @scope The page shell, the panels, the tables, the forms, and the two palettes.
  * @invariants Each card, panel, and row keeps a gap to its neighbour and to both edges.
- * A scroll container reserves the scrollbar gutter, so a shown scrollbar moves no content.
+ * A scroll container reserves the scrollbar gutter on both edges, so a shown scrollbar moves no
+ * content and the two insets stay equal. A card row fills the width of its container.
  * The text of a slice renders in full. The page scrolls, and the slice holds no inner scroll.
  * Two fields in one form row hold one width, and their single-line controls hold one height.
  * The status line floats above the page, so a message and a load state move no screen.
@@ -299,7 +300,7 @@ main {
 	min-height: 0;
 	padding: 18px 22px 26px;
 	overflow: auto;
-	scrollbar-gutter: stable;
+	scrollbar-gutter: stable both-edges;
 }
 main h1 {
 	margin: 0;
@@ -338,7 +339,7 @@ main h1 {
 }
 .cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 	gap: 12px;
 }
 .card {
