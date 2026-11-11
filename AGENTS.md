@@ -47,6 +47,9 @@ entity contract before a change.
 7. Prefer the smallest implementation that meets the contract.
 8. Write tests with each module. Run `pnpm run verify` before you finish a change. Run
    `pnpm run format` for the format.
+9. A change of the console needs the build and the page. Run `pnpm run verify`, then open
+   `memlens ui` and look at the screen. The console host serves the built `packages/cli/dist/ui`,
+   so the source alone shows no change.
 
 ## Boundaries
 
