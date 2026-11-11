@@ -96,7 +96,7 @@ const en = {
 	confirmForget: "Forget {target}?",
 	confirmDelete: "Erase the content of {target}?",
 	catText:
-		"One line for each visible scope. The directions budget limits the catalog lines.",
+		"A line for each range of visible scopes. The directions budget limits the catalog lines.",
 	catLines: "Catalog lines",
 	catNodes: "Catalog nodes",
 	emptyCatalog: "The catalog is empty.",

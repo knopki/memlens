@@ -72,7 +72,7 @@ export const ru: Table = {
 	confirmForget: "Скрыть {target}?",
 	confirmDelete: "Стереть содержимое {target}?",
 	catText:
-		"По одной строке на каждую видимую область. Бюджет directions ограничивает строки каталога.",
+		"По строке на каждый диапазон видимых областей. Бюджет directions ограничивает строки каталога.",
 	catLines: "Строки каталога",
 	catNodes: "Узлы каталога",
 	emptyCatalog: "Каталог пуст.",

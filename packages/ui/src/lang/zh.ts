@@ -70,7 +70,7 @@ export const zh: Table = {
 	actDelete: "删除",
 	confirmForget: "隐藏 {target}？",
 	confirmDelete: "擦除 {target} 的内容？",
-	catText: "每个可见范围一行。directions 预算限制目录行数。",
+	catText: "每个可见范围区间一行。directions 预算限制目录行数。",
 	catLines: "目录行",
 	catNodes: "目录节点",
 	emptyCatalog: "目录为空。",

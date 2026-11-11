@@ -72,7 +72,7 @@ export const fr: Table = {
 	confirmForget: "Masquer {target} ?",
 	confirmDelete: "Effacer le contenu de {target} ?",
 	catText:
-		"Une ligne pour chaque domaine visible. Le budget directions limite les lignes du catalogue.",
+		"Une ligne pour chaque intervalle de domaines visibles. Le budget directions limite les lignes du catalogue.",
 	catLines: "Lignes du catalogue",
 	catNodes: "Nœuds du catalogue",
 	emptyCatalog: "Le catalogue est vide.",

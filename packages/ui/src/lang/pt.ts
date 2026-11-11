@@ -72,7 +72,7 @@ export const pt: Table = {
 	confirmForget: "Ocultar {target}?",
 	confirmDelete: "Apagar o conteúdo de {target}?",
 	catText:
-		"Uma linha para cada escopo visível. O orçamento directions limita as linhas do catálogo.",
+		"Uma linha para cada intervalo de escopos visíveis. O orçamento directions limita as linhas do catálogo.",
 	catLines: "Linhas do catálogo",
 	catNodes: "Nós do catálogo",
 	emptyCatalog: "O catálogo está vazio.",

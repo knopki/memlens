@@ -72,7 +72,7 @@ export const ja: Table = {
 	confirmForget: "{target} を非表示にしますか。",
 	confirmDelete: "{target} の内容を消去しますか。",
 	catText:
-		"表示中のスコープごとに 1 行です。directions の予算がカタログの行数を制限します。",
+		"表示中のスコープの範囲ごとに 1 行です。directions の予算がカタログの行数を制限します。",
 	catLines: "カタログの行",
 	catNodes: "カタログのノード",
 	emptyCatalog: "カタログは空です。",

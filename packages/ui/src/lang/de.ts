@@ -72,7 +72,7 @@ export const de: Table = {
 	confirmForget: "{target} ausblenden?",
 	confirmDelete: "Inhalt von {target} löschen?",
 	catText:
-		"Eine Zeile für jeden sichtbaren Bereich. Das Budget directions begrenzt die Katalogzeilen.",
+		"Eine Zeile für jedes Intervall von Bereichen. Das Budget directions begrenzt die Katalogzeilen.",
 	catLines: "Katalogzeilen",
 	catNodes: "Katalogknoten",
 	emptyCatalog: "Der Katalog ist leer.",
