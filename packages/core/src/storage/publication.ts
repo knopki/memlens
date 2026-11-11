@@ -144,12 +144,11 @@ export function proposalPlan(
 		);
 	}
 	const projection = project(events);
-	const targets =
-		"target" in proposal
-			? [proposal.target]
-			: proposal.op === "note"
-				? (proposal.supersedes ?? [])
-				: [];
+	const linked =
+		proposal.op === "amend" || proposal.op === "note"
+			? (proposal.supersedes ?? [])
+			: [];
+	const targets = "target" in proposal ? [proposal.target, ...linked] : linked;
 	const affected = [
 		proposal.scope,
 		...(accept ? targets.map((id) => projection.records.get(id)?.scope) : []),

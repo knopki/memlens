@@ -234,6 +234,88 @@ describe("local write plans", () => {
 	});
 });
 
+describe("amendment fields", () => {
+	const amend = (target: string, extra: Record<string, unknown>) => ({
+		op: "amend" as const,
+		scope: "project:a" as const,
+		target,
+		...extra,
+	});
+
+	it("changes the kind without a content field", () => {
+		const source = note(1, "first");
+		const plan = prepareAppend(
+			[source],
+			{ op: "amend", scope: "project:a", target: source.id, kind: "decision" },
+			envelope(2),
+		);
+		const record = plan.projection.records.get(source.id);
+		expect(record?.kind).toBe("decision");
+		expect(record?.ts).toBe(source.ts);
+		expect(record?.review_at).toBe(source.review_at);
+		expect(record?.body).toBe("first");
+	});
+
+	it("adds supersedes links and hides each target", () => {
+		const first = note(1, "first");
+		const second = note(2, "second");
+		const third = note(3, "third");
+		const linked = prepareAppend(
+			[first, second, third],
+			amend(second.id, { supersedes: [first.id] }),
+			envelope(4),
+		);
+		expect(linked.projection.records.get(second.id)?.supersedes).toEqual([
+			first.id,
+		]);
+		expect(linked.projection.records.get(first.id)?.state).toBe("hidden");
+		expect(linked.projection.records.get(first.id)?.superseded_by).toBe(
+			second.id,
+		);
+		const again = prepareAppend(
+			linked.events,
+			amend(second.id, { supersedes: [third.id] }),
+			envelope(5),
+		);
+		expect(again.projection.records.get(second.id)?.supersedes).toEqual([
+			first.id,
+			third.id,
+		]);
+		expect(again.projection.records.get(third.id)?.state).toBe("hidden");
+	});
+
+	it("rejects a cross-scope link, an absent link, and a self link", () => {
+		const first = note(1, "first");
+		const second = note(2, "second");
+		const events = [
+			first,
+			second,
+			{ ...note(3, "other"), scope: "project:b" as const },
+		];
+		expect(() =>
+			prepareAppend(
+				events,
+				amend(second.id, { supersedes: [id(3)] }),
+				envelope(4),
+			),
+		).toThrow(/another scope/);
+		expect(() =>
+			prepareAppend(
+				events,
+				amend(second.id, { supersedes: [id(9)] }),
+				envelope(5),
+			),
+		).toThrow(/does not exist/);
+		expect(() =>
+			prepareAppend(
+				events,
+				amend(second.id, { supersedes: [second.id] }),
+				envelope(6),
+			),
+		).toThrow(/supersedes/);
+	});
+});
+
 describe("erased records", () => {
 	it("returns a sanitized appended amendment when its source already lost content", () => {
 		const source = note(1, "private");

@@ -69,12 +69,16 @@ export interface NoteEvent extends EventBase {
 	readonly supersedes?: readonly Ulid[];
 }
 
-/** A change of the content, the longform, or the scope of a record. */
+/** A change of the content, the longform, the scope, the kind, or the supersedes of a record. */
 export interface AmendEvent extends EventBase {
 	readonly op: "amend";
 	readonly target: Ulid;
 	readonly body?: string;
 	readonly longform?: string;
+	/** The new kind of the note. The time, the review date, and the content stay. */
+	readonly kind?: NoteKind;
+	/** The records that the note replaces. An amendment adds links and removes none. */
+	readonly supersedes?: readonly Ulid[];
 	/** True when the event is a proposal. The projection ignores it. */
 	readonly proposed?: true;
 }

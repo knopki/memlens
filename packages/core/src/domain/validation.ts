@@ -93,6 +93,8 @@ const AMEND_FIELDS = [
 	"target",
 	"body",
 	"longform",
+	"kind",
+	"supersedes",
 	"proposed",
 ] as const;
 const HIDE_FIELDS = [...BASE_RAW, "target", "reason", "proposed"] as const;
@@ -338,6 +340,7 @@ function parseNotePayload(record: Obj, sanitized: boolean): Obj {
 /**
  * @purpose Validate edits without replacing absent content fields.
  * @invariants Present raw fields satisfy content limits. Sanitized fields contain empty body or null longform.
+ * @invariants An edit permits optional kind and supersedes. A kind is one of the five kinds. A supersedes list names no target of the edit.
  * @invariants Scope-only edit validation requires the current projection and belongs to the write module.
  */
 function parseAmendPayload(record: Obj, sanitized: boolean): Obj {
@@ -361,6 +364,17 @@ function parseAmendPayload(record: Obj, sanitized: boolean): Obj {
 			if (longform.length > LONGFORM_LIMIT) fail("longform");
 			result.longform = longform;
 		}
+	}
+	if (has(record, "kind")) {
+		const kind = requiredString(record, "kind");
+		if (!NOTE_KINDS.has(kind)) fail("kind");
+		result.kind = kind;
+	}
+	if (has(record, "supersedes")) {
+		const supersedes = ulidArray(record, "supersedes");
+		if (supersedes === undefined || supersedes.length === 0) fail("supersedes");
+		if (supersedes.includes(target)) fail("supersedes");
+		result.supersedes = supersedes;
 	}
 	const proposed = optionalProposed(record);
 	if (proposed !== undefined) result.proposed = true;
@@ -633,7 +647,7 @@ export function normalizeAppend(value: unknown): AppendEvent {
  * @purpose Check that every event target names an event of the permitted operation.
  * @requires The events have passed structural validation.
  * @invariants A local write needs every target. An import can omit a target.
- * @invariants Amend, hide, redact, review, and supersedes target source notes. Dismiss targets a proposed operation and carries a reason.
+ * @invariants Amend, hide, redact, review, and supersedes target source notes. An amendment carries no target of its own id. Dismiss targets a proposed operation and carries a reason.
  * @invariants A node has no self edge. Its children name ordinary notes or nodes.
  * @param events - The resolved event union.
  * @param allowMissing - True for an import and false for a local write.
@@ -654,7 +668,15 @@ export function validateTargets(
 
 	for (const event of events) {
 		switch (event.op) {
-			case "amend":
+			case "amend": {
+				const target = knownTarget(byId, event.target, "target", allowMissing);
+				if (target !== null && !isOrdinaryNote(target)) fail("target");
+				for (const id of event.supersedes ?? []) {
+					const link = knownTarget(byId, id, "supersedes", allowMissing);
+					if (link !== null && !isOrdinaryNote(link)) fail("supersedes");
+				}
+				break;
+			}
 			case "hide":
 			case "redact":
 			case "review": {

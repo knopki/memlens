@@ -168,13 +168,15 @@ function requireTargets(event: Event, local: readonly JsonlLine[]): void {
 	const targets =
 		event.op === "note"
 			? (event.supersedes ?? [])
-			: event.op === "node"
-				? [event.child_a, event.child_b].filter(
-						(id): id is string => id !== null,
-					)
-				: event.op === "invalidate"
-					? event.targets
-					: [event.target];
+			: event.op === "amend"
+				? [event.target, ...(event.supersedes ?? [])]
+				: event.op === "node"
+					? [event.child_a, event.child_b].filter(
+							(id): id is string => id !== null,
+						)
+					: event.op === "invalidate"
+						? event.targets
+						: [event.target];
 	for (const target of targets) {
 		if (!ids.has(target))
 			throw new MemlensError("Data", "A local target does not exist.");
@@ -185,7 +187,7 @@ function requireTargets(event: Event, local: readonly JsonlLine[]): void {
 // #region FUNC_validateWriteContext
 /**
  * @purpose Check resolved record scopes and scope-only edits against the state under the write lock.
- * @invariants An amendment without body or longform must transfer the target to another scope.
+ * @invariants An amendment without body, longform, kind, or supersedes must transfer the target to another scope.
  */
 function validateWriteContext(
 	event: Event,
@@ -201,14 +203,23 @@ function validateWriteContext(
 				);
 		}
 	} else if (event.op === "amend") {
+		for (const id of event.supersedes ?? []) {
+			if (projection.records.get(id)?.scope !== event.scope)
+				throw new MemlensError(
+					"CrossScopeSupersede",
+					"A supersede target belongs to another scope.",
+				);
+		}
 		if (
 			event.body === undefined &&
 			event.longform === undefined &&
+			event.kind === undefined &&
+			event.supersedes === undefined &&
 			projection.records.get(event.target)?.scope === event.scope
 		) {
 			throw new MemlensError(
 				"Data",
-				"An amendment must change content or scope.",
+				"An amendment must change the content, the scope, the kind, or the supersedes.",
 			);
 		}
 	} else if (
@@ -283,8 +294,10 @@ function touchedRecords(
 		if (event.op === "note") {
 			ids.add(event.id);
 			for (const target of event.supersedes ?? []) ids.add(target);
+		} else if (event.op === "amend") {
+			ids.add(event.target);
+			for (const target of event.supersedes ?? []) ids.add(target);
 		} else if (
-			event.op === "amend" ||
 			event.op === "hide" ||
 			event.op === "redact" ||
 			event.op === "review"

@@ -169,14 +169,16 @@ function selectNode(state: ReplayState, event: NodeLine, order: Order): void {
  * @purpose Apply supersedes only when the source note is live at its replay step.
  * @invariants Forward targets participate. Targets become hidden unless already deleted. The first superseded_by value stays.
  * @invariants Later changes to the source never cancel its supersedes. Cross-scope targets raise CrossScopeSupersede.
+ * @invariants The caller gives the links to apply, so an amendment applies its new links only.
  */
 function applySupersedes(
 	records: ReplayState["records"],
 	record: MutableRecord,
 	order: Order,
+	ids: readonly Ulid[] = record.supersedes,
 ): void {
 	if (record.state !== "live") return;
-	for (const id of record.supersedes) {
+	for (const id of ids) {
 		const target = records.get(id);
 		if (!target) continue;
 		if (target.scope !== record.scope) {
@@ -201,6 +203,7 @@ function applySupersedes(
  * @purpose Apply present content fields or transfer a record without changing its source id.
  * @invariants An edit within one scope keeps its position. Each transfer creates a new destination entry.
  * @invariants Absent content fields preserve current values. Erased records can transfer but cannot regain content.
+ * @invariants A present kind replaces the kind. A supersedes list adds links and removes none.
  */
 function applyAmendment(
 	state: ReplayState,
@@ -225,6 +228,11 @@ function applyAmendment(
 		if (event.body !== undefined) record.body = event.body;
 		if (event.longform !== undefined) record.longform = event.longform;
 	}
+	if (event.kind !== undefined) record.kind = event.kind;
+	if (event.supersedes !== undefined)
+		record.supersedes = [
+			...new Set([...record.supersedes, ...event.supersedes]),
+		];
 }
 
 /**
@@ -256,9 +264,14 @@ function applyRecordOperation(
 		case "review":
 			record.review_at = event.review_at;
 			break;
-		case "amend":
+		case "amend": {
+			const added = (event.supersedes ?? []).filter(
+				(id) => !record.supersedes.includes(id),
+			);
 			applyAmendment(state, record, event, order);
+			if (added.length) applySupersedes(state.records, record, order, added);
 			break;
+		}
 	}
 	debug("Record updated", {
 		event: "operation_applied",
