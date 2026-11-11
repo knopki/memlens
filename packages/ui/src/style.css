@@ -4,6 +4,7 @@
  * @invariants Each card, panel, and row keeps a gap to its neighbour and to both edges.
  * A scroll container reserves the scrollbar gutter, so a shown scrollbar moves no content.
  * The text of a slice renders in full. The page scrolls, and the slice holds no inner scroll.
+ * Two fields in one form row hold one width, and their single-line controls hold one height.
  * The stylesheet holds no layout decision of a screen. The attribute data-theme selects the palette.
  * #endregion moduleContract
  */
@@ -692,6 +693,10 @@ dialog textarea {
 .field select:disabled {
 	opacity: 0.6;
 }
+.field input,
+.field select {
+	height: 34px;
+}
 .hint {
 	color: var(--dim);
 	font-size: 11.5px;
@@ -710,7 +715,8 @@ dialog textarea {
 }
 .row2 {
 	display: grid;
-	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: start;
 	gap: 12px;
 }
 dialog {
