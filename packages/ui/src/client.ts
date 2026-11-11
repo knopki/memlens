@@ -12,11 +12,16 @@
  *  - The search screen opens on the selected scope. The review screen holds the records of the
  *    selected scope and one kind at most, and it states the count that the ten-record cap hides.
  *  - The theme choice is light, dark, or system, and it survives a reload.
+ *  - The address of the page holds the screen, the profile, the scope, the open target, and the
+ *    search filters. A reload and the browser buttons return to that place. A navigation adds one
+ *    history entry after its view loads, and a write replaces the current entry.
  *  - A status message and a load state float above the screens and never move them. An open form
  *    takes the message in its own row. The message clears itself, and an error stays longer than a
  *    success.
  * @dependencies GET view, search, open and POST action from the CLI host. i18n.ts for the text.
- * @keywords console, ui, screen, theme, language, frontier, search, review, proposal, compaction
+ * route.ts for the address.
+ * @keywords console, ui, screen, theme, language, frontier, search, review, proposal, compaction,
+ * address, history
  * #endregion moduleContract
  */
 
@@ -46,6 +51,15 @@ import {
 	messages,
 	type Table,
 } from "./i18n.js";
+import {
+	DEFAULT_ROUTE,
+	KINDS,
+	type Route,
+	readRoute,
+	routeOf,
+	SCREENS,
+	type Screen,
+} from "./route.js";
 
 type View = ConsoleModel & {
 	profiles: string[];
@@ -64,8 +78,9 @@ type Job = {
 };
 type Selection = { target: string; result: OpenEntry | OpenChildren };
 type Choice = "system" | "light" | "dark";
+/** How a state change meets the browser history: a new entry, the current entry, or no write. */
+type Step = "push" | "replace" | "none";
 
-const KINDS = ["decision", "preference", "fact", "task", "note"] as const;
 const ICONS = [
 	"M2 3h12M2 8h12M2 13h7",
 	"M8 14V9M8 9L4 6M8 9l4-3M4 6V3M12 6V3",
@@ -79,7 +94,7 @@ const state = {
 	model: undefined as View | undefined,
 	profile: "",
 	scope: "",
-	screen: 0,
+	screen: "overview" as Screen,
 	lang: "en" as Lang,
 	theme: "system" as Choice,
 	busy: false,
@@ -87,11 +102,11 @@ const state = {
 	selection: undefined as Selection | undefined,
 	hits: [] as readonly IndexHit[],
 	query: "",
-	kind: "",
+	kind: "" as NoteKind | "",
 	since: "",
 	limit: "10",
 	searchScope: null as string | null,
-	reviewKind: "",
+	reviewKind: "" as NoteKind | "",
 	job: undefined as Job | undefined,
 	jobError: "",
 };
@@ -292,6 +307,117 @@ function remember(key: string, value: string) {
 }
 // #endregion BLOCK_helpers
 
+// #region FUNC_current
+/** @purpose Read the state of the console as one address. */
+function current(): Route {
+	return {
+		screen: state.screen,
+		profile: state.profile,
+		scope: state.scope,
+		target: state.selection?.target ?? "",
+		query: state.query,
+		searchScope: state.searchScope,
+		kind: state.kind,
+		since: state.since,
+		limit: state.limit,
+		reviewKind: state.reviewKind,
+	};
+}
+// #endregion FUNC_current
+
+// #region FUNC_enter
+/**
+ * @purpose Put the state of the console into the page address at the chosen history step.
+ * @invariants The address keeps its path, so the host serves the same page for each place. A
+ * repeated address writes nothing, so a second click on the live scope adds no entry.
+ */
+function enter(step: Step): void {
+	if (step === "none") return;
+	const here = `${location.pathname}${location.search}`;
+	const url = `${location.pathname}?${routeOf(current())}`;
+	if (url === here) return;
+	history[step === "push" ? "pushState" : "replaceState"](null, "", url);
+	console.debug("Console address", { event: "address", step, url });
+}
+// #endregion FUNC_enter
+
+// #region FUNC_go
+/** @purpose Show one screen and keep its place in the address. */
+function go(screen: Screen, step: Step = "push"): void {
+	state.screen = screen;
+	enter(step);
+	render();
+}
+// #endregion FUNC_go
+
+// #region FUNC_restore
+/**
+ * @purpose Move the console to the place of one address.
+ * @invariants Load the view first, because the target and the search need the store. Then write
+ * the resolved place as one replacement, so the address never loses the target. A place that the
+ * host rejects falls back to the first place once, so a removed profile cannot leave a blank page.
+ */
+async function restore(route: Route, retry = true): Promise<void> {
+	const { target, ...fields } = route;
+	Object.assign(state, fields);
+	state.selection = undefined;
+	state.hits = [];
+	state.job = undefined;
+	state.jobError = "";
+	console.debug("Console restore", {
+		event: "restore",
+		screen: route.screen,
+		profile: route.profile,
+		scope: route.scope,
+		target,
+		query: route.query,
+	});
+	try {
+		await reload("none");
+	} catch (error) {
+		if (!retry) throw error;
+		console.debug("Console place rejected", {
+			event: "fallback",
+			error: String(error),
+		});
+		await restore(DEFAULT_ROUTE, false);
+		return;
+	}
+	if (state.query) await find("none");
+	if (target) await openTarget(target, "none");
+	enter("replace");
+}
+// #endregion FUNC_restore
+
+// #region FUNC_find
+/**
+ * @purpose Run the current search filters and keep the hits.
+ * @invariants Write the address only after the host answers.
+ */
+async function find(step: Step): Promise<void> {
+	const token = state.generation;
+	const params = new URLSearchParams({
+		profile: state.profile,
+		scope: state.searchScope ?? "",
+		query: state.query,
+		kind: state.kind,
+		since: state.since,
+		limit: state.limit,
+	});
+	const found = await request<IndexHit[]>(`/api/search?${params.toString()}`);
+	if (token !== state.generation) return;
+	state.hits = found;
+	console.debug("Console search", {
+		event: "search",
+		hits: found.length,
+		scope: state.searchScope ?? "",
+		query: state.query,
+	});
+	enter(step);
+	render();
+}
+// #endregion FUNC_find
+
 // #region FUNC_applyTheme
 /**
  * @purpose Put the chosen theme on the page and follow the system setting.
@@ -370,8 +496,12 @@ async function action(name: string, extra: Record<string, unknown> = {}) {
 // #endregion FUNC_action
 
 // #region FUNC_reload
-/** @purpose Refresh the console after a profile, scope, or store change. */
-async function reload(): Promise<void> {
+/**
+ * @purpose Refresh the console after a profile, scope, or store change.
+ * @invariants Keep the view of one generation. The host resolves the profile and the scope, so the
+ * address takes the resolved values.
+ */
+async function reload(step: Step = "replace"): Promise<void> {
 	const token = ++state.generation;
 	message(tr("loading"));
 	const params = new URLSearchParams({
@@ -394,6 +524,7 @@ async function reload(): Promise<void> {
 		frontier: view.frontier.length,
 		revision: view.revision,
 	});
+	enter(step);
 	message("");
 	render();
 }
@@ -496,25 +627,14 @@ function layout(model: View) {
 	const rail = el("aside");
 	const nav = el("nav");
 	nav.setAttribute("aria-label", tr("screens"));
-	const titles = [
-		tr("nav0"),
-		tr("nav1"),
-		tr("nav2"),
-		tr("nav3"),
-		tr("nav4"),
-		tr("nav5"),
-		tr("nav6"),
-	];
-	for (let index = 0; index < titles.length; index++) {
+	const titles = SCREENS.map((_, index) => tr(`nav${index}` as keyof Table));
+	for (const [index, screen] of SCREENS.entries()) {
 		const item = btn(
 			"",
-			() => {
-				state.screen = index;
-				render();
-			},
-			state.screen === index ? "nav on" : "nav",
+			() => go(screen),
+			state.screen === screen ? "nav on" : "nav",
 		);
-		if (state.screen === index) item.setAttribute("aria-current", "page");
+		if (state.screen === screen) item.setAttribute("aria-current", "page");
 		item.append(icon(ICONS[index] ?? ""), el("span", titles[index] ?? ""));
 		nav.append(item);
 	}
@@ -537,8 +657,8 @@ function layout(model: View) {
 	const main = el("main");
 	main.id = "main";
 	main.tabIndex = -1;
-	main.append(el("h1", titles[state.screen] ?? ""));
-	const screens = [
+	main.append(el("h1", titles[SCREENS.indexOf(state.screen)] ?? ""));
+	const screens: Record<Screen, (main: HTMLElement, model: View) => void> = {
 		overview,
 		tree,
 		catalog,
@@ -546,8 +666,8 @@ function layout(model: View) {
 		review,
 		proposals,
 		maintenance,
-	];
-	screens[state.screen]?.(main, model);
+	};
+	screens[state.screen](main, model);
 	const body = el("div", "", "layout");
 	body.append(rail, main);
 	return body;
@@ -563,14 +683,14 @@ function footer(model: View) {
 	return node;
 }
 
-async function reset(nextScope: string) {
+async function reset(nextScope: string, step: Step = "push") {
 	state.scope = nextScope;
 	state.selection = undefined;
 	state.hits = [];
 	state.searchScope = null;
 	state.job = undefined;
 	state.jobError = "";
-	await reload();
+	await reload(step);
 }
 
 // #region FUNC_overview
@@ -762,7 +882,7 @@ function inspector(): HTMLElement {
 			message(tr("copied"));
 		}),
 	);
-	if (state.screen !== 1)
+	if (state.screen !== "tree")
 		extra.append(btn(tr("openInTree"), () => openInTree(result.addr)));
 	node.append(extra);
 	return node;
@@ -807,8 +927,11 @@ async function editTarget(target: string, supersede: boolean) {
 }
 
 // #region FUNC_openTarget
-/** @purpose Expand a range or inspect a note, and keep the selection for the inspector. */
-async function openTarget(target: string): Promise<void> {
+/**
+ * @purpose Expand a range or inspect a note, and keep the selection for the inspector.
+ * @invariants Write the address only after the host answers.
+ */
+async function openTarget(target: string, step: Step = "push"): Promise<void> {
 	const token = state.generation;
 	const result = await request<OpenEntry | OpenChildren>(
 		`/api/open?${new URLSearchParams({ profile: state.profile, scope: state.scope, target })}`,
@@ -818,18 +941,19 @@ async function openTarget(target: string): Promise<void> {
 		event: "open",
 		target,
 		kind: result.kind,
+		step,
 	});
 	state.selection = { target, result };
+	enter(step);
 	render();
 }
 // #endregion FUNC_openTarget
 
 // #region FUNC_openInTree
-/** @purpose Select the tree screen and open one record in its inspector. */
+/** @purpose Select the tree screen and open one record in its inspector as one place. */
 async function openInTree(target: string): Promise<void> {
-	await openTarget(target);
-	state.screen = 1;
-	render();
+	await openTarget(target, "none");
+	go("tree");
 }
 // #endregion FUNC_openInTree
 
@@ -893,15 +1017,15 @@ function search(main: HTMLElement, model: View): void {
 	const cap = input(state.limit, "number");
 	cap.min = "1";
 	cap.max = "50";
-	const find = btn(tr("find"), search, "pri");
+	const findBtn = btn(tr("find"), submit, "pri");
 	const bar = el("div", "", "searchbar");
-	bar.append(words, find);
+	bar.append(words, findBtn);
 	words.addEventListener("keydown", (event) => {
-		if (event.key === "Enter") run(search);
+		if (event.key === "Enter") run(submit);
 	});
-	async function search() {
+	async function submit() {
 		state.query = words.value.trim();
-		state.kind = kinds.value;
+		state.kind = kinds.value as NoteKind | "";
 		state.since = date.value;
 		state.limit = cap.value;
 		state.searchScope = scopes.value;
@@ -909,20 +1033,7 @@ function search(main: HTMLElement, model: View): void {
 			message(tr("searchHint"));
 			return;
 		}
-		const token = state.generation;
-		const params = new URLSearchParams({
-			profile: state.profile,
-			scope: state.searchScope,
-			query: state.query,
-			kind: state.kind,
-			since: state.since,
-			limit: state.limit,
-		});
-		const found = await request<IndexHit[]>(`/api/search?${params.toString()}`);
-		if (token !== state.generation) return;
-		state.hits = found;
-		console.debug("Console search", { event: "search", hits: found.length });
-		render();
+		await find("push");
 	}
 	const filters = filterBar([
 		[tr("scope"), scopes],
@@ -987,8 +1098,8 @@ function review(main: HTMLElement, model: View): void {
 	const kinds = kindSelect(state.reviewKind);
 	kinds.onchange = () =>
 		run(async () => {
-			state.reviewKind = kinds.value;
-			await reload();
+			state.reviewKind = kinds.value as NoteKind | "";
+			await reload("push");
 		});
 	main.append(filterBar([[tr("kindLabel"), kinds]]));
 	const rows = (items: View["review"]) =>
@@ -1342,17 +1453,20 @@ function noteDialog(
 // #endregion FUNC_noteDialog
 
 document.addEventListener("keydown", (event) => {
+	const next = SCREENS[Number(event.key) - 1];
 	if (
-		event.key >= "1" &&
-		event.key <= "7" &&
+		next !== undefined &&
 		!document.querySelector("dialog[open]") &&
 		!["INPUT", "TEXTAREA", "SELECT"].includes(
 			(document.activeElement as HTMLElement | null)?.tagName ?? "",
 		)
-	) {
-		state.screen = Number(event.key) - 1;
-		render();
-	}
+	)
+		go(next);
+});
+window.addEventListener("popstate", () => {
+	void run(async () => {
+		await restore(readRoute(location.search));
+	});
 });
 window
 	.matchMedia("(prefers-color-scheme: dark)")
@@ -1361,4 +1475,6 @@ window
 	});
 
 applyTheme();
-run(reload);
+void run(async () => {
+	await restore(readRoute(location.search));
+});
