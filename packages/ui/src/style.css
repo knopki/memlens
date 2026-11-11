@@ -8,6 +8,7 @@
  * Two fields in one form row hold one width, and their single-line controls hold one height.
  * The status line floats above the page, so a message and a load state move no screen.
  * A line kind of the frontier keeps one palette color, and the legend shows the same color.
+ * A search hit takes the frontier line row, so the two lists keep one frame.
  * Below 860 pixels the rail lies horizontal, the page scrolls, and no screen scrolls inside itself.
  * The stylesheet holds no layout decision of a screen. The attribute data-theme selects the palette.
  * #endregion moduleContract
@@ -624,38 +625,19 @@ td:last-child {
 	color: var(--text);
 	font-size: 12.5px;
 }
+/* A hit takes the row of a frontier line, so a result list holds no frame of its own. */
 .hit {
-	display: grid;
 	grid-template-columns: minmax(120px, auto) 90px minmax(0, 1fr) auto;
-	align-items: baseline;
-	gap: 10px;
-	padding: 6px 2px;
-	border: 0;
-	border-bottom: 1px solid var(--line);
-	background: transparent;
-	text-align: left;
-	cursor: pointer;
-}
-.hit:hover {
-	background: var(--panel2);
+	font-family: inherit;
 }
 .hit .id {
 	font-family: var(--mono);
-	font-size: 11.5px;
-	color: var(--muted);
 }
 .hit .kind {
 	color: var(--violet);
-	font-size: 11.5px;
 }
 .hit .when {
 	color: var(--muted);
-	font-size: 11.5px;
-}
-.hit .tx {
-	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
 }
 mark {
 	background: var(--accent-dim);

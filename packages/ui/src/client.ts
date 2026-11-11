@@ -1097,7 +1097,8 @@ function catalogLine(model: View, line: SliceLine) {
 /**
  * @purpose Find notes by words in the selected scope or in every visible scope.
  * @invariants The scope filter opens on the selected scope. Show the hit count and keep the
- * selection beside the results.
+ * selection beside the results. A hit takes the frontier line row, and the open hit keeps its
+ * selected state.
  */
 function search(main: HTMLElement, model: View): void {
 	main.append(el("p", tr("searchText"), "sub"));
@@ -1143,17 +1144,20 @@ function search(main: HTMLElement, model: View): void {
 		tr("matches", { count: state.hits.length }),
 		scopes.value || tr("allScopes"),
 	);
+	const rows = el("div", "", "lines");
 	for (const hit of state.hits) {
-		const node = btn("", () => openTarget(hit.addr), "hit");
+		const node = btn("", () => openTarget(hit.addr), "line hit");
 		node.append(
 			el("span", hit.addr, "id"),
 			el("span", kindName(hit.kind), "kind"),
 			highlight(hit.body),
 			el("span", hit.ts.slice(0, 10), "when"),
 		);
-		list.append(node);
+		if (state.selection?.target === hit.addr) node.classList.add("sel");
+		rows.append(node);
 	}
-	if (!state.hits.length) list.append(el("p", tr("noMatches"), "muted"));
+	if (!state.hits.length) rows.append(el("p", tr("noMatches"), "muted"));
+	list.append(rows);
 	const split = el("div", "", "split");
 	split.append(list, inspector());
 	main.append(split);
