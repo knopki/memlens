@@ -164,3 +164,4 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | console | The screen set that a human uses to read and maintain the memory. The command `memlens ui` hosts it, and the plugin tab is pending. | S-077, S-144 |
 | theme | The page colors of the console: light, dark, or the setting of the system. The choice survives a reload. | S-144 |
 | message table | The text of one language of the console. Every table holds every English key. | S-144 |
+| temporary line | One line of a range without a ready summary. Its text comes from the two child bodies, and the render stores no such node. | S-121, S-152 |

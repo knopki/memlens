@@ -117,8 +117,9 @@ A live scope with an unready root is non-empty, so the catalog writer waits for 
 See the [catalog contracts](../../packages/core/src/domain/projection.ts) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
 
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
-When the top node is not ready, its direction line is a temporary line with the keys and the age, and it renders at once. A scope with no
-live note gives no direction line. A shared scope gets one position in each profile where it is
+When the top node is not ready, its direction line is a temporary line with the keys and the age.
+That line also holds the text assembled from the two child bodies. A scope with no live note gives no
+direction line. A shared scope gets one position in each profile where it is
 visible. See [REQ-108](02-requirements.md), the [context contract](../../packages/core/src/domain/context.ts),
 the [catalog contract](../../packages/core/src/domain/projection.ts), and the [root contract](../../packages/core/src/domain/tree.ts).
 
@@ -251,13 +252,13 @@ value replaces the whole template, and the placeholders apply in it.
 The `<directions>` part holds one direction line for each range of the scopes. A direction line has
 the form `[<keys>] <age> <summary>`. A line above one scope joins its keys with a comma and gives the
 range of their idle times, as `10..20d`. One scope gives its idle time in minutes, hours, or days. The
-line holds no count and no active marker. The text is the summary of the top node of the range. An
-unready top node gives a temporary line with the keys and the age range. That line renders at once,
-and the render calls no model and waits for no writer.
+line holds no count and no active marker. The text is the body of the top node of the range, and the catalog shows that body. An
+unready top node gives a temporary line with the keys, the age range, and the text assembled from the
+two child bodies. That line renders at once, and the render calls no model and waits for no writer.
 A scope with no live records gives no line. The catalog follows the same minimal fold and line budget.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
-and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`, or the two dates only for a temporary line.
+and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`, or its assembled text for a temporary line.
 
 The [context contract](../../packages/core/src/domain/context.ts) owns the line budget of each part.
 The `<how-to>` part is never cut.
@@ -282,8 +283,9 @@ An open of a note gives the note and its `longform`. An open of a node gives its
 the span of the range, and the line holds the first `pos`.
 
 A range gives a temporary line, unless its node passes both tests: `built` and `clean`. That line
-holds the period of the range and no text, and the render calls no model. A rebuild keeps each address, because a merge with
-another log is the only change of the order.
+holds the period of the range and the text assembled from its two children. The render calls no model
+and stores no node. A rebuild keeps each address, because a merge with another log is the only change
+of the order.
 
 A `redact` cleans the store. The copy in the session history stays. See
 [0007 Slice and context](../adr/0007-slice-context.md).
