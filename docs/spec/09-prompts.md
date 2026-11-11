@@ -1,6 +1,6 @@
 # Prompts
 
-This file holds the texts of the slice, of the writer, and of the subagent. Each text is a copy, and a change
+This file holds the texts of the slice, of the compaction, and of the subagent. Each text is a copy, and a change
 of a word is a change of the product.
 
 ## The slice
@@ -145,7 +145,7 @@ An answer above 640 characters after the attempts cuts at a word boundary, and t
 
 The check "the line is shorter than the two children" applies to a model merge of two non-empty children
 only. The fold takes the length of each line from the field `chars`. See the
-[writer contract](../../packages/core/src/domain/writer.ts).
+[compaction contract](../../packages/core/src/domain/compaction.ts).
 
 ## Nudge texts
 

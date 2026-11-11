@@ -45,13 +45,13 @@ export type StoreBackend = "sqlite" | "jsonl";
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
-/** The shape of a run of the writer. */
-export type WriterMode = "parallel" | "batch" | "auto";
+/** The shape of a run of the compaction. */
+export type CompactionMode = "parallel" | "batch" | "auto";
 
 export interface StoreConfig {
 	backend: StoreBackend;
 	path: Path;
-	/** The time without an event that starts the background writer, in seconds. The default is 300. */
+	/** The time without an event that starts the background compaction, in seconds. The default is 300. */
 	idle: number;
 }
 
@@ -105,11 +105,11 @@ export interface NudgeConfig {
 	text: Record<"tool_calls" | "turns", string>;
 }
 
-export interface WriterConfig {
+export interface CompactionConfig {
 	provider: string;
 	model: string;
 	effort: string;
-	mode: WriterMode;
+	mode: CompactionMode;
 	batch: number;
 	maxCallsPerHour: number;
 }
@@ -132,7 +132,7 @@ export interface BaseConfig {
 	profile: Record<string, ProfileConfig>;
 	scope_default: ScopeDefault;
 	nudge: NudgeConfig;
-	writer: WriterConfig;
+	compaction: CompactionConfig;
 	review: ReviewConfig;
 }
 
@@ -141,7 +141,7 @@ export interface PatchConfig {
 	store?: Partial<StoreConfig>;
 	defaultProfile?: string;
 	budget?: Partial<Budget>;
-	writer?: Partial<WriterConfig>;
+	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
 	cacheTtl?: CacheTtl;
 	customPrompt?: string;
@@ -152,7 +152,7 @@ export interface PatchConfig {
 export interface PresetConfig {
 	profile: string;
 	budget?: Partial<Budget>;
-	writer?: Partial<WriterConfig>;
+	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
 	customPrompt?: string;
 	customPromptAppend?: string;

@@ -1,6 +1,6 @@
 # Work rules for agents
 
-The core library implements the domain, both persistent backends, the writer, the slice, and
+The core library implements the domain, both persistent backends, the background compaction, the slice, and
 the configuration. The CLI implements the command surface, including `compact`, `check`, `repair`,
 and `ui`. The session import is pending. The plugin has a scaffold, and the console tab of the
 plugin is pending.

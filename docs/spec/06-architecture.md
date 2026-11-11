@@ -85,7 +85,7 @@ The [projection contract](../../packages/core/src/domain/projection.ts) owns can
 Its entity contracts define both passes and each operation. The [tree contract](../../packages/core/src/domain/tree.ts) owns range revisions and summary readiness.
 
 The store supplies the resolved event union and durable invalidations before replay.
-Node publication remains a store and writer guarantee under [REQ-113](02-requirements.md).
+Node publication remains a store and compaction guarantee under [REQ-113](02-requirements.md).
 
 The [validation contract](../../packages/core/src/domain/validation.ts) checks runtime fields and target types.
 The [merge contract](../../packages/core/src/domain/merge.ts) resolves copies and applies all historical erasure evidence.
@@ -113,7 +113,7 @@ The same log and profile filter give the same positions after a restart or eithe
 A changed leaf identity or position invalidates its old and new catalog paths. The unaffected prefix and scope tree coordinates stay intact.
 At a catalog leaf, child lookup uses that position to find the scope and its current top node.
 The node is the existing scope root, with no synthetic event. Its range belongs to the scope tree, not to the catalog position.
-A live scope with an unready root is non-empty, so the catalog writer waits for it.
+A live scope with an unready root is non-empty, so the catalog compaction waits for it.
 See the [catalog contracts](../../packages/core/src/domain/projection.ts) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
 
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
@@ -123,11 +123,11 @@ direction line. A shared scope gets one position in each profile where it is
 visible. See [REQ-108](02-requirements.md), the [context contract](../../packages/core/src/domain/context.ts),
 the [catalog contract](../../packages/core/src/domain/projection.ts), and the [root contract](../../packages/core/src/domain/tree.ts).
 
-A change of a note makes each node above it dirty, and the writer builds the node from its two
+A change of a note makes each node above it dirty, and the compaction builds the node from its two
 children. A rebuild appends a new `node` event for the same key.
 The projection takes the latest candidate whose id has no invalidation.
 The [invalidation contract](../../packages/core/src/domain/invalidation.ts) owns affected scope and catalog paths.
-[REQ-113](02-requirements.md), [REQ-117](02-requirements.md), and [REQ-192](02-requirements.md) retain writer publication and build guarantees.
+[REQ-113](02-requirements.md), [REQ-117](02-requirements.md), and [REQ-192](02-requirements.md) retain compaction publication and build guarantees.
 
 A `redact` clears historical dependent nodes through their child ids, including earlier scope paths and catalog ancestors.
 The placeholder `[redacted]` appears in the console and the view only, and no event holds it.
@@ -175,7 +175,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Input of a merge | Two children, and 1 024 characters of `longform` at level 1               | The input holds no context, so a delete stays derivable.         |
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
 | Fold             | Stop at the first line-budget fit. The demo orders pairs by jump, due, level, and start. | The order gives one answer. |
-| Writer           | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
+| Compaction       | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
 | Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
@@ -192,7 +192,7 @@ the write. The store holds no record for a scope, and no event describes one. A 
 a record names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and the [scope grammar](../../packages/core/src/domain/scope.ts).
 
 The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.
-Writer candidates derive from dirty ranges, including ranges with no node event. The store keeps no job queue. See
+Compaction candidates derive from dirty ranges, including ranges with no node event. The store keeps no job queue. See
 [0004 Tree and writer](../adr/0004-tree-writer.md).
 
 Each append to the sqlite backend is one transaction, and the backend uses write-ahead logging. The
@@ -254,7 +254,7 @@ the form `[<keys>] <age> <summary>`. A line above one scope joins its keys with 
 range of their idle times, as `10..20d`. One scope gives its idle time in minutes, hours, or days. The
 line holds no count and no active marker. The text is the body of the top node of the range, and the catalog shows that body. An
 unready top node gives a temporary line with the keys, the age range, and the text assembled from the
-two child bodies. That line renders at once, and the render calls no model and waits for no writer.
+two child bodies. That line renders at once, and the render calls no model and waits for no compaction.
 A scope with no live records gives no line. The catalog follows the same minimal fold and line budget.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
@@ -277,7 +277,7 @@ A pair merges though the node of its range is not built, and a temporary line ta
 two lines. So the part always reaches its budget. When no pair merges and the part is still above its
 budget, the oldest lines leave the part.
 
-The render never waits for a job. A line stays temporary until the writer builds its node, so the
+The render never waits for a job. A line stays temporary until the compaction builds its node, so the
 slice fits its budget at once.
 
 An open of a note gives the note and its `longform`. An open of a node gives its non-empty children as slice lines. A range that matches no built node gives one line: the level follows
@@ -319,7 +319,7 @@ The [tree types](../../packages/core/src/types/tree.ts) define the input and out
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
 The [node validation contract](../../packages/core/src/domain/validation.ts) owns aligned starts and summary metadata checks.
-It handles empty halves and single-child copies under the [build input contract](../../packages/core/src/domain/tree.ts) and the [writer contract](../../packages/core/src/domain/writer.ts).
+It handles empty halves and single-child copies under the [build input contract](../../packages/core/src/domain/tree.ts) and the [compaction contract](../../packages/core/src/domain/compaction.ts).
 
 ## Frontier
 
@@ -341,7 +341,7 @@ A cleared parent summary does not clear its unaffected child notes or sibling su
 The store invalidates affected node ids and excludes sanitized nodes from current candidates.
 
 Sanitized notes and amendments set their record to `deleted` and `content_cleared`, including imports without the original redact event.
-The store clears the index, projection content, and future view caches. A late writer answer fails the exact-input check.
+The store clears the index, projection content, and future view caches. A late compaction answer fails the exact-input check.
 Already delivered session messages stay unchanged.
 
 Publication uses one exclusive store lock and an atomic source replacement. SQLite journals and the disposable JSONL index cannot accompany the sanitized source with stale content.
@@ -357,11 +357,11 @@ The demo supplies the comparison cases for the existing tree tests.
 The cache key remains `epoch = hash(storeRev, sorted built nodes)` under [REQ-173](02-requirements.md).
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
-## Writer
+## Compaction
 
-The background writer computes candidates from dirty non-empty aligned ranges through the root.
+The background compaction computes candidates from dirty non-empty aligned ranges through the root.
 A missing node event is a dirty candidate. A range waits for clean non-empty children before a build.
-The [tree contract](../../packages/core/src/domain/tree.ts) owns the candidate order. The writer
+The [tree contract](../../packages/core/src/domain/tree.ts) owns the candidate order. The compaction
 stores no queue, job row, or lease.
 A restart derives candidates again from the tree. In-flight attempts and retry delays are local runtime state.
 
@@ -372,7 +372,7 @@ The model sees the two child inputs only. One non-empty child copies its text wi
 
 Each attempt copies exact child inputs as `BuildInput`. The store compares both current children under the write lock before publication.
 A changed input, a hidden record, or a dirty child rejects the result. The revision equality alone does not permit a result.
-The writer starts when dirty candidates reach `writer.batch`, after `store.idle` seconds without an event, or at `memlens compact`.
+The compaction starts when dirty candidates reach `compaction.batch`, after `store.idle` seconds without an event, or at `memlens compact`.
 Rendering returns immediately with current clean summaries and temporary lines.
 See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0015 Node invalidation](../adr/0015-node-invalidation.md).
 
@@ -548,4 +548,4 @@ customer words as given.
 
 The CLI owes the import from harness sessions. See [REQ-413](02-requirements.md).
 The plugin and its session tab remain pending. See [08-ui.md](08-ui.md) and [REQ-028](02-requirements.md).
-The standalone console states no writer state and no session snapshot state. See [REQ-519](02-requirements.md).
+The standalone console states no compaction state and no session snapshot state. See [REQ-519](02-requirements.md).

@@ -15,7 +15,7 @@ chat is not the answer: each token costs, and the model still loses the old fact
 The memory is a log of curated notes, not a chat history. A note holds one fact in a short `body` and
 an optional `longform` document.
 
-The store folds the notes into a tree. A background writer merges two adjacent notes into one line,
+The store folds the notes into a tree. A background compaction merges two adjacent notes into one line,
 then two lines into one, and so on. A line stands in for its notes for weeks or years, and the agent
 opens it back into the two lines below.
 
@@ -51,7 +51,7 @@ the log of events
 2. The agent reads the map. The `directions` block gives one line for each scope, and the `here` block gives the frontier of the active scope.
 3. The agent opens a line that it needs. The store gives the note word for word, or the two lines below a summary.
 4. The agent writes a note. The log grows, and the tree of the scope becomes dirty.
-5. The writer merges the dirty nodes in the background. A compaction or an idle time renders a new slice.
+5. The compaction merges the dirty nodes in the background. A compaction or an idle time renders a new slice.
 
 A read costs no model call. A note costs one model call in its life, at the merge of its tree.
 

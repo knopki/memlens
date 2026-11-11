@@ -25,8 +25,8 @@ An unverified claim stays a claim. Do not build a requirement on it.
 | --------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `NODE = 512`, `TRIES = 5`, `JOBS = 64`. | `Memory.ts:142-144`                                                                               | confirmed                                                                           |
 | The view goes from 128 KB to 32 KB.     | `Memory.ts:147` `HIGH = 128000` with the comment "merges to half". `Memory.ts:148` `SEEN = 32000` | imprecise. The merge goes to half, that is 64 KB. The 32 KB value is another limit. |
-| The writer takes the most overdue pair. | `Memory.ts:897-901`                                                                               | confirmed                                                                           |
-| The writer retries by the length ruler. | `Memory.ts:167-185`, `Memory.ts:727-742`                                                          | confirmed                                                                           |
+| The compaction takes the most overdue pair. | `Memory.ts:897-901`                                                                               | confirmed                                                                           |
+| The compaction retries by the length ruler. | `Memory.ts:167-185`, `Memory.ts:727-742`                                                          | confirmed                                                                           |
 | A line carries the mark `id+n`.         | `Memory.ts:992`                                                                                   | confirmed                                                                           |
 | The file is 1194 lines.                 | `wc -l Memory.ts` gives 1194                                                                      | confirmed                                                                           |
 
@@ -56,14 +56,14 @@ An unverified claim stays a claim. Do not build a requirement on it.
 | Claim                                                                         | Evidence                                 | Verdict   |
 | ----------------------------------------------------------------------------- | ---------------------------------------- | --------- |
 | The view ceiling is 256 KB and the floor is 128 KB.                           | `README.md:318-319`, `README.md:424-425` | confirmed |
-| The writer makes 6 lines in a batch.                                          | `README.md:323` `writer.batch` = 6       | confirmed |
-| The writer accepts a line up to 1.25 times the limit.                         | `README.md:503-506` "640 bytes at 512"   | confirmed |
-| The writer gets three tries, not five.                                        | `README.md:503-506`                      | confirmed |
+| The compaction makes 6 lines in a batch.                                          | `README.md:323` `compaction.batch` = 6       | confirmed |
+| The compaction accepts a line up to 1.25 times the limit.                         | `README.md:503-506` "640 bytes at 512"   | confirmed |
+| The compaction gets three tries, not five.                                        | `README.md:503-506`                      | confirmed |
 | A retry asks for 0.75 of the limit.                                           | `README.md:275`, `README.md:506`         | confirmed |
 | 27.5 % of the lines stay over 512 bytes.                                      | `README.md:505` "325 of 1,182 lines"     | confirmed |
 | The 90th percentile is 610 bytes.                                             | `README.md:535`                          | confirmed |
 | Higher effort costs a median of 8,800 output tokens and waits of two minutes. | `README.md:512`                          | confirmed |
-| The writer effort is off by default.                                          | `README.md:511`                          | confirmed |
+| The compaction effort is off by default.                                          | `README.md:511`                          | confirmed |
 
 ## pi-durable-memory
 

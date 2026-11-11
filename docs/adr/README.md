@@ -52,3 +52,5 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0015 | Node invalidation | accepted |
 | 0016 | Write boundary | accepted |
 | 0017 | Store publication | accepted |
+
+The decision texts of 2026-11-10 call the compaction the writer. The product renamed the term on 2026-11-11, and the texts stay as decided.

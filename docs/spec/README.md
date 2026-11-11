@@ -21,7 +21,7 @@ Read those contracts before a change. The archive retains the original local req
 | [06-architecture.md](06-architecture.md)     | Parts, interfaces, data, limits.                   | live         |
 | [07-prior-art.md](07-prior-art.md)           | Each claim of the customer table against the code. | archive      |
 | [08-ui.md](08-ui.md)                         | The console, the seven screens, and the two hosts. | live         |
-| [09-prompts.md](09-prompts.md)               | The four prompts of the writer and the subagent.   | live         |
+| [09-prompts.md](09-prompts.md)               | The four prompts of the compaction and the subagent. | live         |
 | [events.d.ts](events.d.ts)                   | The envelope of an event and the payload of each op. | live         |
 | [tree.d.ts](tree.d.ts)                       | The tree, invalidation, build input, and slice. | live         |
 | [tools.d.ts](tools.d.ts)                     | The input and the output type of each tool.        | live         |
