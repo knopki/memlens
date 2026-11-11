@@ -16,7 +16,7 @@
  * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <ts_from>..<ts_to>
  * <summary>. A temporary line holds the period only.
  * - The here budget limits the here lines and the directions budget limits the direction lines.
- * The two budgets are independent.
+ * The two budgets are independent, and each part folds with the budget of that part.
  * - customPrompt replaces the whole template and keeps each placeholder. customPromptAppend fills
  * {{append}}. A missing append leaves an empty line.
  * - The epoch hashes storeRev with the sorted current node ids. A change of one node changes the

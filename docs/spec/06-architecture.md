@@ -156,8 +156,8 @@ a list replaces the earlier value. The result is the type `ResolvedConfig`.
 The store path comes from `--store` first, then the patch, then `MEMLENS_STORE`, then the base file.
 The CLI has no patch, so its order is `--store`, `MEMLENS_STORE`, the base file.
 
-The `budget` keys `here` and `directions` count lines, and the two values are independent. The
-`language` key has one value for the store, and it selects the tokenizer of the index. See
+The `budget` keys `here` and `directions` count lines. The [context contract](../../packages/core/src/domain/context.ts) owns the independence of the two budgets.
+The `language` key has one value for the store, and it selects the tokenizer of the index. See
 [REQ-291](02-requirements.md) and [REQ-450](02-requirements.md).
 
 The `customPrompt` key replaces the whole template of the slice, and the placeholders apply in it. The
@@ -240,8 +240,7 @@ See [0003 Store](../adr/0003-store.md) and [0008 Redaction](../adr/0008-redactio
 
 ## View
 
-A view is the lines that one render gives. The render takes the records, the built nodes, and
-`storeRev`, and it gives one text.
+The [context contract](../../packages/core/src/domain/context.ts) owns the render of the view.
 
 The text is one `<memory>` section with three parts: `<how-to>`, `<directions>`, and `<here>`. The
 template is in [09-prompts.md](09-prompts.md), and each placeholder takes its value.
@@ -258,8 +257,8 @@ A scope with no live records gives no line. The catalog follows the same minimal
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
 and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`, or the two dates only for a temporary line.
 
-The budget counts lines. The `here` value limits the `<here>` part, and the `directions` value limits
-the `<directions>` part. The two values are independent, and the `<how-to>` part is never cut.
+The [context contract](../../packages/core/src/domain/context.ts) owns the line budget of each part.
+The `<how-to>` part is never cut.
 
 Each part is a tree. The tree of the active scope gives the `<here>` part, and the catalog tree gives
 the `<directions>` part.

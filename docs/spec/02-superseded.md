@@ -419,3 +419,14 @@ The work rules move these implemented local rules to their code contracts. Cross
 | REQ-461 | The catalog takes the same keys, the same fold, and the same writer as the tree of a scope. The leaves of the catalog are the top nodes of the scopes. | FR | accepted | S-100, S-104 | A catalog of eight scopes builds the same levels as eight notes. | [tree contract](../../packages/core/src/domain/tree.ts) |
 | REQ-467 | The sidecar of the jsonl backend holds the index and the current node of each key. The store rebuilds the sidecar from the log when it is absent. | FR | accepted | S-100 | A deleted sidecar gives the same view after a rebuild. | [jsonl contract](../../packages/core/src/storage/jsonl.ts) |
 | REQ-504 | The sqlite backend keeps the store in `memlens.db`, and the jsonl backend keeps the log in `memlens.jsonl`. | FR | accepted | S-128 | The data directory holds `memlens.db`, or `memlens.jsonl`. | [sqlite contract](../../packages/core/src/storage/sqlite.ts) and [jsonl contract](../../packages/core/src/storage/jsonl.ts) |
+## Local rule references
+
+The work rules move these implemented local rules to their code contracts. Cross-module guarantees and pending behavior stay in the active list.
+
+| ID | Requirement | Type | Original status | Source | Test method | Live contract |
+| --- | --- | --- | --- | --- | --- | --- |
+| REQ-022 | The view is a deterministic function of the notes, the nodes, and the store version. | NFR | accepted | S-013 | Two builds from the same inputs give the same view. | [context contract](../../packages/core/src/domain/context.ts) |
+| REQ-154 | The `here` budget limits the tree of the active scope. | FR | accepted | S-037, S-088 | The slice of the active scope has this size limit. | [context contract](../../packages/core/src/domain/context.ts) |
+| REQ-155 | The `directions` budget limits the tree of the catalog. | FR | accepted | S-037 | The slice of the catalog has this size limit. | [context contract](../../packages/core/src/domain/context.ts) |
+| REQ-156 | The two budgets are independent, and the profile sets no total budget. | FR | accepted | S-037, S-068, S-084 | A change of `here` changes no `directions` limit. | [context contract](../../packages/core/src/domain/context.ts) |
+| REQ-176 | The fold of a part takes the budget of that part as `high`. | FR | accepted | S-041 | The `here` budget gives `high` for the view of the project. | [context contract](../../packages/core/src/domain/context.ts) |
