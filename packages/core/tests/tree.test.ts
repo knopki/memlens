@@ -13,6 +13,7 @@ import {
 	inputUnchanged,
 	isBuilt,
 	isClean,
+	LINE_LIMIT,
 	rev,
 	slice,
 	topRange,
@@ -460,6 +461,32 @@ describe("minimal fold", () => {
 		expect(lines.every((line) => line.from !== "" && line.to !== "")).toBe(
 			true,
 		);
+	});
+
+	it("splits the line limit between the two halves in proportion to their lengths", () => {
+		const pair = (first: string, second: string): Tree => ({
+			total: 4,
+			notes: [
+				{ ...record(0), body: first },
+				{ ...record(1), body: second },
+				record(2),
+				record(3),
+			],
+			nodes: [],
+			invalidated: [],
+		});
+		const equal = slice(pair("a".repeat(600), "b".repeat(600)), 3)[0];
+		expect(equal?.kind).toBe("temporary");
+		const equalText = equal?.kind === "temporary" ? equal.text : "";
+		expect(equalText.length).toBeLessThanOrEqual(LINE_LIMIT);
+		const [left, right] = equalText.split("; ");
+		expect(Math.abs((left?.length ?? 0) - (right?.length ?? 0))).toBeLessThan(
+			3,
+		);
+		const uneven = slice(pair("a".repeat(600), "b".repeat(40)), 3)[0];
+		const unevenText = uneven?.kind === "temporary" ? uneven.text : "";
+		expect(unevenText.length).toBeLessThanOrEqual(LINE_LIMIT);
+		expect(unevenText.endsWith(`; ${"b".repeat(40)}`)).toBe(true);
 	});
 
 	it("matches demo jump and due ordering for dense and sparse small scopes", () => {

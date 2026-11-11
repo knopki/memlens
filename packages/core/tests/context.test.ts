@@ -78,6 +78,27 @@ describe("hereLines", () => {
 		);
 	});
 
+	it("keeps the date of the period and drops the time of day", () => {
+		const timed: Tree = {
+			total: 3,
+			notes: Array.from({ length: 3 }, (_, pos) => ({
+				...record(pos),
+				ts: `2026-11-0${pos + 1}T08:38:36.760Z`,
+			})),
+			nodes: [
+				{
+					...node(0, 1, "first pair"),
+					ts_from: "2026-11-01T08:38:36.760Z",
+					ts_to: "2026-11-02T09:00:00.000Z",
+				},
+			],
+			invalidated: [],
+		};
+		expect(hereLines(timed, 2)).toBe(
+			"#0-1 2026-11-01..2026-11-02 first pair\n#2 2026-11-03 body 2",
+		);
+	});
+
 	it("renders a clean node with its period and summary", () => {
 		const tree = scopeTree(3, [node(0, 1, "first pair")]);
 		expect(hereLines(tree, 2)).toBe(

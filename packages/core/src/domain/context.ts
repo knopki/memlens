@@ -14,8 +14,8 @@
  * - An unready non-empty range gives a temporary line with the keys, the age, and the text that the
  * tree assembled from its children. The result is immediate: it calls no model and waits for no
  * writer. A ready node gives its summary in place of that text. A scope with no live note gives no line.
- * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <ts_from>..<ts_to>
- * <summary>. A temporary line holds the period and the text that the tree assembled from its children.
+ * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <date>..<date>
+ * <summary>. A temporary line holds the two dates and the text that the tree assembled from its children.
  * - The here budget limits the here lines and the directions budget limits the direction lines.
  * The two budgets are independent, and each part folds with the budget of that part.
  * - customPrompt replaces the whole template and keeps each placeholder. customPromptAppend fills
@@ -102,15 +102,15 @@ export interface ContextInput {
 // #region FUNC_hereLines
 /**
  * @purpose Render the frontier lines of the active scope.
- * @invariants A leaf gives #<pos> <YYYY-MM-DD> <body>. A node gives #<a>-<b> <ts_from>..<ts_to>
- * <summary>. A missing or dirty node gives the address, the period, and the assembled text.
+ * @invariants A leaf gives #<pos> <YYYY-MM-DD> <body>. A node gives #<a>-<b> <date>..<date>
+ * <summary>. A missing or dirty node gives the address, the two dates, and the assembled text.
  */
 export function hereLines(tree: Tree, budget: Lines): string {
 	const text = slice(tree, budget)
 		.map((line) => {
 			if (line.kind === "record")
 				return `#${line.pos} ${line.from.slice(0, 10)} ${line.body}`;
-			const head = `#${line.range.start}-${line.range.start + 2 ** line.range.level - 1} ${line.from}..${line.to}`;
+			const head = `#${line.range.start}-${line.range.start + 2 ** line.range.level - 1} ${line.from.slice(0, 10)}..${line.to.slice(0, 10)}`;
 			const text = line.kind === "summary" ? line.summary : line.text;
 			return text ? `${head} ${text}` : head;
 		})

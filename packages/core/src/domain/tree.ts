@@ -552,6 +552,8 @@ function frontier(model: Model, budget: Lines): Range[] {
  * @invariants A clean node gives its summary. A record gives its body and then its longform. Other
  * ranges join the two halves with "; ". The result holds at most the limit in characters.
  * A hidden or deleted record gives no text. A catalog leaf resolves its scope root.
+ * Above the limit, each half keeps a share of the room in proportion to its own length, and a half
+ * that is short of its share keeps its whole text.
  */
 function rangeBody(model: Model, range: Range, limit: number): string {
 	if (limit <= 0) return "";
@@ -572,12 +574,34 @@ function rangeBody(model: Model, range: Range, limit: number): string {
 	if (node && model.isClean(node)) return node.summary.slice(0, limit);
 	const [left, right] = halves(range);
 	const first = rangeBody(model, left, limit);
-	if (first.length >= limit) return first;
-	const rest = rangeBody(model, right, limit - first.length - 2);
-	if (!first) return rest;
-	if (!rest) return first;
-	return `${first}; ${rest}`;
+	const rest = rangeBody(model, right, limit);
+	return joinBody(first, rest, limit);
 }
+
+// #region FUNC_joinBody
+/**
+ * @purpose Join the two half texts of one range within the limit of a line.
+ * @invariants A short pair joins whole. Above the limit, each half keeps a share of the room in
+ * proportion to its own length, and a half below its share keeps its whole text.
+ * A half at the limit stands for a longer text, so the other half keeps its whole text.
+ */
+function joinBody(first: string, rest: string, limit: number): string {
+	if (!first) return rest.slice(0, limit);
+	if (!rest) return first.slice(0, limit);
+	const room = Math.max(0, limit - 2);
+	if (first.length + rest.length <= room) return `${first}; ${rest}`;
+	const capped = (text: string) => text.length >= limit;
+	if (capped(first) !== capped(rest)) {
+		const [long, short] = capped(first) ? [first, rest] : [rest, first];
+		const cut = cutAtWord(long, Math.max(0, room - short.length));
+		return capped(first) ? `${cut}; ${short}` : `${short}; ${cut}`;
+	}
+	const share = Math.floor(
+		(room * first.length) / (first.length + rest.length),
+	);
+	return `${cutAtWord(first, share)}; ${cutAtWord(rest, room - share)}`;
+}
+// #endregion FUNC_joinBody
 // #endregion FUNC_rangeBody
 
 // #region FUNC_slice
