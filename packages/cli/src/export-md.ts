@@ -16,8 +16,8 @@
  *  - Each file starts with the scope key and the format version. Each record is one section
  *    ## #<pos> with a YAML block and its body. A longform follows under ### longform.
  *  - The YAML block shows id, at, ts, kind, review_at, refs, and supersedes.
- *  - A cleared record holds the body [redacted], the field redacted: true, and no longform.
- *  - The export writes live records and cleared records, and it writes no hidden record.
+ *  - The export writes live records only. It writes no hidden, deleted, or cleared record, and it
+ *    writes no placeholder text.
  *  - The same records give the same text. The exporter never truncates a name and never
  *    overwrites a different scope on a filename collision.
  * @usecases
@@ -75,7 +75,7 @@ export function renderScopeMarkdown(
 ): string {
 	const head = `---\nscope: ${yamlScalar(scope)}\nformat: ${MD_FORMAT}\n---\n`;
 	const sections = records
-		.filter((record) => record.state === "live" || record.content_cleared)
+		.filter((record) => record.state === "live")
 		.map(renderRecord)
 		.join("\n");
 	debug("Scope rendered", { event: "render", scope, records: records.length });
@@ -84,7 +84,6 @@ export function renderScopeMarkdown(
 // #endregion FUNC_renderScopeMarkdown
 
 function renderRecord(record: ProjectionRecord): string {
-	const cleared = record.content_cleared;
 	const block = [
 		`id: ${yamlScalar(record.id)}`,
 		`at: ${yamlScalar(record.recorded_at)}`,
@@ -93,16 +92,12 @@ function renderRecord(record: ProjectionRecord): string {
 		`review_at: ${record.review_at === null ? "null" : yamlScalar(record.review_at)}`,
 		`refs: ${yamlList(record.refs)}`,
 		`supersedes: ${yamlList(record.supersedes)}`,
-		...(cleared ? ["redacted: true"] : []),
 	]
 		.map((line) => `  ${line}`)
 		.join("\n");
-	const body = cleared ? "[redacted]" : record.body;
 	const longform =
-		cleared || record.longform === null
-			? ""
-			: `\n### longform\n\n${record.longform}\n`;
-	return `## #${record.pos}\n\n\`\`\`yaml\n${block}\n\`\`\`\n\n${body}\n${longform}`;
+		record.longform === null ? "" : `\n### longform\n\n${record.longform}\n`;
+	return `## #${record.pos}\n\n\`\`\`yaml\n${block}\n\`\`\`\n\n${record.body}\n${longform}`;
 }
 
 /** Quote one YAML scalar only when its text needs it. */

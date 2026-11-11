@@ -153,6 +153,10 @@ export {
 	validateScopeKey,
 } from "./domain/scope.js";
 export {
+	type ResolvedTarget,
+	resolveTarget,
+} from "./domain/targets.js";
+export {
 	addDays,
 	compareIso,
 	nowIso,

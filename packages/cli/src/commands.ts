@@ -68,6 +68,7 @@ import {
 	prepareImport,
 	project,
 	renderContext,
+	resolveTarget,
 	scopeLines,
 	scopeTree,
 	toIsoDate,
@@ -85,7 +86,6 @@ import {
 	openRuntime,
 	profileLists,
 	resolveForProfile,
-	resolveTarget,
 	runtimeVisibleScopes,
 } from "./runtime.js";
 

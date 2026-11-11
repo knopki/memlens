@@ -7,7 +7,7 @@
  * reads files or the environment itself.
  * @scope
  *  - The base TOML load with a built-in fallback, the CLI store path order, the backend choice,
- *    the profile scopes of the store, target resolution, and the visible scope list.
+ *    the profile scopes of the store, and the visible scope list.
  *  - NOT: command semantics, argument parsing, output formats, and the harness patch.
  * @invariants
  *  - The store path order is --store, then MEMLENS_STORE, then the base file.
@@ -15,14 +15,10 @@
  *    directions lines, and the sqlite backend, and the CLI writes no file.
  *  - The store opens a second time with the profile scopes of the configuration, so a write plans
  *    invalidations for the catalog of each profile.
- *  - A target with a scope outside the visible scopes of the profile gives NotAllowed.
- *  - A target with no scope in the address and no --scope flag gives a Usage error.
- *  - An address that names no record gives a Data error.
  * @usecases
  *  - Open: command => gives --store and a profile name => gets one runtime and closes it
- *  - Target: command => gives target text and --scope => gets one record with its scope
  * @dependencies USES API: @memlens/core; READS: config.toml, the store directory
- * @keywords runtime, config, store, open, profiles, target, visible, cli
+ * @keywords runtime, config, store, open, profiles, visible, cli
  * #endregion moduleContract
  */
 
@@ -198,46 +194,6 @@ export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
 		runtime.config.profile.scopes.some((glob) => globMatches(glob, scope))
 	);
 }
-
-// #region FUNC_resolveTarget
-/**
- * Resolve one target address into one record.
- *
- * @purpose Map target text and --scope to one record, so each target command shares one rule.
- * @invariants A range target is a Usage error. A scope outside the profile gives NotAllowed.
- */
-export function resolveTarget(
-	projection: Projection,
-	visible: readonly ScopeKey[],
-	raw: string,
-	scopeFlag: string | null,
-): { readonly scope: ScopeKey; readonly record: ProjectionRecord } {
-	const address = parseAddress(raw);
-	if (address === null)
-		throw new MemlensError("Usage", `The target ${raw} is not an address.`);
-	if (address.kind === "range" || address.kind === "scoped-range")
-		throw new MemlensError("Usage", `The target ${raw} must name one record.`);
-	const rawScope = address.scope ?? scopeFlag ?? "";
-	if (rawScope === "")
-		throw new MemlensError(
-			"Usage",
-			"The target needs a scope in the address or in --scope.",
-		);
-	const scope = normalizeScopeKey(rawScope) as ScopeKey;
-	if (!visible.includes(scope))
-		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
-	const record = (projection.byScope.get(scope) ?? []).find(
-		(candidate) => candidate.pos === address.pos,
-	);
-	if (record === undefined)
-		throw new MemlensError(
-			"Data",
-			`No record of ${scope} is at ${address.pos}.`,
-		);
-	debug("Target resolved", { event: "target", scope, pos: address.pos });
-	return { scope, record };
-}
-// #endregion FUNC_resolveTarget
 
 /** The active scope key of one directory from the rules of the base layer. */
 export function cliActiveScope(base: BaseConfig, cwd: string): ScopeKey {
