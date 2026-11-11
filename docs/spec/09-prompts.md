@@ -91,9 +91,7 @@ further along than it was. If told the line is too long, shorten it.
 ## Merge task
 
 ```text
-Merge these two adjacent lines into one line of at most {TARGET} characters (about {TARGET/6} words),
-the length of this ruler:
-{RULER = '-' * TARGET}
+Merge these two adjacent lines into one line of at most {TARGET} characters (about {TARGET/6} words).
 <input>
 {child_a}
 {child_b}
@@ -106,9 +104,7 @@ One call of the batch form holds up to six inputs. It names the form of the answ
 needs no guess.
 
 ```text
-Merge each pair of adjacent lines into one line of at most {TARGET} characters (about {TARGET/6} words) each,
-the length of this ruler:
-{RULER = '-' * TARGET}
+Merge each pair of adjacent lines into one line of at most {TARGET} characters (about {TARGET/6} words) each.
 Answer one line for each input, in the form "#a-b: line".
 <input id="{range}">
 {child_a}
@@ -116,8 +112,8 @@ Answer one line for each input, in the form "#a-b: line".
 </input>
 ```
 
-The console job and the command job print this task. A job of several inputs holds one ruler, and
-each input block carries its own `#a-b` id.
+The console job and the command job print this task. Each input block carries its own `#a-b` id, and
+the job asks one line for each input.
 
 ## The input of the merge
 
