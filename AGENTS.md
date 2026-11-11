@@ -11,8 +11,9 @@ entity contract before a change.
 
 ## New customer input
 
-1. Record a fresh customer message about the product in [docs/statements.md](docs/statements.md).
-   Use the next identifier `S-nnn` and add the date. Do not change the words.
+1. Record a fresh customer message about the product in [docs/statements.md](docs/statements.md)
+   only at the direct instruction of the customer. Use the next identifier `S-nnn` and add the date.
+   Do not change the words. Never record a note about an agent error or a process remark.
 2. Never record a repeated instruction, a process reply, or a journal correction. These are not
    statements.
 3. Put the meaning in the correct file:
