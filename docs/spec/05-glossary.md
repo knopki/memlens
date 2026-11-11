@@ -161,3 +161,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | root range | The aligned range that starts at zero and covers every assigned position. Empty padding completes its power-of-two width. | S-137 |
 | catalog position | The ordinal of a scope when the projection first encounters it in a profile. It does not change the scope tree range. | S-138, S-139 |
 | jump | The sum of max(0, parent_level - 1 - neighbor_level) over the outer neighbors of a fold pair. The demo defines it. | S-142 |
+| console | The screen set that a human uses to read and maintain the memory. The command `memlens ui` hosts it, and the plugin tab is pending. | S-077, S-144 |
+| theme | The page colors of the console: light, dark, or the setting of the system. The choice survives a reload. | S-144 |
+| message table | The text of one language of the console. Every table holds every English key. | S-144 |

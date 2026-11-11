@@ -23,7 +23,7 @@ are the data path, and they need no model call. A rejected requirement stays out
 | 12 | The agent tools | 023-024, 030, 039, 260-261, 276, 310, 343-344, 349-350, 352, 371, 477 | 15 | [address](../../packages/core/src/domain/address.ts), [reads](../../packages/core/src/domain/reads.ts), [tree](../../packages/core/src/domain/tree.ts), [errors](../../packages/core/src/types/errors.ts) |
 | 13 | The subagents | 034, 158-159, 353-357, 359-360, 362-363, 441 | 13 | None |
 | 14 | The command line | 411, 413 | 2 | [commands](../../packages/cli/src/commands.ts), [cli](../../packages/cli/src/cli.ts), [export-md](../../packages/cli/src/export-md.ts) |
-| 15 | The console | 361, 423, 459 | 3 | [console](../../packages/core/src/domain/console.ts), [host](../../packages/cli/src/ui.ts), [client](../../packages/ui/src/client.ts) |
+| 15 | The console | 361, 423, 459, 514-519 | 9 | [console](../../packages/core/src/domain/console.ts), [host](../../packages/cli/src/ui.ts), [client](../../packages/ui/src/client.ts), [i18n](../../packages/ui/src/i18n.ts) |
 | 16 | The plugin | 028, 427-428 | 3 | None |
 | 17 | The repository | 001-004, 006-007, 429 | 7 | None |
 
