@@ -330,8 +330,10 @@ holds the address, the range of dates, and the text. See [0004 Tree and writer](
 ## Erasure
 
 A `hide` or an `amend` makes the ancestors of the position dirty. A dirty node does not
-render, and its children take its place down to a clean node or a record. The rebuild goes bottom-up,
-and one change costs `log2(N)+1` model calls at most. See the [slice contract](../../packages/core/src/domain/tree.ts) and [REQ-218](02-requirements.md).
+render, and its children take its place down to a clean node or a record. The rebuild goes bottom-up
+and builds one node on each dirty level. One change costs a depth of the tree, not a count of the
+records. A changed leaf order makes each moved record dirty. See the
+[slice contract](../../packages/core/src/domain/tree.ts).
 
 A redaction clears the note, every historical amendment, and every historical node whose child dependencies reach cleared event ids.
 The clearing follows source ids across scopes and catalogs. Current numeric positions do not determine historical dependencies.
