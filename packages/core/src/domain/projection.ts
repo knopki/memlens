@@ -238,6 +238,7 @@ function applyAmendment(
 /**
  * @purpose Apply operations to their source records and retain each record's latest mutation order.
  * @invariants Hide preserves content and cannot lower deleted state. Review replaces review_at.
+ * @invariants A review keeps the record order, because review_at enters no summary. No node turns dirty.
  */
 function applyRecordOperation(
 	state: ReplayState,
@@ -253,6 +254,17 @@ function applyRecordOperation(
 		});
 		return;
 	}
+	// A review changes no summary input, so it leaves the record order alone.
+	if (event.op === "review") {
+		record.review_at = event.review_at;
+		debug("Review applied", {
+			event: "review_applied",
+			id: event.id,
+			target: event.target,
+			review_at: event.review_at,
+		});
+		return;
+	}
 	touch(record, order);
 	switch (event.op) {
 		case "hide":
@@ -260,9 +272,6 @@ function applyRecordOperation(
 			break;
 		case "redact":
 			clear(record);
-			break;
-		case "review":
-			record.review_at = event.review_at;
 			break;
 		case "amend": {
 			const added = (event.supersedes ?? []).filter(

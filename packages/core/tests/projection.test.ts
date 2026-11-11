@@ -206,12 +206,17 @@ describe("two-pass projection", () => {
 			{ ...base(2), op: "amend", target: "1", body: "new" },
 			{ ...base(3), op: "review", target: "1", review_at: "2027-01-01" },
 		]);
+		const plain = project([
+			note(1, { longform: "document" }),
+			{ ...base(2), op: "amend", target: "1", body: "new" },
+		]);
 		expect(p.records.get("1")).toMatchObject({
 			body: "new",
 			longform: "document",
 			review_at: "2027-01-01",
 			pos: 0,
 		});
+		expect(p.records.get("1")?.order).toEqual(plain.records.get("1")?.order);
 	});
 
 	it("keeps deletion sticky across hides, content edits, and scope transfers", () => {

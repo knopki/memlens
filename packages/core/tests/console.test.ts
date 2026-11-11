@@ -181,6 +181,48 @@ for (const Backend of [JsonlStore, SqliteStore]) {
 			expect(model.reviewNext[0]?.addr).toBe("project:a#1");
 		});
 
+		it("keeps a published node clean through a review", async () => {
+			const store = await open();
+			const first = await store.append(note());
+			await store.append(note("project:a", "second"));
+			const tree = scopeTree(await store.projection(), "project:a");
+			const range = { start: 0, level: 1 };
+			const input = buildInput(tree, range);
+			if (!input) throw new Error("Build input is absent");
+			await store.appendNode(input, {
+				op: "node",
+				scope: "project:a",
+				start: 0,
+				level: 1,
+				child_a: input.children[0]?.id ?? null,
+				child_b: input.children[1]?.id ?? null,
+				input_rev: rev(tree, range),
+				summary: "pair",
+				chars: 4,
+				truncated: false,
+				ts_from: now,
+				ts_to: now,
+			});
+			const clean = await readConsole(store, config(), "project:a", now);
+			expect(
+				clean.candidates.filter((item) => item.scope === "project:a"),
+			).toEqual([]);
+			await store.append({
+				op: "review",
+				scope: "project:a",
+				target: first.id,
+				review_at: "2099-01-01",
+			});
+			const model = await readConsole(store, config(), "project:a", now);
+			expect(
+				model.candidates.filter((item) => item.scope === "project:a"),
+			).toEqual([]);
+			expect(model.nodes[0]).toMatchObject({
+				scope: "project:a",
+				clean: true,
+			});
+		});
+
 		it("retries when a write separates the projection and revision reads", async () => {
 			const store = await open();
 			await store.append(note());
