@@ -11,8 +11,9 @@
  * - A direction line is [<keys>] <age> <summary>. A line above one scope joins each covered key
  * with a comma and gives the range of their idle times, as 10..20d. One scope gives its idle time
  * in minutes, hours, or days. The line holds no count and no active marker.
- * - An unready non-empty scope gives the keys and the age, and no summary text. The line names no
- * period. A scope with no live note gives no line.
+ * - An unready non-empty range gives a temporary line with the keys and the age, and no summary
+ * text. The result is immediate: it calls no model and waits for no writer. A ready node gives its
+ * summary in place of that text. A scope with no live note gives no line.
  * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <ts_from>..<ts_to>
  * <summary>. A temporary line holds the period only.
  * - The here budget limits the here lines and the directions budget limits the direction lines.
@@ -156,7 +157,8 @@ function ageSpan(minutes: readonly number[]): string {
  * @purpose Render one direction line for each range of visible scopes of the catalog fold.
  * @invariants The scopes come in catalog position order. A line above one scope joins each covered
  * key with a comma and gives the range of their idle times. The line holds no count and no active
- * marker. An unready range gives the keys and the age, and no summary text.
+ * marker. An unready range gives a temporary line with the keys and the age, so every non-empty
+ * range renders at once with no model call and no wait.
  */
 export function directionLines(
 	catalog: Tree,
