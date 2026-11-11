@@ -4,11 +4,15 @@
  * eight languages of the DSH set.
  * @scope Native DOM controls, the language and theme choice, and the local HTTP API. NOT: the store
  * rules, the slice, and the tree.
- * @invariants Put each store text into a text node. Keep a destructive action behind a confirmation.
- * Show no state that this host does not hold.
- * @invariants The tree screen shows the frontier of the model, so a range line and the notes inside
- * that range never appear together.
- * @invariants The theme choice is light, dark, or system, and it survives a reload.
+ * @invariants
+ *  - Put each store text into a text node. Keep a destructive action behind a confirmation.
+ *    Show no state that this host does not hold.
+ *  - The tree screen shows the frontier of the model, so a range line and the notes inside that
+ *    range never appear together.
+ *  - The theme choice is light, dark, or system, and it survives a reload.
+ *  - A status message and a load state float above the screens and never move them. An open form
+ *    takes the message in its own row. The message clears itself, and an error stays longer than a
+ *    success.
  * @dependencies GET view, search, open and POST action from the CLI host. i18n.ts for the text.
  * @keywords console, ui, screen, theme, language, frontier, search, review, proposal, compaction
  * #endregion moduleContract
@@ -234,9 +238,21 @@ function span(from: string, to: string): string {
 }
 const kindName = (kind: NoteKind | "unavailable") =>
 	kind === "unavailable" ? tr("none") : tr(KIND_KEYS[kind] as keyof Table);
+let messageTimer: ReturnType<typeof setTimeout> | undefined;
 function message(text: string, error = false) {
-	status.textContent = text;
-	status.className = error ? "error" : "";
+	clearTimeout(messageTimer);
+	const note = document.querySelector<HTMLElement>("dialog[open] .dlg-note");
+	if (note) status.textContent = "";
+	const target = note ?? status;
+	target.textContent = text;
+	target.classList.toggle("error", error);
+	if (text)
+		messageTimer = setTimeout(
+			() => {
+				target.textContent = "";
+			},
+			error ? 8000 : 2500,
+		);
 }
 function language(code: string): Lang {
 	const short = code.slice(0, 2) as Lang;
@@ -379,8 +395,8 @@ async function run(fn: () => unknown): Promise<void> {
 /**
  * @purpose Keep the chrome and the current screen consistent with the latest model.
  * @invariants The header holds the profile, the language, the theme, the here budget, and the create
- * action. The rail holds the seven screens and the scopes. The footer holds the store, the revision,
- * and the backend.
+ * action. The rail holds the seven screens and the scopes. The footer holds only the store, the
+ * revision, and the backend.
  */
 function render(): void {
 	if (!state.model) return;
@@ -1004,8 +1020,8 @@ function proposals(main: HTMLElement, model: View): void {
 // #region FUNC_maintenance
 /**
  * @purpose Show the build state, the budgets, and the compaction job.
- * @invariants Show no writer state and no session state. A job without a merge input states that
- * fact and shows no answer form.
+ * @invariants Show no writer state and no session snapshot state. A job without a merge input
+ * states that fact and shows no answer form.
  */
 function maintenance(main: HTMLElement, model: View): void {
 	main.append(el("p", tr("maintText"), "sub"));
@@ -1196,7 +1212,8 @@ function compactionPanel(model: View) {
 /**
  * @purpose Create, amend, or supersede a record with explicit user input.
  * @invariants Show the body, the document, the scope, the kind, and the addresses that the note
- * replaces. An amendment changes each of these fields, and it can move the record to another scope.
+ * replaces. An amendment changes each of these fields. An amendment with another scope moves the
+ * record to that scope with a new position.
  */
 function noteDialog(
 	record?: ProjectionRecord | OpenEntry,
@@ -1247,7 +1264,7 @@ function noteDialog(
 		field(tr("longform"), longform),
 		row,
 	);
-	form.append(replaceField);
+	form.append(replaceField, el("div", "", "dlg-note"));
 	const save = btn(amend ? tr("save") : tr("create"), () => {}, "pri");
 	save.type = "submit";
 	const foot = el("div", "", "dlg-foot");
