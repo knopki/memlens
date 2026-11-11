@@ -258,7 +258,8 @@ two child bodies. That line renders at once, and the render calls no model and w
 A scope with no live records gives no line. The catalog follows the same minimal fold and line budget.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
-and a range gives `#<a>-<b> <ts_from>..<ts_to> <summary>`, or its assembled text for a temporary line.
+and a range gives `#<a>-<b> <date>..<date> <summary>`, or its assembled text for a temporary line.
+The line holds the two dates of the period and no time of day.
 
 The [context contract](../../packages/core/src/domain/context.ts) owns the line budget of each part.
 The `<how-to>` part is never cut.
