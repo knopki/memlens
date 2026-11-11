@@ -129,7 +129,7 @@ describe("directionLines", () => {
 			now,
 		);
 		expect(lines).toBe(
-			"[project:a] 6h scope a summary\n[global:prefs] 3d body 0; body 1",
+			"[project:a] 0d scope a summary\n[global:prefs] 3d body 0; body 1",
 		);
 	});
 
@@ -157,7 +157,7 @@ describe("directionLines", () => {
 			now,
 		);
 		expect(lines).toBe(
-			"[project:a,global:prefs] 30m..3d both scopes\n[project:c] 15m body 0; body 1",
+			"[project:a,global:prefs] 0..3d both scopes\n[project:c] 0d body 0; body 1",
 		);
 	});
 
@@ -179,7 +179,7 @@ describe("directionLines", () => {
 				4,
 				now,
 			),
-		).toBe("[project:a] 6h scope a summary");
+		).toBe("[project:a] 0d scope a summary");
 	});
 });
 
@@ -201,7 +201,7 @@ describe("renderContext", () => {
 		expect(text).toContain(
 			"One line for each range of scopes: the keys, the age, and the summary.",
 		);
-		expect(text).toContain("[project:a] 6h root summary");
+		expect(text).toContain("[project:a] 0d root summary");
 		expect(text).toContain('<here scope="project:a">');
 		expect(text).toContain("#0 2026-11-1 body 0");
 		expect(text).not.toContain("{{");

@@ -251,7 +251,8 @@ value replaces the whole template, and the placeholders apply in it.
 
 The `<directions>` part holds one direction line for each range of the scopes. A direction line has
 the form `[<keys>] <age> <summary>`. A line above one scope joins its keys with a comma and gives the
-range of their idle times, as `10..20d`. One scope gives its idle time in minutes, hours, or days. The
+range of their idle times, as `10..20d`. The [context contract](../../packages/core/src/domain/context.ts)
+owns the age unit. The
 line holds no count and no active marker. The text is the body of the top node of the range, and the catalog shows that body. An
 unready top node gives a temporary line with the keys, the age range, and the text assembled from the
 two child bodies. That line renders at once, and the render calls no model and waits for no compaction.

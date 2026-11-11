@@ -9,8 +9,8 @@
  * - The template holds the how-to, directions, and here parts, and each part holds its guide line
  * before the content.
  * - A direction line is [<keys>] <age> <summary>. A line above one scope joins each covered key
- * with a comma and gives the range of their idle times, as 10..20d. One scope gives its idle time
- * in minutes, hours, or days. The line holds no count and no active marker.
+ * with a comma and gives the range of their idle times, as 10..20d. The age is always in whole
+ * days, and less than one day gives 0d. The line holds no count and no active marker.
  * - An unready non-empty range gives a temporary line with the keys, the age, and the text that the
  * tree assembled from its children. The result is immediate: it calls no model and waits for no
  * compaction. A ready node gives its summary in place of that text. A scope with no live note gives no line.
@@ -122,37 +122,22 @@ export function hereLines(tree: Tree, budget: Lines): string {
 }
 // #endregion FUNC_hereLines
 
-/** The idle age of the newest write of a scope group, in minutes, hours, or days. */
+/** The idle age of the newest write of a scope group, in whole days. */
 function idleAge(latest: string, now: IsoTime): number {
 	const value = Date.parse(latest);
 	return Number.isNaN(value)
 		? 0
-		: Math.max(0, Math.floor((Date.parse(now) - value) / 60_000));
-}
-
-/** One age value with its unit, in whole minutes, hours, or days. */
-function ageUnit(minutes: number): { unit: "m" | "h" | "d"; value: number } {
-	if (minutes < 60) return { unit: "m", value: minutes };
-	if (minutes < 1440) return { unit: "h", value: Math.floor(minutes / 60) };
-	return { unit: "d", value: Math.floor(minutes / 1440) };
+		: Math.max(0, Math.floor((Date.parse(now) - value) / 86_400_000));
 }
 
 /**
  * @purpose Give the idle time of one scope, or the range of the idle times of a range of scopes.
- * @invariants One value gives one text. Two values of one unit give 10..20d. Two units give 30m..3d.
+ * @invariants One value gives one text, as 3d. Two values give 0..3d. Less than one day gives 0d.
  */
-function ageSpan(minutes: readonly number[]): string {
-	const low = Math.min(...minutes);
-	const high = Math.max(...minutes);
-	if (low === high) {
-		const one = ageUnit(low);
-		return `${one.value}${one.unit}`;
-	}
-	const first = ageUnit(low);
-	const last = ageUnit(high);
-	return first.unit === last.unit
-		? `${first.value}..${last.value}${last.unit}`
-		: `${first.value}${first.unit}..${last.value}${last.unit}`;
+function ageSpan(days: readonly number[]): string {
+	const low = Math.min(...days);
+	const high = Math.max(...days);
+	return low === high ? `${low}d` : `${low}..${high}d`;
 }
 
 // #region FUNC_directionLines
@@ -169,14 +154,18 @@ export function directionLines(
 	budget: Lines,
 	now: IsoTime,
 ): string {
+	const spans: string[] = [];
 	const text = slice(catalog, budget)
 		.map((line) => {
 			const start = line.kind === "record" ? line.pos : line.range.start;
 			const width = line.kind === "record" ? 1 : 2 ** line.range.level;
 			const covered = scopes.slice(start, start + width);
 			const keys = covered.map((scope) => scope.key).join(",");
-			const ages = covered.map((scope) => idleAge(scope.lastWrite, now));
-			const head = `[${keys}] ${ageSpan(ages)}`;
+			const span = ageSpan(
+				covered.map((scope) => idleAge(scope.lastWrite, now)),
+			);
+			spans.push(span);
+			const head = `[${keys}] ${span}`;
 			const text =
 				line.kind === "summary"
 					? line.summary
@@ -190,6 +179,7 @@ export function directionLines(
 		budget,
 		scopes: scopes.length,
 		lines: text === "" ? 0 : text.split("\n").length,
+		spans,
 	});
 	return text;
 }
