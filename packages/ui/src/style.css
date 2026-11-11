@@ -799,10 +799,12 @@ footer {
 	}
 	.shell {
 		height: auto;
-		grid-template-rows: auto auto auto;
+		min-height: 100dvh;
+		grid-template-rows: auto minmax(0, 1fr) auto;
 	}
 	.layout {
 		grid-template-columns: 1fr;
+		align-content: start;
 	}
 	aside {
 		flex-direction: row;
