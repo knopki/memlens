@@ -69,6 +69,17 @@ describe("prompts", () => {
 				ts_to: "2026-11-02",
 			}),
 		).toBe("#0-3 2026-11-01..2026-11-02\nsum");
+		expect(
+			childLine({
+				kind: "node",
+				id: "catalog",
+				pos: 2,
+				range: { start: 0, level: 1 },
+				summary: "scope root",
+				ts_from: "2026-11-01",
+				ts_to: "2026-11-02",
+			}),
+		).toBe("#2 2026-11-01..2026-11-02\nscope root");
 	});
 
 	it("fills the merge task text with the target and the words", () => {
@@ -90,6 +101,7 @@ describe("prompts", () => {
 	it("names the scope of each child in a catalog job", () => {
 		const scopeChild = (
 			id: string,
+			pos: number,
 			level: number,
 			summary: string,
 			from: string,
@@ -97,6 +109,7 @@ describe("prompts", () => {
 		): BuildChild => ({
 			kind: "node",
 			id,
+			pos,
 			range: { start: 0, level },
 			summary,
 			ts_from: from,
@@ -106,8 +119,8 @@ describe("prompts", () => {
 			512,
 			[
 				input(
-					scopeChild("n1", 1, "alpha", "2026-11-01", "2026-11-02"),
-					scopeChild("n2", 2, "beta", "2026-11-03", "2026-11-04"),
+					scopeChild("n1", 0, 1, "alpha", "2026-11-01", "2026-11-02"),
+					scopeChild("n2", 1, 2, "beta", "2026-11-03", "2026-11-04"),
 				),
 			],
 			["project:a", "project:b"],

@@ -172,11 +172,11 @@ export function batchTask(
 	scopeKeys?: readonly ScopeKey[],
 ): string {
 	const blocks = inputs.map((input) => {
-		const half = 2 ** (input.range.level - 1);
 		const lines = input.children
-			.map((child, index) => {
+			.map((child) => {
 				if (!child) return "";
-				const key = scopeKeys?.[input.range.start + index * half];
+				const key =
+					child.pos === undefined ? undefined : scopeKeys?.[child.pos];
 				return key ? scopeChild(key, child) : childLine(child);
 			})
 			.filter(Boolean)
