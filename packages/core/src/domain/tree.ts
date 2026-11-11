@@ -4,6 +4,7 @@
  * @scope Tree reads and copied build inputs. No log scans, event appends, storage, or model calls.
  * @invariants
  * - A node key is (level, start). A level covers 2^level positions; node levels start at one.
+ * - The tree has no depth limit: the levels grow with the highest live position.
  * - A record is a leaf at its position. Hidden and deleted records leave empty positions without a shift.
  * - Scope trees and catalogs use the same engine. A catalog leaf resolves its scope tree through scope_roots.
  * - Every read uses the supplied projection. No read waits for a writer or retains state between calls.

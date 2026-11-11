@@ -4,6 +4,7 @@
  * @purpose Derive current records and stable scope positions from the canonical event history.
  * @scope Two-pass replay, node selection, and tree inputs. No file access or model calls.
  * @invariants Input events stay unchanged. Proposed operations change no record and allocate no position.
+ * @invariants A new record takes the next position of its scope, greater than each earlier position.
  * @invariants Record states are live, hidden, and deleted. No operation restores a record to live.
  * #endregion moduleContract
  */

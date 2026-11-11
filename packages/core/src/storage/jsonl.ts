@@ -199,7 +199,10 @@ export class JsonlStore implements StorePort {
 	// #endregion METHOD_search
 
 	// #region METHOD_export
-	/** @purpose Copy a consistent history, including nodes and invalidations in the selected scope. */
+	/**
+	 * @purpose Copy a consistent history, including nodes and invalidations in the selected scope.
+	 * @invariants Each line is the stored event. No line holds a derived position field.
+	 */
 	async export(scope: ScopeKey | null): Promise<readonly JsonlLine[]> {
 		return this.locked(() => {
 			this.snapshot();
