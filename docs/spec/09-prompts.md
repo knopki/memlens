@@ -115,6 +115,10 @@ Answer one line for each input, in the form "#a-b: line".
 The console job and the command job print this task. Each input block carries its own `#a-b` id, and
 the job asks one line for each input.
 
+A catalog job prints each child as one scope line, `[<key>] <period>` and then the text. The children
+of a catalog range belong to different scope trees, so a tree range there would read as a range of the
+catalog. The id of the input stays the catalog range.
+
 ## The input of the merge
 
 The input holds the two children only. It holds no frontier and no `<context>`. A summary that reads a

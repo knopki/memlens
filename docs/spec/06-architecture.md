@@ -490,7 +490,7 @@ of the store. Each command contract owns its rules.
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui` and its local HTTP boundary.
 The [decision contract](../../packages/core/src/storage/publication.ts) owns approval validation under the backend lock.
-The console gives separate compaction jobs for scope trees and the profile catalog.
+The console gives separate compaction jobs for scope trees and the profile catalog. A catalog job names each child by its scope key.
 The [console models](../../packages/core/src/domain/console.ts) supply the shared view through the store port.
 The [browser client](../../packages/ui/src/client.ts) supplies seven screens in a separate bundle.
 The flag `--from` of `import` and the import from harness sessions remain pending.
