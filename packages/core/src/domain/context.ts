@@ -11,8 +11,8 @@
  * - A direction line is [<key>] <age> <count> <text>. A line above one scope joins each covered
  * key with a comma. The age of the line of the active scope is active. Another line gives its idle
  * time in minutes, hours, or days. The count is the count of live notes of the covered scopes.
- * - An unready non-empty scope gives a temporary line with its period and no summary text. A scope
- * with no live note gives no line.
+ * - An unready non-empty scope gives the key, the age, and the count, and no summary text. The
+ * line names no period. A scope with no live note gives no line.
  * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <ts_from>..<ts_to>
  * <summary>. A temporary line holds the period only.
  * - The here budget limits the here lines and the directions budget limits the direction lines.
@@ -135,7 +135,7 @@ function idleAge(latest: string, now: IsoTime): string {
  * @purpose Render one direction line for each visible scope of the catalog fold.
  * @invariants The scopes come in catalog position order. A line above one scope joins each covered
  * key with a comma. The active scope gives the age active. The count is the sum of live notes.
- * An unready scope gives its period in place of the summary text.
+ * An unready scope gives the key, the age, and the count, and no summary text.
  */
 export function directionLines(
 	catalog: Tree,
@@ -159,9 +159,8 @@ export function directionLines(
 			const age = covered.some((scope) => scope.key === active)
 				? "active"
 				: idleAge(latest, now);
-			const body =
-				line.kind === "summary" ? line.summary : `${line.from}..${line.to}`;
-			return `[${keys}] ${age} ${count} ${body}`;
+			const head = `[${keys}] ${age} ${count}`;
+			return line.kind === "summary" ? `${head} ${line.summary}` : head;
 		})
 		.join("\n");
 	debug("Directions rendered", { budget, scopes: scopes.length });

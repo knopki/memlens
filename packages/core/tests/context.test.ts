@@ -93,7 +93,7 @@ describe("hereLines", () => {
 });
 
 describe("directionLines", () => {
-	it("gives the active scope the age active and an unready scope a temporary line", () => {
+	it("gives the active scope the age active and an unready scope no summary text", () => {
 		const tree = catalog([
 			scopeTree(2, [node(0, 1, "scope a summary")]),
 			scopeTree(2),
@@ -109,7 +109,7 @@ describe("directionLines", () => {
 			now,
 		);
 		expect(lines).toBe(
-			"[project:a] active 2 scope a summary\n[global:prefs] 3d 2 2026-11-1..2026-11-2",
+			"[project:a] active 2 scope a summary\n[global:prefs] 3d 2",
 		);
 	});
 
@@ -138,7 +138,7 @@ describe("directionLines", () => {
 			now,
 		);
 		expect(lines).toBe(
-			"[project:a,global:prefs] 30m 4 both scopes\n[project:c] 15m 2 2026-11-1..2026-11-2",
+			"[project:a,global:prefs] 30m 4 both scopes\n[project:c] 15m 2",
 		);
 	});
 
