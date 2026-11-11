@@ -126,6 +126,8 @@ export const de: Table = {
 	noInputs:
 		"Keine Eingabe zum Zusammenführen. Jedes offene Intervall wartet auf sein zweites Kind.",
 	mergeTasks: "Aufgaben zum Zusammenführen",
+	unknownInput:
+		"Der Auftrag fragt {inputs} ab. Ein Elternintervall wartet auf seine zwei Kinder.",
 	answers: "Antworten",
 	answersHint: "#0-1: eine Zeile für jedes Intervall",
 	applyAnswers: "Antworten anwenden",

@@ -71,10 +71,10 @@ describe("prompts", () => {
 		).toBe("#0-3 2026-11-01..2026-11-02\nsum");
 	});
 
-	it("fills the merge task text with the target, words, and ruler", () => {
+	it("fills the merge task text with the target and the words", () => {
 		const task = mergeTask(512, record(0, "a"), record(1, "b"));
 		expect(task).toContain("at most 512 characters (about 85 words)");
-		expect(task).toContain(`${"-".repeat(512)}`);
+		expect(task).not.toContain("---");
 		expect(task).toContain(
 			"<input>\n#0 2026-11-01\na\n#1 2026-11-02\nb\n</input>",
 		);
@@ -128,7 +128,7 @@ describe("mergeLine", () => {
 		);
 		expect(stub.calls).toHaveLength(2);
 		expect(stub.calls[1]).toContain("at most 384 characters");
-		expect(stub.calls[1]).toContain("-".repeat(384));
+		expect(stub.calls[0]).toContain("at most 512 characters");
 		expect(line).toMatchObject({ ok: true, summary: "short answer" });
 	});
 

@@ -125,6 +125,7 @@ export const ja: Table = {
 	noInputs:
 		"統合する入力がありません。未処理の範囲はどれも 2 つ目の子を待っています。",
 	mergeTasks: "統合タスク",
+	unknownInput: "ジョブは {inputs} を求めます。親の範囲は二人の子を待ちます。",
 	answers: "回答",
 	answersHint: "#0-1: 範囲ごとに 1 行",
 	applyAnswers: "回答を適用",

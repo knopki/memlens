@@ -126,6 +126,8 @@ export const pt: Table = {
 	noInputs:
 		"Sem dados para mesclar. Cada intervalo pendente aguarda o segundo filho.",
 	mergeTasks: "Tarefas de mesclagem",
+	unknownInput:
+		"O trabalho pede {inputs}. Um intervalo pai espera os dois filhos.",
 	answers: "Respostas",
 	answersHint: "#0-1: uma linha para cada intervalo",
 	applyAnswers: "Aplicar as respostas",

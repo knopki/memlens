@@ -126,6 +126,8 @@ export const fr: Table = {
 	noInputs:
 		"Aucune entrée de fusion. Chaque intervalle sans résumé attend son second enfant.",
 	mergeTasks: "Tâches de fusion",
+	unknownInput:
+		"La tâche demande {inputs}. Une plage parente attend ses deux enfants.",
 	answers: "Réponses",
 	answersHint: "#0-1 : une ligne par intervalle",
 	applyAnswers: "Appliquer les réponses",

@@ -132,18 +132,16 @@ const live = (input: BuildInput): readonly BuildChild[] =>
 
 // #region FUNC_mergeTask
 /**
- * @purpose Send the merge task text with the ruler of the asked target.
- * @invariants The text is the Merge task section of 09-prompts.md. TARGET and TARGET/6 words and
- * the ruler of TARGET dashes fill the placeholders. The input holds the two children only.
+ * @purpose Send the merge task text with the target of the asked line.
+ * @invariants The text is the Merge task section of 09-prompts.md. TARGET and TARGET/6 words fill
+ * the placeholders. The input holds the two children only.
  */
 export function mergeTask(
 	target: number,
 	a: BuildChild,
 	b: BuildChild,
 ): string {
-	return `Merge these two adjacent lines into one line of at most ${target} characters (about ${Math.round(target / 6)} words),
-the length of this ruler:
-${"-".repeat(target)}
+	return `Merge these two adjacent lines into one line of at most ${target} characters (about ${Math.round(target / 6)} words).
 <input>
 ${childLine(a)}
 ${childLine(b)}
@@ -154,7 +152,7 @@ ${childLine(b)}
 // #region FUNC_batchTask
 /**
  * @purpose Ask for up to six lines in one call.
- * @invariants The header keeps the target and the ruler. Each input block carries its "#a-b" id.
+ * @invariants The header keeps the target and the word count. Each input block carries its "#a-b" id.
  * The answer instruction names the form "#a-b: line".
  */
 export function batchTask(
@@ -167,9 +165,7 @@ export function batchTask(
 				.map(childLine)
 				.join("\n")}\n</input>`,
 	);
-	return `Merge each pair of adjacent lines into one line of at most ${target} characters (about ${Math.round(target / 6)} words) each,
-the length of this ruler:
-${"-".repeat(target)}
+	return `Merge each pair of adjacent lines into one line of at most ${target} characters (about ${Math.round(target / 6)} words) each.
 Answer one line for each input, in the form "#a-b: line".
 ${blocks.join("\n")}`;
 }

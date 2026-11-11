@@ -126,6 +126,8 @@ export const es: Table = {
 	noInputs:
 		"No hay datos para fusionar. Cada rango pendiente espera a su segundo hijo.",
 	mergeTasks: "Tareas de fusión",
+	unknownInput:
+		"El trabajo pide {inputs}. Un rango padre espera a sus dos hijos.",
 	answers: "Respuestas",
 	answersHint: "#0-1: una línea por cada rango",
 	applyAnswers: "Aplicar las respuestas",

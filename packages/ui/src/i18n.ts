@@ -147,6 +147,8 @@ const en = {
 	noInputsCatalog: "No merge input. A scope has no top node yet.",
 	noInputs: "No merge input. Every dirty range waits for its second child.",
 	mergeTasks: "Merge tasks",
+	unknownInput:
+		"The job asks for {inputs}. A parent range waits for its two children.",
 	answers: "Answers",
 	answersHint: "#0-1: one line for each range",
 	applyAnswers: "Apply the answers",

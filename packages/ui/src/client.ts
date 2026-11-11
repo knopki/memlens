@@ -1123,6 +1123,10 @@ function compactionPanel(model: View) {
 	answers.rows = 5;
 	answers.spellcheck = false;
 	answers.placeholder = tr("answersHint");
+	const wanted = job.inputs.map(
+		(input) =>
+			`#${input.range.start}-${input.range.start + 2 ** input.range.level - 1}`,
+	);
 	const failure = el("p", state.jobError, "banner");
 	if (!state.jobError) failure.hidden = true;
 	const apply = btn(
@@ -1130,6 +1134,14 @@ function compactionPanel(model: View) {
 		async () => {
 			try {
 				if (!answers.value.trim()) throw new Error(tr("enterAnswers"));
+				const unknown = answers.value
+					.split("\n")
+					.map((line) => /^#(\d+)-(\d+):/.exec(line.trim()))
+					.filter((match) => match !== null)
+					.map((match) => `#${match[1]}-${match[2]}`)
+					.filter((id) => !wanted.includes(id));
+				if (unknown.length)
+					throw new Error(tr("unknownInput", { inputs: wanted.join(", ") }));
 				const result = (await action("compact-answer", {
 					catalog: job.catalog,
 					inputs: job.inputs,
@@ -1164,7 +1176,7 @@ function compactionPanel(model: View) {
 		el("span", tr("mergeTasks"), "lbl"),
 		copy,
 		tasks,
-		field(tr("answers"), answers),
+		field(`${tr("answers")} · ${wanted.join(", ")}`, answers),
 		apply,
 		failure,
 	);

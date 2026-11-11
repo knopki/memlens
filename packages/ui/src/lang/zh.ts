@@ -120,6 +120,7 @@ export const zh: Table = {
 	noInputsCatalog: "没有合并输入。某个范围还没有顶部节点。",
 	noInputs: "没有可合并的输入。每个待处理的区间都在等待第二个子节点。",
 	mergeTasks: "合并任务",
+	unknownInput: "任务要求 {inputs}。父区间等待它的两个子区间。",
 	answers: "回答",
 	answersHint: "#0-1：每个区间一行",
 	applyAnswers: "应用回答",
