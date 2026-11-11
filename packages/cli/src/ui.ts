@@ -23,7 +23,7 @@ import {
 } from "node:http";
 import { debuglog } from "node:util";
 import {
-	addDays,
+	addDaysAtTime,
 	type BuildInput,
 	catalogKey,
 	catalogTree,
@@ -41,7 +41,6 @@ import {
 	readConsole,
 	type ScopeKey,
 	scopeTree,
-	toIsoDate,
 	validateScopeKey,
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
@@ -268,7 +267,7 @@ async function route(
 						since: text(fields, "since"),
 						...(kind ? { kinds: [noteKind(kind)] } : {}),
 					},
-					toIsoDate(Date.now()),
+					nowIso(),
 				);
 				break;
 			}
@@ -352,7 +351,7 @@ async function applyAction(
 			longform: text(fields, "longform"),
 			...(supersedes.length ? { supersedes } : {}),
 			ts: nowIso(),
-			review_at: addDays(Date.now(), runtime.config.review[kind]),
+			review_at: addDaysAtTime(Date.now(), runtime.config.review[kind]),
 			session: "ui",
 			turn: "ui",
 			preset: "ui",
@@ -421,7 +420,10 @@ async function applyAction(
 				op: "review",
 				scope: record.scope,
 				target: record.id,
-				review_at: addDays(Date.now(), runtime.config.review[record.kind]),
+				review_at: addDaysAtTime(
+					Date.now(),
+					runtime.config.review[record.kind],
+				),
 			});
 			break;
 		case "forget":

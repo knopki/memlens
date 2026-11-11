@@ -63,6 +63,7 @@ describe("two-pass projection", () => {
 			ts: at(0),
 			review_at: null,
 			recorded_at: at(1),
+			modified_at: at(1),
 			longform: "document",
 			refs: ["ref"],
 			supersedes: [],
@@ -72,7 +73,7 @@ describe("two-pass projection", () => {
 			turn: "turn",
 			preset: "preset",
 		});
-		expect(p.version).toBe(1);
+		expect(p.version).toBe(2);
 		expect(p.cursor).toBe(1024);
 	});
 
@@ -217,6 +218,34 @@ describe("two-pass projection", () => {
 			pos: 0,
 		});
 		expect(p.records.get("1")?.order).toEqual(plain.records.get("1")?.order);
+	});
+
+	it("moves modified_at on each change and keeps recorded_at", () => {
+		const p = project([
+			note(1),
+			{ ...base(2), op: "amend", target: "1", body: "new" },
+			{ ...base(3), op: "review", target: "1", review_at: "2027-01-01" },
+			{ ...base(4), op: "hide", target: "1", reason: "done" },
+		]);
+		const record = p.records.get("1");
+		expect(record?.recorded_at).toBe(at(1));
+		expect(record?.modified_at).toBe(at(4));
+		expect(record?.order).toBe(makeOrder(at(4), "4"));
+	});
+
+	it("keeps the record order through a review and moves modified_at", () => {
+		const p = project([
+			note(1),
+			{ ...base(2), op: "review", target: "1", review_at: "2027-01-01" },
+		]);
+		const record = p.records.get("1");
+		expect(record?.order).toBe(makeOrder(at(1), "1"));
+		expect(record?.modified_at).toBe(at(2));
+	});
+
+	it("moves modified_at of a supersedes target", () => {
+		const p = project([note(1), note(2, { supersedes: ["1"] })]);
+		expect(p.records.get("1")?.modified_at).toBe(at(2));
 	});
 
 	it("keeps deletion sticky across hides, content edits, and scope transfers", () => {

@@ -181,8 +181,8 @@ export async function readConsole(
 		),
 		catalog: slice(catalog, config.budget.directions),
 		frontier: slice(hereTree, config.budget.here),
-		review: dueRecords(projection, keys, time.slice(0, 10)),
-		reviewNext: upcomingRecords(projection, keys, time.slice(0, 10), 10),
+		review: dueRecords(projection, keys, time),
+		reviewNext: upcomingRecords(projection, keys, time, 10),
 		revision,
 	};
 	debug("Console read", {

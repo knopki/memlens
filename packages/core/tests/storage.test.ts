@@ -331,6 +331,28 @@ for (const [backend, Store, filename] of [
 			expect(await store.rev()).toBe(revision);
 		});
 
+		it("rebuilds a snapshot of an older schema version from the log", async () => {
+			const store = await setup();
+			await store.append(payload("durable note"));
+			const expected = await store.projection();
+			const revision = await store.rev();
+			await store.close();
+			const stale = encodeProjection(expected).replace(
+				'"version":2',
+				'"version":1',
+			);
+			const file = new DatabaseSync(
+				join(directory, backend === "sqlite" ? "memlens.db" : "index.db"),
+			);
+			if (backend === "sqlite")
+				file.prepare("UPDATE state SET projection = ?").run(stale);
+			else file.prepare("UPDATE snapshot SET projection = ?").run(stale);
+			file.close();
+			const reopened = await open();
+			expect(await reopened.projection()).toEqual(expected);
+			if (backend === "jsonl") expect(await reopened.rev()).toBe(revision);
+		});
+
 		it("rolls back invalid append and whole invalid import, then imports once by id union", async () => {
 			let store = await setup();
 			await store.append(payload());

@@ -24,7 +24,7 @@
  */
 
 import { debuglog } from "node:util";
-import type { IsoDate, NoteKind, ScopeKey } from "../types/events.js";
+import type { IsoDate, IsoTime, NoteKind, ScopeKey } from "../types/events.js";
 import type { Projection, ProjectionRecord } from "../types/projection.js";
 import type { IndexHit } from "../types/store.js";
 import type { Tree } from "../types/tree.js";
@@ -69,6 +69,7 @@ export interface OpenEntry {
 	readonly longformOffset: number;
 	readonly longformTruncated: boolean;
 	readonly review_at: string | null;
+	readonly modified_at: string;
 	readonly refs: readonly string[];
 }
 
@@ -92,12 +93,12 @@ export interface OpenChildren {
 /**
  * @purpose Apply the find filters to complete hits, so the tools and the CLI share one answer.
  * @invariants Keep the hit order. Cap the hits at 50 for each scope, then apply the total limit.
- * A negative limit gives no hit. The default limit is 10.
+ * A due hit has a review value of now or earlier. A negative limit gives no hit. The default limit is 10.
  */
 export function filterHits(
 	hits: readonly IndexHit[],
 	filter: FindFilter,
-	today: IsoDate,
+	now: IsoTime,
 ): readonly IndexHit[] {
 	const scopes = filter.scopes ? new Set(filter.scopes) : null;
 	const kinds = filter.kinds ? new Set(filter.kinds) : null;
@@ -110,7 +111,7 @@ export function filterHits(
 			return false;
 		if (filter.until && hit.ts.slice(0, filter.until.length) > filter.until)
 			return false;
-		if (filter.due && (hit.review_at === null || hit.review_at > today))
+		if (filter.due && (hit.review_at === null || hit.review_at > now))
 			return false;
 		const seen = perScope.get(hit.scope) ?? 0;
 		if (seen >= FIND_MAX_PER_SCOPE) return false;
@@ -163,6 +164,7 @@ export function openNote(
 		longformOffset: next,
 		longformTruncated: next < document.length,
 		review_at: record.review_at,
+		modified_at: record.modified_at,
 		refs: record.refs,
 	};
 }
@@ -253,15 +255,15 @@ export interface DueRecord {
 // #region FUNC_dueRecords
 /**
  * @purpose List the due records of the supplied scopes, so a review answers without a log scan.
- * @invariants A record is due when its review date is today or earlier. A null scope list takes each scope.
- * Order by the review date, then the scope, then the position.
+ * @invariants A record is due when its review value is now or earlier. A null scope list takes each scope.
+ * A record with no review value is never due. Order by the review value, then the scope, then the position.
  */
 export function dueRecords(
 	projection: Projection,
 	scopes: readonly ScopeKey[] | null,
-	today: IsoDate,
+	now: IsoTime,
 ): readonly DueRecord[] {
-	const due = reviewList(projection, scopes, (review) => review <= today);
+	const due = reviewList(projection, scopes, (review) => review <= now);
 	debug("Review listed", { event: "due", count: due.length });
 	return due;
 }
@@ -269,17 +271,17 @@ export function dueRecords(
 
 // #region FUNC_upcomingRecords
 /**
- * @purpose List the records that come due next, so the review screen stays useful before a due date.
- * @invariants A record is upcoming when its review date is after today. A null review date stays out.
- * Order by the review date, then the scope, then the position. Keep at most the supplied limit.
+ * @purpose List the records that come due next, so the review screen stays useful before a due time.
+ * @invariants A record is upcoming when its review value is after now. A null review value stays out.
+ * Order by the review value, then the scope, then the position. Keep at most the supplied limit.
  */
 export function upcomingRecords(
 	projection: Projection,
 	scopes: readonly ScopeKey[] | null,
-	today: IsoDate,
+	now: IsoTime,
 	limit: number,
 ): readonly DueRecord[] {
-	const next = reviewList(projection, scopes, (review) => review > today);
+	const next = reviewList(projection, scopes, (review) => review > now);
 	debug("Review upcoming listed", {
 		event: "upcoming",
 		count: next.length,
@@ -289,11 +291,11 @@ export function upcomingRecords(
 }
 // #endregion FUNC_upcomingRecords
 
-/** Collect the live records whose review date passes the test, in review date order. */
+/** Collect the live records whose review value passes the test, in review value order. */
 function reviewList(
 	projection: Projection,
 	scopes: readonly ScopeKey[] | null,
-	keep: (review_at: IsoDate) => boolean,
+	keep: (review_at: string) => boolean,
 ): DueRecord[] {
 	const visible = scopes === null ? projection.scopeOrder : scopes;
 	const list: DueRecord[] = [];

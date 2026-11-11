@@ -180,10 +180,20 @@ describe("validateEvent", () => {
 		]) {
 			expectDataError(note(ID, { at, ts: at }));
 		}
-		for (const review of ["2024-02-29", "2026-12-31", null]) {
+		for (const review of [
+			"2024-02-29",
+			"2026-12-31",
+			"2027-01-01T10:00:00.000Z",
+			null,
+		]) {
 			expect(validateEvent(note(ID, { review_at: review }))).toBeTruthy();
 		}
-		for (const review of ["2023-02-29", "2026-02-30", "2026-1-01"]) {
+		for (const review of [
+			"2023-02-29",
+			"2026-02-30",
+			"2026-1-01",
+			"2026-12-31T25:00:00.000Z",
+		]) {
 			expectDataError(note(ID, { review_at: review }));
 		}
 	});

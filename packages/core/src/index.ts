@@ -157,11 +157,10 @@ export {
 	resolveTarget,
 } from "./domain/targets.js";
 export {
-	addDays,
+	addDaysAtTime,
 	compareIso,
 	nowIso,
 	toIso,
-	toIsoDate,
 } from "./domain/time.js";
 export {
 	buildInput,

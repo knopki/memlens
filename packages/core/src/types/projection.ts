@@ -8,13 +8,13 @@
  *  - The record from the projection, the node map, and the scope counter.
  *  - NOT: the event log format, the backend files, or the view rendering.
  * @invariants
- *  - A record has id, pos, scope, state, body, and recorded_at.
- *  - The projection schema version starts at 1 and grows by one on each change.
+ *  - A record has id, pos, scope, state, body, recorded_at, and modified_at.
+ *  - The projection schema version grows by one on each change.
  * @keywords record, projection, state, live, hidden, deleted, content_cleared, superseded_by
  * #endregion moduleContract
  */
 
-import type { IsoDate, IsoTime, NoteKind, ScopeKey, Ulid } from "./events.js";
+import type { IsoTime, NoteKind, ScopeKey, Ulid } from "./events.js";
 import type { Id, Level, Order, Pos, Rev, TreeNode } from "./tree.js";
 
 /** The state of a record after the projection applies the operations. */
@@ -36,8 +36,12 @@ export interface ProjectionRecord {
 	readonly body: string;
 	readonly kind: NoteKind;
 	readonly ts: IsoTime;
-	readonly review_at: IsoDate | null;
+	/** The next review time. The log keeps older values of the date form. */
+	readonly review_at: IsoTime | null;
+	/** The at of the write of the note. It never changes. */
 	readonly recorded_at: IsoTime;
+	/** The at of the latest event that affects the record. */
+	readonly modified_at: IsoTime;
 	readonly longform: string | null;
 	readonly refs: readonly string[];
 	readonly supersedes: readonly Ulid[];
@@ -100,4 +104,4 @@ export interface Projection {
 }
 
 /** The current schema version of the projection. */
-export const PROJECTION_VERSION = 1;
+export const PROJECTION_VERSION = 2;

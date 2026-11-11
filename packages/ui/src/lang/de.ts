@@ -93,8 +93,9 @@ export const de: Table = {
 	noMatches: "Keine Treffer.",
 	searchHint: "Geben Sie Wörter ein, und wählen Sie Suchen.",
 	revText:
-		"Die Notizen mit einem Prüfdatum von heute oder früher, dann die nächstfälligen Notizen.",
+		"Die Notizen mit einer Prüfzeit von jetzt oder früher, dann die nächstfälligen Notizen.",
 	due: "Fällig",
+	modifiedAt: "Geändert",
 	next: "Nächste",
 	address: "Adresse",
 	text: "Text",

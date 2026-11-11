@@ -93,8 +93,9 @@ export const es: Table = {
 	noMatches: "Sin coincidencias.",
 	searchHint: "Escriba palabras y pulse Buscar.",
 	revText:
-		"Las notas con fecha de revisión de hoy o anterior, luego las próximas a vencer.",
+		"Las notas con hora de revisión de ahora o anterior, luego las próximas a vencer.",
 	due: "Vencidas",
+	modifiedAt: "Modificada",
 	next: "Próximas",
 	address: "Dirección",
 	text: "Texto",

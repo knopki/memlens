@@ -308,6 +308,23 @@ describe("dueRecords and scopeLines", () => {
 		expect(upcomingRecords(projection, null, "2026-12-31", 10)).toEqual([]);
 	});
 
+	it("compares an older date value with a full review time", () => {
+		const mixed = project([
+			note("x:a", "date due", { review_at: "2026-11-10" }),
+			note("x:a", "time due", { review_at: "2026-11-10T09:00:00.000Z" }),
+		]);
+		expect(
+			dueRecords(mixed, null, "2026-11-10T12:00:00.000Z").map(
+				(item) => item.body,
+			),
+		).toEqual(["date due", "time due"]);
+		expect(
+			upcomingRecords(mixed, null, "2026-11-10T08:00:00.000Z", 10).map(
+				(item) => item.body,
+			),
+		).toEqual(["time due"]);
+	});
+
 	it("lists each scope with its live count and its last write date", () => {
 		expect(scopeLines(projection, null)).toEqual([
 			{ key: "x:a", notes: 3, lastSeen: "2026-11-10" },

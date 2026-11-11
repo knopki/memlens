@@ -282,7 +282,7 @@ export function decodeProjection(text: string): Projection {
 			: value,
 	) as Projection;
 	if (
-		projection.version !== 1 ||
+		projection.version !== 2 ||
 		!(projection.records instanceof Map) ||
 		!(projection.byScope instanceof Map) ||
 		!(projection.nodes instanceof Map) ||

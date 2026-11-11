@@ -3,12 +3,11 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-	addDays,
+	addDaysAtTime,
 	compareIso,
 	dateSpan,
 	nowIso,
 	toIso,
-	toIsoDate,
 } from "../src/domain/time.js";
 
 describe("nowIso", () => {
@@ -35,26 +34,15 @@ describe("toIso", () => {
 	});
 });
 
-describe("toIsoDate", () => {
-	it("formats a Date as YYYY-MM-DD", () => {
-		const d = new Date("2026-11-10T17:44:58.000Z");
-		expect(toIsoDate(d)).toBe("2026-11-10");
-	});
-
-	it("formats a timestamp as YYYY-MM-DD", () => {
-		expect(toIsoDate(1794332698000)).toBe("2026-11-10");
-	});
-});
-
-describe("addDays", () => {
-	it("adds days to a date", () => {
+describe("addDaysAtTime", () => {
+	it("adds days and keeps the time of day", () => {
 		const d = new Date("2026-11-10T00:00:00.000Z");
-		expect(addDays(d, 7)).toBe("2026-11-17");
+		expect(addDaysAtTime(d, 7)).toBe("2026-11-17T00:00:00.000Z");
 	});
 
 	it("handles month boundaries", () => {
 		const d = new Date("2026-11-28T00:00:00.000Z");
-		expect(addDays(d, 5)).toBe("2026-12-03");
+		expect(addDaysAtTime(d, 5)).toBe("2026-12-03T00:00:00.000Z");
 	});
 });
 

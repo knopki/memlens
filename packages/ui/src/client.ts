@@ -727,6 +727,7 @@ function inspector(): HTMLElement {
 			[tr("supersedes"), record?.supersedes.join(", ") || tr("none")],
 			[tr("supersededBy"), record?.superseded_by ?? tr("none")],
 			[tr("reviewAt"), result.review_at ?? tr("none")],
+			[tr("modifiedAt"), result.modified_at ?? tr("none")],
 		]),
 	);
 	node.append(recordActions(result.addr, record));
@@ -968,7 +969,7 @@ function review(main: HTMLElement, model: View): void {
 			btn(item.addr, () => openInTree(item.addr)),
 			item.body,
 			kindName(item.kind),
-			item.review_at ?? tr("none"),
+			item.review_at?.slice(0, 10) ?? tr("none"),
 			recordActions(item.addr),
 		]);
 	const headers = [

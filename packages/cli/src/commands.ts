@@ -54,7 +54,7 @@ import type {
 } from "@memlens/core";
 import {
 	activeScope,
-	addDays,
+	addDaysAtTime,
 	catalogTree,
 	dueRecords,
 	filterHits,
@@ -72,7 +72,6 @@ import {
 	resolveTarget,
 	scopeLines,
 	scopeTree,
-	toIsoDate,
 	validateEvent,
 	xdgDirs,
 } from "@memlens/core";
@@ -138,14 +137,14 @@ function reviewFlag(
 	fallbackDays: number,
 ): string | null {
 	const raw = flagValue(flags, name);
-	if (raw === null) return addDays(Date.now(), fallbackDays);
+	if (raw === null) return addDaysAtTime(Date.now(), fallbackDays);
 	if (raw === "never") return null;
 	if (!/^\d+d$/.test(raw))
 		throw new MemlensError(
 			"Usage",
 			`The flag --${name} needs <number>d or never.`,
 		);
-	return addDays(Date.now(), Number(raw.slice(0, -1)));
+	return addDaysAtTime(Date.now(), Number(raw.slice(0, -1)));
 }
 
 function isJson(flags: ParsedArgs["flags"]): boolean {
@@ -268,7 +267,7 @@ export async function findCommand(
 				due: args.flags.due === true,
 				limit,
 			},
-			toIsoDate(Date.now()),
+			nowIso(),
 		);
 		debug("Find answered", { event: "find", hits: kept.length });
 		return isJson(args.flags) ? print(kept) : kept.map(renderHit).join("\n");
@@ -429,7 +428,7 @@ export async function reviewCommand(
 		const due = dueRecords(
 			runtime.projection,
 			scopes.length === 0 ? runtimeVisibleScopes(runtime) : scopes,
-			toIsoDate(Date.now()),
+			nowIso(),
 		).slice(0, countFlag(args.flags, "limit", 50));
 		debug("Review listed", { event: "review", due: due.length });
 		return isJson(args.flags) ? print(due) : due.map(renderDue).join("\n");
@@ -440,7 +439,7 @@ export async function reviewCommand(
 // #endregion FUNC_reviewCommand
 
 function renderDue(record: DueRecord): string {
-	return `${record.addr}  ${record.review_at}  ${record.kind}  ${record.body}`;
+	return `${record.addr}  ${record.review_at?.slice(0, 10)}  ${record.kind}  ${record.body}`;
 }
 
 async function reviewMark(
@@ -747,7 +746,7 @@ export async function statusCommand(
 					sum + (runtime.projection.scopeCounts.get(scope)?.live ?? 0),
 				0,
 			),
-			due: dueRecords(runtime.projection, null, toIsoDate(Date.now())).length,
+			due: dueRecords(runtime.projection, null, nowIso()).length,
 		};
 		debug("Status answered", { event: "status", rev });
 		return isJson(args.flags)

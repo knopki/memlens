@@ -93,8 +93,9 @@ export const fr: Table = {
 	noMatches: "Aucun résultat.",
 	searchHint: "Entrez des mots, puis choisissez Trouver.",
 	revText:
-		"Les notes dont la date de révision est aujourd’hui ou avant, puis les prochaines échéances.",
+		"Les notes dont l’heure de révision est passée, puis les prochaines échéances.",
 	due: "Échéances",
+	modifiedAt: "Modifiée",
 	next: "À venir",
 	address: "Adresse",
 	text: "Texte",

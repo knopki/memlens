@@ -5,8 +5,7 @@
  * @modulecontract
  * @purpose Format and compare ISO 8601 UTC times, so events use one time format that sorts as text.
  * @scope
- *  - Formatting of at and ts as ISO 8601 UTC with Z.
- *  - Formatting of review_at as YYYY-MM-DD.
+ *  - Formatting of at, ts, and review_at as ISO 8601 UTC with Z.
  *  - The date span of the view text: the shared year and month appear once.
  *  - NOT: time zones, local time, or a clock display.
  * @invariants
@@ -45,26 +44,17 @@ export function toIso(d: Date | number): string {
 }
 // #endregion FUNC_toIso
 
-// #region FUNC_toIsoDate
 /**
- * @purpose Format a Date or a number as YYYY-MM-DD, so the review_at field uses one date format.
+ * Add days to a time and keep the full UTC form.
  */
-export function toIsoDate(d: Date | number): string {
-	const date = typeof d === "number" ? new Date(d) : d;
-	const result = date.toISOString().slice(0, 10);
-	debug("Time toIsoDate", { event: "toIsoDate", result });
-	return result;
-}
-// #endregion FUNC_toIsoDate
-
-/**
- * Add days to a date and return the YYYY-MM-DD result.
- */
-export function addDays(d: Date | number, days: number): string {
+export function addDaysAtTime(d: Date | number, days: number): string {
 	const date = typeof d === "number" ? new Date(d) : new Date(d.getTime());
 	date.setUTCDate(date.getUTCDate() + days);
-	return toIsoDate(date);
+	const result = toIso(date);
+	debug("Time shift", { event: "add_days_at_time", days, result });
+	return result;
 }
+// #endregion FUNC_addDaysAtTime
 
 /**
  * Compare two ISO 8601 times as text. Returns negative, zero, or positive.

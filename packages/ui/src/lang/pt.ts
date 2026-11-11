@@ -93,8 +93,9 @@ export const pt: Table = {
 	noMatches: "Nenhum resultado.",
 	searchHint: "Digite palavras e escolha Buscar.",
 	revText:
-		"As notas com data de revisão de hoje ou anterior, depois as próximas a vencer.",
+		"As notas com hora de revisão de agora ou anterior, depois as próximas a vencer.",
 	due: "Vencidas",
+	modifiedAt: "Modificada",
 	next: "Próximas",
 	address: "Endereço",
 	text: "Texto",

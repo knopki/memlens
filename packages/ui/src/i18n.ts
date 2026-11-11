@@ -116,8 +116,9 @@ const en = {
 	noMatches: "No matches.",
 	searchHint: "Enter words and press Find.",
 	revText:
-		"The notes with a review date of today or earlier, then the notes that come due next.",
+		"The notes with a review time of now or earlier, then the notes that come due next.",
 	due: "Due",
+	modifiedAt: "Modified",
 	next: "Next",
 	address: "Address",
 	text: "Text",

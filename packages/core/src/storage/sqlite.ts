@@ -179,14 +179,25 @@ export class SqliteStore implements StorePort {
 	// #endregion METHOD_decideProposal
 
 	// #region METHOD_projection
-	/** @purpose Read an independent snapshot from the projection row without an event scan. */
+	/** @purpose Read an independent snapshot from the projection row without an event scan.
+	 * @invariants A snapshot of an older schema version rebuilds from the log in one repair.
+	 */
 	async projection(): Promise<Projection> {
 		this.requireOpen();
 		const row = this.db
 			.prepare("SELECT projection FROM state WHERE id = 1")
 			.get();
 		debug("SQLite read", { event: "read", kind: "projection" });
-		return decodeProjection(String(row?.projection));
+		try {
+			return decodeProjection(String(row?.projection));
+		} catch {
+			debug("SQLite snapshot rebuild", { event: "snapshot_rebuild" });
+			await this.repair(false);
+			const fresh = this.db
+				.prepare("SELECT projection FROM state WHERE id = 1")
+				.get();
+			return decodeProjection(String(fresh?.projection));
+		}
 	}
 	// #endregion METHOD_projection
 
@@ -252,13 +263,25 @@ export class SqliteStore implements StorePort {
 	async repair(dryRun: boolean): Promise<readonly string[]> {
 		return this.transaction(() => {
 			const events = this.events();
-			const stored = decodeProjection(
-				String(
-					this.db.prepare("SELECT projection FROM state WHERE id = 1").get()
-						?.projection,
-				),
-			);
-			const replay = project(events, stored.cursor);
+			let stored: Projection | null = null;
+			try {
+				stored = decodeProjection(
+					String(
+						this.db.prepare("SELECT projection FROM state WHERE id = 1").get()
+							?.projection,
+					),
+				);
+			} catch {
+				debug("SQLite snapshot rejected", { event: "snapshot_rebuild" });
+			}
+			const cursor =
+				stored?.cursor ??
+				Number(
+					this.db
+						.prepare("SELECT COALESCE(MAX(seq), 0) AS cursor FROM events")
+						.get()?.cursor,
+				);
+			const replay = project(events, cursor);
 			const changes: string[] = [];
 			if (!isDeepStrictEqual(stored, replay)) {
 				changes.push("rewrite the projection from the log");

@@ -226,12 +226,19 @@ function isIsoDate(value: unknown): value is IsoDate {
 	return isoTimeMs(`${value}T00:00:00.000Z`) !== null;
 }
 
-function requiredDateOrNull(record: Obj, field: string): IsoDate | null {
-	if (!has(record, field)) fail(field);
-	const value = record[field];
+/** The next review value. A full time passes, and the log keeps older values of the date form. */
+function reviewAtOrNull(record: Obj): IsoTime | IsoDate | null {
+	if (!has(record, "review_at")) fail("review_at");
+	const value = record["review_at"];
 	if (value === null) return null;
-	if (!isIsoDate(value)) fail(field);
-	return value;
+	if (isIsoDate(value)) return value;
+	if (
+		typeof value === "string" &&
+		ISO_TIME_RE.test(value) &&
+		isoTimeMs(value) !== null
+	)
+		return value;
+	fail("review_at");
 }
 
 function isCatalogScope(value: string): boolean {
@@ -311,7 +318,7 @@ function parseNotePayload(record: Obj, sanitized: boolean): Obj {
 	const kind = requiredString(record, "kind");
 	if (!NOTE_KINDS.has(kind)) fail("kind");
 	const ts = requiredIsoTime(record, "ts");
-	const reviewAt = requiredDateOrNull(record, "review_at");
+	const reviewAt = reviewAtOrNull(record);
 	const session = requiredString(record, "session");
 	const turn = requiredString(record, "turn");
 	const preset = requiredString(record, "preset");
@@ -403,7 +410,7 @@ function parseRedactPayload(record: Obj): Obj {
 
 function parseReviewPayload(record: Obj): Obj {
 	const target = requiredUlid(record, "target");
-	const reviewAt = requiredDateOrNull(record, "review_at");
+	const reviewAt = reviewAtOrNull(record);
 	const proposed = optionalProposed(record);
 	const result: Obj = { target, review_at: reviewAt };
 	if (proposed !== undefined) result.proposed = true;

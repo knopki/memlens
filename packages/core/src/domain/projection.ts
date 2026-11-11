@@ -11,7 +11,7 @@
 
 import { debuglog } from "node:util";
 import { MemlensError } from "../types/errors.js";
-import type { JsonlLine, ScopeKey, Ulid } from "../types/events.js";
+import type { IsoTime, JsonlLine, ScopeKey, Ulid } from "../types/events.js";
 import {
 	PROJECTION_VERSION,
 	type Projection,
@@ -57,7 +57,7 @@ function clear(record: MutableRecord): void {
 
 /**
  * @purpose Initialize a live record from each source note and copy its payload fields.
- * @invariants recorded_at copies at. review_at copies the next review date.
+ * @invariants recorded_at copies at. modified_at copies at. review_at copies the next review time.
  * @invariants Absent longform becomes null. Absent refs and supersedes become empty arrays.
  */
 function recordFromNote(event: NoteLine): MutableRecord {
@@ -72,6 +72,7 @@ function recordFromNote(event: NoteLine): MutableRecord {
 		ts: event.ts,
 		review_at: event.review_at,
 		recorded_at: event.at,
+		modified_at: event.at,
 		longform: event.longform ?? null,
 		refs: [...(event.refs ?? [])],
 		supersedes: [...(event.supersedes ?? [])],
@@ -175,6 +176,7 @@ function applySupersedes(
 	records: ReplayState["records"],
 	record: MutableRecord,
 	order: Order,
+	at: IsoTime,
 	ids: readonly Ulid[] = record.supersedes,
 ): void {
 	if (record.state !== "live") return;
@@ -194,6 +196,7 @@ function applySupersedes(
 		}
 		if (target.state === "live") target.state = "hidden";
 		target.superseded_by ??= record.id;
+		target.modified_at = at;
 		touch(target, order);
 	}
 }
@@ -238,7 +241,7 @@ function applyAmendment(
 /**
  * @purpose Apply operations to their source records and retain each record's latest mutation order.
  * @invariants Hide preserves content and cannot lower deleted state. Review replaces review_at.
- * @invariants A review keeps the record order, because review_at enters no summary. No node turns dirty.
+ * @invariants A review keeps the record order and moves modified_at. No node turns dirty through a review.
  */
 function applyRecordOperation(
 	state: ReplayState,
@@ -257,6 +260,7 @@ function applyRecordOperation(
 	// A review changes no summary input, so it leaves the record order alone.
 	if (event.op === "review") {
 		record.review_at = event.review_at;
+		record.modified_at = event.at;
 		debug("Review applied", {
 			event: "review_applied",
 			id: event.id,
@@ -266,6 +270,7 @@ function applyRecordOperation(
 		return;
 	}
 	touch(record, order);
+	record.modified_at = event.at;
 	switch (event.op) {
 		case "hide":
 			if (record.state === "live") record.state = "hidden";
@@ -278,7 +283,8 @@ function applyRecordOperation(
 				(id) => !record.supersedes.includes(id),
 			);
 			applyAmendment(state, record, event, order);
-			if (added.length) applySupersedes(state.records, record, order, added);
+			if (added.length)
+				applySupersedes(state.records, record, order, event.at, added);
 			break;
 		}
 	}
@@ -315,7 +321,7 @@ function applyOperations(
 			case "note": {
 				const record = state.records.get(event.id);
 				if (!record) break;
-				applySupersedes(state.records, record, order);
+				applySupersedes(state.records, record, order, event.at);
 				if (event.redacted) clear(record);
 				break;
 			}
@@ -381,7 +387,7 @@ function groupRecords(
  * @invariants Replay follows (at, id). Pass one creates records. Pass two applies operations, including targets later in that order.
  * @invariants Additional invalidated ids support a provisional write plan before its event envelopes exist.
  * @invariants The caller must persist provisional invalidations before publication. Candidate selection includes historical fallbacks.
- * @ensures The snapshot holds records, current range nodes, scope counts, and schema version 1. The supplied cursor stays unchanged.
+ * @ensures The snapshot holds records, current range nodes, scope counts, and schema version 2. The supplied cursor stays unchanged.
  */
 export function project(
 	events: readonly JsonlLine[],
