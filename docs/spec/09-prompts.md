@@ -128,6 +128,10 @@ store cannot derive. See [REQ-433](02-requirements.md).
 At level 1, each child carries the preview of its `longform`, at most 1 024 characters. The preview belongs to the
 child. See [REQ-434](02-requirements.md).
 
+A child line holds no time of day. A record gives `#<pos> <YYYY-MM-DD>` and its body. A node gives
+`#<a>-<b> <start>..<end>` and its summary. The span writes the shared year and month once, as
+`2026-10-30..11-01`. See [S-067](../statements.md#s-067).
+
 ## Sizes and retries
 
 The target is 512 characters, and the limit is 640 characters. The call accepts an answer up to 640
