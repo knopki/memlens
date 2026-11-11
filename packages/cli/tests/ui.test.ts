@@ -233,6 +233,55 @@ for (const backend of ["sqlite", "jsonl"])
 			).toEqual(["moved"]);
 		});
 
+		it("changes the kind and the supersedes of a note from the console", async () => {
+			const { get, post } = await fixture(backend);
+			await post({ action: "note", body: "first", kind: "note" });
+			await post({ action: "note", body: "second", kind: "note" });
+			const before = await get();
+			const first = `user:notes#${before.records[0].pos}`;
+			const second = `user:notes#${before.records[1].pos}`;
+			expect(
+				(
+					await post({
+						action: "amend",
+						target: first,
+						dest: "user:notes",
+						body: "first",
+						longform: "",
+						kind: "decision",
+					})
+				).status,
+			).toBe(200);
+			let view = await get();
+			expect(
+				view.records.find((record: { body: string }) => record.body === "first")
+					?.kind,
+			).toBe("decision");
+			expect(
+				(
+					await post({
+						action: "amend",
+						target: second,
+						dest: "user:notes",
+						body: "second",
+						longform: "",
+						kind: "note",
+						supersedes: "0",
+					})
+				).status,
+			).toBe(200);
+			view = await get();
+			const replaced = view.records.find(
+				(record: { body: string }) => record.body === "first",
+			);
+			const source = view.records.find(
+				(record: { body: string }) => record.body === "second",
+			);
+			expect(replaced.state).toBe("hidden");
+			expect(replaced.superseded_by).toBe(source.id);
+			expect(source.supersedes).toEqual([replaced.id]);
+		});
+
 		it("shows a proposal of an unlisted scope and accepts it", async () => {
 			const { root, env, get, post } = await fixture(
 				backend,

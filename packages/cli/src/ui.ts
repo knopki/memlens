@@ -5,6 +5,7 @@
  * @invariants The command `ui` starts the console with no harness.
  * @invariants Bind only to 127.0.0.1. Reject foreign hosts and origins. Never enable CORS.
  * @invariants Writes require JSON. Delete requires --allow-delete and explicit confirmation.
+ * @invariants An amend takes a destination scope, a kind, and supersede targets of that scope.
  * @invariants Each request opens its selected profile and closes its store, including on failure.
  * @invariants A view combines its projection, proposals, and revision without an intervening write.
  * @invariants Proposal approval uses ordinary write rules and publishes its dismiss event under the same store lock.
@@ -396,13 +397,22 @@ async function applyAction(
 	let event: Event;
 	switch (action) {
 		case "amend": {
-			const dest = text(fields, "dest");
+			const destination = text(fields, "dest") || record.scope;
+			const scope = allowedScope(runtime, destination);
+			const kind = text(fields, "kind");
+			const supersedes = text(fields, "supersedes")
+				.split(",")
+				.map((item) => item.trim())
+				.filter(Boolean)
+				.map((target) => targetRecord(runtime, scope, target).id);
 			event = await runtime.store.append({
 				op: "amend",
-				scope: dest ? allowedScope(runtime, dest) : record.scope,
+				scope,
 				target: record.id,
 				body: text(fields, "body"),
 				longform: text(fields, "longform"),
+				...(kind ? { kind: noteKind(kind) } : {}),
+				...(supersedes.length ? { supersedes } : {}),
 			});
 			break;
 		}

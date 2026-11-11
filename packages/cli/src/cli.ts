@@ -65,7 +65,7 @@ export const USAGE = `Usage: ${NAME} <command> [flags]
   review [--scope key]... [--limit 50] [--json]
   review --mark <target>,<target> [--scope key] [--for 180d]
   redact <target> [--scope key] [--reason "text"] [--yes]
-  amend <target> [--scope key] [--body "text"] [--longform file.md]
+  amend <target> [--scope key] [--body "text"] [--longform file.md] [--kind kind] [--supersedes 12,14]
   scopes [--json]
   scope
   slice [--profile name] [--scope key] [--json]
@@ -131,7 +131,7 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 		run: amendCommand,
 		spec: {
 			positional: ["target"],
-			flags: { scope: 1, body: 1, longform: 1 },
+			flags: { scope: 1, body: 1, longform: 1, kind: 1, supersedes: 1 },
 		},
 	},
 	scopes: { run: scopesCommand, spec: { positional: [], flags: { json: 0 } } },

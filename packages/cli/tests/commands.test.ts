@@ -178,6 +178,34 @@ describe("@memlens/cli commands", () => {
 		expect(hidden.out).toContain("hidden project:acme/x#0");
 	});
 
+	it("changes the kind and adds a supersedes link on amend", async () => {
+		const test = makeEnv();
+		await run(test, "note", "First text", "--scope", "project:acme/x");
+		await run(test, "note", "Second text", "--scope", "project:acme/x");
+		const kind = await run(
+			test,
+			"amend",
+			"project:acme/x#0",
+			"--kind",
+			"decision",
+		);
+		expect(kind.code).toBe(0);
+		const found = await run(test, "find", "First", "--json");
+		expect(JSON.parse(found.out)).toMatchObject([{ kind: "decision" }]);
+		const link = await run(
+			test,
+			"amend",
+			"project:acme/x#1",
+			"--supersedes",
+			"0",
+		);
+		expect(link.code).toBe(0);
+		const gone = await run(test, "find", "First", "--json");
+		expect(JSON.parse(gone.out)).toEqual([]);
+		const status = await run(test, "status", "--json");
+		expect(JSON.parse(status.out)).toMatchObject({ live: 1 });
+	});
+
 	it("redacts a note and clears the content", async () => {
 		const test = makeEnv();
 		await run(test, "note", "Secret marker", "--scope", "user:private");

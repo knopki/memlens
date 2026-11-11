@@ -48,6 +48,7 @@ import type {
 	DueRecord,
 	IndexHit,
 	JsonlLine,
+	NoteKind,
 	ScopeKey,
 } from "@memlens/core";
 import {
@@ -521,7 +522,8 @@ export async function redactCommand(
  * @purpose Apply one correction to a record, so a user fixes a note without a new note.
  * @invariants The address scope gives the current scope of the record. The flag --scope gives the
  * destination scope, and it also names the current scope when the address holds none. The store
- * refuses an amendment that changes neither content nor scope.
+ * refuses an amendment that changes no content, scope, kind, or supersedes.
+ * @invariants Supersede targets take the address form, and they resolve in the destination scope.
  */
 export async function amendCommand(
 	args: ParsedArgs,
@@ -538,19 +540,43 @@ export async function amendCommand(
 		);
 		const body = flagValue(args.flags, "body");
 		const longformFile = flagValue(args.flags, "longform");
+		const kindRaw = flagValue(args.flags, "kind");
+		if (kindRaw !== null && !(KINDS as readonly string[]).includes(kindRaw))
+			throw new MemlensError("Usage", `The kind ${kindRaw} is unknown.`);
+		const target =
+			destination === null
+				? scope
+				: (normalizeScopeKey(destination) as ScopeKey);
+		const supersedes = flagList(args.flags, "supersedes")
+			.flatMap((raw) => raw.split(","))
+			.filter((raw) => raw !== "")
+			.map(
+				(raw) =>
+					resolveTarget(
+						runtime.projection,
+						runtimeVisibleScopes(runtime),
+						raw,
+						target,
+					).record.id,
+			);
 		await runtime.store.append({
 			op: "amend",
 			target: record.id,
-			scope:
-				destination === null
-					? scope
-					: (normalizeScopeKey(destination) as ScopeKey),
+			scope: target,
 			...(body === null ? {} : { body }),
 			...(longformFile === null
 				? {}
 				: { longform: readBodyFile(longformFile) }),
+			...(kindRaw === null ? {} : { kind: kindRaw as NoteKind }),
+			...(supersedes.length === 0 ? {} : { supersedes }),
 		});
-		debug("Record amended", { event: "amend", scope, pos: record.pos });
+		debug("Record amended", {
+			event: "amend",
+			scope,
+			pos: record.pos,
+			kind: kindRaw,
+			supersedes: supersedes.length,
+		});
 		return `amended ${scope}#${record.pos}`;
 	} finally {
 		await runtime.close();
