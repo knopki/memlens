@@ -304,7 +304,7 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 	try {
 		value = text ? JSON.parse(text) : null;
 	} catch {
-		throw new Error(`HTTP ${response.status}: invalid JSON`);
+		throw new Error(tr("badJson", { status: response.status }));
 	}
 	if (!response.ok)
 		throw new Error(
@@ -359,7 +359,7 @@ async function reload(): Promise<void> {
 	const view = await request<View>(`/api/view?${params.toString()}`);
 	if (token !== state.generation) return;
 	if (!view || !Array.isArray(view.scopes) || !Array.isArray(view.records))
-		throw new Error("The console gave an invalid view.");
+		throw new Error(tr("badView"));
 	state.model = view;
 	state.profile = view.profile;
 	state.scope = view.scope;
@@ -1116,7 +1116,7 @@ function compactionPanel(model: View) {
 						job: string;
 					};
 					if (!result || !Array.isArray(result.inputs))
-						throw new Error("The console gave an invalid job.");
+						throw new Error(tr("badJob"));
 					state.job = {
 						inputs: result.inputs,
 						job: result.job,
