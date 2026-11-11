@@ -623,7 +623,7 @@ function frontierLine(key: string, line: SliceLine) {
 			? line.body
 			: line.kind === "summary"
 				? line.summary
-				: "";
+				: line.text;
 	const node = btn("", () => openTarget(target), `line ${line.kind[0] ?? ""}`);
 	node.append(el("span", target, "id"));
 	node.append(
