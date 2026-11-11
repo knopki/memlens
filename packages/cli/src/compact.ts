@@ -20,6 +20,7 @@
  *    The shrink check applies to no answer.
  *  - The flag --dry-run writes nothing and lists the job.
  *  - A rejected answer names a changed input. The next job lists its range again.
+ *  - The console host calls prepareCompact and applyAnswers, so one job format serves both hosts.
  * @usecases
  *  - Job: user => runs compact => answers the job => runs compact --answer => gets built nodes
  * @dependencies
@@ -30,8 +31,14 @@
  */
 
 import { readFileSync } from "node:fs";
-import { debuglog } from "node:util";
-import type { BuildChild, BuildInput, ScopeKey, Tree } from "@memlens/core";
+import { debuglog, isDeepStrictEqual } from "node:util";
+import type {
+	BuildChild,
+	BuildInput,
+	Projection,
+	ScopeKey,
+	Tree,
+} from "@memlens/core";
 import {
 	answerLine,
 	buildInput,
@@ -55,6 +62,18 @@ import {
 } from "./runtime.js";
 
 const debug = debuglog("memlens:compact");
+
+/** The result of one prepared compaction job. */
+export interface CompactJob {
+	/** The merge inputs of the job, in candidate order. */
+	readonly inputs: readonly BuildInput[];
+	/** The merge task text, with one block for each input. Empty when no input waits. */
+	readonly job: string;
+	/** The copy inputs that the projection held before the publication. */
+	readonly found: number;
+	/** The copies that the store accepted. */
+	readonly published: number;
+}
 
 /** The merge inputs with two live children, in candidate order. */
 function mergeInputs(tree: Tree): readonly BuildInput[] {
@@ -132,9 +151,54 @@ export async function compactCommand(
 }
 // #endregion FUNC_compactCommand
 
+// #region FUNC_prepareCompact
+/**
+ * Publish the copies of one tree and give the merge inputs that remain.
+ *
+ * @purpose Let a terminal user and a console user start one job with one rule set.
+ * @invariants Publish each copy input with no model call. A dry run writes nothing.
+ * The merge inputs come from the projection after the copy publication, and the limit applies after that read.
+ */
+export async function prepareCompact(
+	runtime: Runtime,
+	scope: ScopeKey,
+	treeOf: (projection: Projection) => Tree,
+	options: { readonly dryRun?: boolean; readonly max?: number } = {},
+): Promise<CompactJob> {
+	const dryRun = options.dryRun === true;
+	const max = options.max ?? 50;
+	const first = treeOf(runtime.projection);
+	const copies = copyInputs(first);
+	let published = 0;
+	if (!dryRun)
+		for (const input of copies) {
+			const appended = await runtime.store.appendNode(
+				input,
+				nodeEvent(scope, first, input, copyBuild(input)),
+			);
+			if (appended.ok) published += 1;
+		}
+	const tree = dryRun ? first : treeOf(await runtime.store.projection());
+	const inputs = mergeInputs(tree).slice(0, max);
+	const job = inputs
+		.map((input) => {
+			const children = input.children as readonly [BuildChild, BuildChild];
+			return `${addressOf(input)}\n${mergeTask(NODE_TARGET, children[0], children[1])}`;
+		})
+		.join("\n\n");
+	debug("Job prepared", {
+		event: "prepare",
+		copies: copies.length,
+		published,
+		merges: inputs.length,
+	});
+	return { inputs, job, found: copies.length, published };
+}
+// #endregion FUNC_prepareCompact
+
 // #region FUNC_compactJob
 /**
- * Publish the copy inputs and print the job of the merge inputs.
+ * Print the job of the merge inputs.
  *
  * @purpose Give a human or an agent the exact merge tasks of the dirty ranges, so the answers
  * need no model.
@@ -149,47 +213,27 @@ async function compactJob(
 	const runtime = await compactRuntime(args, io, scope);
 	try {
 		const dryRun = args.flags["dry-run"] === true;
-		let tree = scopeTree(runtime.projection, scope);
-		const copies = copyInputs(tree);
-		let published = 0;
-		if (!dryRun)
-			for (const input of copies) {
-				const appended = await runtime.store.appendNode(
-					input,
-					nodeEvent(scope, tree, input, copyBuild(input)),
-				);
-				if (appended.ok) published += 1;
-			}
-		debug("Copies published", {
-			event: "copies",
-			published,
-			of: copies.length,
-		});
-		const projection = await runtime.store.projection();
-		tree = scopeTree(projection, scope);
-		const max = countFlag(args.flags, "max", 50);
-		const merges = mergeInputs(tree).slice(0, max);
+		const job = await prepareCompact(
+			runtime,
+			scope,
+			(projection) => scopeTree(projection, scope),
+			{ dryRun, max: countFlag(args.flags, "max", 50) },
+		);
 		const head = [
 			`scope: ${scope}`,
 			dryRun
-				? `would publish ${copies.length} copies`
-				: `published ${published} copies`,
+				? `would publish ${job.found} copies`
+				: `published ${job.published} copies`,
 		];
-		const body = merges.length
+		const body = job.job
 			? [
 					'Answer one line for each range below, in the form "#a-b: line".',
 					`Then run: memlens compact --answer <path> --scope ${scope}`,
 					"",
-					...merges.map((input) => {
-						const children = input.children as readonly [
-							BuildChild,
-							BuildChild,
-						];
-						return `${addressOf(input)}\n${mergeTask(NODE_TARGET, children[0], children[1])}`;
-					}),
+					job.job,
 				].join("\n")
 			: "no merge inputs";
-		debug("Job listed", { event: "job", merges: merges.length, max });
+		debug("Job listed", { event: "job", merges: job.inputs.length });
 		return [...head, body].join("\n");
 	} finally {
 		await runtime.close();
@@ -197,13 +241,56 @@ async function compactJob(
 }
 // #endregion FUNC_compactJob
 
+// #region FUNC_applyAnswers
+/**
+ * Write one answer for each range into the store as node events.
+ *
+ * @purpose Turn the answers of a job into built nodes through one rule set for both hosts.
+ * @invariants An empty answer gives a Data error. The store checks the exact input under the write
+ * lock, and a changed input counts as rejected. The shrink check applies to no answer.
+ * A copied job rejects an answer whose current input differs from the copied input.
+ */
+export async function applyAnswers(
+	runtime: Runtime,
+	scope: ScopeKey,
+	tree: Tree,
+	answers: readonly Answer[],
+	copied: readonly BuildInput[] | null = null,
+): Promise<{ readonly built: number; readonly rejected: number }> {
+	let built = 0;
+	let rejected = 0;
+	for (const answer of answers) {
+		const input = buildInput(tree, answer.range);
+		if (
+			input === null ||
+			(copied !== null &&
+				!copied.some((value) => isDeepStrictEqual(value, input)))
+		) {
+			rejected += 1;
+			continue;
+		}
+		const line = answerLine(input, answer.text);
+		if (!line.ok)
+			throw new MemlensError("Data", `The answer for ${answer.addr} is empty.`);
+		const appended = await runtime.store.appendNode(
+			input,
+			nodeEvent(scope, tree, input, line),
+		);
+		if (appended.ok) built += 1;
+		else rejected += 1;
+	}
+	debug("Answers applied", { event: "answer", built, rejected });
+	return { built, rejected };
+}
+// #endregion FUNC_applyAnswers
+
 // #region FUNC_compactAnswer
 /**
  * Apply one answer file as node events.
  *
  * @purpose Write the answers of a job into the store, so the tree holds the built nodes.
- * @invariants Each answer names one aligned range with "#a-b: text". The store rechecks the exact
- * input of each range under the write lock. A rejected answer counts and stays for the next job.
+ * @invariants Each answer names one aligned range with "#a-b: text". A rejected answer counts and
+ * stays for the next job.
  */
 async function compactAnswer(
 	args: ParsedArgs,
@@ -215,28 +302,12 @@ async function compactAnswer(
 	try {
 		const answers = parseAnswerFile(answerPath);
 		const tree = scopeTree(await runtime.store.projection(), scope);
-		let built = 0;
-		let rejected = 0;
-		for (const answer of answers) {
-			const input = buildInput(tree, answer.range);
-			if (input === null) {
-				rejected += 1;
-				continue;
-			}
-			const line = answerLine(input, answer.text);
-			if (!line.ok)
-				throw new MemlensError(
-					"Data",
-					`The answer for ${answer.addr} is empty.`,
-				);
-			const appended = await runtime.store.appendNode(
-				input,
-				nodeEvent(scope, tree, input, line),
-			);
-			if (appended.ok) built += 1;
-			else rejected += 1;
-		}
-		debug("Answers applied", { event: "answer", built, rejected });
+		const { built, rejected } = await applyAnswers(
+			runtime,
+			scope,
+			tree,
+			answers,
+		);
 		const hint =
 			rejected > 0 ? "\nrun memlens compact again for the rejected ranges" : "";
 		return `built ${built} nodes, rejected ${rejected}${hint}`;
@@ -247,20 +318,19 @@ async function compactAnswer(
 // #endregion FUNC_compactAnswer
 
 /** One parsed answer line: the range, its address, and the answer text. */
-interface Answer {
+export interface Answer {
 	readonly addr: string;
-	readonly range: { start: number; level: number };
+	readonly range: { readonly start: number; readonly level: number };
 	readonly text: string;
 }
 
-/** Read one answer file and check the form of each line. A duplicate address gives an error. */
-function parseAnswerFile(path: string): readonly Answer[] {
-	let text: string;
-	try {
-		text = readFileSync(path, "utf8");
-	} catch {
-		throw new MemlensError("Data", `The file ${path} does not read.`);
-	}
+// #region FUNC_parseAnswers
+/**
+ * @purpose Turn answer lines into aligned ranges for both hosts.
+ * @invariants Each line needs the form "#a-b: text", and the range must be aligned at its level.
+ * A duplicate address gives an error.
+ */
+export function parseAnswers(text: string): readonly Answer[] {
 	const answers: Answer[] = [];
 	const seen = new Set<string>();
 	for (const raw of text.split("\n")) {
@@ -283,11 +353,32 @@ function parseAnswerFile(path: string): readonly Answer[] {
 			);
 		const addr = `#${match[1]}-${match[2]}`;
 		if (seen.has(addr))
-			throw new MemlensError("Data", `The file holds two answers for ${addr}.`);
+			throw new MemlensError(
+				"Data",
+				`The input holds two answers for ${addr}.`,
+			);
 		seen.add(addr);
 		answers.push({ addr, range: { start, level }, text: match[3] });
 	}
 	if (!answers.length)
-		throw new MemlensError("Data", `The file ${path} holds no answer.`);
+		throw new MemlensError("Data", "The answer holds no line.");
 	return answers;
+}
+// #endregion FUNC_parseAnswers
+
+/** Read one answer file and check the form of each line. */
+function parseAnswerFile(path: string): readonly Answer[] {
+	let text: string;
+	try {
+		text = readFileSync(path, "utf8");
+	} catch {
+		throw new MemlensError("Data", `The file ${path} does not read.`);
+	}
+	try {
+		return parseAnswers(text);
+	} catch (error) {
+		throw error instanceof MemlensError
+			? new MemlensError("Data", `The file ${path}: ${error.message}`)
+			: error;
+	}
 }

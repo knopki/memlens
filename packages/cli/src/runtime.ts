@@ -11,7 +11,8 @@
  *  - NOT: command semantics, argument parsing, output formats, and the harness patch.
  * @invariants
  *  - The store path order is --store, then MEMLENS_STORE, then the base file.
- *  - A missing base file falls back to a built-in default configuration, and the CLI writes no file.
+ *  - A missing base file falls back to a built-in default configuration with 20 here lines, 10
+ *    directions lines, and the sqlite backend, and the CLI writes no file.
  *  - The store opens a second time with the profile scopes of the configuration, so a write plans
  *    invalidations for the catalog of each profile.
  *  - A target with a scope outside the visible scopes of the profile gives NotAllowed.
@@ -40,6 +41,8 @@ import type {
 import {
 	activeScope,
 	expandTilde,
+	globMatches,
+	isCatalogKey,
 	JsonlStore,
 	loadBaseConfig,
 	MemlensError,
@@ -74,8 +77,8 @@ maxCallsPerHour = 120
 scopes = ["*"]
 
 [profile.default.budget]
-here = 17
-directions = 3
+here = 20
+directions = 10
 
 [scope_default]
 rules = []
@@ -182,6 +185,17 @@ export function runtimeVisibleScopes(runtime: Runtime): readonly ScopeKey[] {
 	return visibleScopes(
 		runtime.config.profile.scopes,
 		runtime.projection.scopeOrder,
+	);
+}
+
+/**
+ * @purpose Tell a listed scope from a scope that needs a proposal.
+ * @invariants A listed glob matches the scope. A catalog key is never listed.
+ */
+export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
+	return (
+		!isCatalogKey(scope) &&
+		runtime.config.profile.scopes.some((glob) => globMatches(glob, scope))
 	);
 }
 

@@ -19,29 +19,23 @@ import {
 	type IncomingMessage,
 	type ServerResponse,
 } from "node:http";
-import { debuglog, isDeepStrictEqual } from "node:util";
+import { debuglog } from "node:util";
 import {
 	addDays,
-	answerLine,
 	type BuildInput,
-	buildInput,
-	candidates,
 	catalogKey,
 	catalogTree,
-	copyBuild,
 	type Event,
 	filterHits,
 	globMatches,
 	isCatalogKey,
 	MemlensError,
-	mergeTask,
-	NODE_TARGET,
 	type NoteKind,
-	nodeEvent,
 	normalizeScopeKey,
 	nowIso,
 	openNote,
 	openRange,
+	type Projection,
 	parseAddress,
 	readConsole,
 	type ScopeKey,
@@ -51,9 +45,11 @@ import {
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import { type CommandIo, countFlag, flagValue } from "./commands.js";
+import { applyAnswers, parseAnswers, prepareCompact } from "./compact.js";
 import {
 	cliActiveScope,
 	openRuntime,
+	profileLists,
 	type Runtime,
 	runtimeVisibleScopes,
 } from "./runtime.js";
@@ -399,15 +395,17 @@ async function applyAction(
 	const record = targetRecord(runtime, scope, text(fields, "target"));
 	let event: Event;
 	switch (action) {
-		case "amend":
+		case "amend": {
+			const dest = text(fields, "dest");
 			event = await runtime.store.append({
 				op: "amend",
-				scope: record.scope,
+				scope: dest ? allowedScope(runtime, dest) : record.scope,
 				target: record.id,
 				body: text(fields, "body"),
 				longform: text(fields, "longform"),
 			});
 			break;
+		}
 		case "review":
 			event = await runtime.store.append({
 				op: "review",
@@ -435,97 +433,49 @@ async function applyAction(
 
 // #region FUNC_compact
 /**
- * @purpose Give copied merge inputs or publish answers after exact input checks.
- * @invariants A stale answer rejects its range. Client payloads cannot replace copied child inputs.
+ * @purpose Give the merge inputs of one tree and publish answers through the store input check.
+ * @invariants A catalog job uses the catalog key of the default profile.
+ * The job text, the copy publication, and the answer rule are the command rules.
  */
 async function compact(
 	runtime: Runtime,
 	scope: ScopeKey,
 	fields: Fields,
 ): Promise<unknown> {
-	const projection = await runtime.store.projection();
 	const catalog = fields.catalog === true;
+	const target = catalog ? catalogKey(runtime.config.defaultProfile) : scope;
 	const keys = runtimeVisibleScopes(runtime);
-	if (catalog) scope = catalogKey(runtime.config.defaultProfile);
-	const treeOf = (value: typeof projection) =>
+	const treeOf = (projection: Projection) =>
 		catalog
-			? catalogTree(value, runtime.config.defaultProfile, keys)
-			: scopeTree(value, scope);
-	let tree = treeOf(projection);
+			? catalogTree(projection, runtime.config.defaultProfile, keys)
+			: scopeTree(projection, target);
 	if (fields.action === "compact") {
-		for (const range of candidates(tree)) {
-			const input = buildInput(tree, range);
-			if (input && input.children.filter(Boolean).length === 1)
-				await runtime.store.appendNode(
-					input,
-					nodeEvent(scope, tree, input, copyBuild(input)),
-				);
-		}
-		tree = treeOf(await runtime.store.projection());
-		const inputs = candidates(tree)
-			.map((range) => buildInput(tree, range))
-			.filter(
-				(input): input is BuildInput =>
-					input !== null && input.children.filter(Boolean).length === 2,
-			)
-			.slice(0, 50);
-		const job = inputs
-			.map((input) => {
-				const [a, b] = input.children;
-				return a && b
-					? `#${input.range.start}-${input.range.start + 2 ** input.range.level - 1}\n${mergeTask(NODE_TARGET, a, b)}`
-					: "";
-			})
-			.join("\n\n");
-		debug("Job prepared", { event: "compact", scope, inputs: inputs.length });
-		return { inputs, job: job || "no merge inputs" };
+		const job = await prepareCompact(runtime, target, treeOf);
+		debug("Job prepared", {
+			event: "compact",
+			target,
+			inputs: job.inputs.length,
+			copies: job.published,
+		});
+		return { inputs: job.inputs, job: job.job, copies: job.published };
 	}
-	if (!Array.isArray(fields.inputs))
+	const answers = parseAnswers(text(fields, "answers"));
+	const copied = Array.isArray(fields.inputs) ? fields.inputs : null;
+	if (copied === null)
 		throw new MemlensError("Usage", "The answer needs copied inputs.");
-	const answers = text(fields, "answers")
-		.split(/\r?\n/)
-		.filter((line) => line.trim());
-	const parsed = answers.map((line) => {
-		const match = /^#(\d+)-(\d+):\s*(.*)$/.exec(line);
-		if (!match)
-			throw new MemlensError(
-				"Usage",
-				"Use one #a-b: text line for each answer.",
-			);
-		const start = Number(match[1]),
-			end = Number(match[2]),
-			level = Math.log2(end - start + 1);
-		if (
-			!Number.isSafeInteger(start) ||
-			!Number.isInteger(level) ||
-			level < 1 ||
-			start % 2 ** level !== 0
-		)
-			throw new MemlensError("Usage", "The answer range must be aligned.");
-		return { range: { start, level }, text: match[3] ?? "" };
+	const { built, rejected } = await applyAnswers(
+		runtime,
+		target,
+		treeOf(await runtime.store.projection()),
+		answers,
+		copied as readonly BuildInput[],
+	);
+	debug("Answers applied", {
+		event: "compact-answer",
+		target,
+		built,
+		rejected,
 	});
-	if (!parsed.length) throw new MemlensError("Usage", "The answer is empty.");
-	let built = 0,
-		rejected = 0;
-	for (const answer of parsed) {
-		const current = buildInput(tree, answer.range);
-		if (
-			!current ||
-			!fields.inputs.some((input) => isDeepStrictEqual(input, current))
-		) {
-			rejected++;
-			continue;
-		}
-		const line = answerLine(current, answer.text);
-		if (!line.ok) throw new MemlensError("Data", "The summary is empty.");
-		const result = await runtime.store.appendNode(
-			current,
-			nodeEvent(scope, tree, current, line),
-		);
-		if (result.ok) built++;
-		else rejected++;
-	}
-	debug("Answers applied", { event: "compact-answer", scope, built, rejected });
 	return { built, rejected };
 }
 // #endregion FUNC_compact
@@ -538,10 +488,7 @@ function text(fields: Fields, key: string): string {
 	return value;
 }
 function matches(runtime: Runtime, scope: ScopeKey): boolean {
-	return (
-		!isCatalogKey(scope) &&
-		runtime.config.profile.scopes.some((glob) => globMatches(glob, scope))
-	);
+	return profileLists(runtime, scope);
 }
 function allowedScope(runtime: Runtime, raw: string): ScopeKey {
 	const scope = normalizeScopeKey(raw) as ScopeKey;
@@ -580,7 +527,7 @@ async function pendingProposals(runtime: Runtime) {
 			event.proposed === true &&
 			event.redacted !== true &&
 			!dismissed.has(event.id) &&
-			matches(runtime, event.scope),
+			!isCatalogKey(event.scope),
 	);
 }
 // #region FUNC_readBody

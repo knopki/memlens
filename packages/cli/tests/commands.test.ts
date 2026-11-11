@@ -115,8 +115,8 @@ maxCallsPerHour = 120
 scopes = ["project:*"]
 
 [profile.work.budget]
-here = 17
-directions = 3
+here = 20
+directions = 10
 
 [scope_default]
 default = "user:notes"
@@ -391,8 +391,8 @@ maxCallsPerHour = 120
 scopes = ["*"]
 
 [profile.default.budget]
-here = 17
-directions = 3
+here = 20
+directions = 10
 
 [scope_default]
 default = "user:notes"

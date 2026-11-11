@@ -19,14 +19,17 @@ afterEach(async () => {
 
 // #region FUNC_fixture
 /** @purpose Open an isolated console with its own configuration and store. */
-async function fixture(backend: string, allowDelete = false) {
+async function fixture(backend: string, allowDelete = false, scopes = '["*"]') {
 	const root = await mkdtemp(join(tmpdir(), "memlens-ui-"));
 	cleanups.push(() => rm(root, { recursive: true, force: true }));
 	const config = join(root, "config", "memlens");
 	await mkdir(config, { recursive: true });
 	await writeFile(
 		join(config, "config.toml"),
-		DEFAULT_CONFIG_TOML.replace('backend = "sqlite"', `backend = "${backend}"`),
+		DEFAULT_CONFIG_TOML.replace(
+			'backend = "sqlite"',
+			`backend = "${backend}"`,
+		).replace('scopes = ["*"]', `scopes = ${scopes}`),
 	);
 	const env = {
 		XDG_CONFIG_HOME: join(root, "config"),
@@ -200,6 +203,89 @@ for (const backend of ["sqlite", "jsonl"])
 			const view = await get();
 			expect(view.records).toHaveLength(1);
 			expect(view.proposals).toHaveLength(0);
+		});
+
+		it("moves a note to another listed scope on amend", async () => {
+			const { get, post } = await fixture(
+				backend,
+				false,
+				'["user:*", "project:*"]',
+			);
+			await post({ action: "note", body: "movable", kind: "fact" });
+			const before = await get();
+			const target = `user:notes#${before.records[0].pos}`;
+			expect(
+				(
+					await post({
+						action: "amend",
+						target,
+						dest: "project:demo",
+						body: "moved",
+						longform: "",
+					})
+				).status,
+			).toBe(200);
+			const after = await get(
+				`/api/view?profile=default&scope=${encodeURIComponent("project:demo")}`,
+			);
+			expect(
+				after.records.map((record: { body: string }) => record.body),
+			).toEqual(["moved"]);
+		});
+
+		it("shows a proposal of an unlisted scope and accepts it", async () => {
+			const { root, env, get, post } = await fixture(
+				backend,
+				false,
+				'["user:*"]',
+			);
+			const runtime = await openRuntime({
+				storeFlag: join(root, "store"),
+				env,
+			});
+			try {
+				await runtime.store.append({
+					op: "note",
+					scope: "other:demo",
+					body: "child idea",
+					kind: "note",
+					ts: "2026-11-10T00:00:00.000Z",
+					review_at: null,
+					session: "child",
+					turn: "1",
+					preset: "test",
+					proposed: true,
+				});
+			} finally {
+				await runtime.close();
+			}
+			const view = await get();
+			expect(view.proposals).toHaveLength(1);
+			expect(
+				(await post({ action: "accept", target: view.proposals[0].id })).status,
+			).toBe(200);
+			expect((await get()).proposals).toHaveLength(0);
+			const opened = await openRuntime({
+				storeFlag: join(root, "store"),
+				env,
+			});
+			try {
+				expect(
+					(opened.projection.byScope.get("other:demo") ?? []).map(
+						(record) => record.body,
+					),
+				).toContain("child idea");
+			} finally {
+				await opened.close();
+			}
+		});
+
+		it("states a compaction job without a merge input", async () => {
+			const { post } = await fixture(backend);
+			await post({ action: "note", body: "alone", kind: "fact" });
+			const job = await (await post({ action: "compact" })).json();
+			expect(job.inputs).toEqual([]);
+			expect(job.job).toBe("");
 		});
 
 		it("compacts catalog roots through the same answer boundary", async () => {

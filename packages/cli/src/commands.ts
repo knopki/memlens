@@ -82,6 +82,7 @@ import {
 	DEFAULT_CONFIG_TOML,
 	loadCliBaseConfig,
 	openRuntime,
+	profileLists,
 	resolveForProfile,
 	resolveTarget,
 	runtimeVisibleScopes,
@@ -199,6 +200,7 @@ export async function noteCommand(
 			"review",
 			runtime.config.review[kind],
 		);
+		const proposed = !profileLists(runtime, scope);
 		const saved = await runtime.store.append({
 			op: "note",
 			scope,
@@ -211,11 +213,14 @@ export async function noteCommand(
 			preset: "cli",
 			...(longform === null ? {} : { longform }),
 			...(supersedes.length === 0 ? {} : { supersedes }),
+			...(proposed ? { proposed: true } : {}),
 		});
 		const projection = await runtime.store.projection();
 		const pos = projection.records.get(saved.id)?.pos;
-		debug("Note saved", { event: "note", scope, pos });
-		return `saved ${scope}#${pos} (${kind}) review ${reviewAt ?? "never"}`;
+		debug("Note saved", { event: "note", scope, pos, proposed });
+		return proposed
+			? `proposed ${scope} ${saved.id} (${kind}) review ${reviewAt ?? "never"}`
+			: `saved ${scope}#${pos} (${kind}) review ${reviewAt ?? "never"}`;
 	} finally {
 		await runtime.close();
 	}
