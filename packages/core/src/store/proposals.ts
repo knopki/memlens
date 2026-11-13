@@ -16,7 +16,7 @@ import { debuglog } from "node:util";
 import { ulid } from "../domain/ulid.js";
 import { MemlensError } from "../types/errors.js";
 import type { ScopeKey } from "../types/events.js";
-import type { Store } from "./store.js";
+import type { Store, Tx } from "./store.js";
 import type { Proposal, ProposalStatus } from "./types.js";
 
 const debug = debuglog("memlens:proposals");
@@ -168,7 +168,7 @@ export function sweep(store: Store): number {
 export function accept(
 	store: Store,
 	id: string,
-	apply: (payload: unknown) => void,
+	apply: (payload: unknown, tx: Tx) => void,
 	visibleScopes: readonly ScopeKey[],
 ): void {
 	store.publish((tx) => {
@@ -188,7 +188,7 @@ export function accept(
 			debug("Proposal refused", { event: "accept_refused", id });
 			throw new MemlensError("NotAllowed", NOT_PENDING);
 		}
-		apply(JSON.parse(proposal.payload) as unknown);
+		apply(JSON.parse(proposal.payload) as unknown, tx);
 		tx.db
 			.prepare("UPDATE proposals SET closed = 1, payload = '' WHERE id = ?")
 			.run(id);

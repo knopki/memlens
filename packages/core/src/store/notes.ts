@@ -20,7 +20,7 @@ import { MemlensError } from "../types/errors.js";
 import type { NoteKind, ScopeKey, Ulid } from "../types/events.js";
 import { deleteCovering, deleteRange } from "./nodes.js";
 import { nextSlot, rankFor } from "./slots.js";
-import type { Store } from "./store.js";
+import type { Store, Tx } from "./store.js";
 import type { Note, NoteState, WriteResult } from "./types.js";
 
 const debug = debuglog("memlens:notes");
@@ -114,8 +114,6 @@ export function note(store: Store, input: NoteInput): WriteResult<Note> {
 	const longform = input.longform ?? null;
 	const reviewAt = input.review_at ?? null;
 	const supersedes = input.supersedes ?? [];
-	const ts = input.ts ?? new Date().toISOString();
-	const id = input.id ?? ulid(Date.now());
 	if (supersedes.length === 0) {
 		const duplicate = store.read((db) =>
 			findDuplicate(db, scope, body, input.kind, longform, reviewAt),
@@ -125,68 +123,82 @@ export function note(store: Store, input: NoteInput): WriteResult<Note> {
 			return { ok: false, reason: "duplicate" };
 		}
 	}
-	const created = store.publish((tx) => {
-		const now = new Date().toISOString();
-		if (rowById(tx.db, id) !== undefined)
-			throw new MemlensError("Data", "A note id already exists.");
-		const targets = supersedes.map((target) => {
-			const row = rowById(tx.db, target);
-			if (row === undefined)
-				throw new MemlensError("Data", "A local target does not exist.");
-			if (row.scope !== scope)
-				throw new MemlensError(
-					"CrossScopeSupersede",
-					"A supersede target belongs to another scope.",
-				);
-			return row;
-		});
-		const pos = openSlot(tx.db, scope, ts, id);
-		tx.db
-			.prepare(INSERT_ROW)
-			.run(
-				id,
-				scope,
-				pos,
-				input.kind,
-				body,
-				longform,
-				JSON.stringify(input.refs ?? []),
-				ts,
-				now,
-				now,
-				reviewAt,
-				input.session,
-				input.turn,
-				input.preset,
-				tx.version,
-				tx.version,
-			);
-		const row = requireRow(tx.db, id);
-		ftsSet(tx.db, row.n, null, ftsRowOf(row));
-		deleteShifted(tx.db, scope, pos);
-		for (const target of targets) {
-			ftsSet(tx.db, target.n, ftsRowOf(target), null);
-			tx.db
-				.prepare(
-					"UPDATE notes SET state = 'hidden', superseded_by = ?, v = ?, modified_at = ? WHERE id = ?",
-				)
-				.run(id, tx.version, now, target.id);
-			deleteCovering(tx.db, target.scope, target.pos);
-			tx.journal("supersede", target.id, target.scope);
-		}
-		tx.journal("note", id, scope);
-		debug("Note write", {
-			event: "note",
-			id,
-			scope,
-			slot: pos,
-			supersedes: targets.length,
-		});
-		return toNote(row);
-	});
-	return { ok: true, value: created.value };
+	return { ok: true, value: store.publish((tx) => noteTx(tx, input)).value };
 }
 // #endregion FUNC_note
+
+// #region FUNC_noteTx
+/**
+ * @purpose Add a note within the caller transaction.
+ * @invariants The caller checks for duplicates before this call.
+ */
+export function noteTx(tx: Tx, input: NoteInput): Note {
+	const scope = checkedScope(input.scope);
+	const body = checkedBody(input.body);
+	const longform = input.longform ?? null;
+	const reviewAt = input.review_at ?? null;
+	const supersedes = input.supersedes ?? [];
+	const ts = input.ts ?? new Date().toISOString();
+	const id = input.id ?? ulid(Date.now());
+	const now = new Date().toISOString();
+	if (rowById(tx.db, id) !== undefined)
+		throw new MemlensError("Data", "A note id already exists.");
+	const targets = supersedes.map((target) => {
+		const row = rowById(tx.db, target);
+		if (row === undefined)
+			throw new MemlensError("Data", "A local target does not exist.");
+		if (row.scope !== scope)
+			throw new MemlensError(
+				"CrossScopeSupersede",
+				"A supersede target belongs to another scope.",
+			);
+		return row;
+	});
+	const pos = openSlot(tx.db, scope, ts, id);
+	tx.db
+		.prepare(INSERT_ROW)
+		.run(
+			id,
+			scope,
+			pos,
+			input.kind,
+			body,
+			longform,
+			JSON.stringify(input.refs ?? []),
+			ts,
+			now,
+			now,
+			reviewAt,
+			input.session,
+			input.turn,
+			input.preset,
+			tx.version,
+			tx.version,
+		);
+	const row = requireRow(tx.db, id);
+	ftsSet(tx.db, row.n, null, ftsRowOf(row));
+	deleteShifted(tx.db, scope, pos);
+	for (const target of targets) {
+		ftsSet(tx.db, target.n, ftsRowOf(target), null);
+		tx.db
+			.prepare(
+				"UPDATE notes SET state = 'hidden', superseded_by = ?, v = ?, modified_at = ? WHERE id = ?",
+			)
+			.run(id, tx.version, now, target.id);
+		deleteCovering(tx.db, target.scope, target.pos);
+		tx.journal("supersede", target.id, target.scope);
+	}
+	tx.journal("note", id, scope);
+	debug("Note write", {
+		event: "note",
+		id,
+		scope,
+		slot: pos,
+		supersedes: targets.length,
+	});
+	return toNote(row);
+}
+// #endregion FUNC_noteTx
 
 // #region FUNC_amend
 /**
@@ -196,55 +208,49 @@ export function note(store: Store, input: NoteInput): WriteResult<Note> {
  * @returns The changed note.
  */
 export function amend(store: Store, input: AmendInput): Note {
-	const changed = store.publish((tx) => {
-		const old = requireRow(tx.db, input.id);
-		if (old.cleared === 1)
-			throw new MemlensError("Data", "A cleared note cannot change.");
-		const now = new Date().toISOString();
-		const scope: ScopeKey =
-			input.scope === undefined ? old.scope : checkedScope(input.scope);
-		const body = input.body === undefined ? old.body : checkedBody(input.body);
-		const longform = Object.hasOwn(input, "longform")
-			? (input.longform ?? null)
-			: old.longform;
-		const kind = input.kind ?? old.kind;
-		const moved = scope !== old.scope;
-		ftsSet(tx.db, old.n, ftsRowOf(old), {
-			body,
-			longform,
-			state: old.state,
-			cleared: old.cleared,
-		});
-		let pos = old.pos;
-		if (moved) {
-			pos = openSlot(tx.db, scope, old.ts, old.id);
-			deleteCovering(tx.db, old.scope, old.pos);
-			deleteShifted(tx.db, scope, pos);
-		} else {
-			deleteCovering(tx.db, old.scope, old.pos);
-		}
-		tx.db
-			.prepare(
-				"UPDATE notes SET scope = ?, pos = ?, kind = ?, body = ?, longform = ?, v = ?, v_content = ?, modified_at = ? WHERE id = ?",
-			)
-			.run(
-				scope,
-				pos,
-				kind,
-				body,
-				longform,
-				tx.version,
-				tx.version,
-				now,
-				old.id,
-			);
-		tx.journal("amend", old.id, scope);
-		debug("Note amend", { event: "amend", id: old.id, scope, moved });
-		return requireNote(tx.db, old.id);
-	});
-	return changed.value;
+	return store.publish((tx) => amendTx(tx, input)).value;
 }
 // #endregion FUNC_amend
+
+// #region FUNC_amendTx
+/** @purpose Amend a note within the caller transaction. */
+export function amendTx(tx: Tx, input: AmendInput): Note {
+	const old = requireRow(tx.db, input.id);
+	if (old.cleared === 1)
+		throw new MemlensError("Data", "A cleared note cannot change.");
+	const now = new Date().toISOString();
+	const scope: ScopeKey =
+		input.scope === undefined ? old.scope : checkedScope(input.scope);
+	const body = input.body === undefined ? old.body : checkedBody(input.body);
+	const longform = Object.hasOwn(input, "longform")
+		? (input.longform ?? null)
+		: old.longform;
+	const kind = input.kind ?? old.kind;
+	const moved = scope !== old.scope;
+	ftsSet(tx.db, old.n, ftsRowOf(old), {
+		body,
+		longform,
+		state: old.state,
+		cleared: old.cleared,
+	});
+	let pos = old.pos;
+	if (moved) {
+		pos = openSlot(tx.db, scope, old.ts, old.id);
+		deleteCovering(tx.db, old.scope, old.pos);
+		deleteShifted(tx.db, scope, pos);
+	} else {
+		deleteCovering(tx.db, old.scope, old.pos);
+	}
+	tx.db
+		.prepare(
+			"UPDATE notes SET scope = ?, pos = ?, kind = ?, body = ?, longform = ?, v = ?, v_content = ?, modified_at = ? WHERE id = ?",
+		)
+		.run(scope, pos, kind, body, longform, tx.version, tx.version, now, old.id);
+	tx.journal("amend", old.id, scope);
+	debug("Note amend", { event: "amend", id: old.id, scope, moved });
+	return requireNote(tx.db, old.id);
+}
+// #endregion FUNC_amendTx
 
 // #region FUNC_hide
 /**
@@ -253,31 +259,39 @@ export function amend(store: Store, input: AmendInput): Note {
  * @returns The hidden note.
  */
 export function hide(store: Store, id: Ulid, reason?: string): Note {
-	const checked = checkedReason(reason);
-	const hidden = store.publish((tx) => {
-		const old = requireRow(tx.db, id);
-		if (old.state === "deleted" || old.cleared === 1)
-			throw new MemlensError("Data", "A deleted note cannot hide.");
-		const now = new Date().toISOString();
-		ftsSet(tx.db, old.n, ftsRowOf(old), null);
-		tx.db
-			.prepare(
-				"UPDATE notes SET state = 'hidden', v = ?, modified_at = ? WHERE id = ?",
-			)
-			.run(tx.version, now, id);
-		deleteCovering(tx.db, old.scope, old.pos);
-		tx.journal("hide", id, old.scope, checked);
-		debug("Note hide", {
-			event: "hide",
-			id,
-			scope: old.scope,
-			hasReason: checked !== undefined,
-		});
-		return requireNote(tx.db, id);
-	});
-	return hidden.value;
+	return store.publish((tx) => hideTx(tx, { id, reason })).value;
 }
 // #endregion FUNC_hide
+
+// #region FUNC_hideTx
+/** @purpose Hide a note within the caller transaction. */
+export function hideTx(
+	tx: Tx,
+	input: { id: Ulid; reason?: string | undefined },
+): Note {
+	const { id, reason } = input;
+	const checked = checkedReason(reason);
+	const old = requireRow(tx.db, id);
+	if (old.state === "deleted" || old.cleared === 1)
+		throw new MemlensError("Data", "A deleted note cannot hide.");
+	const now = new Date().toISOString();
+	ftsSet(tx.db, old.n, ftsRowOf(old), null);
+	tx.db
+		.prepare(
+			"UPDATE notes SET state = 'hidden', v = ?, modified_at = ? WHERE id = ?",
+		)
+		.run(tx.version, now, id);
+	deleteCovering(tx.db, old.scope, old.pos);
+	tx.journal("hide", id, old.scope, checked);
+	debug("Note hide", {
+		event: "hide",
+		id,
+		scope: old.scope,
+		hasReason: checked !== undefined,
+	});
+	return requireNote(tx.db, id);
+}
+// #endregion FUNC_hideTx
 
 // #region FUNC_redact
 /**
@@ -315,21 +329,29 @@ export function redact(store: Store, id: Ulid, reason: string): Note {
  * @returns The reviewed note.
  */
 export function review(store: Store, id: Ulid, reviewAt: string | null): Note {
-	const reviewed = store.publish((tx) => {
-		const old = requireRow(tx.db, id);
-		const now = new Date().toISOString();
-		tx.db
-			.prepare(
-				"UPDATE notes SET review_at = ?, reviewed_at = ?, v = ?, v_review = ? WHERE id = ?",
-			)
-			.run(reviewAt, now, tx.version, tx.version, id);
-		tx.journal("review", id, old.scope);
-		debug("Note review", { event: "review", id, scope: old.scope });
-		return requireNote(tx.db, id);
-	});
-	return reviewed.value;
+	return store.publish((tx) => reviewTx(tx, { id, reviewAt })).value;
 }
 // #endregion FUNC_review
+
+// #region FUNC_reviewTx
+/** @purpose Review a note within the caller transaction. */
+export function reviewTx(
+	tx: Tx,
+	input: { id: Ulid; reviewAt: string | null },
+): Note {
+	const { id, reviewAt } = input;
+	const old = requireRow(tx.db, id);
+	const now = new Date().toISOString();
+	tx.db
+		.prepare(
+			"UPDATE notes SET review_at = ?, reviewed_at = ?, v = ?, v_review = ? WHERE id = ?",
+		)
+		.run(reviewAt, now, tx.version, tx.version, id);
+	tx.journal("review", id, old.scope);
+	debug("Note review", { event: "review", id, scope: old.scope });
+	return requireNote(tx.db, id);
+}
+// #endregion FUNC_reviewTx
 
 // #region FUNC_ftsSet
 /**

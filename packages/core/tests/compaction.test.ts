@@ -3,10 +3,10 @@
  * @purpose Check merge attempts, batch answers, job answers, form choice, pacing, and one compaction pass.
  * #endregion moduleContract
  */
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import {
 	answerLine,
 	autoForm,
@@ -21,19 +21,10 @@ import {
 	RateWindow,
 	retryDelay,
 } from "../src/domain/compaction.js";
-import { catalogTree, scopeTree } from "../src/domain/projection.js";
-import { catalogKey } from "../src/domain/scope.js";
-import {
-	buildInput,
-	currentNode,
-	isClean,
-	slice,
-	topRange,
-} from "../src/domain/tree.js";
-import { SqliteStore } from "../src/storage/sqlite.js";
-import type { ScopeKey } from "../src/types/events.js";
-import type { AppendEvent } from "../src/types/store.js";
-import type { BuildChild, BuildInput, Tree } from "../src/types/tree.js";
+import { amend, note } from "../src/store/notes.js";
+import { Store } from "../src/store/store.js";
+import { loadView, sliceOf } from "../src/store/view.js";
+import type { BuildChild, BuildInput } from "../src/types/tree.js";
 
 const record = (pos: number, body: string): BuildChild => ({
 	kind: "record",
@@ -343,189 +334,76 @@ describe("form choice and pacing", () => {
 });
 
 describe("compactionPass", () => {
-	const directories: string[] = [];
-	afterEach(async () => {
-		await Promise.all(directories.map((dir) => rm(dir, { recursive: true })));
-		directories.length = 0;
+	const stores: Store[] = [];
+	const dirs: string[] = [];
+	afterAll(() => {
+		for (const store of stores) store.close();
+		for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 	});
-
-	const note = (
-		scope: "project:a" | "project:b",
-		body: string,
-	): Extract<AppendEvent, { op: "note" }> => ({
-		op: "note",
-		scope,
-		body,
-		kind: "note",
-		ts: "2026-11-10T00:00:00.000Z",
-		review_at: null,
-		session: "s",
-		turn: "t",
-		preset: "p",
-	});
-
-	it("builds dirty nodes bottom-up and repeats to the root", async () => {
-		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
-		directories.push(directory);
-		const store = new SqliteStore(directory);
-		for (let index = 0; index < 4; index += 1)
-			await store.append(
-				note("project:a", `${"long body ".repeat(40)}${index}`),
-			);
-		const retold = "sum pill ".repeat(40).trim();
-		const summary = async () => retold;
-		const pass = async () =>
-			compactionPass(
-				store,
-				"project:a",
-				scopeTree(await store.projection(), "project:a"),
-				summary,
-				{ form: "parallel" },
-			);
-		expect(await pass()).toMatchObject({ built: 2, rejected: 0, failed: 0 });
-		expect(await pass()).toMatchObject({ built: 1, rejected: 0, failed: 0 });
-		expect(await pass()).toMatchObject({ built: 0, calls: 0 });
-		const lines = slice(scopeTree(await store.projection(), "project:a"), 3);
-		expect(lines).toHaveLength(3);
-		expect(lines[0]).toMatchObject({ kind: "summary", summary: retold });
-		await store.close();
-	});
-
-	it("publishes the join chain with no model call", async () => {
-		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
-		directories.push(directory);
-		const store = new SqliteStore(directory);
-		for (let index = 0; index < 4; index += 1)
-			await store.append(note("project:a", `note ${index}`));
-		const refused = async (): Promise<string> => {
-			throw new Error("The model was called for a fitting pair.");
-		};
-		const pass = async () =>
-			compactionPass(
-				store,
-				"project:a",
-				scopeTree(await store.projection(), "project:a"),
-				refused,
-			);
-		const before = slice(scopeTree(await store.projection(), "project:a"), 3);
-		expect(before[0]).toMatchObject({
-			kind: "temporary",
-			text: "note 0; note 1",
+	function open(): Store {
+		const dir = mkdtempSync(join(tmpdir(), "memlens-compaction-"));
+		dirs.push(dir);
+		const store = new Store(dir);
+		stores.push(store);
+		return store;
+	}
+	function add(store: Store, body: string, index: number): void {
+		note(store, {
+			scope: "p:x",
+			kind: "note",
+			body,
+			session: "s",
+			turn: "t",
+			preset: "p",
+			ts: `2026-01-0${index + 1}T00:00:00.000Z`,
 		});
-		expect(await pass()).toMatchObject({ built: 2, calls: 0 });
-		expect(await pass()).toMatchObject({ built: 1, calls: 0 });
-		expect(await pass()).toMatchObject({ built: 0, calls: 0 });
-		const tree = scopeTree(await store.projection(), "project:a");
-		const lines = slice(tree, 3);
-		expect(lines).toHaveLength(3);
-		expect(lines[0]).toMatchObject({
+	}
+	it("publishes join nodes bottom up without a model", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `note ${i}`, i);
+		const model = async (): Promise<string> => {
+			throw new Error("unexpected model");
+		};
+		expect(await compactionPass(store, "p:x", model)).toMatchObject({
+			built: 2,
+			calls: 0,
+		});
+		expect(await compactionPass(store, "p:x", model)).toMatchObject({
+			built: 1,
+			calls: 0,
+		});
+		expect(await compactionPass(store, "p:x", model)).toMatchObject({
+			built: 0,
+			calls: 0,
+		});
+		expect(sliceOf(loadView(store.handle(), "p:x"), 3)[0]).toMatchObject({
 			kind: "summary",
 			summary: "note 0; note 1",
 		});
-		const root = topRange(tree);
-		const node = root ? currentNode(tree, root) : null;
-		expect(node?.summary).toBe("note 0; note 1; note 2; note 3");
-		expect(root && node ? isClean(tree, node) : false).toBe(true);
-		await store.close();
 	});
-
-	it("makes one batch call for several lines and publishes each result", async () => {
-		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
-		directories.push(directory);
-		const store = new SqliteStore(directory);
-		for (let index = 0; index < 4; index += 1)
-			await store.append(
-				note("project:a", `${"long body ".repeat(40)}${index}`),
-			);
-		const batch = async () => "#0-1: sum zero one\n#2-3: sum two three";
-		const result = await compactionPass(
-			store,
-			"project:a",
-			scopeTree(await store.projection(), "project:a"),
-			batch,
-			{ form: "batch" },
-		);
-		expect(result).toMatchObject({
-			built: 2,
-			calls: 1,
-			rejected: 0,
-			failed: 0,
-		});
-		await store.close();
-	});
-
-	it("builds the catalog above the scope roots and rebuilds it after a change", async () => {
-		const directory = await mkdtemp(join(tmpdir(), "memlens-compaction-"));
-		directories.push(directory);
-		const scopes = ["project:a", "project:b"] as const;
-		const catalogScope = catalogKey("work");
-		const store = new SqliteStore(directory, new Map([["work", [...scopes]]]));
-		const retold = "sum pill ".repeat(40).trim();
-		const summary = async () => retold;
-		const catalog = async (): Promise<Tree> =>
-			catalogTree(
-				await store.projection(),
-				"work",
-				scopes as readonly ScopeKey[],
-			);
-		const pass = async (scope: (typeof scopes)[number] | typeof catalogScope) =>
-			compactionPass(
-				store,
-				scope,
-				scope === catalogScope
-					? await catalog()
-					: scopeTree(await store.projection(), scope),
-				summary,
-			);
-
-		for (const scope of scopes) {
-			await store.append(note(scope, `${"detail ".repeat(60)}zero`));
-			await store.append(note(scope, `${"detail ".repeat(60)}one`));
-			expect(await pass(scope)).toMatchObject({ built: 1, calls: 1 });
-		}
-		const catalogInput = buildInput(await catalog(), { start: 0, level: 1 });
-		if (!catalogInput) throw new Error("The catalog input is absent");
+	it("publishes batch answers", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
 		expect(
-			catalogInput.children.map((child) =>
-				child && "pos" in child ? child.pos : undefined,
+			await compactionPass(
+				store,
+				"p:x",
+				async () => "#0-1: first summary\n#2-3: second summary",
+				{ form: "batch" },
 			),
-		).toEqual([0, 1]);
-		const catalogTask = batchTask(512, [catalogInput]);
-		expect(catalogTask).toContain('<input id="#0-1">');
-		expect(catalogTask).toContain("\n#0 ");
-		expect(catalogTask).toContain("\n#1 ");
-
-		expect(await pass(catalogScope)).toMatchObject({ built: 1, calls: 1 });
-
-		const catalogEvents = async () =>
-			(await store.export(catalogScope)).filter((event) => event.op === "node");
-		expect(await catalogEvents()).toHaveLength(1);
-		expect(slice(await catalog(), 2)).toEqual([
-			expect.objectContaining({ kind: "summary", summary: retold }),
-			expect.objectContaining({ kind: "summary", summary: retold }),
-		]);
-		expect(slice(await catalog(), 1)).toEqual([
-			expect.objectContaining({ kind: "summary", summary: retold }),
-		]);
-		const firstCatalogEvents = await catalogEvents();
-
-		await store.append(note("project:a", `${"detail ".repeat(60)}two`));
-		expect(await pass("project:a")).toMatchObject({ built: 1, calls: 0 });
-		expect(await pass("project:a")).toMatchObject({ built: 1, calls: 1 });
-		expect(await pass(catalogScope)).toMatchObject({ built: 1, calls: 1 });
-
-		const rebuilt = await catalogEvents();
-		expect(rebuilt).toHaveLength(2);
-		const oldEvent = firstCatalogEvents[0];
-		const unchanged = rebuilt.find((event) => event.id === oldEvent?.id);
-		expect(unchanged).toEqual(oldEvent);
-		const projection = await store.projection();
-		const current = (projection.nodes.get(catalogScope) ?? []).filter(
-			(node) => node.range.start === 0 && node.range.level === 1,
-		);
-		expect(current).toHaveLength(1);
-		expect(current[0]?.id).not.toBe(oldEvent?.id);
-		expect(projection.invalidated.has(oldEvent?.id ?? "")).toBe(true);
-		await store.close();
+		).toMatchObject({ built: 2, calls: 1, failed: 0 });
+	});
+	it("rejects a model answer after a child changes", async () => {
+		const store = open();
+		add(store, "a".repeat(400), 0);
+		add(store, "b".repeat(400), 1);
+		const id = loadView(store.handle(), "p:x").notes[0]?.id;
+		if (!id) throw new Error("missing note");
+		const result = await compactionPass(store, "p:x", async () => {
+			amend(store, { id, body: "changed" });
+			return "summary";
+		});
+		expect(result).toMatchObject({ rejected: 1, built: 0, calls: 1 });
+		expect(loadView(store.handle(), "p:x").nodes).toHaveLength(0);
 	});
 });

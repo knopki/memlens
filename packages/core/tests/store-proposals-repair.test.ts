@@ -13,6 +13,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, it } from "vitest";
+import { noteTx } from "../src/store/notes.js";
 import {
 	accept,
 	dismiss,
@@ -172,14 +173,16 @@ describe("proposals", () => {
 		accept(
 			store,
 			"01ACCEPT",
-			(payload) => {
-				const body = (payload as { body: string }).body;
-				store
-					.handle()
-					.prepare(
-						"INSERT INTO notes (id, scope, pos, state, kind, body, ts, created_at, modified_at, v, v_content) VALUES ('01ACCEPTNOTE', 'p:x', 0, 'live', 'note', ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'v1', 'v1')",
-					)
-					.run(body);
+			(payload, tx) => {
+				noteTx(tx, {
+					id: "01ACCEPTNOTE",
+					scope: "p:x",
+					kind: "note",
+					body: (payload as { body: string }).body,
+					session: "s",
+					turn: "t",
+					preset: "p",
+				});
 			},
 			["p:x"],
 		);
@@ -206,10 +209,9 @@ describe("proposals", () => {
 				accept(
 					store,
 					"01ROLLBACK",
-					(payload) => {
+					(payload, tx) => {
 						const body = (payload as { body: string }).body;
-						store
-							.handle()
+						tx.db
 							.prepare(
 								"INSERT INTO notes (id, scope, pos, state, kind, body, ts, created_at, modified_at, v, v_content) VALUES ('01ROLLEDNOTE', 'p:x', 0, 'live', 'note', ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'v1', 'v1')",
 							)

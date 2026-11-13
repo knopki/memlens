@@ -27,20 +27,27 @@
  * - A pass calls the model at most maxCallsPerHour times. A compaction at the limit defers its calls
  * while the affected ranges stay dirty.
  * @dependencies
- * USES API: domain/tree.ts (candidates, buildInput, rev), domain/order.ts
- * READS: Tree, BuildInput
- * WRITES: StorePort.appendNode only, through nodeEvent
+ * USES API: store/build.ts, domain/order.ts
+ * READS: Store rows, BuildInput
+ * WRITES: Node cache rows through store/build.ts
  * @keywords compaction, merge, retelling, batch, parallel, retry, node, summary
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
+import {
+	type BuildRead,
+	publishJoin,
+	publishNode,
+	readBuild,
+	candidates as storeCandidates,
+} from "../store/build.js";
+import type { Store } from "../store/store.js";
 import type { NodeEvent, ScopeKey } from "../types/events.js";
-import type { StorePort } from "../types/store.js";
 import type { BuildChild, BuildInput, Tree } from "../types/tree.js";
 import { maxOrder } from "./order.js";
 import { dateSpan } from "./time.js";
-import { buildInput, candidates, cutAtWord, LINE_LIMIT, rev } from "./tree.js";
+import { cutAtWord, LINE_LIMIT, rev } from "./tree.js";
 
 const debug = debuglog("memlens:compaction");
 
@@ -528,6 +535,7 @@ export interface CompactionRun {
 export interface PassResult {
 	readonly built: number;
 	readonly rejected: number;
+	readonly reasons: readonly "input_changed"[];
 	readonly failed: number;
 	readonly calls: number;
 }
@@ -538,24 +546,65 @@ export interface PassResult {
  * @invariants A pass takes at most batch ready inputs and uses one form only. Inputs with one
  * non-empty child publish a copy with no model call, and fitting pairs publish their join.
  * The batch form makes one call, retries a broken answer once with the error text, then falls
- * back to parallel. Each result publishes through appendNode, which rechecks the exact input
- * under the write lock. A pass stores no state and starts no timers.
+ * back to parallel. Each result checks its captured keys under the write lock. A pass stores no state and starts no timers.
  */
 export async function compactionPass(
-	store: StorePort,
+	store: Store,
 	scope: ScopeKey,
-	tree: Tree,
 	model: MergeModel,
 	run: Partial<CompactionRun> = {},
 ): Promise<PassResult> {
 	const form = run.form ?? "parallel";
 	const batch = run.batch ?? COMPACTION_BATCH;
 	const parallel = run.parallel ?? COMPACTION_PARALLEL;
-	const inputs = candidates(tree)
-		.map((range) => buildInput(tree, range))
-		.filter((input): input is BuildInput => input !== null)
-		.slice(0, batch);
-	const result = { built: 0, rejected: 0, failed: 0, calls: 0 };
+	const result = {
+		built: 0,
+		rejected: 0,
+		failed: 0,
+		calls: 0,
+		reasons: [] as "input_changed"[],
+	};
+	const captured = new Map<BuildInput, BuildRead>();
+	const inputs: BuildInput[] = [];
+	for (const range of storeCandidates(store, scope)) {
+		const read = readBuild(store, scope, range.level, range.start);
+		if (!read.ok) continue;
+		const width = 2 ** (range.level - 1);
+		const child = (
+			text: string | null,
+			key: string | null,
+			start: number,
+		): BuildChild | null => {
+			if (text === null) return null;
+			if (range.level === 1)
+				return {
+					kind: "record",
+					id: key ?? "",
+					pos: start,
+					body: text,
+					preview: "",
+					ts: start === range.start ? read.tsFrom : read.tsTo,
+				};
+			return {
+				kind: "node",
+				id: key ?? "",
+				range: { start, level: range.level - 1 },
+				summary: text,
+				ts_from: read.tsFrom,
+				ts_to: read.tsTo,
+			};
+		};
+		const input: BuildInput = {
+			range,
+			children: [
+				child(read.aText, read.aKey, range.start),
+				child(read.bText, read.bKey, range.start + width),
+			],
+		};
+		captured.set(input, read);
+		inputs.push(input);
+		if (inputs.length >= batch) break;
+	}
 	const counted: MergeModel = async (system, task) => {
 		result.calls += 1;
 		return model(system, task);
@@ -565,29 +614,58 @@ export async function compactionPass(
 			result.failed += 1;
 			return;
 		}
-		const appended = await store.appendNode(
-			input,
-			nodeEvent(scope, tree, input, line),
+		const read = captured.get(input);
+		if (!read) throw new Error("Build input is absent.");
+		const published = publishNode(
+			store,
+			scope,
+			input.range.level,
+			input.range.start,
+			line.summary,
+			read,
 		);
-		if (appended.ok) result.built += 1;
-		else result.rejected += 1;
+		if (published.ok) result.built += 1;
+		else {
+			result.rejected += 1;
+			debug("Build rejected", {
+				scope,
+				start: input.range.start,
+				level: input.range.level,
+				reason: published.reason,
+			});
+		}
 	};
 	debug("Compaction pass", { scope, form, candidates: inputs.length });
 	const merges: BuildInput[] = [];
 	for (const input of inputs) {
-		const line = live(input).length < 2 ? copyBuild(input) : joinBuild(input);
-		if (line) {
-			await publish(input, line);
-			continue;
-		}
-		merges.push(input);
+		const read = captured.get(input);
+		if (!read) throw new Error("Build input is absent.");
+		if (read.fits) {
+			const published = publishJoin(
+				store,
+				scope,
+				input.range.level,
+				input.range.start,
+				read,
+			);
+			if (published.ok) result.built += 1;
+			else {
+				result.rejected += 1;
+				debug("Build rejected", {
+					scope,
+					start: input.range.start,
+					level: input.range.level,
+					reason: published.reason,
+				});
+			}
+		} else merges.push(input);
 	}
 	if (merges.length) {
 		if (form === "batch") await runBatch(merges, counted, publish, parallel);
 		else await runParallel(merges, counted, publish, parallel);
 	}
 	debug("Compaction pass complete", { scope, ...result });
-	return { ...result };
+	return result;
 }
 // #endregion FUNC_compactionPass
 
