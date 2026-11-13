@@ -35,6 +35,7 @@ async function fixture(backend: string, allowDelete = false, scopes = '["*"]') {
 	};
 	const host = await startUi({
 		storeFlag: join(root, "store"),
+		cwd: root,
 		env,
 		port: 0,
 		allowDelete,

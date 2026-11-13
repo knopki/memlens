@@ -10,8 +10,8 @@
  *    check, repair, export, import, and config.
  *  - NOT: argument parsing, the exit code mapping, the store logic, and the compaction job.
  * @invariants
- *  - The CLI has no active scope. The command note takes its scope in --scope. A command with a
- *    target takes the scope in the address or in --scope.
+ *  - The command note uses the active scope unless --scope gives a key. A command with a target
+ *    takes the scope in the address or in --scope.
  *  - Each target scope must be visible in the profile, or the command gives NotAllowed and
  *    changes no record.
  *  - The commands find and review with no --scope use each visible scope of the profile.
@@ -52,7 +52,6 @@ import type {
 	ScopeKey,
 } from "@memlens/core";
 import {
-	activeScope,
 	addDaysAtTime,
 	amend,
 	byAddress,
@@ -88,6 +87,7 @@ import { encodeScopeFilename, renderScopeMarkdown } from "./export-md.js";
 import type { Runtime } from "./runtime.js";
 import {
 	cliActiveScope,
+	cliScopeResult,
 	DEFAULT_CONFIG_TOML,
 	loadCliBaseConfig,
 	openRuntime,
@@ -187,13 +187,15 @@ export async function noteCommand(
 	args: ParsedArgs,
 	io: CommandIo,
 ): Promise<string> {
-	const scope = requiredScope(args.flags);
 	const kindRaw = flagValue(args.flags, "kind") ?? "note";
 	if (!(KINDS as readonly string[]).includes(kindRaw))
 		throw new MemlensError("Usage", `The kind ${kindRaw} is unknown.`);
 	const kind = kindRaw as (typeof KINDS)[number];
 	const runtime = await openCommandRuntime(args, io);
 	try {
+		const scope = normalizeScopeKey(
+			flagValue(args.flags, "scope") ?? cliActiveScope(runtime.base, io.cwd),
+		) as ScopeKey;
 		const visible = runtimeVisibleScopes(runtime);
 		const supersedes = flagList(args.flags, "supersedes")
 			.flatMap((raw) => raw.split(","))
@@ -231,14 +233,6 @@ export async function noteCommand(
 }
 
 // #endregion FUNC_noteCommand
-
-/** One scope from --scope, or the Usage error. */
-function requiredScope(flags: ParsedArgs["flags"]): ScopeKey {
-	const raw = flagValue(flags, "scope");
-	if (raw === null)
-		throw new MemlensError("Usage", "The command needs --scope.");
-	return normalizeScopeKey(raw) as ScopeKey;
-}
 
 /** Resolve an address to a visible note row. */
 function resolveRowTarget(
@@ -659,10 +653,10 @@ export async function scopesCommand(
  */
 export function scopeCommand(io: CommandIo): string {
 	const base = loadCliBaseConfig(io.env);
-	const result = activeScope(base.scope_default, { path: io.cwd });
+	const result = cliScopeResult(base, io.cwd);
 	const rule =
 		result.rule === null
-			? "default"
+			? result.source
 			: describeRule(base.scope_default.rules[result.rule] ?? null);
 	debug("Scope resolved", {
 		event: "scope",

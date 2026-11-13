@@ -58,7 +58,7 @@ const debug = debuglog("memlens:cli");
 /** The usage text of the binary. */
 export const USAGE = `Usage: ${NAME} <command> [flags]
 
-  note <body> --scope key [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
+  note <body> [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
   find <words> [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
   open <target> [--scope key] [--no-longform] [--offset N] [--json]
   forget <target> [--scope key] [--reason "text"]

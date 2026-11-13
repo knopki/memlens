@@ -361,7 +361,7 @@ The binary `memlens` runs without the harness, and it takes one command. The usa
 commands and their flags. A flag outside the usage is an error by usage.
 
 ```text
-memlens note "<body>" --scope key [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
+memlens note "<body>" [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
 memlens find "<words>" [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
 memlens open <target> [--scope key] [--no-longform] [--offset N]
 memlens forget <target> [--scope key] [--reason "text"]
@@ -389,6 +389,8 @@ resolution, the visible scope rules, the review periods, and the confirmation of
 [compaction job contract](../../packages/cli/src/compact.ts) owns the job of one scope and the
 application of one answer file. The [entry contract](../../packages/cli/src/cli.ts) owns the dispatch
 and the exit codes.
+The CLI selects the first matching scope rule, then the Git repository name, then the configured default.
+The command `note` uses that scope when the user omits `--scope`.
 
 The CLI command `compact` publishes each copy input and gives the merge inputs of one scope as one
 job. The flag `--answer` applies one answer file, and the store verifies each exact input again. The
