@@ -46,6 +46,7 @@ export class Store {
 	/**
 	 * @purpose Run one change under the write lock and tick the clock when the change writes.
 	 * @invariants A failed change rolls back and leaves the clock at its earlier value.
+	 * @invariants A change that writes no row writes no clock value, so a rejected build moves no epoch.
 	 * @returns The value of the work, and the version of the change.
 	 */
 	publish<T>(work: (tx: Tx) => T): { value: T; version: Version } {
@@ -55,14 +56,21 @@ export class Store {
 			const clock = this.clock();
 			const next = tickClock(clock);
 			const tx = new Tx(this.db, clock.store, next.version);
+			const before = totalChanges(this.db);
 			const value = work(tx);
-			// The work may fold imported versions into the clock. Keep the greater value.
-			const folded = this.meta("clock");
-			const final =
-				folded !== null && folded > next.version ? folded : next.version;
-			this.setMeta("clock", final);
-			this.db.exec("COMMIT");
-			debug("Publish", { event: "publish", version: final });
+			const changed = totalChanges(this.db) > before;
+			if (changed) {
+				// The work may fold imported versions into the clock. Keep the greater value.
+				const folded = this.meta("clock");
+				const final =
+					folded !== null && folded > next.version ? folded : next.version;
+				this.setMeta("clock", final);
+				this.db.exec("COMMIT");
+				debug("Publish", { event: "publish", version: final });
+			} else {
+				this.db.exec("COMMIT");
+				debug("Publish no-op", { event: "publish", noop: true });
+			}
 			return { value, version: next.version };
 		} catch (error) {
 			try {
@@ -220,3 +228,8 @@ function tickClock(clock: ClockState): { state: ClockState; version: Version } {
 
 /** @purpose Name the schema version of this build for a check. */
 export const BUILD_SCHEMA = SCHEMA_VERSION;
+
+/** @purpose Read the cumulative write count of the connection, so one publish sees its own writes. */
+function totalChanges(db: import("node:sqlite").DatabaseSync): number {
+	return Number(db.prepare("SELECT total_changes() AS c").get()?.c ?? 0);
+}

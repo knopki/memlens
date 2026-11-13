@@ -315,18 +315,20 @@ describe("epoch", () => {
 	it("gives a different key for each clock value of a store", () => {
 		const store = newStore();
 		const first = store.rev();
-		store.publish(() => undefined);
+		addNote(store, { pos: 0, body: "note" });
 		const second = store.rev();
 		expect(second).not.toBe(first);
 		expect(epoch(second)).not.toBe(epoch(first));
 	});
 
-	it("follows the clock of the store", () => {
+	it("follows the clock of the store and holds it on a no-op publish", () => {
 		const store = newStore();
 		const first = store.rev();
 		addNote(store, { pos: 0, body: "changed" });
-		store.publish(() => undefined);
 		expect(store.rev()).not.toBe(first);
+		const before = store.rev();
+		store.publish(() => undefined);
+		expect(store.rev()).toBe(before);
 		expect(epoch(store.rev())).not.toBe(epoch(first));
 	});
 });
