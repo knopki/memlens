@@ -56,9 +56,13 @@ export class Store {
 			const next = tickClock(clock);
 			const tx = new Tx(this.db, clock.store, next.version);
 			const value = work(tx);
-			this.setMeta("clock", next.version);
+			// The work may fold imported versions into the clock. Keep the greater value.
+			const folded = this.meta("clock");
+			const final =
+				folded !== null && folded > next.version ? folded : next.version;
+			this.setMeta("clock", final);
 			this.db.exec("COMMIT");
-			debug("Publish", { event: "publish", version: next.version });
+			debug("Publish", { event: "publish", version: final });
 			return { value, version: next.version };
 		} catch (error) {
 			try {
