@@ -56,7 +56,7 @@ export function rankFor(
 // #region FUNC_shiftFrom
 /**
  * @purpose Move each row of a scope at or above one slot one slot higher.
- * @invariants The caller runs the statement inside the insert transaction.
+ * @invariants The shift runs as one negative band, so no row meets the slot of another row on the way.
  * @returns The count of moved rows.
  */
 export function shiftFrom(
@@ -64,9 +64,12 @@ export function shiftFrom(
 	scope: ScopeKey,
 	from: number,
 ): number {
+	db.prepare(
+		"UPDATE notes SET pos = -pos - 1 WHERE scope = ? AND pos >= ?",
+	).run(scope, from);
 	const result = db
-		.prepare("UPDATE notes SET pos = pos + 1 WHERE scope = ? AND pos >= ?")
-		.run(scope, from);
+		.prepare("UPDATE notes SET pos = -pos WHERE scope = ? AND pos < 0")
+		.run(scope);
 	debug("Slot shift", { event: "shift", from, moved: result.changes });
 	return Number(result.changes);
 }

@@ -67,6 +67,19 @@ describe("slots", () => {
 			.map((row) => row.id);
 		assert.deepEqual(order, ["x", "y"]);
 	});
+
+	it("shifts a band of several rows without a unique collision", () => {
+		const { db } = store();
+		for (const id of ["a", "b", "c", "d", "e"])
+			add(db, id, `2026-0${id.charCodeAt(0) - 96}-01T00:00:00.000Z`, `v-${id}`);
+		add(db, "m", "2026-03-15T00:00:00.000Z", "v-m");
+		const order = db
+			.prepare("SELECT id FROM notes WHERE scope = 'p:x' ORDER BY pos")
+			.all()
+			.map((row) => row.id);
+		assert.deepEqual(order, ["a", "b", "c", "m", "d", "e"]);
+		assert.equal(nextSlot(db, "p:x"), 6);
+	});
 });
 // #endregion FUNC_test_slots
 
