@@ -23,6 +23,7 @@ export function widthOf(level: number): number {
 }
 
 // #region FUNC_deleteCovering
+
 /**
  * @purpose Delete each node of a scope that covers one slot, at every level.
  * @invariants The caller runs the statement inside the write transaction of the change.
@@ -45,9 +46,11 @@ export function deleteCovering(
 	});
 	return Number(result.changes);
 }
+
 // #endregion FUNC_deleteCovering
 
 // #region FUNC_deleteRange
+
 /**
  * @purpose Delete each node of a scope that intersects one slot range.
  * @invariants A tail shift calls this for the whole shifted range in the same transaction.
@@ -72,9 +75,11 @@ export function deleteRange(
 	});
 	return Number(result.changes);
 }
+
 // #endregion FUNC_deleteRange
 
 // #region FUNC_leafKeyOf
+
 /**
  * @purpose Read the validity key of one leaf slot: the version and the state of the occupant.
  * @returns The key text, or null when the slot holds no row.
@@ -90,9 +95,11 @@ export function leafKeyOf(
 	if (row === undefined) return null;
 	return `${row.v_content}|${row.state}`;
 }
+
 // #endregion FUNC_leafKeyOf
 
 // #region FUNC_nodeKeyOf
+
 /**
  * @purpose Read the validity key of one child node row.
  * @returns The build version, or null when the child row is absent.
@@ -110,9 +117,11 @@ export function nodeKeyOf(
 		.get(scope, level, start);
 	return row === undefined ? null : String(row.built_v);
 }
+
 // #endregion FUNC_nodeKeyOf
 
 // #region FUNC_validNode
+
 /**
  * @purpose Prove that one node still summarizes the current halves of its range.
  * @invariants Each non-null half matches its current child key. Each null half holds no live note.
@@ -126,6 +135,7 @@ export function validNode(db: DatabaseSync, node: Node): boolean {
 		halfValid(db, node.scope, half, width, node.start + width, node.b_key)
 	);
 }
+
 // #endregion FUNC_validNode
 
 /** @purpose Check one half of a node against its child range and key. */

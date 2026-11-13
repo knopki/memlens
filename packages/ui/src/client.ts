@@ -34,12 +34,8 @@ import type {
 	OpenEntry,
 	OpenLine,
 } from "../../core/src/domain/reads.js";
-import type {
-	Event as MemoryEvent,
-	NoteKind,
-} from "../../core/src/types/events.js";
-import type { ProjectionRecord } from "../../core/src/types/projection.js";
-import type { IndexHit } from "../../core/src/types/store.js";
+import type { IndexHit, Note, Proposal } from "../../core/src/store/types.js";
+import type { NoteKind } from "../../core/src/types/events.js";
 import type {
 	BuildInput,
 	Range,
@@ -70,7 +66,7 @@ type View = ConsoleModel & {
 	backend: string;
 	allowDelete: boolean;
 	reviewPolicy: Record<NoteKind, number>;
-	proposals: MemoryEvent[];
+	proposals: readonly Proposal[];
 };
 type Job = {
 	inputs: BuildInput[];
@@ -79,6 +75,7 @@ type Job = {
 	profile: string;
 	scope: string;
 };
+type RecordModel = ConsoleModel["records"][number];
 type Selection = { target: string; result: Opened };
 /** The answer of one open: a note, the children of a range, or the lines below a catalog range. */
 type Opened =
@@ -138,6 +135,7 @@ state.theme = theme(chosen("memlens.theme", "system"));
 let table: Table = messages(state.lang);
 
 // #region BLOCK_helpers
+
 function el<K extends keyof HTMLElementTagNameMap>(
 	tag: K,
 	text = "",
@@ -326,9 +324,11 @@ function remember(key: string, value: string) {
 		// A blocked storage keeps the choice for this page only.
 	}
 }
+
 // #endregion BLOCK_helpers
 
 // #region FUNC_current
+
 /** @purpose Read the state of the console as one address. */
 function current(): Route {
 	return {
@@ -344,9 +344,11 @@ function current(): Route {
 		reviewKind: state.reviewKind,
 	};
 }
+
 // #endregion FUNC_current
 
 // #region FUNC_enter
+
 /**
  * @purpose Put the state of the console into the page address at the chosen history step.
  * @invariants The address keeps its path, so the host serves the same page for each place. A
@@ -360,18 +362,22 @@ function enter(step: Step): void {
 	history[step === "push" ? "pushState" : "replaceState"](null, "", url);
 	console.debug("Console address", { event: "address", step, url });
 }
+
 // #endregion FUNC_enter
 
 // #region FUNC_go
+
 /** @purpose Show one screen and keep its place in the address. */
 function go(screen: Screen, step: Step = "push"): void {
 	state.screen = screen;
 	enter(step);
 	render();
 }
+
 // #endregion FUNC_go
 
 // #region FUNC_restore
+
 /**
  * @purpose Move the console to the place of one address.
  * @invariants Load the view first, because the target and the search need the store. Then write
@@ -411,9 +417,11 @@ async function restore(route: Route, retry = true): Promise<void> {
 			: openTarget(target, "none"));
 	enter("replace");
 }
+
 // #endregion FUNC_restore
 
 // #region FUNC_find
+
 /**
  * @purpose Run the current search filters and keep the hits.
  * @invariants Write the address only after the host answers.
@@ -440,9 +448,11 @@ async function find(step: Step): Promise<void> {
 	enter(step);
 	render();
 }
+
 // #endregion FUNC_find
 
 // #region FUNC_applyTheme
+
 /**
  * @purpose Put the chosen theme on the page and follow the system setting.
  * @invariants The attribute holds the resolved theme, so the stylesheet needs two palettes only.
@@ -456,9 +466,11 @@ function applyTheme(): void {
 	document.documentElement.dataset.theme = dark ? "dark" : "light";
 	console.debug("Console theme", { event: "theme", choice: state.theme, dark });
 }
+
 // #endregion FUNC_applyTheme
 
 // #region FUNC_request
+
 /** @purpose Surface API errors and return successful JSON results. */
 async function request<T>(path: string, body?: unknown): Promise<T> {
 	const response = await fetch(
@@ -486,9 +498,11 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 		);
 	return value as T;
 }
+
 // #endregion FUNC_request
 
 // #region FUNC_action
+
 /** @purpose Apply one user action once and refresh its visible result. */
 async function action(name: string, extra: Record<string, unknown> = {}) {
 	if (state.busy) throw new Error(tr("busyAction"));
@@ -517,9 +531,11 @@ async function action(name: string, extra: Record<string, unknown> = {}) {
 		state.busy = false;
 	}
 }
+
 // #endregion FUNC_action
 
 // #region FUNC_reload
+
 /**
  * @purpose Refresh the console after a profile, scope, or store change.
  * @invariants Keep the view of one generation. The host resolves the profile and the scope, so the
@@ -552,9 +568,11 @@ async function reload(step: Step = "replace"): Promise<void> {
 	message("");
 	render();
 }
+
 // #endregion FUNC_reload
 
 // #region FUNC_run
+
 /** @purpose Keep one failed action from blocking the next one. */
 async function run(fn: () => unknown): Promise<void> {
 	try {
@@ -567,9 +585,11 @@ async function run(fn: () => unknown): Promise<void> {
 		message(error instanceof Error ? error.message : String(error), true);
 	}
 }
+
 // #endregion FUNC_run
 
 // #region FUNC_render
+
 /**
  * @purpose Keep the chrome and the current screen consistent with the latest model.
  * @invariants The header holds the profile, the language, the theme, the here budget, and the create
@@ -587,6 +607,7 @@ function render(): void {
 	shell.replaceChildren();
 	shell.append(header(model), layout(model), footer(model));
 }
+
 // #endregion FUNC_render
 
 function header(model: View) {
@@ -718,6 +739,7 @@ async function reset(nextScope: string, step: Step = "push") {
 }
 
 // #region FUNC_overview
+
 /**
  * @purpose Show each visible scope as one card and the assembled slice below.
  * @invariants Keep a card for a scope with no live note. Quote the whole slice as text: the page
@@ -766,6 +788,7 @@ function overview(main: HTMLElement, model: View): void {
 	slice.append(text);
 	main.append(slice);
 }
+
 // #endregion FUNC_overview
 
 /** The message key of each line kind, so a line and its legend name the kind in one way. */
@@ -791,6 +814,7 @@ function hintPanel() {
 }
 
 // #region FUNC_tree
+
 /**
  * @purpose Show the frontier of the selected scope beside the inspector.
  * @invariants Draw every line from the model frontier. A range line opens its children, and a note
@@ -827,6 +851,7 @@ function tree(main: HTMLElement, model: View): void {
 	split.append(panelNode, inspector());
 	main.append(split, column);
 }
+
 // #endregion FUNC_tree
 
 function frontierLine(key: string, line: SliceLine) {
@@ -866,6 +891,7 @@ function childLine(child: OpenLine) {
 }
 
 // #region FUNC_inspector
+
 /**
  * @purpose Show the selected note or range with its provenance and its record actions.
  * @invariants Put the body and the document into text nodes. Disable delete without host permission.
@@ -918,9 +944,10 @@ function inspector(): HTMLElement {
 	node.append(extra);
 	return node;
 }
+
 // #endregion FUNC_inspector
 
-function recordActions(target: string, record?: ProjectionRecord) {
+function recordActions(target: string, record?: RecordModel | Note) {
 	const row = el("div", "", "actions");
 	row.append(
 		btn(tr("actReviewed"), () => action("review", { target })),
@@ -958,6 +985,7 @@ async function editTarget(target: string, supersede: boolean) {
 }
 
 // #region FUNC_openTarget
+
 /**
  * @purpose Expand a range or inspect a note, and keep the selection for the inspector.
  * @invariants Write the address only after the host answers.
@@ -978,17 +1006,21 @@ async function openTarget(target: string, step: Step = "push"): Promise<void> {
 	enter(step);
 	render();
 }
+
 // #endregion FUNC_openTarget
 
 // #region FUNC_openInTree
+
 /** @purpose Select the tree screen and open one record in its inspector as one place. */
 async function openInTree(target: string): Promise<void> {
 	await openTarget(target, "none");
 	go("tree");
 }
+
 // #endregion FUNC_openInTree
 
 // #region FUNC_openCatalog
+
 /**
  * @purpose Expand one catalog range into the two lines below it, and keep the selection.
  * @invariants Write the address only after the host answers.
@@ -1018,17 +1050,21 @@ async function openCatalog(range: Range, step: Step = "push"): Promise<void> {
 	enter(step);
 	render();
 }
+
 // #endregion FUNC_openCatalog
 
 // #region FUNC_openScopeTree
+
 /** @purpose Open the tree screen of one scope as one place. */
 async function openScopeTree(key: string): Promise<void> {
 	state.screen = "tree";
 	await reset(key);
 }
+
 // #endregion FUNC_openScopeTree
 
 // #region FUNC_catalog
+
 /**
  * @purpose Show the direction lines of the visible scopes with their budget, and open one part.
  * @invariants The list holds one line for each catalog range of the model, with the legend of the
@@ -1062,6 +1098,7 @@ function catalog(main: HTMLElement, model: View): void {
 	split.append(lines, detail);
 	main.append(split);
 }
+
 // #endregion FUNC_catalog
 
 /** The name of one catalog range for a human: the scope keys it covers, or its range id. */
@@ -1094,6 +1131,7 @@ function catalogLine(model: View, line: SliceLine) {
 }
 
 // #region FUNC_search
+
 /**
  * @purpose Find notes by words in the selected scope or in every visible scope.
  * @invariants The scope filter opens on the selected scope. Show the hit count and keep the
@@ -1162,6 +1200,7 @@ function search(main: HTMLElement, model: View): void {
 	split.append(list, inspector());
 	main.append(split);
 }
+
 // #endregion FUNC_search
 
 function highlight(body: string) {
@@ -1188,6 +1227,7 @@ function highlight(body: string) {
 }
 
 // #region FUNC_review
+
 /**
  * @purpose List the due notes of the selected scope and the next notes with their review dates and
  * the record actions.
@@ -1239,9 +1279,11 @@ function review(main: HTMLElement, model: View): void {
 	);
 	main.append(list, next, policy);
 }
+
 // #endregion FUNC_review
 
 // #region FUNC_proposals
+
 /** @purpose Show each pending proposal with its session, scope, age, and decision. */
 function proposals(main: HTMLElement, model: View): void {
 	main.append(el("p", tr("propText"), "sub"));
@@ -1251,8 +1293,8 @@ function proposals(main: HTMLElement, model: View): void {
 			[tr("id"), tr("session"), tr("text"), tr("scope"), tr("decision")],
 			model.proposals.map((item) => [
 				item.id,
-				"session" in item ? item.session : tr("none"),
-				"body" in item ? (item.body ?? "") : item.op,
+				tr("none"),
+				item.payload,
 				item.scope,
 				append(
 					el("div", "", "actions"),
@@ -1264,9 +1306,11 @@ function proposals(main: HTMLElement, model: View): void {
 	);
 	main.append(list);
 }
+
 // #endregion FUNC_proposals
 
 // #region FUNC_maintenance
+
 /**
  * @purpose Show the build state, the budgets, and the compaction job.
  * @invariants Show no compaction state and no session snapshot state. A job without a merge input
@@ -1306,7 +1350,7 @@ function maintenance(main: HTMLElement, model: View): void {
 	);
 	const levels = [
 		...new Set([
-			...model.nodes.map((item) => item.node.range.level),
+			...model.nodes.map((item) => item.node.level),
 			...model.candidates.map((item) => item.range.level),
 		]),
 	].sort((a, b) => a - b);
@@ -1316,13 +1360,10 @@ function maintenance(main: HTMLElement, model: View): void {
 			[tr("level"), tr("nodes"), tr("dirty"), tr("candidates")],
 			levels.map((level) => [
 				String(level),
+				String(model.nodes.filter((item) => item.node.level === level).length),
 				String(
-					model.nodes.filter((item) => item.node.range.level === level).length,
-				),
-				String(
-					model.nodes.filter(
-						(item) => item.node.range.level === level && !item.clean,
-					).length,
+					model.nodes.filter((item) => item.node.level === level && !item.clean)
+						.length,
 				),
 				String(
 					model.candidates.filter((item) => item.range.level === level).length,
@@ -1332,6 +1373,7 @@ function maintenance(main: HTMLElement, model: View): void {
 	);
 	main.append(tiles, budgets, candidates, perLevel, compactionPanel(model));
 }
+
 // #endregion FUNC_maintenance
 
 function bar(name: string, value: { used: number; limit: number }) {
@@ -1458,6 +1500,7 @@ function compactionPanel(model: View) {
 }
 
 // #region FUNC_noteDialog
+
 /**
  * @purpose Create, amend, or supersede a record with explicit user input.
  * @invariants Show the body, the document, the scope, the kind, and the addresses that the note
@@ -1465,7 +1508,7 @@ function compactionPanel(model: View) {
  * record to that scope with a new position.
  */
 function noteDialog(
-	record?: ProjectionRecord | OpenEntry,
+	record?: RecordModel | OpenEntry,
 	supersedes = "",
 	fresh = false,
 ): void {
@@ -1551,6 +1594,7 @@ function noteDialog(
 	dialog.showModal();
 	note.focus();
 }
+
 // #endregion FUNC_noteDialog
 
 document.addEventListener("keydown", (event) => {

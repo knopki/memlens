@@ -52,7 +52,6 @@ export {
 	NODE_ATTEMPTS,
 	NODE_LIMIT,
 	NODE_TARGET,
-	nodeEvent,
 	type PassResult,
 	parseBatchAnswer,
 	RateWindow,
@@ -90,7 +89,6 @@ export {
 	type RuleWorkspace,
 	resolveConfig,
 	type ScopeDefault,
-	type StoreBackend,
 	type StoreConfig,
 	type SubagentMode,
 	storePath,
@@ -111,20 +109,7 @@ export {
 	hereLines,
 	POLICY,
 	renderContext,
-	type TreeContextInput,
-	treeDirectionLines,
-	treeHereLines,
 } from "./domain/context.js";
-export {
-	type InvalidationPlan,
-	type ProfileScopes,
-	planInvalidation,
-} from "./domain/invalidation.js";
-export {
-	canonicalJson,
-	type MergeResult,
-	mergeEvents,
-} from "./domain/merge.js";
 export {
 	BODY_DECLARED_SIZE,
 	BODY_HARD_LIMIT,
@@ -132,8 +117,6 @@ export {
 	normalizeBody,
 	splitBody,
 } from "./domain/note-body.js";
-export { compareOrder, makeOrder, maxOrder } from "./domain/order.js";
-export { catalogTree, project, scopeTree } from "./domain/projection.js";
 export {
 	type DueRecord,
 	dueRecords,
@@ -155,7 +138,6 @@ export {
 	type ScopeLine,
 	scopeLines,
 } from "./domain/reads.js";
-export { redactionClosure, sanitizeEvent } from "./domain/sanitization.js";
 export {
 	CATALOG_PREFIX,
 	catalogKey,
@@ -164,50 +146,53 @@ export {
 	validateScopeKey,
 } from "./domain/scope.js";
 export {
-	type ResolvedTarget,
-	resolveTarget,
-} from "./domain/targets.js";
-export {
 	addDaysAtTime,
 	compareIso,
 	nowIso,
 	toIso,
 } from "./domain/time.js";
 export {
-	buildInput,
-	candidates,
-	catalogChildren,
-	currentNode,
 	cutAtWord,
 	due,
-	fold,
 	foldPositions,
-	inputUnchanged,
-	isBuilt,
-	isClean,
 	joinBody,
 	LINE_LIMIT,
-	rev,
-	slice,
-	topRange,
 	topRangeOf,
 } from "./domain/tree.js";
 export { isUlid, ulid } from "./domain/ulid.js";
 export {
-	normalizeAppend,
-	validateEvent,
-	validateTargets,
-} from "./domain/validation.js";
+	type BuildRead,
+	candidates,
+	publishJoin,
+	publishNode,
+	readBuild,
+} from "./store/build.js";
 export {
-	prepareAppend,
-	prepareImport,
-	type WritePlan,
-} from "./domain/write.js";
-export { FtsIndex } from "./storage/fts.js";
-export { JsonlStore } from "./storage/jsonl.js";
-export { SqliteStore } from "./storage/sqlite.js";
+	type AmendInput,
+	amend,
+	amendTx,
+	hide,
+	hideTx,
+	linkSupersedes,
+	type NoteInput,
+	note,
+	noteCheckedTx,
+	noteTx,
+	redact,
+	review,
+	reviewTx,
+} from "./store/notes.js";
+export {
+	accept,
+	dismiss,
+	type ProposalInput,
+	pending,
+	propose,
+	sweep,
+} from "./store/proposals.js";
 export {
 	byAddress,
+	byId,
 	type DirectionLine,
 	type DirectionsData,
 	directionsData,
@@ -216,8 +201,17 @@ export {
 	nodesOf,
 	scopeNotes,
 } from "./store/reads.js";
+export { check, type RepairOptions } from "./store/repair.js";
+export { search } from "./store/search.js";
 export { Store } from "./store/store.js";
+export {
+	exportLines,
+	type ImportOptions,
+	type ImportResult,
+	importLines,
+} from "./store/transfer.js";
 export type {
+	IndexHit,
 	Node,
 	Note,
 	NoteState,
@@ -242,56 +236,13 @@ export {
 } from "./store/view.js";
 export { type ErrorCode, MemlensError } from "./types/errors.js";
 // Type exports
-export type {
-	AmendEvent,
-	DismissEvent,
-	Event,
-	HideEvent,
-	InvalidateEvent,
-	IsoDate,
-	IsoTime,
-	JsonlLine,
-	NodeEvent,
-	NoteEvent,
-	NoteKind,
-	RedactEvent,
-	ReviewEvent,
-	SanitizedAmendEvent,
-	SanitizedEvent,
-	SanitizedNodeEvent,
-	SanitizedNoteEvent,
-	ScopeKey,
-	Ulid,
-} from "./types/events.js";
-export type {
-	Projection,
-	ProjectionRecord,
-	RangeNode,
-	RecordState,
-	ScopeCount,
-	SlotRev,
-} from "./types/projection.js";
-export { PROJECTION_VERSION } from "./types/projection.js";
-export type {
-	AppendEvent,
-	IndexHit,
-	IndexPort,
-	NodeAppendResult,
-	StorePort,
-	StoreRev,
-} from "./types/store.js";
+export type { IsoTime, NoteKind, ScopeKey, Ulid } from "./types/events.js";
 export type {
 	BuildChild,
 	BuildInput,
-	Id,
 	Level,
 	Lines,
-	Order,
 	Pos,
 	Range,
-	Rev,
 	SliceLine,
-	Tree,
-	TreeNode,
-	TreeRecord,
 } from "./types/tree.js";

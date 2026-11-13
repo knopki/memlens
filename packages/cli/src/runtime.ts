@@ -6,15 +6,14 @@
  * @purpose Give each CLI command one opened store and one resolved configuration, so no command
  * reads files or the environment itself.
  * @scope
- *  - The base TOML load with a built-in fallback, the CLI store path order, the backend choice,
- *    the profile scopes of the store, and the visible scope list.
+ *  - The base TOML load with a built-in fallback, the CLI store path order, the profile scopes,
+ *    and the visible scope list.
  *  - NOT: command semantics, argument parsing, output formats, and the harness patch.
  * @invariants
  *  - The store path order is --store, then MEMLENS_STORE, then the base file.
  *  - A missing base file falls back to a built-in default configuration with 20 here lines, 10
  *    directions lines, and the sqlite backend, and the CLI writes no file.
- *  - The store opens a second time with the profile scopes of the configuration, so a write plans
- *    invalidations for the catalog of each profile.
+ *  - Each runtime owns one row store and the visible scopes of its selected profile.
  * @usecases
  *  - Open: command => gives --store and a profile name => gets one runtime and closes it
  * @dependencies USES API: @memlens/core; READS: config.toml, the store directory
@@ -25,27 +24,17 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { debuglog } from "node:util";
-import type {
-	BaseConfig,
-	Projection,
-	ProjectionRecord,
-	ResolvedConfig,
-	ScopeKey,
-	StoreConfig,
-	StorePort,
-} from "@memlens/core";
+import type { BaseConfig, ResolvedConfig, ScopeKey } from "@memlens/core";
 import {
 	activeScope,
 	expandTilde,
 	globMatches,
 	isCatalogKey,
-	JsonlStore,
+	liveCounts,
 	loadBaseConfig,
 	MemlensError,
-	normalizeScopeKey,
-	parseAddress,
 	resolveConfig,
-	SqliteStore,
+	Store,
 	storePath,
 	visibleScopes,
 	xdgDirs,
@@ -58,7 +47,6 @@ export const DEFAULT_CONFIG_TOML = `language = "en"
 defaultProfile = "default"
 
 [store]
-backend = "sqlite"
 idle = 300
 
 [compaction]
@@ -81,17 +69,14 @@ rules = []
 default = "user:notes"
 `;
 
-/** One opened CLI runtime: the configuration, the store, and the first projection. */
+/** One opened CLI runtime: configuration, a row store, and visible profile scopes. */
 export interface Runtime {
 	readonly base: BaseConfig;
 	readonly config: ResolvedConfig;
-	/** The resolved store directory. */
 	readonly path: string;
-	readonly store: StorePort;
-	readonly projection: Projection;
-	/** The visible scopes of each profile, for a dry-run that plans an import. */
+	readonly store: Store;
+	readonly scopes: readonly ScopeKey[];
 	readonly profiles: ReadonlyMap<string, readonly ScopeKey[]>;
-	/** Close the store. Each command calls this before it returns. */
 	close(): Promise<void>;
 }
 
@@ -119,12 +104,12 @@ function readCliFile(path: string): string | null {
 }
 
 // #region FUNC_openRuntime
+
 /**
  * Resolve the configuration and open the store of the CLI.
  *
  * @purpose Give one command one consistent runtime, so each command sees the same store rules.
- * @invariants The profile name comes from the caller and must exist in the base layer. The store
- * reopens with the resolved profile scopes before the runtime returns.
+ * @invariants The profile name comes from the caller and must exist in the base layer.
  */
 export async function openRuntime(options: {
 	storeFlag: string | null;
@@ -145,27 +130,28 @@ export async function openRuntime(options: {
 		storePath(options.storeFlag, env.MEMLENS_STORE ?? null, base.store),
 		env,
 	);
-	const store = openBackend(config, path, new Map());
-	const first = await store.projection();
-	const scopes = profileScopes(base, first);
-	await store.close();
-	debug("Runtime reopens", {
-		event: "reopen",
-		path,
-		profiles: scopes.size,
-	});
-	const final = openBackend(config, path, scopes);
-	const projection = await final.projection();
+	const store = new Store(path, config.language);
+	const counts = liveCounts(store);
+	const known = [...counts.keys()];
+	const profiles = new Map(
+		Object.entries(base.profile).map(([name, item]) => [
+			name,
+			visibleScopes(item.scopes, known),
+		]),
+	);
+	const scopes = profiles.get(profile) ?? [];
+	debug("Runtime opened", { event: "open", path, profiles: profiles.size });
 	return {
 		base,
 		config,
 		path,
-		store: final,
-		projection,
-		profiles: scopes,
-		close: () => final.close(),
+		store,
+		scopes,
+		profiles,
+		close: async () => store.close(),
 	};
 }
+
 // #endregion FUNC_openRuntime
 
 /** Resolve the configuration for one profile name, without a patch and without a preset. */
@@ -178,10 +164,7 @@ export function resolveForProfile(
 
 /** The visible scope keys of the profile of the runtime. */
 export function runtimeVisibleScopes(runtime: Runtime): readonly ScopeKey[] {
-	return visibleScopes(
-		runtime.config.profile.scopes,
-		runtime.projection.scopeOrder,
-	);
+	return runtime.scopes;
 }
 
 /**
@@ -198,35 +181,4 @@ export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
 /** The active scope key of one directory from the rules of the base layer. */
 export function cliActiveScope(base: BaseConfig, cwd: string): ScopeKey {
 	return activeScope(base.scope_default, { path: cwd }).key;
-}
-
-function openBackend(
-	config: ResolvedConfig,
-	path: string,
-	scopes: ReadonlyMap<string, readonly ScopeKey[]>,
-): StorePort {
-	const open = (store: StoreConfig) =>
-		store.backend === "jsonl"
-			? new JsonlStore(path, scopes, config.language)
-			: new SqliteStore(path, scopes, config.language);
-	const store = open(config.store);
-	debug("Store opened", {
-		event: "open",
-		backend: config.store.backend,
-		profiles: scopes.size,
-	});
-	return store;
-}
-
-/** Resolve the visible scopes of each profile of the base layer against the known scopes. */
-function profileScopes(
-	base: BaseConfig,
-	projection: Projection,
-): ReadonlyMap<string, readonly ScopeKey[]> {
-	return new Map(
-		Object.entries(base.profile).map(([name, profile]) => [
-			name,
-			visibleScopes(profile.scopes, projection.scopeOrder),
-		]),
-	);
 }

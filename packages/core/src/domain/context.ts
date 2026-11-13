@@ -20,10 +20,9 @@
  * {{append}}. A missing append leaves an empty line.
  * - The epoch derives from the store clock only. A change of the clock changes the epoch.
  * - The text names no review date and no catalog key.
- * - The projection branch serves the frontend packages until their read path moves to the store.
  * @dependencies
- * USES API: store/view.ts (sliceOf, topLineOf, textOfLine), domain/tree.ts (legacy slice)
- * READS: View, SliceLine, DirectionLine, Tree
+ * USES API: store/view.ts (sliceOf, topLineOf, textOfLine)
+ * READS: View, SliceLine, DirectionLine
  * @keywords context, slice, snapshot, directions, frontier, policy, template, epoch
  * #endregion moduleContract
  */
@@ -33,9 +32,8 @@ import type { DirectionLine } from "../store/reads.js";
 import type { View } from "../store/view.js";
 import { sliceOf } from "../store/view.js";
 import type { IsoTime, ScopeKey } from "../types/events.js";
-import type { Lines, SliceLine, Tree } from "../types/tree.js";
+import type { Lines, SliceLine } from "../types/tree.js";
 import { dateSpan } from "./time.js";
-import { slice } from "./tree.js";
 
 const debug = debuglog("memlens:context");
 
@@ -103,22 +101,8 @@ export interface ContextInput {
 	readonly customPromptAppend?: string;
 }
 
-/** The inputs of one context render from the projection trees, for the frontend packages. */
-export interface TreeContextInput {
-	readonly scope: ScopeKey;
-	readonly here: Tree;
-	readonly hereBudget: Lines;
-	readonly catalog: Tree;
-	readonly catalogScopes: readonly DirectionScope[];
-	readonly directionsBudget: Lines;
-	readonly now: IsoTime;
-	readonly policy?: string;
-	readonly append?: string;
-	readonly customPrompt?: string;
-	readonly customPromptAppend?: string;
-}
-
 // #region FUNC_hereLines
+
 /**
  * @purpose Render the frontier lines of the active scope from its rows.
  * @invariants A leaf gives #<pos> <YYYY-MM-DD> <body>. A node gives #<a>-<b> <start>..<end> <summary>,
@@ -130,6 +114,7 @@ export function hereLines(view: View, budget: Lines): string {
 	debug("Frontier rendered", { budget, chars: text.length });
 	return text;
 }
+
 // #endregion FUNC_hereLines
 
 /** @purpose Render one here line of a slice line. */
@@ -160,6 +145,7 @@ function ageSpan(days: readonly number[]): string {
 }
 
 // #region FUNC_directionLines
+
 /**
  * @purpose Render the directions block: the older scopes, then the budgeted scopes, oldest first.
  * @invariants Each budgeted scope gives one line [<key>] <age> <text>. A null text leaves the head.
@@ -189,21 +175,22 @@ export function directionLines(
 	});
 	return block;
 }
+
 // #endregion FUNC_directionLines
 
 // #region FUNC_renderContext
+
 /**
  * @purpose Fill the context template with the policy and the two rendered parts.
  * @invariants customPrompt replaces the template and keeps each placeholder. customPromptAppend
  * fills {{append}} before the append value. The render calls no model and waits for no compaction.
- * A projection input takes the frontend branch; a view input takes the store branch.
  */
-export function renderContext(input: ContextInput | TreeContextInput): string {
-	const text =
-		"catalog" in input ? renderTreeContext(input) : renderViewContext(input);
+export function renderContext(input: ContextInput): string {
+	const text = renderViewContext(input);
 	debug("Context rendered", { scope: input.scope, chars: text.length });
 	return text;
 }
+
 // #endregion FUNC_renderContext
 
 /** @purpose Fill the template from the rows of the active scope. */
@@ -214,22 +201,9 @@ function renderViewContext(input: ContextInput): string {
 	});
 }
 
-/** @purpose Fill the template from the projection trees, until the frontends read the store. */
-function renderTreeContext(input: TreeContextInput): string {
-	return fillTemplate(input, {
-		directions: treeDirectionLines(
-			input.catalog,
-			input.catalogScopes,
-			input.directionsBudget,
-			input.now,
-		),
-		here: treeHereLines(input.here, input.hereBudget),
-	});
-}
-
 /** @purpose Replace each template placeholder with one value of the render. */
 function fillTemplate(
-	input: ContextInput | TreeContextInput,
+	input: ContextInput,
 	parts: { readonly directions: string; readonly here: string },
 ): string {
 	return (input.customPrompt ?? CONTEXT_TEMPLATE)
@@ -241,6 +215,7 @@ function fillTemplate(
 }
 
 // #region FUNC_epoch
+
 /**
  * @purpose Derive the context epoch from the store clock into one view cache key.
  * @invariants The epoch changes when the clock changes. The hash keeps the key short.
@@ -253,47 +228,5 @@ export function epoch(storeRev: string): string {
 	}
 	return hash.toString(16);
 }
+
 // #endregion FUNC_epoch
-
-// #region FUNC_treeHereLines
-/**
- * @purpose Render the here part from the projection tree, until the frontends read the store.
- * @invariants The line forms equal the forms of the store branch.
- */
-export function treeHereLines(tree: Tree, budget: Lines): string {
-	return slice(tree, budget).map(lineText).join("\n");
-}
-// #endregion FUNC_treeHereLines
-
-// #region FUNC_treeDirectionLines
-/**
- * @purpose Render one direction line for each range of visible scopes of the catalog fold.
- * @invariants A line above one scope joins each covered key with a comma and gives the idle span.
- */
-export function treeDirectionLines(
-	catalog: Tree,
-	scopes: readonly DirectionScope[],
-	budget: Lines,
-	now: IsoTime,
-): string {
-	return slice(catalog, budget)
-		.map((line) => {
-			const start = line.kind === "record" ? line.pos : line.range.start;
-			const width = line.kind === "record" ? 1 : 2 ** line.range.level;
-			const covered = scopes.slice(start, start + width);
-			const keys = covered.map((scope) => scope.key).join(",");
-			const span = ageSpan(
-				covered.map((scope) => idleAge(scope.lastWrite, now)),
-			);
-			const head = `[${keys}] ${span}`;
-			const text =
-				line.kind === "summary"
-					? line.summary
-					: line.kind === "temporary"
-						? line.text
-						: line.body;
-			return text ? `${head} ${text}` : head;
-		})
-		.join("\n");
-}
-// #endregion FUNC_treeDirectionLines

@@ -24,27 +24,38 @@ export type BuildRead = {
 	readonly bKey: string | null;
 	readonly aText: string | null;
 	readonly bText: string | null;
+	/** The longform preview of a leaf half: the first 1024 characters. */
+	readonly aPreview: string | null;
+	readonly bPreview: string | null;
 	readonly tsFrom: string;
 	readonly tsTo: string;
 	readonly fits: boolean;
 };
 
-type Half = { key: string | null; text: string | null } | null;
+type Half = {
+	key: string | null;
+	text: string | null;
+	preview: string | null;
+} | null;
 
 /** @purpose Read one ready child or detect an unready child. */
 function half(view: View, level: number, start: number): Half {
 	const live = view.notes.filter(
 		(n) => n.state === "live" && n.pos >= start && n.pos < start + 2 ** level,
 	);
-	if (!live.length) return { key: null, text: null };
+	if (!live.length) return { key: null, text: null, preview: null };
 	if (level === 0) {
 		const note = live[0];
 		if (!note) return null;
-		return { key: `${note.v_content}|${note.state}`, text: note.body };
+		return {
+			key: `${note.v_content}|${note.state}`,
+			text: note.body,
+			preview: (note.longform ?? "").slice(0, 1024),
+		};
 	}
 	const node = nodeAt(view, level, start);
 	return node && nodeValid(view, node)
-		? { key: node.built_v, text: node.summary }
+		? { key: node.built_v, text: node.summary, preview: null }
 		: null;
 }
 
@@ -66,6 +77,8 @@ function snapshot(view: View, level: number, start: number): BuildRead | null {
 		bKey: b.key,
 		aText: a.text,
 		bText: b.text,
+		aPreview: a.preview,
+		bPreview: b.preview,
 		tsFrom: first.ts,
 		tsTo: last.ts,
 		fits: joinText(a.text ?? "", b.text ?? "").fits,
@@ -73,6 +86,7 @@ function snapshot(view: View, level: number, start: number): BuildRead | null {
 }
 
 // #region FUNC_readBuild
+
 /** @purpose Capture the ready children of one covered range in one read transaction. */
 export function readBuild(
 	store: Store,
@@ -86,9 +100,11 @@ export function readBuild(
 	debug("Build read", { scope, level, start, ready: result !== null });
 	return result ?? { ok: false, reason: "empty" };
 }
+
 // #endregion FUNC_readBuild
 
 // #region FUNC_publishNode
+
 /** @purpose Publish a summary only when both captured child keys still match. */
 export function publishNode(
 	store: Store,
@@ -128,9 +144,11 @@ export function publishNode(
 	debug("Node published", { scope, level, start, version: result.version });
 	return { ok: true, version: result.version };
 }
+
 // #endregion FUNC_publishNode
 
 // #region FUNC_publishJoin
+
 /** @purpose Publish a whole child join without a model call. */
 export function publishJoin(
 	store: Store,
@@ -151,9 +169,11 @@ export function publishJoin(
 		read,
 	);
 }
+
 // #endregion FUNC_publishJoin
 
 // #region FUNC_candidates
+
 /** @purpose List covered ranges without valid cache rows, with older coverage first. */
 export function candidates(store: Store, scope: ScopeKey): readonly Range[] {
 	return store.read((db) => {
@@ -184,4 +204,5 @@ export function candidates(store: Store, scope: ScopeKey): readonly Range[] {
 		return result;
 	});
 }
+
 // #endregion FUNC_candidates

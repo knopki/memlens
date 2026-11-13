@@ -29,6 +29,7 @@ export const LANG_NAMES: Readonly<Record<Lang, string>> = {
 };
 
 // #region BLOCK_english
+
 /** The English messages. This table is the key set of every other language. */
 const en = {
 	// The chrome.
@@ -199,6 +200,7 @@ import { zh } from "./lang/zh.js";
 export type Table = Readonly<Record<keyof typeof en, string>>;
 
 // #region BLOCK_tables
+
 /** The messages of each language. */
 export const MESSAGES: Readonly<Record<Lang, Table>> = {
 	en,
@@ -210,9 +212,11 @@ export const MESSAGES: Readonly<Record<Lang, Table>> = {
 	ru,
 	zh,
 };
+
 // #endregion BLOCK_tables
 
 // #region FUNC_messages
+
 /**
  * @purpose Give the table of one language with the English fallback.
  * @invariants An unknown code gives English. A missing key gives the English text.
@@ -223,9 +227,11 @@ export function messages(code: string): Table {
 	if (!table) return en;
 	return table;
 }
+
 // #endregion FUNC_messages
 
 // #region FUNC_fill
+
 /**
  * @purpose Replace each {name} placeholder in one message.
  * @invariants An absent value keeps the placeholder out of the text and writes nothing.
@@ -238,6 +244,7 @@ export function fill(
 		name in values ? String(values[name]) : "",
 	);
 }
+
 // #endregion FUNC_fill
 
 /** The kind labels of the note kinds. */

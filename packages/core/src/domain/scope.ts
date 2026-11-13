@@ -28,6 +28,7 @@ export const CATALOG_PREFIX = "__catalog__:";
 const SEGMENT_RE = /^[a-z0-9][a-z0-9._/-]*$/;
 
 // #region FUNC_normalizeScopeKey
+
 /**
  * @purpose Normalize a scope key to lowercase before writing, so a wrong case does not create a new scope.
  * @param raw - The scope key as supplied by the caller.
@@ -38,9 +39,11 @@ export function normalizeScopeKey(raw: string): string {
 	debug("Scope key normalized", { event: "normalize", raw, result });
 	return result;
 }
+
 // #endregion FUNC_normalizeScopeKey
 
 // #region FUNC_validateScopeKey
+
 /**
  * @purpose Reject a key that does not match the scope grammar, so no invalid key enters the store.
  * @param key - The normalized scope key.
@@ -62,6 +65,7 @@ export function validateScopeKey(key: string): key is ScopeKey {
 	debug("Scope key validated", { event: "validate", key, result });
 	return result;
 }
+
 // #endregion FUNC_validateScopeKey
 
 /** Check whether a key is a hidden catalog key. */

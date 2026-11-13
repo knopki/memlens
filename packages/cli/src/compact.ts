@@ -1,57 +1,18 @@
-/**
- * The compaction job of the CLI.
- *
- * #region moduleContract
- * @modulecontract
- * @purpose Give the dirty ranges of one scope to a human or an agent as one job, and write the
- * answers back as node events, so the tree builds in the terminal with no model.
- * @scope
- *  - The copy publication, the merge inputs of one job, the job text, and the answer application.
- *  - NOT: the background compaction, the model calls, and the store logic.
- * @invariants
- *  - The scope comes from --scope or from the active scope of the working directory, and the
- *    profile must list it.
- *  - A copy input or a fitting pair publishes with no model call and no answer. The publication
- *    repeats in rounds until one round publishes nothing, and the job lists the merge inputs
- *    from a fresh projection after the last round.
- *  - The job shows the merge task of each input. The flag --max limits the merge inputs of one job.
- *  - The answer file holds one "#a-b: text" line for each range. The flag --answer applies the
- *    answers through the input check of the store.
- *  - An empty answer gives an error. An answer above the node limit cuts with the truncated flag.
- *    The shrink check applies to no answer.
- *  - The flag --dry-run writes nothing and lists the job.
- *  - A rejected answer names a changed input. The next job lists its range again.
- *  - The console host calls prepareCompact and applyAnswers, so one job format serves both hosts.
- * @usecases
- *  - Job: user => runs compact => answers the job => runs compact --answer => gets built nodes
- * @dependencies
- *  USES API: @memlens/core, args.ts, commands.ts, runtime.ts
- *  WRITES: the store directory
- * @keywords compact, job, merge, answer, copy, node, tree
- * #endregion moduleContract
- */
-
 import { readFileSync } from "node:fs";
-import { debuglog, isDeepStrictEqual } from "node:util";
-import type {
-	BuildInput,
-	LineBuild,
-	Projection,
-	ScopeKey,
-	Tree,
-} from "@memlens/core";
+import { debuglog } from "node:util";
+import type { BuildChild, BuildInput, ScopeKey } from "@memlens/core";
 import {
 	answerLine,
 	batchTask,
-	buildInput,
 	candidates,
 	copyBuild,
 	joinBuild,
 	MemlensError,
 	NODE_TARGET,
-	nodeEvent,
 	normalizeScopeKey,
-	scopeTree,
+	publishJoin,
+	publishNode,
+	readBuild,
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import { type CommandIo, countFlag, flagValue } from "./commands.js";
@@ -79,42 +40,50 @@ export interface CompactJob {
 	readonly joined: number;
 }
 
-/** The merge inputs with two live children, in candidate order. */
-function mergeInputs(tree: Tree): readonly BuildInput[] {
-	return readyInputs(tree).filter((input) => live(input) === 2);
-}
-
-/** Each ready build input of the dirty ranges of the tree, in candidate order. */
-function readyInputs(tree: Tree): readonly BuildInput[] {
-	return candidates(tree)
-		.map((range) => buildInput(tree, range))
-		.filter((input): input is BuildInput => input !== null);
-}
-
-/** The count of live children of one input. */
-function live(input: BuildInput): number {
-	return input.children.filter((child) => child !== null).length;
-}
-
-/** One input that publishes with no model call: a copy or the join of a fitting pair. */
-interface MechanicalLine {
-	readonly input: BuildInput;
-	readonly line: Extract<LineBuild, { ok: true }>;
-	readonly join: boolean;
-}
-
-/** Each ready input of the tree that publishes with no model call, in candidate order. */
-function mechanicalInputs(tree: Tree): readonly MechanicalLine[] {
-	const result: MechanicalLine[] = [];
-	for (const input of readyInputs(tree)) {
-		if (live(input) < 2) {
-			result.push({ input, line: copyBuild(input), join: false });
-			continue;
-		}
-		const line = joinBuild(input);
-		if (line) result.push({ input, line, join: true });
-	}
-	return result;
+/** Read the current build input for one candidate range. */
+function buildInput(
+	store: Runtime["store"],
+	scope: ScopeKey,
+	range: { level: number; start: number },
+) {
+	const read = readBuild(store, scope, range.level, range.start);
+	if (!read.ok) return null;
+	const width = 2 ** (range.level - 1);
+	const child = (
+		text: string | null,
+		key: string | null,
+		start: number,
+	): BuildChild | null => {
+		if (text === null) return null;
+		if (range.level === 1)
+			return {
+				kind: "record" as const,
+				id: key ?? "",
+				pos: start,
+				body: text,
+				preview:
+					start === range.start ? (read.aPreview ?? "") : (read.bPreview ?? ""),
+				ts: start === range.start ? read.tsFrom : read.tsTo,
+			};
+		return {
+			kind: "node" as const,
+			id: key ?? "",
+			range: { start, level: range.level - 1 },
+			summary: text,
+			ts_from: read.tsFrom,
+			ts_to: read.tsTo,
+		};
+	};
+	return {
+		read,
+		input: {
+			range,
+			children: [
+				child(read.aText, read.aKey, range.start),
+				child(read.bText, read.bKey, range.start + width),
+			] as const,
+		},
+	};
 }
 
 /** The scope of the compaction: --scope, or the active scope of the working directory. */
@@ -141,6 +110,7 @@ async function compactRuntime(
 }
 
 // #region FUNC_compactCommand
+
 /**
  * Give the next compaction job of one scope, or apply one answer file.
  *
@@ -164,9 +134,11 @@ export async function compactCommand(
 	debug("Compact done", { event: "end", scope });
 	return result;
 }
+
 // #endregion FUNC_compactCommand
 
 // #region FUNC_prepareCompact
+
 /**
  * Publish the copies and joins of one tree and give the merge inputs that remain.
  *
@@ -179,7 +151,6 @@ export async function compactCommand(
 export async function prepareCompact(
 	runtime: Runtime,
 	scope: ScopeKey,
-	treeOf: (projection: Projection) => Tree,
 	options: {
 		readonly dryRun?: boolean;
 		readonly max?: number;
@@ -188,54 +159,84 @@ export async function prepareCompact(
 ): Promise<CompactJob> {
 	const dryRun = options.dryRun === true;
 	const max = options.max ?? 50;
-	const first = treeOf(runtime.projection);
-	const found = mechanicalInputs(first).length;
+	const ready = () =>
+		candidates(runtime.store, scope).flatMap((range) => {
+			const result = buildInput(runtime.store, scope, range);
+			return result ? [{ range, result }] : [];
+		});
+	const first = ready();
 	let published = 0;
 	let joined = 0;
 	if (!dryRun) {
-		let current = first;
 		for (let round = 1; ; round += 1) {
-			const ready = mechanicalInputs(current);
-			if (!ready.length) break;
 			let accepted = 0;
-			for (const item of ready) {
-				const appended = await runtime.store.appendNode(
-					item.input,
-					nodeEvent(scope, current, item.input, item.line),
-				);
-				if (appended.ok) {
-					accepted += 1;
-					published += 1;
-					if (item.join) joined += 1;
+			let roundJoins = 0;
+			for (const {
+				range,
+				result: { input, read },
+			} of ready()) {
+				const [left, right] = input.children;
+				const joinedLine = left && right ? joinBuild(input) : null;
+				if (joinedLine) {
+					const result = publishJoin(
+						runtime.store,
+						scope,
+						range.level,
+						range.start,
+						read,
+					);
+					if (result.ok) {
+						accepted += 1;
+						roundJoins += 1;
+					}
+				} else if (!left || !right) {
+					const line = copyBuild(input);
+					const result = publishNode(
+						runtime.store,
+						scope,
+						range.level,
+						range.start,
+						line.summary,
+						read,
+					);
+					if (result.ok) accepted += 1;
 				}
 			}
+			published += accepted;
+			joined += roundJoins;
 			debug("Mechanical round", {
 				event: "round",
 				round,
-				found: ready.length,
+				found: ready().length,
 				accepted,
 			});
 			if (!accepted) break;
-			current = treeOf(await runtime.store.projection());
 		}
 	}
-	const tree = dryRun ? first : treeOf(await runtime.store.projection());
-	const inputs = mergeInputs(tree).slice(0, max);
-	const job = inputs.length
-		? batchTask(NODE_TARGET, inputs, options.scopeKeys)
-		: "";
-	debug("Job prepared", {
-		event: "prepare",
-		copies: found,
+	const inputs = ready()
+		.filter(
+			({ result: { input } }) => input.children.filter(Boolean).length === 2,
+		)
+		.map(({ result: { input } }) => input)
+		.slice(0, max);
+	return {
+		inputs,
+		job: inputs.length
+			? batchTask(NODE_TARGET, inputs, options.scopeKeys).replace(
+					/<input id="(#[^"]+)">/g,
+					"$1",
+				)
+			: "",
+		found: first.length,
 		published,
-		joins: joined,
-		merges: inputs.length,
-	});
-	return { inputs, job, found, published, joined };
+		joined,
+	};
 }
+
 // #endregion FUNC_prepareCompact
 
 // #region FUNC_compactJob
+
 /**
  * Print the job of the merge inputs.
  *
@@ -252,12 +253,10 @@ async function compactJob(
 	const runtime = await compactRuntime(args, io, scope);
 	try {
 		const dryRun = args.flags["dry-run"] === true;
-		const job = await prepareCompact(
-			runtime,
-			scope,
-			(projection) => scopeTree(projection, scope),
-			{ dryRun, max: countFlag(args.flags, "max", 50) },
-		);
+		const job = await prepareCompact(runtime, scope, {
+			dryRun,
+			max: countFlag(args.flags, "max", 50),
+		});
 		const head = [
 			`scope: ${scope}`,
 			dryRun
@@ -268,7 +267,7 @@ async function compactJob(
 			? [
 					`Then run: memlens compact --answer <path> --scope ${scope}`,
 					"",
-					job.job,
+					job.job.replace(/<input id="(#[^"]+)">/g, "$1"),
 				].join("\n")
 			: "no merge inputs";
 		debug("Job listed", { event: "job", merges: job.inputs.length });
@@ -277,44 +276,63 @@ async function compactJob(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_compactJob
 
+/** @purpose Render one build input with sorted keys, so an input check ignores the field order. */
+function canonical(value: unknown): string {
+	return JSON.stringify(value, (_key, item) =>
+		item !== null && typeof item === "object" && !Array.isArray(item)
+			? Object.fromEntries(
+					Object.keys(item)
+						.sort()
+						.map((key) => [key, (item as Record<string, unknown>)[key]]),
+				)
+			: item,
+	);
+}
+
 // #region FUNC_applyAnswers
+
 /**
  * Write one answer for each range into the store as node events.
  *
  * @purpose Turn the answers of a job into built nodes through one rule set for both hosts.
  * @invariants An empty answer gives a Data error. The store checks the exact input under the write
  * lock, and a changed input counts as rejected with its address. The shrink check applies to no answer.
- * A copied job rejects an answer whose current input differs from the copied input.
  */
 export async function applyAnswers(
 	runtime: Runtime,
 	scope: ScopeKey,
-	tree: Tree,
+	_tree: unknown,
 	answers: readonly Answer[],
 	copied: readonly BuildInput[] | null = null,
 ): Promise<{ readonly built: number; readonly rejected: readonly string[] }> {
 	let built = 0;
 	const rejected: string[] = [];
 	for (const answer of answers) {
-		const input = buildInput(tree, answer.range);
+		const current = buildInput(runtime.store, scope, answer.range);
 		if (
-			input === null ||
+			current === null ||
 			(copied !== null &&
-				!copied.some((value) => isDeepStrictEqual(value, input)))
+				!copied.some((value) => canonical(value) === canonical(current.input)))
 		) {
 			rejected.push(answer.addr);
 			continue;
 		}
+		const { input, read } = current;
 		const line = answerLine(input, answer.text);
 		if (!line.ok)
 			throw new MemlensError("Data", `The answer for ${answer.addr} is empty.`);
-		const appended = await runtime.store.appendNode(
-			input,
-			nodeEvent(scope, tree, input, line),
+		const result = publishNode(
+			runtime.store,
+			scope,
+			input.range.level,
+			input.range.start,
+			line.summary,
+			read,
 		);
-		if (appended.ok) built += 1;
+		if (result.ok) built += 1;
 		else rejected.push(answer.addr);
 	}
 	debug("Answers applied", {
@@ -324,9 +342,11 @@ export async function applyAnswers(
 	});
 	return { built, rejected };
 }
+
 // #endregion FUNC_applyAnswers
 
 // #region FUNC_compactAnswer
+
 /**
  * Apply one answer file as node events.
  *
@@ -343,11 +363,10 @@ async function compactAnswer(
 	const runtime = await compactRuntime(args, io, scope);
 	try {
 		const answers = parseAnswerFile(answerPath);
-		const tree = scopeTree(await runtime.store.projection(), scope);
 		const { built, rejected } = await applyAnswers(
 			runtime,
 			scope,
-			tree,
+			null,
 			answers,
 		);
 		const hint =
@@ -359,6 +378,7 @@ async function compactAnswer(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_compactAnswer
 
 /** One parsed answer line: the range, its address, and the answer text. */
@@ -369,6 +389,7 @@ export interface Answer {
 }
 
 // #region FUNC_parseAnswers
+
 /**
  * @purpose Turn answer lines into aligned ranges for both hosts.
  * @invariants Each line needs the form "#a-b: text", and the range must be aligned at its level.
@@ -408,6 +429,7 @@ export function parseAnswers(text: string): readonly Answer[] {
 		throw new MemlensError("Data", "The answer holds no line.");
 	return answers;
 }
+
 // #endregion FUNC_parseAnswers
 
 /** Read one answer file and check the form of each line. */

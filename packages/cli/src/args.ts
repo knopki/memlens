@@ -47,6 +47,7 @@ function usageError(message: string): never {
 }
 
 // #region FUNC_parseArgs
+
 /**
  * Parse one command line against its usage.
  *
@@ -106,4 +107,5 @@ export function parseArgs(
 	});
 	return { positional, flags };
 }
+
 // #endregion FUNC_parseArgs

@@ -28,7 +28,6 @@ const config = () =>
 			`
 defaultProfile = "work"
 [store]
-backend = "sqlite"
 [compaction]
 provider = "test"
 model = "test"

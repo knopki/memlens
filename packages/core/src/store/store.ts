@@ -27,6 +27,7 @@ import { openDatabase, SCHEMA_VERSION } from "./schema.js";
 const debug = debuglog("memlens:store");
 
 // #region CLASS_Store
+
 /**
  * @purpose Hold one database handle and own every write transaction of the store.
  * @invariants Reads use the same handle with one statement or a short deferred transaction.
@@ -40,9 +41,11 @@ export class Store {
 		mkdirSync(directory, { recursive: true });
 		this.db = openDatabase(join(directory, "memlens.db"), language);
 	}
+
 	// #endregion CLASS_Store
 
 	// #region METHOD_publish
+
 	/**
 	 * @purpose Run one change under the write lock and tick the clock when the change writes.
 	 * @invariants A failed change rolls back and leaves the clock at its earlier value.
@@ -82,9 +85,11 @@ export class Store {
 			throw error;
 		}
 	}
+
 	// #endregion METHOD_publish
 
 	// #region METHOD_receive
+
 	/**
 	 * @purpose Raise the clock above each imported version.
 	 * @invariants The call runs in a write transaction and changes no note row.
@@ -92,6 +97,7 @@ export class Store {
 	acceptVersions(versions: readonly string[]): void {
 		this.publish(() => receive(this.clock(), versions));
 	}
+
 	// #endregion METHOD_receive
 
 	/** @purpose Read one value from the meta table. */
@@ -114,6 +120,7 @@ export class Store {
 	}
 
 	// #region METHOD_truncate
+
 	/**
 	 * @purpose Move each committed frame into the database file and empty the write-ahead log.
 	 * @invariants The call runs outside a transaction. A busy result is a state, not an error.
@@ -125,9 +132,11 @@ export class Store {
 		debug("Checkpoint", { event: "checkpoint", busy });
 		return !busy;
 	}
+
 	// #endregion METHOD_truncate
 
 	// #region METHOD_transaction
+
 	/** @purpose Run one read in a deferred transaction, so each statement sees one state. */
 	read<T>(work: (db: DatabaseSync) => T): T {
 		this.requireOpen();
@@ -138,6 +147,7 @@ export class Store {
 			this.db.exec("COMMIT");
 		}
 	}
+
 	// #endregion METHOD_transaction
 
 	/** @purpose Give the caller the open handle for a read model. */
@@ -147,6 +157,7 @@ export class Store {
 	}
 
 	// #region METHOD_close
+
 	/** @purpose Truncate the log and release the handle once. */
 	close(): void {
 		if (this.closed) return;
@@ -155,6 +166,7 @@ export class Store {
 		this.closed = true;
 		debug("Store close", { event: "close" });
 	}
+
 	// #endregion METHOD_close
 
 	/** @purpose Read the clock, or create it on the first call of a new store. */
@@ -184,6 +196,7 @@ export class Store {
 }
 
 // #region CLASS_Tx
+
 /**
  * @purpose Give one publish call its transaction, its store identity, and its journal writer.
  * @invariants The transaction owns every statement of the change. The caller writes no BEGIN.
@@ -216,6 +229,7 @@ export class Tx {
 			);
 	}
 }
+
 // #endregion CLASS_Tx
 
 /** @purpose Give one clock state its next version. */

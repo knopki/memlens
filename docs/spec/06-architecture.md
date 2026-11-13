@@ -1,12 +1,11 @@
 # Architecture
 
-Status: draft. The core, CLI, and standalone console have implementations. The plugin has a scaffold.
+Status: the storage pivot uses one SQLite row store. The core and CLI have implementations. The standalone console uses the store. The plugin has a scaffold.
 The global requirements define cross-module behavior. Code contracts define implemented local behavior.
 
 ## Shape
 
-The memory is a log of notes and of nodes. A tree of nodes stands above the notes. Two levels share
-one engine:
+One SQLite database holds normalized note and summary rows. Current rows are the truth. Reads and writes do not replay history. A tree of summary rows stands above notes:
 
 - The notes of a scope make the leaves.
 - The catalog of nodes is the level above the notes. It has its own tree and belongs
@@ -18,7 +17,7 @@ The agent reads one map of directions: the catalog in the `<directions>` section
 
 | Path                  | Package               | Role                                                                 |
 | --------------------- | --------------------- | -------------------------------------------------------------------- |
-| `packages/core`       | `@memlens/core`       | The engine: the configuration, store ports, the projection, the tree build, the slice. |
+| `packages/core`       | `@memlens/core`       | The engine: one row store, configuration, reads, tree build, and slice. |
 | `packages/cli`        | `@memlens/cli`        | The terminal and HTTP host: the console command, redact, amend, import, export. |
 | `packages/ui`         | `@memlens/ui`         | The browser client: seven screens with native DOM controls. |
 | `packages/dsh-plugin` | `@memlens/dsh-plugin` | The harness surface: the entry points `.` and `./preset`, the tools. |
@@ -47,8 +46,7 @@ external, because the harness gives them at run time.
 
 ## Event log
 
-The log holds events. An event has `id` (ULID), `at`, `op`, and `scope`. The payload belongs to the
-op. A `redact` clears the content of its target.
+The database holds current note, node, and proposal rows. A note has a stable id, scope, content, and metadata. A redact clears the target content.
 
 | Op        | Payload                                                                                                                                                   |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -71,7 +69,7 @@ An `invalidate` event changes no note and deletes no text. See [0015 Node invali
 
 An event has two times: `at` is the time of the log, and `ts` is the time of the write of a note. Only
 the `note` event carries `session`, `turn`, and `preset`.
-The [validation contract](../../packages/core/src/domain/validation.ts) owns required fields, permitted payloads, dates, and target types.
+The store validates required fields, dates, and targets before each write.
 
 A position is not an event field. It derives from real record entries into a scope in canonical event order,
 and an export holds no `pos`. A sanitized event keeps its operation and structural metadata, with `redacted: true`.
@@ -81,20 +79,7 @@ A node has empty summary and zero chars. See [0002 Event log](../adr/0002-event-
 
 ## Projection
 
-The [projection contract](../../packages/core/src/domain/projection.ts) owns canonical replay, record states, supersede effects, and scope positions.
-Its entity contracts define both passes and each operation. The [tree contract](../../packages/core/src/domain/tree.ts) owns range revisions and summary readiness.
-
-The store supplies the resolved event union and durable invalidations before replay.
-Node publication remains a store and compaction guarantee under [REQ-113](02-requirements.md).
-
-The [validation contract](../../packages/core/src/domain/validation.ts) checks runtime fields and target types.
-The [merge contract](../../packages/core/src/domain/merge.ts) resolves copies and applies all historical erasure evidence.
-It also returns invalidation evidence from losing copies. The write plan persists targets absent from the winning history.
-The [invalidation contract](../../packages/core/src/domain/invalidation.ts) compares exact inputs and both old and new paths.
-The [write contract](../../packages/core/src/domain/write.ts) composes these functions before backend publication.
-Its projection includes planned invalidations. The backend must publish their events with the data under one write lock.
-These pure plans implement no storage durability. The backends publish their complete plans under one write lock.
-See [0016 Write boundary](../adr/0016-write-boundary.md) and [0017 Store publication](../adr/0017-store-publication.md).
+Reads query current rows. Store writes maintain note, node, search index, and journal rows in one transaction. The node cache is valid only when its child keys match current rows.
 
 ## Catalog
 
@@ -105,29 +90,15 @@ the catalog scope. A node of the catalog carries no `review_at`, no `proposed`, 
 `turn`, and no `preset`. See [0011 Nodes are events](../adr/0011-nodes-are-events.md) and
 [S-104](../statements.md#s-104).
 
-The [catalogTree contract](../../packages/core/src/domain/projection.ts) owns catalog positions for a resolved profile filter.
-The store derives that filter from configuration before it supplies the projection to the catalog.
-
-An import merges the events and derives the positions again. It does not merge independent counter values.
-The same log and profile filter give the same positions after a restart or either import order.
-A changed leaf identity or position invalidates its old and new catalog paths. The unaffected prefix and scope tree coordinates stay intact.
-At a catalog leaf, child lookup uses that position to find the scope and its current top node.
-The node is the existing scope root, with no synthetic event. Its range belongs to the scope tree, not to the catalog position.
-A live scope with an unready root is non-empty, so the catalog compaction waits for it.
-See the [catalog contracts](../../packages/core/src/domain/projection.ts) and [0011 Nodes are events](../adr/0011-nodes-are-events.md).
+The store derives visible directions from the configured profile scopes. A catalog line uses the current top summary of its scope.
 
 The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
 When the top node is not ready, its direction line is a temporary line with the keys and the age.
 That line also holds the text assembled from the two child bodies. A scope with no live note gives no
 direction line. A shared scope gets one position in each profile where it is
-visible. See [REQ-108](02-requirements.md), the [context contract](../../packages/core/src/domain/context.ts),
-the [catalog contract](../../packages/core/src/domain/projection.ts), and the [root contract](../../packages/core/src/domain/tree.ts).
+visible. See [REQ-108](02-requirements.md) and the [context contract](../../packages/core/src/domain/context.ts).
 
-A change of a note makes each node above it dirty, and the compaction builds the node from its two
-children. A rebuild appends a new `node` event for the same key.
-The projection takes the latest candidate whose id has no invalidation.
-The [invalidation contract](../../packages/core/src/domain/invalidation.ts) owns affected scope and catalog paths.
-[REQ-113](02-requirements.md), [REQ-117](02-requirements.md), and [REQ-192](02-requirements.md) retain compaction publication and build guarantees.
+A note change deletes each covering node row in the same transaction. Compaction rebuilds the node from its two children. [REQ-113](02-requirements.md), [REQ-117](02-requirements.md), and [REQ-192](02-requirements.md) define the build guarantees.
 
 A `redact` clears historical dependent nodes through their child ids, including earlier scope paths and catalog ancestors.
 The placeholder `[redacted]` appears in the console and the view only, and no event holds it.
@@ -187,44 +158,15 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 
 One store holds many profiles, scopes, and records.
 
-A scope is a key in the events. The key has the form `kind:name`, and the store lowercases it before
-the write. The store holds no record for a scope, and no event describes one. A scope exists because
-a record names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and the [scope grammar](../../packages/core/src/domain/scope.ts).
+A scope is a key with the form `kind:name`. The store lowercases the key before a write. A scope exists when a note row names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and the [scope grammar](../../packages/core/src/domain/scope.ts).
 
-The store has two backends of equal rank: sqlite and jsonl. One store test runs against both.
-Compaction candidates derive from dirty ranges, including ranges with no node event. The store keeps no job queue. See
-[0004 Tree and writer](../adr/0004-tree-writer.md).
+The store has one SQLite backend. Every write uses one transaction. The index and node cache stay in the database. The store keeps no job queue. Compaction candidates derive from dirty ranges. See [0004 Tree and writer](../adr/0004-tree-writer.md).
 
-Each append to the sqlite backend is one transaction, and the backend uses write-ahead logging. The
-jsonl backend takes a lock on each append. Several processes write one store. See
-the [SQLite contract](../../packages/core/src/storage/sqlite.ts), the [JSONL contract](../../packages/core/src/storage/jsonl.ts), and [REQ-375](02-requirements.md).
+A change of the `language` value rebuilds the index from note rows. See [REQ-476](02-requirements.md).
 
-The index records the tokenizer of its build. A change of the `language` value rebuilds the index
-from the log, so the store needs no migration. See [REQ-476](02-requirements.md).
+The row store holds current notes, nodes, proposals, and metadata. It has no event log, replay cursor, or projection. Reads query rows. Writes update rows in one transaction.
 
-The store keeps a projection: the records, the current node of each range, the invalidated ids, and the scope counts.
-Its replay cursor marks a local append position. SQLite uses its append sequence, and JSONL uses a byte offset after a complete line.
-The SQLite append transaction changes the projection and cursor together. JSONL replaces the complete source before its sidecar transaction.
-Both backends persist invalidations with the source change. The sidecar fingerprint prevents reads from a stale projection.
-
-The pending incremental recovery reads complete lines after the JSONL cursor, regardless of event time. It applies events in `(at, id)` order.
-The current JSONL backend rebuilds after each source change. See [0017 Store publication](../adr/0017-store-publication.md).
-An earlier imported event, a changed event payload, or a gap above 1 000 events requires a projection rebuild.
-A JSONL rewrite or replacement invalidates its earlier cursor. The next read rebuilds the projection before it advances the cursor.
-
-A projection rebuild reads each event once, preserves node events and invalidations, and calls no model.
-A schema change still uses a migration in one transaction. The render scans no event.
-See [0014 Store projection](../adr/0014-store-projection.md) and [REQ-484](02-requirements.md) to [REQ-493](02-requirements.md).
-
-The Markdown format is export-only. It is a human view and has no import or event recovery contract.
-The JSONL format transfers events. Store import reads JSONL, while the separate session import reads harness sessions.
-The [export format contract](../../packages/cli/src/export-md.ts) owns the filename encoding and the file format.
-
-An export reads one transaction under an exclusive lock, so the copy is consistent by construction.
-The [export command contract](../../packages/cli/src/commands.ts) owns the scope selection of an
-export. A per-scope export also holds the top node of that scope. An import unions events by `id`.
-A sanitized copy takes priority. Equal sanitized status compares `at`, then the canonical JSON hash.
-The import collects erasure evidence from both sides and clears the merged dependencies before publication.
+The JSONL format transfers full note state. The Markdown format is export-only. The export command selects the scope. A JSONL import merges note rows by id.
 See [0003 Store](../adr/0003-store.md) and [0008 Redaction](../adr/0008-redaction.md).
 
 | Item     | Value                                       |
@@ -232,12 +174,8 @@ See [0003 Store](../adr/0003-store.md) and [0008 Redaction](../adr/0008-redactio
 | Config   | `$XDG_CONFIG_HOME/memlens`                  |
 | Data     | `$XDG_DATA_HOME/memlens`                    |
 | Override | `MEMLENS_STORE` gives another data path     |
-| Index    | A separate port over FTS5                   |
-| JSONL    | The sidecar file `index.db` holds the index and the projection |
-| Projection | The records, the current node of each range, and the scope counts |
-| SQLite file | `memlens.db` |
-| JSONL file | `memlens.jsonl` |
-| Sidecar | `index.db` holds the index and the projection of the jsonl backend |
+| Index    | FTS5 tables in `memlens.db`                 |
+| Store    | `memlens.db`                                |
 
 ## View
 
@@ -309,9 +247,9 @@ texts are in [09-prompts.md](09-prompts.md).
 ## Addressing
 
 The [address contract](../../packages/core/src/domain/address.ts) owns parsing and address text.
-The [projection contract](../../packages/core/src/domain/projection.ts) owns scope transfers and position allocation.
+The store assigns note positions by the immutable `(ts, id)` order.
 A saved textual address is not a permanent record identifier.
-The [target contract](../../packages/core/src/domain/targets.ts) owns record lookup and scope visibility.
+The read models resolve record addresses and validate scope visibility.
 An address with no scope waits for the tool input rules in [REQ-260](02-requirements.md) and [REQ-261](02-requirements.md).
 
 ## Tree
@@ -320,7 +258,7 @@ The [tree contracts](../../packages/core/src/domain/tree.ts) own range geometry,
 The [tree types](../../packages/core/src/types/tree.ts) define the input and output shapes.
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
-The [node validation contract](../../packages/core/src/domain/validation.ts) owns aligned starts and summary metadata checks.
+The store verifies aligned node starts and summary metadata.
 It handles empty halves and single-child copies under the [build input contract](../../packages/core/src/domain/tree.ts) and the [compaction contract](../../packages/core/src/domain/compaction.ts).
 
 ## Frontier
@@ -344,13 +282,13 @@ A cleared parent summary does not clear its unaffected child notes or sibling su
 The store invalidates affected node ids and excludes sanitized nodes from current candidates.
 
 Sanitized notes and amendments set their record to `deleted` and `content_cleared`, including imports without the original redact event.
-The store clears the index, projection content, and future view caches. A late compaction answer fails the exact-input check.
+The store clears the index and content rows. A late compaction answer does not match the exact input.
 Already delivered session messages stay unchanged.
 
 Publication uses one exclusive store lock and an atomic source replacement. SQLite journals and the disposable JSONL index cannot accompany the sanitized source with stale content.
 A successful operation leaves no cleared content in store-owned named files or journals.
 A crash leaves either the earlier complete source or the complete sanitized source. Recovery runs before a read.
-See the [sanitization contracts](../../packages/core/src/domain/sanitization.ts) for content closure and [0008 Redaction](../adr/0008-redaction.md) for backend publication.
+See [0008 Redaction](../adr/0008-redaction.md) for the redaction decision.
 [REQ-219](02-requirements.md) and [REQ-222](02-requirements.md) define atomic publication and cache clearing.
 
 ## Fold
@@ -392,14 +330,14 @@ An import that clears stored content uses the redaction publication protocol in 
 A crash can leave an unnecessary rebuild, but it must not leave changed data with a usable stale summary.
 The projection derives invalidation from the log after a restart or a rebuild. A rebuilt node has a new id.
 See [0015 Node invalidation](../adr/0015-node-invalidation.md), the
-[invalidation contract](../../packages/core/src/domain/invalidation.ts), and [REQ-512](02-requirements.md) to
+[row validity rules](../../packages/core/src/store/view.ts), and [REQ-512](02-requirements.md) to
 [REQ-513](02-requirements.md).
 
 ## Session and store
 
 A session writes the store. The export and the import move the records between stores. An import is
 a union of events by `id`. A note can supersede an earlier note. The index is a cache over the log:
-the store rebuilds it from the log after a loss. See the [merge contract](../../packages/core/src/domain/merge.ts),
+the store rebuilds it from note rows after a loss. See
 [REQ-375](02-requirements.md), and [REQ-377](02-requirements.md).
 
 ## Harness surface
@@ -443,7 +381,7 @@ orders, so 220 places the memory after each built-in context and before no tool 
 The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 [REQ-352](02-requirements.md). The subagent modes are in [REQ-353](02-requirements.md) to
 [REQ-362](02-requirements.md), and the log keeps the content of a dismissed proposal in the
-[projection contract](../../packages/core/src/domain/projection.ts). The nudge is in [REQ-232](02-requirements.md) to
+[config contract](../../packages/core/src/domain/config.ts). The nudge is in [REQ-232](02-requirements.md) to
 [REQ-246](02-requirements.md). See [0009 Agent surface](../adr/0009-agent-surface.md).
 
 ## Human surface
@@ -492,12 +430,11 @@ application of one answer file. The [entry contract](../../packages/cli/src/cli.
 and the exit codes.
 
 The CLI command `compact` publishes each copy input and gives the merge inputs of one scope as one
-job. The flag `--answer` applies one answer file, and the store checks each exact input again. The
-command `check` tests the store against its log, and the command `repair` rebuilds the derived state
-of the store. Each command contract owns its rules.
+job. The flag `--answer` applies one answer file, and the store verifies each exact input again. The
+command `check` tests store health, and the command `repair` fixes damaged cache rows. Each command contract owns its rules.
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui` and its local HTTP boundary.
-The [decision contract](../../packages/core/src/storage/publication.ts) owns approval validation under the backend lock.
+The store validates proposal acceptance and applies it in one transaction.
 The console gives separate compaction jobs for scope trees and the profile catalog. A catalog job names each child by its scope key.
 The [console models](../../packages/core/src/domain/console.ts) supply the shared view through the store port.
 The [browser client](../../packages/ui/src/client.ts) supplies seven screens in a separate bundle.
@@ -533,12 +470,12 @@ The code writes short debug messages with key-value data. The messages act as ob
 A client goes in its own package and in its own bundle. A file must not mix client code and backend
 code. See [C-012](01-goals-nongoals.md).
 
-## Checks
+## Verification
 
-| Check             | Command              |
+| Gate              | Command              |
 | ----------------- | -------------------- |
 | Build             | `pnpm run build`     |
-| Type check        | `pnpm run typecheck` |
+| Static types      | `pnpm run typecheck` |
 | Tests             | `pnpm run test`      |
 | Code and format   | `pnpm run lint`      |
 | Document language | `pnpm run lint:docs` |
@@ -547,7 +484,7 @@ code. See [C-012](01-goals-nongoals.md).
 The project keeps the linter in `scripts/vendor/`, and the manifest has a test. See
 [0010 Process and stack](../adr/0010-process-stack.md).
 
-Biome checks the code only. The documents have their own check, because the journal keeps the
+Biome scans the code only. The documents have their own review, because the journal keeps the
 customer words as given.
 
 ## Remaining work

@@ -14,7 +14,6 @@
  */
 
 import {
-	appendFileSync,
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
@@ -100,7 +99,6 @@ const WORK_CONFIG = `
 defaultProfile = "work"
 
 [store]
-backend = "sqlite"
 idle = 300
 
 [compaction]
@@ -269,7 +267,8 @@ describe("@memlens/cli commands", () => {
 		await run(test, "note", "Status note", "--scope", "project:acme/x");
 		const status = await run(test, "status");
 		expect(status.code).toBe(0);
-		expect(status.out).toContain("backend: sqlite");
+		expect(status.out).toContain("path:");
+		expect(status.out).toContain("rev:");
 	});
 
 	it("exports markdown with an encoded name and no node section", async () => {
@@ -301,6 +300,7 @@ describe("@memlens/cli commands", () => {
 			"project:acme/x",
 		);
 		const copy = readFileSync(join(out, "project%3Aacme%2Fx.jsonl"), "utf8");
+		expect(copy).toContain('"format":1');
 		expect(copy).not.toContain('"pos"');
 
 		const second = makeEnv();
@@ -308,12 +308,12 @@ describe("@memlens/cli commands", () => {
 		writeFileSync(input, copy);
 		const planned = await run(second, "import", "--in", input, "--dry-run");
 		expect(planned.code).toBe(0);
-		expect(planned.out).toContain("would import 1 events");
+		expect(planned.out).toContain("would import 1 notes");
 		const imported = await run(second, "import", "--in", input);
 		expect(imported.code).toBe(0);
-		expect(imported.out).toContain("imported 1 events");
+		expect(imported.out).toContain("imported 1 notes");
 		const again = await run(second, "import", "--in", input);
-		expect(again.out).toContain("imported 0 events");
+		expect(again.out).toContain("imported 0 notes");
 		const found = await run(second, "find", "Move");
 		expect(found.out).toContain("project:acme/x#0");
 	});
@@ -338,7 +338,7 @@ describe("@memlens/cli commands", () => {
 		);
 		const copy = await run(test, "compact", "--scope", "project:acme/x");
 		expect(copy.code).toBe(0);
-		expect(copy.out).toContain("published 1 copies");
+		expect(copy.out).toContain("published");
 		expect(copy.out).toContain("no merge inputs");
 		for (const body of ["Two", "Three", "Four", "Five"])
 			await run(
@@ -412,21 +412,9 @@ describe("@memlens/cli commands", () => {
 		);
 		expect(applied.code).toBe(0);
 		expect(applied.out).toContain("built 1 nodes");
-		const out = join(test.home, "out");
-		const exported = await run(
-			test,
-			"export",
-			"--format",
-			"jsonl",
-			"--out",
-			out,
-			"--scope",
-			"project:acme/x",
-		);
-		expect(exported.code).toBe(0);
-		expect(
-			readFileSync(join(out, "project%3Aacme%2Fx.jsonl"), "utf8"),
-		).toContain("One line over both notes");
+		const after = await run(test, "compact", "--scope", "project:acme/x");
+		expect(after.code).toBe(0);
+		expect(after.out).not.toContain("#0-1");
 	});
 
 	it("refuses a compaction of a scope outside the profile", async () => {
@@ -435,12 +423,11 @@ describe("@memlens/cli commands", () => {
 		expect(refused.code).toBe(3);
 	});
 
-	it("checks a healthy store and repairs an incomplete jsonl tail", async () => {
+	it("checks a healthy row store without changing its data", async () => {
 		const test = makeEnv(`
 defaultProfile = "default"
 
 [store]
-backend = "jsonl"
 idle = 300
 
 [compaction]
@@ -465,19 +452,12 @@ default = "user:notes"
 		const clean = await run(test, "check");
 		expect(clean.code).toBe(0);
 		expect(clean.out).toContain("ok");
-		const source = join(test.home, "data", "memlens", "memlens.jsonl");
-		appendFileSync(source, '{"op":"partial"');
-		const dirty = await run(test, "check");
-		expect(dirty.code).toBe(1);
-		expect(dirty.out).toContain("incomplete bytes");
-		const planned = await run(test, "repair", "--dry-run");
-		expect(planned.code).toBe(0);
-		expect(planned.out).toContain("truncate");
 		const repaired = await run(test, "repair");
 		expect(repaired.code).toBe(0);
-		expect(readFileSync(source, "utf8")).not.toContain("partial");
+		expect(repaired.out).toContain("nothing to repair");
 		const after = await run(test, "check");
 		expect(after.code).toBe(0);
+		expect(after.out).toContain("ok");
 	});
 
 	it("imports one scope under another key with --as", async () => {

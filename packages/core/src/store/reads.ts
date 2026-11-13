@@ -48,6 +48,7 @@ export interface DirectionsData {
 }
 
 // #region FUNC_byAddress
+
 /**
  * @purpose Read one note by its slot, so a numeric address maps to one row.
  * @invariants A null scope takes the first scope in key order. The row may be in any state.
@@ -79,9 +80,11 @@ export function byAddress(
 	});
 	return row === undefined ? null : noteFromRow(row);
 }
+
 // #endregion FUNC_byAddress
 
 // #region FUNC_byId
+
 /**
  * @purpose Read one note by its cross-store identity, so a caller names it after an import.
  * @returns The note, or null when no row holds the id.
@@ -94,9 +97,11 @@ export function byId(store: Store, id: Ulid): Note | null {
 	debug("Note by id", { event: "by_id", found: row !== undefined });
 	return row === undefined ? null : noteFromRow(row);
 }
+
 // #endregion FUNC_byId
 
 // #region FUNC_dueReviews
+
 /**
  * @purpose List the live notes whose review time has come, so a review needs no scan.
  * @invariants A note with no review time is never due. The order is the review time, then scope, then slot.
@@ -124,9 +129,11 @@ export function dueReviews(
 	});
 	return rows.map(noteFromRow);
 }
+
 // #endregion FUNC_dueReviews
 
 // #region FUNC_liveCounts
+
 /**
  * @purpose Count the live notes of each scope, so the scope list needs no second query.
  * @invariants A scope with no live note gives no entry.
@@ -145,9 +152,11 @@ export function liveCounts(store: Store): Map<ScopeKey, number> {
 	debug("Live counts", { event: "live_counts", scopes: counts.size });
 	return counts;
 }
+
 // #endregion FUNC_liveCounts
 
 // #region FUNC_scopeNotes
+
 /**
  * @purpose Give each note row of one scope in slot order, as the raw material of the slice.
  * @invariants The rows may be in any state, because each row holds its slot.
@@ -165,9 +174,11 @@ export function scopeNotes(store: Store, scope: ScopeKey): readonly Note[] {
 	});
 	return rows.map(noteFromRow);
 }
+
 // #endregion FUNC_scopeNotes
 
 // #region FUNC_nodesOf
+
 /**
  * @purpose Give each node row of one scope, so the slice renders from the cache.
  * @invariants The order is the level, then the start slot. Each row is a cache entry.
@@ -187,9 +198,11 @@ export function nodesOf(store: Store, scope: ScopeKey): readonly Node[] {
 	});
 	return rows.map(nodeFromRow);
 }
+
 // #endregion FUNC_nodesOf
 
 // #region FUNC_directionsData
+
 /**
  * @purpose Give the scope lines of the directions block and the older scopes outside its budget.
  * @invariants The read covers the live notes of the supplied scopes. A scope with no live note gives no entry.
@@ -226,7 +239,11 @@ export function directionsData(
 	const lines = marksByWrite
 		.slice(0, cap)
 		.reverse()
-		.map((mark) => ({ ...mark, summary: null }));
+		.map((mark) => ({
+			...mark,
+			summary: null,
+			children: [],
+		}));
 	const rest = marksByWrite.slice(cap).map((mark) => mark.scope);
 	debug("Directions read", {
 		event: "directions",
@@ -237,6 +254,7 @@ export function directionsData(
 	});
 	return { lines, rest };
 }
+
 // #endregion FUNC_directionsData
 
 /** Order the scope marks by the last write, the newest first, then by the scope key. */
@@ -254,6 +272,7 @@ function nullable(value: unknown): string | null {
 }
 
 // #region FUNC_parseRefs
+
 /**
  * @purpose Read the JSON refs value of one row, so a damaged value never fails a read.
  * @invariants A malformed value or an unknown item gives no ref. The list keeps the string items.
@@ -268,9 +287,11 @@ function parseRefs(text: unknown): readonly string[] {
 		return [];
 	}
 }
+
 // #endregion FUNC_parseRefs
 
 // #region FUNC_noteFromRow
+
 /**
  * @purpose Build one note in one place, so each read gives the same note shape.
  * @invariants A cleared value of 0 gives false. A null column stays null. The refs field is JSON.
@@ -300,9 +321,11 @@ function noteFromRow(row: Record<string, unknown>): Note {
 		v_review: nullable(row.v_review),
 	};
 }
+
 // #endregion FUNC_noteFromRow
 
 // #region FUNC_nodeFromRow
+
 /**
  * @purpose Build one node in one place, so the slice reads one node shape.
  * @invariants The two half keys stay null when the half holds no live note.
@@ -320,4 +343,5 @@ function nodeFromRow(row: Record<string, unknown>): Node {
 		b_key: nullable(row.b_key),
 	};
 }
+
 // #endregion FUNC_nodeFromRow

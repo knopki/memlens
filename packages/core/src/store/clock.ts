@@ -29,13 +29,16 @@ export interface ClockState {
 }
 
 // #region FUNC_storeId
+
 /** @purpose Mint the identity of a new store. The identity breaks every version tie. */
 export function storeId(): string {
 	return randomUUID();
 }
+
 // #endregion FUNC_storeId
 
 // #region FUNC_formatVersion
+
 /**
  * @purpose Render one version as a text that sorts by the order of its parts.
  * @invariants Both numbers take a fixed width, so text order equals numeric order.
@@ -45,9 +48,11 @@ export function formatVersion(state: ClockState): Version {
 		state.counter,
 	).padStart(6, "0")}|${state.store}`;
 }
+
 // #endregion FUNC_formatVersion
 
 // #region FUNC_parseVersion
+
 /**
  * @purpose Read one version text into its parts.
  * @returns The parts, or null when the text is not a version.
@@ -61,9 +66,11 @@ export function parseVersion(value: string): ClockState | null {
 		store: match[3],
 	};
 }
+
 // #endregion FUNC_parseVersion
 
 // #region FUNC_tick
+
 /**
  * @purpose Give a local write a version greater than each version the store has seen.
  * @invariants The physical part never decreases, so a backward clock jump changes no order.
@@ -79,9 +86,11 @@ export function tick(
 	debug("Clock tick", { event: "tick", physical, counter });
 	return { state: next, version: formatVersion(next) };
 }
+
 // #endregion FUNC_tick
 
 // #region FUNC_receive
+
 /**
  * @purpose Raise the clock above each imported version.
  * @invariants The result is greater than the greatest received value. Imported versions keep their own store part.
@@ -117,4 +126,5 @@ export function receive(
 		});
 	return best;
 }
+
 // #endregion FUNC_receive

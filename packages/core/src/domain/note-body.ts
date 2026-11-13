@@ -25,6 +25,7 @@ export const BODY_DECLARED_SIZE = 384;
 export const LONGFORM_LIMIT = 16_384;
 
 // #region FUNC_normalizeBody
+
 /**
  * @purpose Trim the ends of the body and collapse runs of spaces to one space.
  * @invariants The result has no leading or trailing whitespace. Each run of spaces or tabs becomes one space.
@@ -38,9 +39,11 @@ export function normalizeBody(raw: string): string {
 	});
 	return result;
 }
+
 // #endregion FUNC_normalizeBody
 
 // #region FUNC_splitBody
+
 /**
  * @purpose Keep the body within its limit without losing excess content.
  * @invariants The body has at most 512 characters. Move excess text before the existing longform.
@@ -96,4 +99,5 @@ export function splitBody(
 	});
 	return { body: keptBody, longform };
 }
+
 // #endregion FUNC_splitBody

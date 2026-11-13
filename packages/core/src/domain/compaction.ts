@@ -27,7 +27,7 @@
  * - A pass calls the model at most maxCallsPerHour times. A compaction at the limit defers its calls
  * while the affected ranges stay dirty.
  * @dependencies
- * USES API: store/build.ts, domain/order.ts
+ * USES API: store/build.ts
  * READS: Store rows, BuildInput
  * WRITES: Node cache rows through store/build.ts
  * @keywords compaction, merge, retelling, batch, parallel, retry, node, summary
@@ -43,11 +43,10 @@ import {
 	candidates as storeCandidates,
 } from "../store/build.js";
 import type { Store } from "../store/store.js";
-import type { NodeEvent, ScopeKey } from "../types/events.js";
-import type { BuildChild, BuildInput, Tree } from "../types/tree.js";
-import { maxOrder } from "./order.js";
+import type { ScopeKey } from "../types/events.js";
+import type { BuildChild, BuildInput } from "../types/tree.js";
 import { dateSpan } from "./time.js";
-import { cutAtWord, LINE_LIMIT, rev } from "./tree.js";
+import { cutAtWord, LINE_LIMIT } from "./tree.js";
 
 const debug = debuglog("memlens:compaction");
 
@@ -116,6 +115,7 @@ export type LineBuild =
 	| { readonly ok: false; readonly reason: "no_answer" | "not_shorter" };
 
 // #region FUNC_childLine
+
 /**
  * @purpose Render one child as the model reads it.
  * @invariants A record gives its address, date, body, and preview below the body when present.
@@ -130,6 +130,7 @@ export function childLine(child: BuildChild): string {
 	const end = child.range.start + 2 ** child.range.level - 1;
 	return `#${child.range.start}-${end} ${dateSpan(child.ts_from, child.ts_to)}\n${child.summary}`;
 }
+
 // #endregion FUNC_childLine
 
 /** One child of a catalog range: the scope key, the date span, and the text. */
@@ -152,6 +153,7 @@ const live = (input: BuildInput): readonly BuildChild[] =>
 	input.children.filter((child): child is BuildChild => child !== null);
 
 // #region FUNC_mergeTask
+
 /**
  * @purpose Send the merge task text with the target of the asked line.
  * @invariants The text is the Merge task section of 09-prompts.md. TARGET and TARGET/6 words fill
@@ -168,9 +170,11 @@ ${childLine(a)}
 ${childLine(b)}
 </input>`;
 }
+
 // #endregion FUNC_mergeTask
 
 // #region FUNC_batchTask
+
 /**
  * @purpose Ask for up to six lines in one call.
  * @invariants The header keeps the target and the word count. Each input block carries its "#a-b" id.
@@ -199,6 +203,7 @@ export function batchTask(
 Answer one line for each input, in the form "#a-b: line".
 ${blocks.join("\n")}`;
 }
+
 // #endregion FUNC_batchTask
 
 function datesOf(input: BuildInput): { ts_from: string; ts_to: string } {
@@ -212,6 +217,7 @@ function datesOf(input: BuildInput): { ts_from: string; ts_to: string } {
 }
 
 // #region FUNC_copyBuild
+
 /**
  * @purpose Give the copy line of one input with a single non-empty child.
  * @invariants The copy holds the text and dates of that child, with no model call. An input with
@@ -228,9 +234,11 @@ export function copyBuild(input: BuildInput): Extract<LineBuild, { ok: true }> {
 		...datesOf(input),
 	};
 }
+
 // #endregion FUNC_copyBuild
 
 // #region FUNC_joinBuild
+
 /**
  * @purpose Publish the join of two whole child texts with no model call, when no cut occurs.
  * @invariants Two children join as "first; rest" when their lengths with the separator stay at
@@ -260,9 +268,11 @@ export function joinBuild(
 		...datesOf(input),
 	};
 }
+
 // #endregion FUNC_joinBuild
 
 // #region FUNC_finalizeLine
+
 /**
  * @purpose Apply the shrink check and the limit cut to one finished answer text.
  * @invariants An empty text fails with no_answer. A text at least as long as its source fails with
@@ -293,9 +303,11 @@ function finalizeLine(input: BuildInput, text: string): LineBuild {
 		...datesOf(input),
 	};
 }
+
 // #endregion FUNC_finalizeLine
 
 // #region FUNC_answerLine
+
 /**
  * @purpose Finalize one answer of a compaction job from a human or an agent, with no model call.
  * @invariants The shrink check applies to a model merge only, so an answer needs no retry and no
@@ -323,6 +335,7 @@ export function answerLine(input: BuildInput, text: string): LineBuild {
 		...datesOf(input),
 	};
 }
+
 // #endregion FUNC_answerLine
 
 async function callModel(
@@ -347,6 +360,7 @@ async function callModel(
 }
 
 // #region FUNC_mergeLine
+
 /**
  * @purpose Build one line from a ready input, with retries and the shrink check.
  * @invariants The model writes the summary from the two copied children only.
@@ -389,9 +403,11 @@ export async function mergeLine(
 	});
 	return line;
 }
+
 // #endregion FUNC_mergeLine
 
 // #region FUNC_parseBatchAnswer
+
 /**
  * @purpose Read the lines of a batch answer.
  * @invariants Each answer line has the form "#a-b: line" and names one requested range.
@@ -414,6 +430,7 @@ export function parseBatchAnswer(
 	}
 	return result.size === inputs.length ? result : null;
 }
+
 // #endregion FUNC_parseBatchAnswer
 
 /** Match one cacheTtl glob against a model name. A `P/*` pattern matches the family of P. */
@@ -433,6 +450,7 @@ function matchGlob(pattern: string, model: string): boolean {
 }
 
 // #region FUNC_autoForm
+
 /**
  * @purpose Pick the call form of auto from the cache knowledge of the model.
  * @invariants A model under a specific cacheTtl glob gives parallel: a family pattern P/* matches
@@ -454,18 +472,22 @@ export function autoForm(
 	}
 	return best ? "parallel" : "batch";
 }
+
 // #endregion FUNC_autoForm
 
 // #region FUNC_retryDelay
+
 /** @purpose Give the local wait after the given count of failed attempts. */
 export function retryDelay(failures: number): number {
 	return (
 		RETRY_WAITS[Math.min(Math.max(failures, 1), RETRY_WAITS.length) - 1] ?? 300
 	);
 }
+
 // #endregion FUNC_retryDelay
 
 // #region CLASS_RateWindow
+
 /**
  * @purpose Keep one hour of model call times, so a compaction at the limit defers its calls.
  * @invariants The window keeps the timestamps of the last hour. tryAcquire records a call and
@@ -486,43 +508,8 @@ export class RateWindow {
 		return true;
 	}
 }
-// #endregion CLASS_RateWindow
 
-// #region FUNC_nodeEvent
-/**
- * @purpose Copy a finished line and its input into a node event for publication.
- * @invariants The range, children, revision, and dates copy from the same tree snapshot as the
- * build input. The revision is the greater revision of the two child halves.
- */
-export function nodeEvent(
-	scope: ScopeKey,
-	tree: Tree,
-	input: BuildInput,
-	line: Extract<LineBuild, { ok: true }>,
-): Omit<NodeEvent, "id" | "at"> {
-	const half = 2 ** (input.range.level - 1);
-	return {
-		op: "node",
-		scope,
-		level: input.range.level,
-		start: input.range.start,
-		child_a: input.children[0]?.id ?? null,
-		child_b: input.children[1]?.id ?? null,
-		input_rev: maxOrder(
-			rev(tree, { start: input.range.start, level: input.range.level - 1 }),
-			rev(tree, {
-				start: input.range.start + half,
-				level: input.range.level - 1,
-			}),
-		),
-		summary: line.summary,
-		chars: line.chars,
-		truncated: line.truncated,
-		ts_from: line.ts_from,
-		ts_to: line.ts_to,
-	};
-}
-// #endregion FUNC_nodeEvent
+// #endregion CLASS_RateWindow
 
 /** The resolved settings of one compaction pass. */
 export interface CompactionRun {
@@ -541,6 +528,7 @@ export interface PassResult {
 }
 
 // #region FUNC_compactionPass
+
 /**
  * @purpose Build and publish the next batch of dirty lines of one tree.
  * @invariants A pass takes at most batch ready inputs and uses one form only. Inputs with one
@@ -667,6 +655,7 @@ export async function compactionPass(
 	debug("Compaction pass complete", { scope, ...result });
 	return result;
 }
+
 // #endregion FUNC_compactionPass
 
 /** Publish each merge input through one concurrent group of model calls. */

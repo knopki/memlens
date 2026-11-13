@@ -132,12 +132,6 @@ export interface NodeEvent extends EventBase {
 	readonly ts_to: IsoTime;
 }
 
-/** The node ids whose summaries must stay unusable. A later rebuild gets a new id. */
-export interface InvalidateEvent extends EventBase {
-	readonly op: "invalidate";
-	readonly targets: readonly Ulid[];
-}
-
 /** The log holds these eight ops. */
 export type Event =
 	| NoteEvent
@@ -146,8 +140,7 @@ export type Event =
 	| RedactEvent
 	| ReviewEvent
 	| DismissEvent
-	| NodeEvent
-	| InvalidateEvent;
+	| NodeEvent;
 
 /** A sanitized note event. The content is cleared, and the metadata stays. */
 export type SanitizedNoteEvent = Omit<

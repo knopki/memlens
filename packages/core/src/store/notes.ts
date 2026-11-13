@@ -13,7 +13,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import { debuglog } from "node:util";
-import { BODY_HARD_LIMIT, normalizeBody } from "../domain/note-body.js";
+import { normalizeBody, splitBody } from "../domain/note-body.js";
 import { normalizeScopeKey, validateScopeKey } from "../domain/scope.js";
 import { ulid } from "../domain/ulid.js";
 import { MemlensError } from "../types/errors.js";
@@ -67,6 +67,7 @@ const SELECT_DUPLICATE =
 const INSERT_ROW = `INSERT INTO notes (id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts, created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content, v_review) VALUES (?, ?, ?, 'live', 0, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, NULL)`;
 
 // #region INTERFACE_NoteInput
+
 /**
  * @purpose Name the fields of one new note, so the caller supplies one complete write.
  * @invariants The ts field defaults to the write time. The supersedes field skips the duplicate check.
@@ -85,9 +86,11 @@ export interface NoteInput {
 	readonly ts?: string;
 	readonly supersedes?: readonly Ulid[];
 }
+
 // #endregion INTERFACE_NoteInput
 
 // #region INTERFACE_AmendInput
+
 /**
  * @purpose Name the fields of one amendment, so an absent field keeps its stored value.
  * @invariants A present scope field moves the row to its rank in the destination scope.
@@ -99,9 +102,11 @@ export interface AmendInput {
 	readonly kind?: NoteKind;
 	readonly scope?: ScopeKey;
 }
+
 // #endregion INTERFACE_AmendInput
 
 // #region FUNC_note
+
 /**
  * @purpose Add one note at its key rank, or name an existing live note as the duplicate.
  * @invariants A duplicate writes no note row and does not tick the clock.
@@ -110,13 +115,19 @@ export interface AmendInput {
  */
 export function note(store: Store, input: NoteInput): WriteResult<Note> {
 	const scope = checkedScope(input.scope);
-	const body = checkedBody(input.body);
-	const longform = input.longform ?? null;
+	const split = splitForWrite(input.body, input.longform ?? null);
 	const reviewAt = input.review_at ?? null;
 	const supersedes = input.supersedes ?? [];
 	if (supersedes.length === 0) {
 		const duplicate = store.read((db) =>
-			findDuplicate(db, scope, body, input.kind, longform, reviewAt),
+			findDuplicate(
+				db,
+				scope,
+				split.body,
+				input.kind,
+				split.longform,
+				reviewAt,
+			),
 		);
 		if (duplicate) {
 			debug("Note duplicate", { event: "duplicate", scope, kind: input.kind });
@@ -125,17 +136,20 @@ export function note(store: Store, input: NoteInput): WriteResult<Note> {
 	}
 	return { ok: true, value: store.publish((tx) => noteTx(tx, input)).value };
 }
+
 // #endregion FUNC_note
 
 // #region FUNC_noteTx
+
 /**
  * @purpose Add a note within the caller transaction.
  * @invariants The caller checks for duplicates before this call.
  */
 export function noteTx(tx: Tx, input: NoteInput): Note {
 	const scope = checkedScope(input.scope);
-	const body = checkedBody(input.body);
-	const longform = input.longform ?? null;
+	const split = splitForWrite(input.body, input.longform ?? null);
+	const body = split.body;
+	const longform = split.longform;
 	const reviewAt = input.review_at ?? null;
 	const supersedes = input.supersedes ?? [];
 	const ts = input.ts ?? new Date().toISOString();
@@ -198,9 +212,76 @@ export function noteTx(tx: Tx, input: NoteInput): Note {
 	});
 	return toNote(row);
 }
+
 // #endregion FUNC_noteTx
 
+// #region FUNC_noteCheckedTx
+
+/**
+ * @purpose Apply one note write with ordinary duplicate rules inside a caller transaction.
+ * @invariants A duplicate writes no note row, so a proposal approval that repeats a live note closes with no record.
+ */
+export function noteCheckedTx(tx: Tx, input: NoteInput): WriteResult<Note> {
+	const scope = checkedScope(input.scope);
+	const split = splitForWrite(input.body, input.longform ?? null);
+	if (
+		findDuplicate(
+			tx.db,
+			scope,
+			split.body,
+			input.kind,
+			split.longform,
+			input.review_at ?? null,
+		)
+	)
+		return { ok: false, reason: "duplicate" };
+	return { ok: true, value: noteTx(tx, input) };
+}
+
+// #endregion FUNC_noteCheckedTx
+
+// #region FUNC_linkSupersedes
+
+/**
+ * @purpose Stamp the supersede latch on targets of one source, as one publication.
+ * @invariants Each target hides, takes the source id as its first link, and leaves the index and its covering nodes.
+ * @invariants A target of another scope or a cleared target refuses the write. An already linked target stays untouched.
+ */
+export function linkSupersedes(
+	store: Store,
+	id: string,
+	targets: readonly string[],
+): void {
+	store.publish((tx) => {
+		const source = requireRow(tx.db, id);
+		const now = new Date().toISOString();
+		for (const target of targets) {
+			const row = requireRow(tx.db, target);
+			if (row.scope !== source.scope)
+				throw new MemlensError(
+					"CrossScopeSupersede",
+					"A supersede target belongs to another scope.",
+				);
+			if (row.cleared === 1)
+				throw new MemlensError("Data", "A cleared note cannot change.");
+			if (row.superseded_by !== null) continue;
+			ftsSet(tx.db, row.n, ftsRowOf(row), null);
+			tx.db
+				.prepare(
+					"UPDATE notes SET state = 'hidden', superseded_by = ?, v = ?, modified_at = ? WHERE id = ?",
+				)
+				.run(id, tx.version, now, target);
+			deleteCovering(tx.db, row.scope, row.pos);
+			tx.journal("supersede", target, row.scope);
+		}
+		tx.journal("supersede", id, source.scope);
+	});
+}
+
+// #endregion FUNC_linkSupersedes
+
 // #region FUNC_amend
+
 /**
  * @purpose Change the content group of one note, and move the note to its rank when the scope changes.
  * @invariants An absent field keeps its stored value. A cleared note refuses the change.
@@ -210,9 +291,11 @@ export function noteTx(tx: Tx, input: NoteInput): Note {
 export function amend(store: Store, input: AmendInput): Note {
 	return store.publish((tx) => amendTx(tx, input)).value;
 }
+
 // #endregion FUNC_amend
 
 // #region FUNC_amendTx
+
 /** @purpose Amend a note within the caller transaction. */
 export function amendTx(tx: Tx, input: AmendInput): Note {
 	const old = requireRow(tx.db, input.id);
@@ -221,10 +304,15 @@ export function amendTx(tx: Tx, input: AmendInput): Note {
 	const now = new Date().toISOString();
 	const scope: ScopeKey =
 		input.scope === undefined ? old.scope : checkedScope(input.scope);
-	const body = input.body === undefined ? old.body : checkedBody(input.body);
-	const longform = Object.hasOwn(input, "longform")
+	const explicitLongform = Object.hasOwn(input, "longform")
 		? (input.longform ?? null)
 		: old.longform;
+	const split =
+		input.body === undefined
+			? null
+			: splitForWrite(input.body, explicitLongform);
+	const body = split === null ? old.body : split.body;
+	const longform = split === null ? explicitLongform : split.longform;
 	const kind = input.kind ?? old.kind;
 	const moved = scope !== old.scope;
 	ftsSet(tx.db, old.n, ftsRowOf(old), {
@@ -250,9 +338,11 @@ export function amendTx(tx: Tx, input: AmendInput): Note {
 	debug("Note amend", { event: "amend", id: old.id, scope, moved });
 	return requireNote(tx.db, old.id);
 }
+
 // #endregion FUNC_amendTx
 
 // #region FUNC_hide
+
 /**
  * @purpose Remove the note from the view, and keep the row as a lifecycle record.
  * @invariants A deleted or cleared row refuses the hide. The index row leaves before the state changes.
@@ -261,9 +351,11 @@ export function amendTx(tx: Tx, input: AmendInput): Note {
 export function hide(store: Store, id: Ulid, reason?: string): Note {
 	return store.publish((tx) => hideTx(tx, { id, reason })).value;
 }
+
 // #endregion FUNC_hide
 
 // #region FUNC_hideTx
+
 /** @purpose Hide a note within the caller transaction. */
 export function hideTx(
 	tx: Tx,
@@ -291,9 +383,11 @@ export function hideTx(
 	});
 	return requireNote(tx.db, id);
 }
+
 // #endregion FUNC_hideTx
 
 // #region FUNC_redact
+
 /**
  * @purpose Erase the content of one note, so no copy of the text stays in the store.
  * @invariants The transaction clears the row, the index row, the covering nodes, and the proposals of the target.
@@ -320,9 +414,11 @@ export function redact(store: Store, id: Ulid, reason: string): Note {
 	store.truncate();
 	return cleared.value;
 }
+
 // #endregion FUNC_redact
 
 // #region FUNC_review
+
 /**
  * @purpose Record one review of a note, and set the next review time.
  * @invariants The write changes no content, no modified_at, and no node row.
@@ -331,9 +427,11 @@ export function redact(store: Store, id: Ulid, reason: string): Note {
 export function review(store: Store, id: Ulid, reviewAt: string | null): Note {
 	return store.publish((tx) => reviewTx(tx, { id, reviewAt })).value;
 }
+
 // #endregion FUNC_review
 
 // #region FUNC_reviewTx
+
 /** @purpose Review a note within the caller transaction. */
 export function reviewTx(
 	tx: Tx,
@@ -351,9 +449,11 @@ export function reviewTx(
 	debug("Note review", { event: "review", id, scope: old.scope });
 	return requireNote(tx.db, id);
 }
+
 // #endregion FUNC_reviewTx
 
 // #region FUNC_ftsSet
+
 /**
  * @purpose Keep the external-content index in step with the old and the new values of one row.
  * @invariants The delete uses the old values, because the index cannot read a changed content row.
@@ -380,9 +480,11 @@ function ftsSet(
 		debug("Index insert", { event: "fts_insert", row: n });
 	}
 }
+
 // #endregion FUNC_ftsSet
 
 // #region FUNC_openSlot
+
 /**
  * @purpose Open the rank slot of one key, and move each later slot one place up.
  * @invariants Two statements pass the moved tail through a negative band, so no pair of slots clashes.
@@ -405,9 +507,11 @@ function openSlot(
 	debug("Slot open", { event: "slot_open", slot: pos });
 	return pos;
 }
+
 // #endregion FUNC_openSlot
 
 // #region FUNC_deleteShifted
+
 /**
  * @purpose Delete each node over a changed slot and over the tail that moved with it.
  * @invariants The range runs from the changed slot to the slot above the tail.
@@ -416,9 +520,11 @@ function deleteShifted(db: DatabaseSync, scope: ScopeKey, from: number): void {
 	const to = nextSlot(db, scope);
 	if (to > from) deleteRange(db, scope, from, to);
 }
+
 // #endregion FUNC_deleteShifted
 
 // #region FUNC_toNote
+
 /**
  * @purpose Turn one note row into the public note shape.
  * @invariants The refs text becomes an array of strings. A broken text gives an empty array.
@@ -448,6 +554,7 @@ function toNote(row: RawNote): Note {
 		v_review: row.v_review,
 	};
 }
+
 // #endregion FUNC_toNote
 
 /** @purpose Read the refs text of a note row as an array of strings. */
@@ -513,12 +620,15 @@ function checkedScope(raw: string): ScopeKey {
 	return scope;
 }
 
-/** @purpose Normalize one body, or refuse the write when the body exceeds its hard limit. */
-function checkedBody(raw: string): string {
-	const body = normalizeBody(raw);
-	if (body.length > BODY_HARD_LIMIT)
-		throw new MemlensError("Data", "The body exceeds 512 characters.");
-	return body;
+/** @purpose Normalize one body and move its overflow into the longform. */
+function splitForWrite(
+	raw: string,
+	existing: string | null,
+): {
+	body: string;
+	longform: string | null;
+} {
+	return splitBody(normalizeBody(raw), existing);
 }
 
 /** @purpose Keep a journal reason within its limit, or refuse the write. */

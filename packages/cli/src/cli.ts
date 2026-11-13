@@ -175,6 +175,7 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 };
 
 // #region FUNC_main
+
 /**
  * Run one command line.
  *
@@ -213,6 +214,7 @@ export async function main(
 		return code;
 	}
 }
+
 // #endregion FUNC_main
 
 function cliIo(io?: Partial<CommandIo>): CommandIo {

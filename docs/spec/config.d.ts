@@ -39,9 +39,6 @@ export type Glob = string;
  */
 export type ScopeKey = `${string}:${string}`;
 
-/** The backend of the store. */
-export type StoreBackend = "sqlite" | "jsonl";
-
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
@@ -49,9 +46,8 @@ export type SubagentMode = "propose" | "read" | "off";
 export type CompactionMode = "parallel" | "batch" | "auto";
 
 export interface StoreConfig {
-	backend: StoreBackend;
 	path: Path;
-	/** The time without an event that starts the background compaction, in seconds. The default is 300. */
+	/** The idle time before background compaction starts, in seconds. The default is 300. */
 	idle: number;
 }
 

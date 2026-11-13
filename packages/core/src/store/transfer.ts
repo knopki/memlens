@@ -102,6 +102,8 @@ interface Decision {
 export interface ImportOptions {
 	/** Report each decision and write nothing. */
 	readonly dryRun?: boolean;
+	/** Replace each incoming non-catalog scope with this key. */
+	readonly as?: ScopeKey;
 }
 
 /** The counts of one import. */
@@ -129,6 +131,7 @@ interface Statements {
 }
 
 // #region FUNC_exportLines
+
 /**
  * @purpose Give one portable text that carries the complete note state of a store.
  * @invariants Line one is the header. The last line is the trailer.
@@ -161,9 +164,11 @@ export function exportLines(store: Store): string[] {
 	debug("Export complete", { event: "export", rows: notes.length });
 	return [header, ...notes, trailer];
 }
+
 // #endregion FUNC_exportLines
 
 // #region FUNC_rowLine
+
 /**
  * @purpose Render one note row as one JSONL line with a stable field order.
  * @invariants A tombstone holds id, scope, ts, state, cleared, and the three versions only.
@@ -212,9 +217,11 @@ function rowLine(row: Record<string, unknown>): string {
 		v_review: vReview,
 	});
 }
+
 // #endregion FUNC_rowLine
 
 // #region FUNC_importLines
+
 /**
  * @purpose Join one transfer file into the note rows of a store with the five merge channels.
  * @invariants The call validates the complete file before the first write.
@@ -229,6 +236,9 @@ export function importLines(
 	opts: ImportOptions = {},
 ): ImportResult {
 	const file = parseTransfer(lines);
+	if (opts.as !== undefined)
+		for (const item of file.rows)
+			if (!item.row.scope.startsWith("__catalog__:")) item.row.scope = opts.as;
 	const dryRun = opts.dryRun === true;
 	const clock = foldClock(store.meta("clock") ?? "", file.versions);
 	debug("Import start", {
@@ -253,9 +263,11 @@ export function importLines(
 	});
 	return result;
 }
+
 // #endregion FUNC_importLines
 
 // #region FUNC_parseTransfer
+
 /**
  * @purpose Read and validate the complete file before the store sees one write.
  * @invariants The header names format 1. The trailer count and digest must match the note lines.
@@ -314,9 +326,11 @@ function parseTransfer(input: readonly string[]): ParsedFile {
 	debug("Transfer parsed", { event: "parse", rows: rows.length });
 	return { rows, versions };
 }
+
 // #endregion FUNC_parseTransfer
 
 // #region FUNC_parseRow
+
 /**
  * @purpose Read one JSON object as a note with the field limits of the table.
  * @invariants A missing content field takes the default of a tombstone.
@@ -379,9 +393,11 @@ function parseRow(value: Record<string, unknown>): Row {
 		v_review: vReview,
 	};
 }
+
 // #endregion FUNC_parseRow
 
 // #region FUNC_mergeRow
+
 /**
  * @purpose Join the five channels of one present note with its incoming copy.
  * @invariants Lifecycle takes the greater rank, and cleared latches to true.
@@ -447,9 +463,11 @@ function mergeRow(local: LocalRow, incoming: Row): Decision {
 		reviewKept,
 	};
 }
+
 // #endregion FUNC_mergeRow
 
 // #region FUNC_countDecisions
+
 /**
  * @purpose Read each local row per id and report the counts of a real import, with no write.
  * @invariants The call runs in one deferred read transaction.
@@ -490,9 +508,11 @@ function countDecisions(
 	});
 	return result;
 }
+
 // #endregion FUNC_countDecisions
 
 // #region FUNC_applyRows
+
 /**
  * @purpose Write the merged note rows in one publish transaction.
  * @invariants Each absent row takes its key rank with one tail shift.
@@ -555,9 +575,11 @@ function applyRows(
 		return { applied, merged, keptLocal, lost, clearedApplied };
 	}).value;
 }
+
 // #endregion FUNC_applyRows
 
 // #region FUNC_insertRow
+
 /**
  * @purpose Insert one absent note at its key rank, then sync the index and the node cache.
  * @invariants The tail shift moves each later slot of the scope one slot up.
@@ -599,9 +621,11 @@ function insertRow(db: DatabaseSync, sql: Statements, row: Row): void {
 		sql.ftsInsert.run(n, row.body, row.longform);
 	debug("Row inserted", { event: "insert", slot: pos, scope });
 }
+
 // #endregion FUNC_insertRow
 
 // #region FUNC_writeMerged
+
 /**
  * @purpose Apply one merged note row, its index rows, its node rows, and its slot.
  * @invariants A winning scope change inserts the row at the destination key rank.
@@ -652,9 +676,11 @@ function writeMerged(
 	if (moved) deleteCovering(db, merged.scope, pos);
 	debug("Row merged", { event: "merge", moved, scope: merged.scope });
 }
+
 // #endregion FUNC_writeMerged
 
 // #region FUNC_foldClock
+
 /**
  * @purpose Give the clock text that outranks the current value and each incoming version.
  * @invariants Only a version text that parses can raise the clock.
@@ -666,6 +692,7 @@ function foldClock(current: string, versions: readonly string[]): string {
 		if (parseVersion(value) !== null && value > greatest) greatest = value;
 	return greatest;
 }
+
 // #endregion FUNC_foldClock
 
 /** @purpose Write the clock text of one store connection. */
@@ -676,6 +703,7 @@ function setClock(db: DatabaseSync, value: string): void {
 }
 
 // #region FUNC_statementsOf
+
 /**
  * @purpose Prepare each statement of one import publish one time.
  * @invariants The index delete command carries the old body and longform of the row.
@@ -700,6 +728,7 @@ function statementsOf(db: DatabaseSync): Statements {
 		),
 	};
 }
+
 // #endregion FUNC_statementsOf
 
 /** @purpose Hash the complete text of each line before the trailer. */

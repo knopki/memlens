@@ -20,7 +20,6 @@ const BASE_TOML = `
 defaultProfile = "default"
 
 [store]
-backend = "sqlite"
 
 [profile.default]
 scopes = ["global:prefs", "project:dsh/*", "project:acme/*", "agent:default"]
@@ -62,7 +61,6 @@ function configToml(
 defaultProfile = "default"
 
 [store]
-backend = "sqlite"
 path = "x"
 
 [profile.default]
@@ -112,23 +110,22 @@ describe("loadBaseConfig", () => {
 
 	it("rejects an unknown key", () => {
 		expect(() =>
-			loadBaseConfig(
-				'unknown = 1\n\n[store]\nbackend = "jsonl"\npath = "x"\n',
-				"/s",
-			),
+			loadBaseConfig('unknown = 1\n\n[store]\npath = "x"\n', "/s"),
 		).toThrow(/unknown key unknown/);
 	});
 
-	it("rejects a wrong backend", () => {
+	it("rejects the removed backend key", () => {
 		expect(() =>
-			loadBaseConfig('[store]\nbackend = "redis"\npath = "x"\n', "/s"),
-		).toThrow(/store.backend/);
+			loadBaseConfig(
+				configToml().replace('path = "x"', 'path = "x"\nbackend = "sqlite"'),
+				"/s",
+			),
+		).toThrow(/unknown key/);
 	});
 
 	it("rejects a profile without a budget", () => {
 		const text = `
 [store]
-backend = "sqlite"
 path = "x"
 
 [profile.default]
@@ -246,21 +243,17 @@ describe("resolveConfig", () => {
 
 describe("storePath", () => {
 	it("takes the flag over the environment and the file", () => {
-		expect(
-			storePath("/flag", "/env", { backend: "sqlite", path: "/file", idle: 1 }),
-		).toBe("/flag");
+		expect(storePath("/flag", "/env", { path: "/file", idle: 1 })).toBe(
+			"/flag",
+		);
 	});
 
 	it("takes the environment over the file", () => {
-		expect(
-			storePath(null, "/env", { backend: "sqlite", path: "/file", idle: 1 }),
-		).toBe("/env");
+		expect(storePath(null, "/env", { path: "/file", idle: 1 })).toBe("/env");
 	});
 
 	it("takes the file last", () => {
-		expect(
-			storePath(null, null, { backend: "sqlite", path: "/file", idle: 1 }),
-		).toBe("/file");
+		expect(storePath(null, null, { path: "/file", idle: 1 })).toBe("/file");
 	});
 });
 

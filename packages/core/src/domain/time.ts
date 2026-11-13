@@ -21,6 +21,7 @@ import { debuglog } from "node:util";
 const debug = debuglog("memlens:time");
 
 // #region FUNC_nowIso
+
 /**
  * @purpose Give the current time in ISO 8601 UTC with Z, so the log records one format.
  * @returns The current time as a string, for example 2026-11-10T17:44:58.000Z.
@@ -30,9 +31,11 @@ export function nowIso(): string {
 	debug("Time now", { event: "now", result });
 	return result;
 }
+
 // #endregion FUNC_nowIso
 
 // #region FUNC_toIso
+
 /**
  * @purpose Convert a Date or a number to ISO 8601 UTC with Z, so the store writes one format.
  */
@@ -42,6 +45,7 @@ export function toIso(d: Date | number): string {
 	debug("Time toIso", { event: "toIso", result });
 	return result;
 }
+
 // #endregion FUNC_toIso
 
 /**
@@ -54,6 +58,7 @@ export function addDaysAtTime(d: Date | number, days: number): string {
 	debug("Time shift", { event: "add_days_at_time", days, result });
 	return result;
 }
+
 // #endregion FUNC_addDaysAtTime
 
 /**
@@ -64,6 +69,7 @@ export function compareIso(a: string, b: string): number {
 }
 
 // #region FUNC_dateSpan
+
 /**
  * @purpose Put one period into the date form of the view, so a range line names its span once.
  * @invariants Equal dates give one date. One year and month give 2026-11-01..02. One year gives
@@ -80,4 +86,5 @@ export function dateSpan(from: string, to: string): string {
 	if (yearA === yearB) return `${first}..${monthB}-${dayB}`;
 	return `${first}..${last}`;
 }
+
 // #endregion FUNC_dateSpan

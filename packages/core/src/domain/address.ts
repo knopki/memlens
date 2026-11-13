@@ -41,6 +41,7 @@ export type ParsedAddress =
 	  };
 
 // #region FUNC_parseAddress
+
 /**
  * @purpose Parse a string address into its parts, so a tool call or CLI argument maps to a record.
  * @invariants Strip one leading # before the parse. Invalid address text gives null.
@@ -92,6 +93,7 @@ export function parseAddress(raw: string): ParsedAddress | null {
 	debug("Address parse done", { result });
 	return result;
 }
+
 // #endregion FUNC_parseAddress
 
 /** Parse a string of the form N or N-M. Returns null on failure. */
@@ -118,6 +120,7 @@ function parseNonNegInt(s: string): number | null {
 }
 
 // #region FUNC_renderAddress
+
 /**
  * @purpose Render a pos or range in the address form of a slice line.
  * @invariants A local address starts with #. A scoped address starts with scope#.
@@ -136,4 +139,5 @@ export function renderAddress(
 	debug("Address rendered", { scope, start, end, result });
 	return result;
 }
+
 // #endregion FUNC_renderAddress

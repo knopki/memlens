@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -31,6 +31,37 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe("library isolation", () => {
+	it("exports no legacy event API", async () => {
+		const entry = await import("../src/index.js");
+		expect("project" in entry).toBe(false);
+		expect("replay" in entry).toBe(false);
+		expect("invalidate" in entry).toBe(false);
+	});
+
+	it("has no storage directory", () => {
+		expect(existsSync(join(root, "storage"))).toBe(false);
+	});
+
+	it("keeps store imports limited to pure domain helpers", () => {
+		const allowed = new Set([
+			"../domain/address.js",
+			"../domain/note-body.js",
+			"../domain/scope.js",
+			"../domain/time.js",
+			"../domain/tree.js",
+			"../domain/ulid.js",
+		]);
+		for (const file of sourceFiles(join(root, "store"))) {
+			const text = readFileSync(file, "utf8");
+			for (const match of text.matchAll(/from\s+["']([^"']+)['"]/g)) {
+				const name = match[1] ?? "";
+				if (name.startsWith("../domain/")) {
+					expect(allowed.has(name), `${file} imports ${name}`).toBe(true);
+				}
+			}
+		}
+	});
+
 	it("imports no frontend, plugin, or harness package", () => {
 		for (const file of sourceFiles(root)) {
 			const text = readFileSync(file, "utf8");

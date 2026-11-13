@@ -59,6 +59,7 @@ interface Index {
 const nodeKey = (level: number, start: number): string => `${level}:${start}`;
 
 // #region FUNC_loadView
+
 /**
  * @purpose Read each note row and each node row of one scope, as the input of the frontier.
  * @invariants The notes run from the first slot to the last, in any state.
@@ -84,9 +85,11 @@ export function loadView(db: DatabaseSync, scope: ScopeKey): View {
 	});
 	return { scope, notes, nodes };
 }
+
 // #endregion FUNC_loadView
 
 // #region FUNC_totalOf
+
 /**
  * @purpose Give the assigned extent of one scope: one above the greatest slot in any state.
  * @invariants An empty scope gives zero. Hidden and deleted rows still count.
@@ -95,6 +98,7 @@ export function totalOf(view: View): Pos {
 	const last = view.notes[view.notes.length - 1];
 	return last === undefined ? 0 : last.pos + 1;
 }
+
 // #endregion FUNC_totalOf
 
 /** @purpose Index one view for a render, so each lookup costs a map read or a binary search. */
@@ -176,6 +180,7 @@ function validOf(index: Index, node: ViewNode): boolean {
 }
 
 // #region FUNC_nodeValid
+
 /**
  * @purpose Prove one node row against the rows of one view.
  * @invariants Each non-null half matches its current key. Each null half holds no live note.
@@ -184,9 +189,11 @@ function validOf(index: Index, node: ViewNode): boolean {
 export function nodeValid(view: View, node: ViewNode): boolean {
 	return validOf(indexOf(view), node);
 }
+
 // #endregion FUNC_nodeValid
 
 // #region FUNC_nodeAt
+
 /** @purpose Give the node row of one range, or undefined when the store holds none. */
 export function nodeAt(
 	view: View,
@@ -197,9 +204,11 @@ export function nodeAt(
 		(node) => node.level === level && node.start === start,
 	);
 }
+
 // #endregion FUNC_nodeAt
 
 // #region FUNC_notesInRange
+
 /**
  * @purpose Give the live notes of one half-open slot range, so an open of a range reads rows only.
  * @invariants The result is in slot order. Hidden and deleted rows give no line.
@@ -215,6 +224,7 @@ export function notesInRange(
 		lowerBound(index.slots, to),
 	);
 }
+
 // #endregion FUNC_notesInRange
 
 /** @purpose Split one range into its two halves. */
@@ -227,6 +237,7 @@ function halves(range: Range): readonly [Range, Range] {
 }
 
 // #region FUNC_rangeText
+
 /**
  * @purpose Assemble the text of one range from the rows, without a model call.
  * @invariants A live note gives its body and its longform. A valid node gives its summary.
@@ -251,9 +262,11 @@ function rangeText(index: Index, range: Range, limit: number): string {
 		limit,
 	);
 }
+
 // #endregion FUNC_rangeText
 
 // #region FUNC_joinText
+
 /**
  * @purpose Join the two child texts of one range and report whether the whole pair fits.
  * @invariants A pair that fits the limit joins whole, and the caller may publish it as a join node.
@@ -272,6 +285,7 @@ export function joinText(
 		? { text: whole, fits: true }
 		: { text: joinBody(first, rest, limit), fits: false };
 }
+
 // #endregion FUNC_joinText
 
 /** @purpose Give the dates of the first and last live note in one range. */
@@ -286,6 +300,7 @@ function periodOf(
 }
 
 // #region FUNC_lineOfRange
+
 /**
  * @purpose Render one frontier range as one line of the slice.
  * @invariants A live note of level zero gives a record line. A valid node gives its summary and its dates.
@@ -319,9 +334,11 @@ function lineOfRange(index: Index, range: Range): SliceLine {
 		text: cutAtWord(rangeText(index, range, LINE_LIMIT), LINE_LIMIT),
 	};
 }
+
 // #endregion FUNC_lineOfRange
 
 // #region FUNC_sliceOf
+
 /**
  * @purpose Render the frontier of one view: a budgeted mixed-level set of ranges, the oldest first.
  * @invariants The fold keeps the greatest live slot. Each range renders by the node, the join, or the cut text.
@@ -341,9 +358,11 @@ export function sliceOf(view: View, budget: Lines): readonly SliceLine[] {
 	});
 	return lines;
 }
+
 // #endregion FUNC_sliceOf
 
 // #region FUNC_topLineOf
+
 /**
  * @purpose Render the top line of one scope, for the directions block.
  * @invariants The top range covers each assigned slot. A scope with no live note gives no line.
@@ -356,9 +375,11 @@ export function topLineOf(view: View): SliceLine | null {
 	const range = topRangeOf(index.total);
 	return range === null ? null : lineOfRange(index, range);
 }
+
 // #endregion FUNC_topLineOf
 
 // #region FUNC_textOfLine
+
 /**
  * @purpose Give the visible text of one slice line, or an empty text.
  * @invariants A record gives its body, a summary gives its summary, and a temporary line gives its text.
@@ -367,6 +388,7 @@ export function textOfLine(line: SliceLine): string {
 	if (line.kind === "record") return line.body;
 	return line.kind === "summary" ? line.summary : line.text;
 }
+
 // #endregion FUNC_textOfLine
 
 /** @purpose Read one nullable text column. */
@@ -387,6 +409,7 @@ function parseRefs(text: unknown): readonly string[] {
 }
 
 // #region FUNC_noteFromRow
+
 /**
  * @purpose Build one view note in one place, so each load gives the same note shape.
  * @invariants A cleared value of 0 gives false. A null column stays null. The refs field is JSON.
@@ -416,9 +439,11 @@ function noteFromRow(row: Record<string, unknown>): ViewNote {
 		v_review: nullable(row.v_review),
 	};
 }
+
 // #endregion FUNC_noteFromRow
 
 // #region FUNC_nodeFromRow
+
 /**
  * @purpose Build one view node in one place, so the slice reads one node shape.
  * @invariants The two half keys stay null when the half holds no live note.
@@ -436,4 +461,5 @@ function nodeFromRow(row: Record<string, unknown>): ViewNode {
 		b_key: nullable(row.b_key),
 	};
 }
+
 // #endregion FUNC_nodeFromRow

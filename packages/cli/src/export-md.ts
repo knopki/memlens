@@ -22,13 +22,30 @@
  *    overwrites a different scope on a filename collision.
  * @usecases
  *  - Export: caller => gives one scope and its records => gets one Markdown text
- * @dependencies READS: ProjectionRecord
+ * @dependencies READS: MarkdownRecord
  * @keywords export, markdown, md, filename, encoding, scope, record
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
-import type { ProjectionRecord, ScopeKey } from "@memlens/core";
+import type { ScopeKey } from "@memlens/core";
+
+interface MarkdownRecord {
+	readonly id: string;
+	readonly pos: number;
+	readonly state: "live" | "hidden" | "deleted";
+	readonly kind: string;
+	readonly review_at: string | null;
+	readonly ts: string;
+	readonly recorded_at?: string;
+	readonly created_at?: string;
+	readonly refs: readonly string[];
+	readonly supersedes?: readonly string[];
+	readonly longform: string | null;
+	readonly body: string;
+	readonly cleared?: boolean;
+	readonly content_cleared?: boolean;
+}
 
 const debug = debuglog("memlens:export-md");
 
@@ -36,6 +53,7 @@ const debug = debuglog("memlens:export-md");
 export const MD_FORMAT = "memlens-md-1";
 
 // #region FUNC_encodeScopeFilename
+
 /**
  * Encode one scope key into one safe filename stem.
  *
@@ -59,9 +77,11 @@ export function encodeScopeFilename(scope: ScopeKey): string {
 	debug("Scope name encoded", { event: "encode", scope, name });
 	return name;
 }
+
 // #endregion FUNC_encodeScopeFilename
 
 // #region FUNC_renderScopeMarkdown
+
 /**
  * Render one scope and its records as one Markdown text.
  *
@@ -71,27 +91,31 @@ export function encodeScopeFilename(scope: ScopeKey): string {
  */
 export function renderScopeMarkdown(
 	scope: ScopeKey,
-	records: readonly ProjectionRecord[],
+	records: readonly MarkdownRecord[],
 ): string {
 	const head = `---\nscope: ${yamlScalar(scope)}\nformat: ${MD_FORMAT}\n---\n`;
 	const sections = records
-		.filter((record) => record.state === "live")
+		.filter(
+			(record) =>
+				record.state === "live" && !record.cleared && !record.content_cleared,
+		)
 		.map(renderRecord)
 		.join("\n");
 	debug("Scope rendered", { event: "render", scope, records: records.length });
 	return `${head}\n${sections}`;
 }
+
 // #endregion FUNC_renderScopeMarkdown
 
-function renderRecord(record: ProjectionRecord): string {
+function renderRecord(record: MarkdownRecord): string {
 	const block = [
 		`id: ${yamlScalar(record.id)}`,
-		`at: ${yamlScalar(record.recorded_at)}`,
+		`at: ${yamlScalar(record.recorded_at ?? record.created_at ?? record.ts)}`,
 		`ts: ${yamlScalar(record.ts)}`,
 		`kind: ${record.kind}`,
 		`review_at: ${record.review_at === null ? "null" : yamlScalar(record.review_at)}`,
 		`refs: ${yamlList(record.refs)}`,
-		`supersedes: ${yamlList(record.supersedes)}`,
+		`supersedes: ${yamlList(record.supersedes ?? [])}`,
 	]
 		.map((line) => `  ${line}`)
 		.join("\n");

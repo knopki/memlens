@@ -44,6 +44,7 @@ export const KINDS = [
 ] as const satisfies readonly NoteKind[];
 
 // #region TYPE_route
+
 /**
  * @purpose Hold one place of the console as plain text, so the address and the screen state share
  * one shape.
@@ -62,6 +63,7 @@ export type Route = {
 	limit: string;
 	reviewKind: NoteKind | "";
 };
+
 // #endregion TYPE_route
 
 /** The place of a first visit: the overview of the default profile with no filter. */
@@ -79,6 +81,7 @@ export const DEFAULT_ROUTE: Route = {
 };
 
 // #region FUNC_routeOf
+
 /**
  * @purpose Turn a place of the console into the query text of the page address.
  * @invariants Write the keys `screen`, `profile`, `scope`, `target`, `q`, `s`, `kind`, `since`,
@@ -101,6 +104,7 @@ export function routeOf(route: Route): string {
 	put("rkind", route.reviewKind, "");
 	return params.toString();
 }
+
 // #endregion FUNC_routeOf
 
 // The text of a date field, as the date control writes it.
@@ -109,6 +113,7 @@ const kindOf = (raw: string): NoteKind | "" =>
 	(KINDS as readonly string[]).includes(raw) ? (raw as NoteKind) : "";
 
 // #region FUNC_readRoute
+
 /**
  * @purpose Turn the query text of the page address into a place of the console.
  * @invariants Keep each value inside the closed set of its field. A missing or rejected value gives
@@ -137,4 +142,5 @@ export function readRoute(search: string): Route {
 		reviewKind: kindOf(params.get("rkind") ?? ""),
 	};
 }
+
 // #endregion FUNC_readRoute

@@ -9,7 +9,6 @@
  * counts them before the cap. A kind selects one kind and null takes each kind.
  * @invariants The frontier holds the slice lines of the selected scope, in the same order and with
  * the same fold as the text of the slice. A range line hides the notes inside that range.
- * @invariants A projection source serves the frontend packages until their read path moves to the store.
  * @dependencies store/reads.ts, store/view.ts, domain/context.ts, domain/reads.ts, domain/tree.ts
  * @keywords console, model, frontier, catalog, directions, review, candidates, scope
  * #endregion moduleContract
@@ -18,7 +17,7 @@
 import { debuglog } from "node:util";
 import { directionsData, liveCounts, nodesOf } from "../store/reads.js";
 import type { Store } from "../store/store.js";
-import type { Note } from "../store/types.js";
+import type { Node, Note } from "../store/types.js";
 import {
 	loadView,
 	nodeValid,
@@ -28,23 +27,13 @@ import {
 } from "../store/view.js";
 import { MemlensError } from "../types/errors.js";
 import type { NoteKind, ScopeKey } from "../types/events.js";
-import type { Projection, ProjectionRecord } from "../types/projection.js";
-import type { StorePort } from "../types/store.js";
-import type { Range, SliceLine, TreeNode } from "../types/tree.js";
+import type { Range, SliceLine } from "../types/tree.js";
 import { visibleScopes } from "./active-scope.js";
 import type { ResolvedConfig } from "./config.js";
-import {
-	directionLines,
-	hereLines,
-	renderContext,
-	treeDirectionLines,
-	treeHereLines,
-} from "./context.js";
-import { catalogTree, scopeTree } from "./projection.js";
+import { directionLines, hereLines, renderContext } from "./context.js";
 import { type DueRecord, dueRecords, upcomingRecords } from "./reads.js";
-import { catalogKey, validateScopeKey } from "./scope.js";
+import { validateScopeKey } from "./scope.js";
 import { nowIso } from "./time.js";
-import { buildInput, candidates, isClean, slice } from "./tree.js";
 
 const debug = debuglog("memlens:console");
 
@@ -52,6 +41,7 @@ const debug = debuglog("memlens:console");
 const NEXT_LIMIT = 10;
 
 // #region CLASS_ConsoleModel
+
 /** @purpose Give console hosts one serializable view of the visible memory. */
 export interface ConsoleModel {
 	readonly profile: string;
@@ -71,10 +61,10 @@ export interface ConsoleModel {
 		readonly here: { readonly used: number; readonly limit: number };
 		readonly directions: { readonly used: number; readonly limit: number };
 	};
-	readonly records: readonly ProjectionRecord[];
+	readonly records: readonly ReturnType<typeof recordOf>[];
 	readonly nodes: readonly {
-		readonly scope: string;
-		readonly node: TreeNode;
+		readonly scope: ScopeKey;
+		readonly node: Node;
 		readonly clean: boolean;
 	}[];
 	readonly candidates: readonly {
@@ -91,6 +81,7 @@ export interface ConsoleModel {
 	readonly reviewNextTotal: number;
 	readonly revision: string;
 }
+
 // #endregion CLASS_ConsoleModel
 
 /** The visible scope keys of one console read. */
@@ -100,6 +91,7 @@ interface ScopeSet {
 }
 
 // #region FUNC_readConsole
+
 /**
  * @purpose Read one console snapshot for the selected visible scope.
  * @invariants Keep explicit empty scopes. Accept an absent selected scope when the profile matches it.
@@ -109,24 +101,24 @@ interface ScopeSet {
  * call no compaction. The revision is the store clock of one read.
  * @invariants The catalog scopes hold the scope of each catalog position, in the order of the
  * catalog tree, so a host maps a line position to its scope.
- * @invariants A store source reads rows. A projection source serves the frontends until their read
- * path moves to the store.
  */
 export async function readConsole(
-	source: StorePort | Store,
+	store: Store,
 	config: ResolvedConfig,
 	scope: ScopeKey,
 	now?: string,
 	kind: NoteKind | null = null,
 ): Promise<ConsoleModel> {
 	debug("Console read start", { event: "start", scope });
-	return "handle" in source
-		? readStoreConsole(source, config, scope, now ?? nowIso(), kind)
-		: readPortConsole(source, config, scope, now, kind);
+	return store.read(() =>
+		readStoreConsole(store, config, scope, now ?? nowIso(), kind),
+	);
 }
+
 // #endregion FUNC_readConsole
 
 // #region FUNC_readStoreConsole
+
 /**
  * @purpose Read one console snapshot from the rows of one store.
  * @invariants The revision is the store clock of one read, so the model and the epoch agree.
@@ -147,6 +139,7 @@ function readStoreConsole(
 		set.keys.map((key) => [key, loadView(store.handle(), key)]),
 	);
 	const hereView = requireView(views, set.selected);
+	const links = supersedesOf(store, set.keys);
 	const data = directionsData(store, set.keys, config.budget.directions);
 	const lines = data.lines.map((line) => ({
 		...line,
@@ -181,12 +174,12 @@ function readStoreConsole(
 			directions: { used: lines.length, limit: config.budget.directions },
 		},
 		records: set.keys.flatMap((key) =>
-			requireView(views, key).notes.map(recordOf),
+			requireView(views, key).notes.map((row) => recordOf(row, links)),
 		),
 		nodes: set.keys.flatMap((key) =>
 			nodesOf(store, key).map((node) => ({
 				scope: key,
-				node: nodeAsTree(node),
+				node,
 				clean: nodeValid(requireView(views, key), node),
 			})),
 		),
@@ -198,11 +191,11 @@ function readStoreConsole(
 			})),
 		),
 		catalog: lines.map((line, pos) => ({
-			kind: "summary",
+			kind: "temporary",
 			range: { start: pos, level: 0 },
 			from: line.lastWrite,
 			to: line.lastWrite,
-			summary: line.summary ?? "",
+			text: line.summary ?? "",
 		})),
 		catalogScopes: lines.map((line) => line.scope),
 		frontier: sliceOf(hereView, config.budget.here),
@@ -224,6 +217,7 @@ function readStoreConsole(
 	});
 	return model;
 }
+
 // #endregion FUNC_readStoreConsole
 
 /** @purpose Give one scope panel of the console from the rows of one store. */
@@ -252,6 +246,7 @@ function topText(store: Store, scope: ScopeKey): string | null {
 }
 
 // #region FUNC_candidatesOf
+
 /**
  * @purpose List the ranges of one view that lack a valid node, so a compaction has work.
  * @invariants Each level from one to the top of the extent gives one range for each live slot.
@@ -282,6 +277,7 @@ export function candidatesOf(view: View): readonly Range[] {
 	debug("Candidates listed", { slots: slots.length, count: result.length });
 	return result;
 }
+
 // #endregion FUNC_candidatesOf
 
 /** @purpose Give the visible scope keys of one console read, and the selected key. */
@@ -312,7 +308,29 @@ function requireView(views: ReadonlyMap<ScopeKey, View>, key: ScopeKey): View {
 }
 
 /** @purpose Give the record shape of the console from one note row. */
-function recordOf(row: Note): ProjectionRecord {
+/** @purpose Build the reverse supersede map of the visible scopes: each source names its targets. */
+function supersedesOf(
+	store: import("../store/store.js").Store,
+	keys: readonly ScopeKey[],
+): ReadonlyMap<string, string[]> {
+	const links = new Map<string, string[]>();
+	if (keys.length === 0) return links;
+	const placeholders = keys.map(() => "?").join(", ");
+	const rows = store
+		.handle()
+		.prepare(
+			`SELECT id, superseded_by FROM notes WHERE superseded_by IS NOT NULL AND scope IN (${placeholders})`,
+		)
+		.all(...keys) as { id: string; superseded_by: string }[];
+	for (const row of rows) {
+		const list = links.get(row.superseded_by) ?? [];
+		list.push(row.id);
+		links.set(row.superseded_by, list);
+	}
+	return links;
+}
+
+function recordOf(row: Note, links: ReadonlyMap<string, string[]>) {
 	return {
 		id: row.id,
 		scope: row.scope,
@@ -327,7 +345,7 @@ function recordOf(row: Note): ProjectionRecord {
 		modified_at: row.modified_at,
 		longform: row.longform,
 		refs: row.refs,
-		supersedes: [],
+		supersedes: links.get(row.id) ?? [],
 		superseded_by: row.superseded_by,
 		content_cleared: row.cleared,
 		session: row.session,
@@ -337,162 +355,3 @@ function recordOf(row: Note): ProjectionRecord {
 }
 
 /** @purpose Give the tree node shape of the console from one node row. */
-function nodeAsTree(node: {
-	readonly level: number;
-	readonly start: number;
-	readonly summary: string;
-	readonly ts_from: string;
-	readonly ts_to: string;
-	readonly built_v: string;
-	readonly a_key: string | null;
-	readonly b_key: string | null;
-}): TreeNode {
-	return {
-		id: `${node.level}:${node.start}`,
-		order: node.built_v as TreeNode["order"],
-		range: { start: node.start, level: node.level },
-		child_a: node.a_key,
-		child_b: node.b_key,
-		input_rev: null,
-		summary: node.summary,
-		chars: node.summary.length,
-		truncated: false,
-		ts_from: node.ts_from,
-		ts_to: node.ts_to,
-	};
-}
-
-// #region FUNC_readPortConsole
-/**
- * @purpose Read one console snapshot from the projection of a frontend store.
- * @invariants The loop repeats until the revision of the projection matches the revision of the store.
- */
-async function readPortConsole(
-	store: StorePort,
-	config: ResolvedConfig,
-	scope: ScopeKey,
-	now: string | undefined,
-	kind: NoteKind | null,
-): Promise<ConsoleModel> {
-	let revision: string;
-	let projection: Projection;
-	do {
-		revision = await store.rev();
-		projection = await store.projection();
-	} while (revision !== (await store.rev()));
-	const known = projection.scopeOrder;
-	const set = scopeSet(config, known, scope);
-	const time = now ?? nowIso();
-	const profile = config.defaultProfile;
-	const trees = set.keys.map((key) => ({
-		scope: key,
-		tree: scopeTree(projection, key),
-	}));
-	const hereTree = scopeTree(projection, set.selected);
-	const catalog = catalogTree(projection, profile, set.keys);
-	const catalogScopes = projection.scopeOrder
-		.filter((key) => set.keys.includes(key))
-		.map((key) => {
-			const live = (projection.byScope.get(key) ?? []).filter(
-				(record) => record.state === "live",
-			);
-			return {
-				key,
-				lastWrite:
-					live
-						.map((record) => record.recorded_at)
-						.sort()
-						.at(-1) ?? "",
-			};
-		});
-	const scopes = trees.map(({ scope: key, tree }) => ({
-		key,
-		total: tree.total,
-		live: tree.notes.filter((note) => note.state === "live").length,
-		hidden: tree.notes.filter((note) => note.state === "hidden").length,
-		deleted: tree.notes.filter((note) => note.state === "deleted").length,
-		frontier: treeHereLines(tree, config.budget.here),
-	}));
-	const allTrees = [...trees, { scope: catalogKey(profile), tree: catalog }];
-	const next = upcomingRecords(
-		projection,
-		[set.selected],
-		time,
-		NEXT_LIMIT,
-		kind,
-	);
-	const model: ConsoleModel = {
-		profile,
-		scope: set.selected,
-		scopes,
-		here: treeHereLines(hereTree, config.budget.here),
-		directions: treeDirectionLines(
-			catalog,
-			catalogScopes,
-			config.budget.directions,
-			time,
-		),
-		text: renderContext({
-			scope: set.selected,
-			here: hereTree,
-			hereBudget: config.budget.here,
-			catalog,
-			catalogScopes,
-			directionsBudget: config.budget.directions,
-			now: time,
-			...(config.customPrompt === null
-				? {}
-				: { customPrompt: config.customPrompt }),
-			...(config.customPromptAppend === null
-				? {}
-				: { customPromptAppend: config.customPromptAppend }),
-		}),
-		budgets: {
-			here: {
-				used: slice(hereTree, config.budget.here).length,
-				limit: config.budget.here,
-			},
-			directions: {
-				used: slice(catalog, config.budget.directions).length,
-				limit: config.budget.directions,
-			},
-		},
-		records: set.keys.flatMap((key) => [
-			...(projection.byScope.get(key) ?? []),
-		]),
-		nodes: allTrees.flatMap(({ scope: key, tree }) =>
-			tree.nodes.map((node) => ({
-				scope: key,
-				node,
-				clean: isClean(tree, node),
-			})),
-		),
-		candidates: allTrees.flatMap(({ scope: key, tree }) =>
-			candidates(tree).map((range) => ({
-				scope: key,
-				range,
-				ready: buildInput(tree, range) !== null,
-			})),
-		),
-		catalog: slice(catalog, config.budget.directions),
-		catalogScopes: catalogScopes.map((item) => item.key),
-		frontier: slice(hereTree, config.budget.here),
-		review: dueRecords(projection, [set.selected], time, kind),
-		reviewNext: next.records,
-		reviewNextTotal: next.total,
-		revision,
-	};
-	debug("Console read", {
-		profile,
-		scope: set.selected,
-		scopes: scopes.length,
-		records: model.records.length,
-		nodes: model.nodes.length,
-		frontier: model.frontier.length,
-		kind,
-		due: model.review.length,
-		next: `${model.reviewNext.length}/${model.reviewNextTotal}`,
-	});
-	return model;
-}
-// #endregion FUNC_readPortConsole

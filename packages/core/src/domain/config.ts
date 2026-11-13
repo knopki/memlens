@@ -60,9 +60,6 @@ export type Duration = `${number}${"s" | "m" | "h"}`;
 /** A glob over the whole key. The part `*` matches any text. */
 export type Glob = string;
 
-/** The backend of the store. */
-export type StoreBackend = "sqlite" | "jsonl";
-
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
@@ -70,7 +67,6 @@ export type SubagentMode = "propose" | "read" | "off";
 export type CompactionMode = "parallel" | "batch" | "auto";
 
 export interface StoreConfig {
-	backend: StoreBackend;
 	path: Path;
 	/** The time without an event that starts the background compaction, in seconds. */
 	idle: number;
@@ -222,6 +218,7 @@ const SCOPE_KINDS: readonly NoteKind[] = [
 ];
 
 // #region FUNC_loadBaseConfig
+
 /**
  * @purpose Read the base TOML file into a complete layer, so the rest of the code sees one shape.
  * @param text - The content of `config.toml`.
@@ -250,14 +247,8 @@ export function loadBaseConfig(
 	);
 
 	const storeRec = expectRecord(root.store, "store");
-	expectKeys(storeRec, ["backend", "path", "idle"], "store");
-	const backend = expectOneOf(
-		storeRec.backend,
-		["sqlite", "jsonl"],
-		"store.backend",
-	);
+	expectKeys(storeRec, ["path", "idle"], "store");
 	const store: StoreConfig = {
-		backend,
 		path:
 			storeRec.path === undefined
 				? defaultStorePath
@@ -293,14 +284,15 @@ export function loadBaseConfig(
 	debug("Base config loaded", {
 		event: "base",
 		profiles: Object.keys(profile).length,
-		backend: store.backend,
 		defaultProfile: result.defaultProfile,
 	});
 	return result;
 }
+
 // #endregion FUNC_loadBaseConfig
 
 // #region FUNC_loadPatchConfig
+
 /**
  * @purpose Read the patch row of the harness into a layer, so the harness profile can override values.
  * @param value - The parsed row `memlens` of `cordis.patch.yml`.
@@ -325,15 +317,8 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 	const patch: PatchConfig = {};
 	if (row.store !== undefined) {
 		const storeRec = expectRecord(row.store, "patch.store");
-		expectKeys(storeRec, ["backend", "path", "idle"], "patch.store");
+		expectKeys(storeRec, ["path", "idle"], "patch.store");
 		const store: Partial<StoreConfig> = {};
-		if (storeRec.backend !== undefined) {
-			store.backend = expectOneOf(
-				storeRec.backend,
-				["sqlite", "jsonl"],
-				"patch.store.backend",
-			);
-		}
 		if (storeRec.path !== undefined)
 			store.path = expectString(storeRec.path, "patch.store.path");
 		if (storeRec.idle !== undefined)
@@ -366,9 +351,11 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 	debug("Patch config loaded", { event: "patch", keys: Object.keys(patch) });
 	return patch;
 }
+
 // #endregion FUNC_loadPatchConfig
 
 // #region FUNC_loadPresetConfig
+
 /**
  * @purpose Read an agent preset into a layer, so one agent can override values of its profile.
  * @param value - The parsed preset object.
@@ -414,9 +401,11 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 	debug("Preset config loaded", { event: "preset", profile: preset.profile });
 	return preset;
 }
+
 // #endregion FUNC_loadPresetConfig
 
 // #region FUNC_resolveConfig
+
 /**
  * @purpose Merge the three layers into one resolved configuration, so each caller reads one object.
  * @param base - The base layer.
@@ -471,9 +460,11 @@ export function resolveConfig(
 	});
 	return result;
 }
+
 // #endregion FUNC_resolveConfig
 
 // #region FUNC_storePath
+
 /**
  * @purpose Pick the store path by the fixed order, so each frontend opens the same directory.
  * @param flag - The value of `--store`, or null.
@@ -494,6 +485,7 @@ export function storePath(
 	});
 	return picked;
 }
+
 // #endregion FUNC_storePath
 
 /** Expand a leading tilde to the home directory of the environment. */
@@ -536,6 +528,7 @@ export function parseDuration(value: string): number {
 }
 
 // #region FUNC_globMatches
+
 /**
  * @purpose Match one glob, so scope lists, rules, and model globs share one rule.
  * @param glob - The pattern. The part `*` matches any text, and the rest matches itself.
@@ -546,9 +539,11 @@ export function globMatches(glob: Glob, value: string): boolean {
 	const re = new RegExp(`^${glob.split("*").map(escapeRegExp).join(".*")}$`);
 	return re.test(value);
 }
+
 // #endregion FUNC_globMatches
 
 // #region FUNC_ttlSeconds
+
 /**
  * @purpose Give the cache TTL of one model in seconds, so the plugin knows when a new text is due.
  * @param cacheTtl - The glob to duration map.
@@ -578,6 +573,7 @@ export function ttlSeconds(cacheTtl: CacheTtl, model: string): number {
 	});
 	return parseDuration(raw);
 }
+
 // #endregion FUNC_ttlSeconds
 
 function countStars(glob: string): number {

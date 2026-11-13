@@ -3,10 +3,10 @@
  *
  * #region moduleContract
  * @modulecontract
- * @purpose Generate time-sortable identifiers for events, so the projection orders events by (at, id).
+ * @purpose Generate unique time-sortable identifiers for stored notes and proposals.
  * @scope
  *  - ULID generation, parsing, and text comparison.
- *  - NOT: event validation or projection logic.
+ *  - NOT: time validation or storage.
  * @invariants
  *  - A ULID is 26 characters of Crockford base32.
  *  - Two ULIDs generated at the same time sort by their random suffix.
@@ -26,6 +26,7 @@ const RAND_LEN = 16;
 const ULID_LEN = TIME_LEN + RAND_LEN;
 
 // #region FUNC_ulid
+
 /**
  * @purpose Generate a time-sortable ULID from the given timestamp, so events sort by (at, id).
  * @param timestampMs - The time of the log in milliseconds since epoch.
@@ -61,6 +62,7 @@ export function ulid(timestampMs: number): string {
 	debug("ULID generated", { event: "generated", len: result.length });
 	return result;
 }
+
 // #endregion FUNC_ulid
 
 /** Check that a string is a valid ULID. */

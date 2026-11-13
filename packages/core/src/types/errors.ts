@@ -30,6 +30,7 @@ const debug = debuglog("memlens:errors");
 export type ErrorCode = "NotAllowed" | "CrossScopeSupersede" | "Usage" | "Data";
 
 // #region CLASS_MemlensError
+
 /**
  * @purpose Carry a code and a message so the CLI can map errors to exit codes.
  * @invariants Preserve the supplied code and message. The error name is MemlensError.
@@ -44,4 +45,5 @@ export class MemlensError extends Error {
 		debug("Error created", { code, message });
 	}
 }
+
 // #endregion CLASS_MemlensError

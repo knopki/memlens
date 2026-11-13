@@ -50,6 +50,7 @@ export interface ActiveScope {
 }
 
 // #region FUNC_repoName
+
 /**
  * @purpose Take the repository name from one remote, so `{repo}` names the project.
  * @param remote - The remote URL, for example `git@github.com:knopki/optmem.git`.
@@ -59,9 +60,11 @@ export function repoName(remote: string): string {
 	const last = remote.trim().split(/[/:]/).filter(Boolean).at(-1) ?? "";
 	return last.replace(/\.git$/, "").toLowerCase();
 }
+
 // #endregion FUNC_repoName
 
 // #region FUNC_activeScope
+
 /**
  * @purpose Apply the ordered rules to one subject, so one context maps to one scope key.
  * @param scopeDefault - The rules and the default key from the configuration.
@@ -90,9 +93,11 @@ export function activeScope(
 	});
 	return { key: scopeDefault.default, rule: null };
 }
+
 // #endregion FUNC_activeScope
 
 // #region FUNC_visibleScopes
+
 /**
  * @purpose Filter the known scopes through the globs of one profile, so the profile sees its scopes only.
  * @param globs - The scope globs of the profile.
@@ -113,6 +118,7 @@ export function visibleScopes(
 	});
 	return visible;
 }
+
 // #endregion FUNC_visibleScopes
 
 function ruleKey(rule: Rule, subject: ScopeSubject): ScopeKey | null {

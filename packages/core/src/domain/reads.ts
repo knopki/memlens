@@ -1,12 +1,11 @@
 /**
  * #region moduleContract
- * @purpose Answer each memory read from the store rows or the projection, without a log scan.
+ * @purpose Answer each memory read from the store rows, without a log scan.
  * @scope
  *  - Find filters, the open of one note and of one range, the due review list, and the scope list.
  *  - NOT: the address grammar, the index storage, the locks, and the tool schemas.
  * @invariants
- *  - A store source reads rows through store/reads.ts and store/view.ts. A projection source serves
- * the frontend packages until their read path moves to the store.
+ *  - Reads use rows through store/reads.ts and store/view.ts.
  *  - Find keeps at most 50 hits for each scope and at most 10 hits in total by default.
  *  - Since and until compare against the ts text, and a date-only bound covers that whole day.
  *  - The due filter and the due list take a record with a review time of now or earlier.
@@ -18,10 +17,10 @@
  *  - An open of an aligned range gives the non-empty child lines. A clean child gives its text.
  *  - A dirty or missing child gives a temporary line with the period and no text.
  *  - A range that matches no node gives one line, and the line holds the first pos.
- *  - Every read uses the supplied projection and hits. No read scans events or waits for a compaction.
+ *  - Every read uses the supplied store, view, or hits. No read scans events or waits for a compaction.
  * @dependencies
- *  USES API: domain/address.ts, domain/tree.ts, store/reads.ts, store/view.ts
- *  READS: Projection, IndexHit, Tree, Note, View
+ *  USES API: domain/address.ts, store/reads.ts, store/view.ts
+ *  READS: Store, IndexHit, Note, View
  * @keywords find, filter, open, longform, range, review, due, scopes, reads, store
  * #endregion moduleContract
  */
@@ -29,7 +28,7 @@
 import { debuglog } from "node:util";
 import { liveCounts, scopeNotes } from "../store/reads.js";
 import type { Store } from "../store/store.js";
-import type { Note } from "../store/types.js";
+import type { IndexHit, Note } from "../store/types.js";
 import {
 	loadView,
 	nodeAt,
@@ -37,29 +36,15 @@ import {
 	notesInRange,
 	type View,
 } from "../store/view.js";
-import type { IsoDate, IsoTime, NoteKind, ScopeKey } from "../types/events.js";
-import type { Projection } from "../types/projection.js";
-import type { IndexHit } from "../types/store.js";
-import type { Tree } from "../types/tree.js";
+import type { IsoTime, NoteKind, ScopeKey } from "../types/events.js";
 import { renderAddress } from "./address.js";
-import { currentNode, isClean } from "./tree.js";
 
 const debug = debuglog("memlens:reads");
 
-/** A read source: the rows of one store, or the projection of a frontend package. */
-export type ReadSource = Projection | Store;
+/** A read source: the rows of one store. */
+export type ReadSource = Store;
 
-/** @purpose Report whether one read source holds the row handle of the store. */
-function isStore(source: ReadSource): source is Store {
-	return "handle" in source;
-}
-
-/** @purpose Report whether one range source holds the assigned extent of a projection tree. */
-function isTree(source: Tree | View): source is Tree {
-	return "total" in source;
-}
-
-/** The fields of one note that an open reads. A store note and a projection record both fit. */
+/** The fields of one note that an open reads. */
 export type OpenSubject = Pick<
 	Note,
 	| "id"
@@ -129,6 +114,7 @@ export interface OpenChildren {
 }
 
 // #region FUNC_filterHits
+
 /**
  * @purpose Apply the find filters to complete hits, so the tools and the CLI share one answer.
  * @invariants Keep the hit order. Cap the hits at 50 for each scope, then apply the total limit.
@@ -165,9 +151,11 @@ export function filterHits(
 	});
 	return result.slice(0, limit);
 }
+
 // #endregion FUNC_filterHits
 
 // #region FUNC_openNote
+
 /**
  * @purpose Give one note with the visible part of its document.
  * @invariants The mode head gives 8192 characters at most, and all gives 16384.
@@ -207,9 +195,11 @@ export function openNote(
 		refs: record.refs,
 	};
 }
+
 // #endregion FUNC_openNote
 
 // #region FUNC_openRange
+
 /**
  * @purpose Give the non-empty child lines of one range of positions.
  * @invariants An aligned range splits into its two halves. Each non-empty half gives one line.
@@ -218,68 +208,13 @@ export function openNote(
  */
 export function openRange(
 	scope: ScopeKey,
-	source: Tree | View,
+	view: View,
 	start: number,
 	end: number,
 ): OpenChildren {
-	if (!isTree(source)) return openViewRange(scope, source, start, end);
-	const tree = source;
-	const span = end - start + 1;
-	const level = Math.max(1, Math.ceil(Math.log2(span)));
-	const live = liveNotes(tree, start, end);
-	if (span !== 2 ** level || start % 2 ** level !== 0) {
-		debug("Range opened", { event: "open_range", start, end, lines: 1 });
-		return {
-			kind: "children",
-			children: [line(scope, period(live), start, null)],
-		};
-	}
-	const children: OpenLine[] = [];
-	for (const half of [
-		{ start, level: level - 1 },
-		{ start: start + 2 ** (level - 1), level: level - 1 },
-	]) {
-		const notes = liveNotes(tree, half.start, half.start + 2 ** half.level - 1);
-		if (!notes.length) continue;
-		if (half.level === 0) {
-			const record = notes[0];
-			if (!record) continue;
-			children.push({
-				addr: renderAddress(scope, record.pos, null),
-				ts_from: record.ts,
-				ts_to: record.ts,
-				text: record.body,
-				built: true,
-				chars: record.body.length,
-			});
-			continue;
-		}
-		const node = currentNode(tree, half);
-		children.push(
-			node && isClean(tree, node)
-				? {
-						addr: renderAddress(
-							scope,
-							node.range.start,
-							node.range.start + 2 ** node.range.level - 1,
-						),
-						ts_from: node.ts_from,
-						ts_to: node.ts_to,
-						text: node.summary,
-						built: true,
-						chars: node.chars,
-					}
-				: line(scope, period(notes), half.start, half),
-		);
-	}
-	debug("Range opened", {
-		event: "open_range",
-		start,
-		end,
-		lines: children.length,
-	});
-	return { kind: "children", children };
+	return openViewRange(scope, view, start, end);
 }
+
 // #endregion FUNC_openRange
 
 /** One due record of a review. */
@@ -294,6 +229,7 @@ export interface DueRecord {
 }
 
 // #region FUNC_dueRecords
+
 /**
  * @purpose List the due records of the supplied scopes, so a review answers without a log scan.
  * @invariants A record is due when its review time is now or earlier. A null scope list takes each scope.
@@ -306,11 +242,9 @@ export function dueRecords(
 	now: IsoTime,
 	kind: NoteKind | null = null,
 ): readonly DueRecord[] {
-	if (isStore(source)) return dueFromStore(source, scopes, now, kind);
-	const due = reviewList(source, scopes, (review) => review <= now, kind);
-	debug("Review listed", { event: "due", count: due.length, kind });
-	return due;
+	return dueFromStore(source, scopes, now, kind);
 }
+
 // #endregion FUNC_dueRecords
 
 /** One page of the records that come due next, with the count of the whole list. */
@@ -320,6 +254,7 @@ export interface UpcomingPage {
 }
 
 // #region FUNC_upcomingRecords
+
 /**
  * @purpose List the records that come due next, so the review screen stays useful before a due time.
  * @invariants A record is upcoming when its review time is after now. A null review value stays out.
@@ -333,100 +268,33 @@ export function upcomingRecords(
 	limit: number,
 	kind: NoteKind | null = null,
 ): UpcomingPage {
-	if (isStore(source))
-		return upcomingFromStore(source, scopes, now, limit, kind);
-	const next = reviewList(source, scopes, (review) => review > now, kind);
-	debug("Review upcoming listed", {
-		event: "upcoming",
-		count: next.length,
-		limit,
-		kind,
-	});
-	return { records: next.slice(0, limit), total: next.length };
+	return upcomingFromStore(source, scopes, now, limit, kind);
 }
-// #endregion FUNC_upcomingRecords
 
-/** Collect the live records that pass the kind test and the review test, in review value order. */
-function reviewList(
-	projection: Projection,
-	scopes: readonly ScopeKey[] | null,
-	keep: (review_at: string) => boolean,
-	kind: NoteKind | null,
-): DueRecord[] {
-	const visible = scopes === null ? projection.scopeOrder : scopes;
-	const list: DueRecord[] = [];
-	for (const scope of visible) {
-		const records = projection.byScope.get(scope) ?? [];
-		for (const record of records)
-			if (
-				record.state === "live" &&
-				record.review_at !== null &&
-				(kind === null || record.kind === kind) &&
-				keep(record.review_at)
-			)
-				list.push({
-					addr: renderAddress(scope, record.pos, null),
-					scope,
-					pos: record.pos,
-					ts: record.ts,
-					kind: record.kind,
-					body: record.body,
-					review_at: record.review_at,
-				});
-	}
-	list.sort(
-		(a, b) =>
-			(a.review_at ?? "").localeCompare(b.review_at ?? "") ||
-			a.scope.localeCompare(b.scope) ||
-			a.pos - b.pos,
-	);
-	return list;
-}
+// #endregion FUNC_upcomingRecords
 
 /** One scope line of the scope list. */
 export interface ScopeLine {
 	readonly key: ScopeKey;
 	readonly notes: number;
-	readonly lastSeen: IsoDate;
+	readonly lastSeen: string;
 }
 
 // #region FUNC_scopeLines
+
 /**
  * @purpose List the visible scopes with a live count and the date of the latest live write.
- * @invariants Keep the scope order of the projection. A null scope list takes each scope.
- * lastSeen is the UTC date of the latest recorded_at of a live record.
+ * @invariants Keep the supplied scope order. A null scope list takes each live scope in key order.
+ * lastSeen is the UTC date of the latest modified_at of a live note.
  */
 export function scopeLines(
 	source: ReadSource,
 	scopes: readonly ScopeKey[] | null,
 ): readonly ScopeLine[] {
-	if (isStore(source)) return scopeLinesFromStore(source, scopes);
-	const projection = source;
-	const visible = scopes === null ? projection.scopeOrder : scopes;
-	const lines = visible.flatMap((scope) => {
-		const live = (projection.byScope.get(scope) ?? []).filter(
-			(record) => record.state === "live",
-		);
-		if (!live.length) return [];
-		const latest = latestOf(live.map((record) => record.recorded_at));
-		return [{ key: scope, notes: live.length, lastSeen: latest.slice(0, 10) }];
-	});
-	debug("Scopes listed", { event: "scopes", count: lines.length });
-	return lines;
+	return scopeLinesFromStore(source, scopes);
 }
-// #endregion FUNC_scopeLines
 
-function liveNotes(
-	tree: Tree,
-	start: number,
-	end: number,
-): readonly (typeof tree.notes)[number][] {
-	return tree.notes
-		.filter(
-			(note) => note.state === "live" && note.pos >= start && note.pos <= end,
-		)
-		.sort((a, b) => a.pos - b.pos);
-}
+// #endregion FUNC_scopeLines
 
 /** @purpose Give the greatest text of a non-empty list, so a date compare stays one rule. */
 function latestOf(values: readonly string[]): string {
@@ -461,6 +329,7 @@ function line(
 }
 
 // #region FUNC_dueFromStore
+
 /**
  * @purpose List the due notes of the supplied scopes from the rows of one store.
  * @invariants The read takes the live rows of the scope list, or of each scope when the list is null.
@@ -481,9 +350,11 @@ function dueFromStore(
 	debug("Review listed", { event: "due", count: due.length, kind });
 	return due;
 }
+
 // #endregion FUNC_dueFromStore
 
 // #region FUNC_upcomingFromStore
+
 /**
  * @purpose List the notes that come due next from the rows of one store.
  * @invariants A note is upcoming when its review value is after now. The total counts each row before the cap.
@@ -509,6 +380,7 @@ function upcomingFromStore(
 	});
 	return { records: next.slice(0, limit), total: next.length };
 }
+
 // #endregion FUNC_upcomingFromStore
 
 /** @purpose Collect the live notes of the scopes that pass the kind test and the review test. */
@@ -547,6 +419,7 @@ function storeReviewList(
 }
 
 // #region FUNC_scopeLinesFromStore
+
 /**
  * @purpose List the scopes with a live count and the date of the latest live write, from the rows.
  * @invariants The read takes the live counts of the store. A null scope list takes each live scope.
@@ -575,9 +448,11 @@ function scopeLinesFromStore(
 	debug("Scopes listed", { event: "scopes", count: lines.length });
 	return lines;
 }
+
 // #endregion FUNC_scopeLinesFromStore
 
 // #region FUNC_openViewRange
+
 /**
  * @purpose Give the non-empty child lines of one range from the rows of one view.
  * @invariants An aligned range splits into its two halves. Each non-empty half gives one line.
@@ -648,9 +523,11 @@ function openViewRange(
 	});
 	return { kind: "children", children };
 }
+
 // #endregion FUNC_openViewRange
 
 // #region FUNC_loadRangeView
+
 /**
  * @purpose Read the rows of one scope for an open of a range.
  * @invariants The view holds each note row and each node row of the scope.
@@ -658,4 +535,5 @@ function openViewRange(
 export function loadRangeView(store: Store, scope: ScopeKey): View {
 	return loadView(store.handle(), scope);
 }
+
 // #endregion FUNC_loadRangeView

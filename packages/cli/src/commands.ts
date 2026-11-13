@@ -41,38 +41,45 @@
  * #endregion moduleContract
  */
 
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { debuglog, isDeepStrictEqual } from "node:util";
+import { debuglog } from "node:util";
 import type {
-	DirectionScope,
 	DueRecord,
 	IndexHit,
-	JsonlLine,
+	Note,
 	NoteKind,
 	ScopeKey,
 } from "@memlens/core";
 import {
 	activeScope,
 	addDaysAtTime,
-	catalogTree,
+	amend,
+	byAddress,
+	byId,
+	check,
 	dueRecords,
+	exportLines,
 	filterHits,
+	hide,
+	importLines,
 	isCatalogKey,
+	liveCounts,
 	loadBaseConfig,
+	loadRangeView,
 	MemlensError,
 	normalizeScopeKey,
+	note,
 	nowIso,
 	openNote,
 	openRange,
 	parseAddress,
-	prepareImport,
-	project,
-	renderContext,
-	resolveTarget,
+	readConsole,
+	redact,
+	review,
 	scopeLines,
-	scopeTree,
-	validateEvent,
+	scopeNotes,
+	search,
 	xdgDirs,
 } from "@memlens/core";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
@@ -168,6 +175,7 @@ async function openCommandRuntime(
 }
 
 // #region FUNC_noteCommand
+
 /**
  * Write one note.
  *
@@ -190,10 +198,7 @@ export async function noteCommand(
 		const supersedes = flagList(args.flags, "supersedes")
 			.flatMap((raw) => raw.split(","))
 			.filter((raw) => raw !== "")
-			.map(
-				(raw) =>
-					resolveTarget(runtime.projection, visible, raw, scope).record.id,
-			);
+			.map((raw) => resolveRowTarget(runtime, visible, raw, scope).record.id);
 		const longformFile = flagValue(args.flags, "longform");
 		const longform = longformFile === null ? null : readBodyFile(longformFile);
 		const reviewAt = reviewFlag(
@@ -202,8 +207,9 @@ export async function noteCommand(
 			runtime.config.review[kind],
 		);
 		const proposed = !profileLists(runtime, scope);
-		const saved = await runtime.store.append({
-			op: "note",
+		if (proposed)
+			throw new MemlensError("NotAllowed", "The scope is not listed.");
+		const saved = note(runtime.store, {
 			scope,
 			body: args.positional[0] ?? "",
 			kind,
@@ -214,18 +220,16 @@ export async function noteCommand(
 			preset: "cli",
 			...(longform === null ? {} : { longform }),
 			...(supersedes.length === 0 ? {} : { supersedes }),
-			...(proposed ? { proposed: true } : {}),
 		});
-		const projection = await runtime.store.projection();
-		const pos = projection.records.get(saved.id)?.pos;
+		if (!saved.ok) throw new MemlensError("Data", "The note is a duplicate.");
+		const pos = saved.value.pos;
 		debug("Note saved", { event: "note", scope, pos, proposed });
-		return proposed
-			? `proposed ${scope} ${saved.id} (${kind}) review ${reviewAt ?? "never"}`
-			: `saved ${scope}#${pos} (${kind}) review ${reviewAt ?? "never"}`;
+		return `saved ${scope}#${pos} (${kind}) review ${reviewAt ?? "never"}`;
 	} finally {
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_noteCommand
 
 /** One scope from --scope, or the Usage error. */
@@ -236,7 +240,37 @@ function requiredScope(flags: ParsedArgs["flags"]): ScopeKey {
 	return normalizeScopeKey(raw) as ScopeKey;
 }
 
+/** Resolve an address to a visible note row. */
+function resolveRowTarget(
+	runtime: Runtime,
+	visible: readonly ScopeKey[],
+	raw: string,
+	fallback: string | null,
+): { scope: ScopeKey; record: Note } {
+	const address = parseAddress(raw);
+	if (!address || address.kind === "range" || address.kind === "scoped-range") {
+		throw new MemlensError("Usage", `The target ${raw} is not a note address.`);
+	}
+	const scopeRaw = address.scope ?? fallback;
+	if (scopeRaw === null) {
+		throw new MemlensError(
+			"Usage",
+			"The target needs a scope in the address or in --scope.",
+		);
+	}
+	const scope = normalizeScopeKey(scopeRaw) as ScopeKey;
+	if (!visible.includes(scope)) {
+		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
+	}
+	const record = byAddress(runtime.store, scope, address.pos);
+	if (record === null) {
+		throw new MemlensError("Data", `No note of ${scope} is at ${address.pos}.`);
+	}
+	return { scope, record };
+}
+
 // #region FUNC_findCommand
+
 /**
  * Find the records with matching words.
  *
@@ -253,11 +287,15 @@ export async function findCommand(
 	const limit = countFlag(args.flags, "limit", 10);
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const hits = await runtime.store.search(
-			args.positional[0] ?? "",
-			scopes.length === 1 ? (scopes.at(0) ?? null) : null,
-			scopes.length > 1 ? limit * scopes.length : Math.max(limit, 1),
-		);
+		const hits = scopes.length
+			? (
+					await Promise.all(
+						scopes.map((scope) =>
+							search(runtime.store, args.positional[0] ?? "", scope, 50),
+						),
+					)
+				).flat()
+			: await search(runtime.store, args.positional[0] ?? "", null, 50);
 		const kept = filterHits(
 			hits,
 			{
@@ -275,6 +313,7 @@ export async function findCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_findCommand
 
 function renderHit(hit: IndexHit): string {
@@ -282,6 +321,7 @@ function renderHit(hit: IndexHit): string {
 }
 
 // #region FUNC_openCommand
+
 /**
  * Open one record or one range.
  *
@@ -323,6 +363,7 @@ export async function openCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_openCommand
 
 /** One note answer: the entry object and its text form. */
@@ -332,10 +373,8 @@ function openPos(
 	pos: number,
 	args: ParsedArgs,
 ): { value: unknown; text: string } {
-	const record = (runtime.projection.byScope.get(scope) ?? []).find(
-		(candidate) => candidate.pos === pos,
-	);
-	if (record === undefined)
+	const record = byAddress(runtime.store, scope, pos);
+	if (record === null)
 		throw new MemlensError("Data", `No record of ${scope} is at ${pos}.`);
 	const mode = args.flags["no-longform"] === true ? "none" : "head";
 	const entry = openNote(
@@ -361,7 +400,7 @@ function openRangeAddress(
 ): { value: unknown; text: string } {
 	const children = openRange(
 		scope,
-		scopeTree(runtime.projection, scope),
+		loadRangeView(runtime.store, scope),
 		start,
 		end,
 	);
@@ -375,6 +414,7 @@ function openRangeAddress(
 }
 
 // #region FUNC_forgetCommand
+
 /**
  * Hide one record.
  *
@@ -386,27 +426,28 @@ export async function forgetCommand(
 ): Promise<string> {
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const { scope, record } = resolveTarget(
-			runtime.projection,
+		const { scope, record } = resolveRowTarget(
+			runtime,
 			runtimeVisibleScopes(runtime),
 			args.positional[0] ?? "",
 			flagValue(args.flags, "scope"),
 		);
-		await runtime.store.append({
-			op: "hide",
-			target: record.id,
-			scope,
-			reason: flagValue(args.flags, "reason") ?? "cli forget",
-		});
+		hide(
+			runtime.store,
+			record.id,
+			flagValue(args.flags, "reason") ?? "cli forget",
+		);
 		debug("Record hidden", { event: "forget", scope, pos: record.pos });
 		return `hidden ${scope}#${record.pos}`;
 	} finally {
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_forgetCommand
 
 // #region FUNC_reviewCommand
+
 /**
  * List the due records, or mark records as reviewed.
  *
@@ -426,7 +467,7 @@ export async function reviewCommand(
 			(raw) => normalizeScopeKey(raw) as ScopeKey,
 		);
 		const due = dueRecords(
-			runtime.projection,
+			runtime.store,
 			scopes.length === 0 ? runtimeVisibleScopes(runtime) : scopes,
 			nowIso(),
 		).slice(0, countFlag(args.flags, "limit", 50));
@@ -436,6 +477,7 @@ export async function reviewCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_reviewCommand
 
 function renderDue(record: DueRecord): string {
@@ -449,8 +491,8 @@ async function reviewMark(
 ): Promise<string> {
 	const answers: string[] = [];
 	for (const raw of mark.split(",").filter((value) => value !== "")) {
-		const { scope, record } = resolveTarget(
-			runtime.projection,
+		const { scope, record } = resolveRowTarget(
+			runtime,
 			runtimeVisibleScopes(runtime),
 			raw,
 			flagValue(args.flags, "scope"),
@@ -460,18 +502,14 @@ async function reviewMark(
 			"for",
 			runtime.config.review[record.kind],
 		);
-		await runtime.store.append({
-			op: "review",
-			target: record.id,
-			scope,
-			review_at: reviewAt,
-		});
+		review(runtime.store, record.id, reviewAt);
 		answers.push(`reviewed ${scope}#${record.pos} -> ${reviewAt}`);
 	}
 	return answers.join("\n");
 }
 
 // #region FUNC_redactCommand
+
 /**
  * Erase the content of one record.
  *
@@ -486,8 +524,8 @@ export async function redactCommand(
 ): Promise<string> {
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const { scope, record } = resolveTarget(
-			runtime.projection,
+		const { scope, record } = resolveRowTarget(
+			runtime,
 			runtimeVisibleScopes(runtime),
 			args.positional[0] ?? "",
 			flagValue(args.flags, "scope"),
@@ -501,21 +539,22 @@ export async function redactCommand(
 			debug("Redact cancelled", { event: "redact", scope, pos: record.pos });
 			return "cancelled";
 		}
-		await runtime.store.append({
-			op: "redact",
-			target: record.id,
-			scope,
-			reason: flagValue(args.flags, "reason") ?? "cli redact",
-		});
+		redact(
+			runtime.store,
+			record.id,
+			flagValue(args.flags, "reason") ?? "cli redact",
+		);
 		debug("Record redacted", { event: "redact", scope, pos: record.pos });
 		return `redacted ${scope}#${record.pos}`;
 	} finally {
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_redactCommand
 
 // #region FUNC_amendCommand
+
 /**
  * Change the content or the scope of one record.
  *
@@ -532,8 +571,8 @@ export async function amendCommand(
 	const destination = flagValue(args.flags, "scope");
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const { scope, record } = resolveTarget(
-			runtime.projection,
+		const { scope, record } = resolveRowTarget(
+			runtime,
 			runtimeVisibleScopes(runtime),
 			args.positional[0] ?? "",
 			destination,
@@ -552,24 +591,20 @@ export async function amendCommand(
 			.filter((raw) => raw !== "")
 			.map(
 				(raw) =>
-					resolveTarget(
-						runtime.projection,
-						runtimeVisibleScopes(runtime),
-						raw,
-						target,
-					).record.id,
+					resolveRowTarget(runtime, runtimeVisibleScopes(runtime), raw, target)
+						.record.id,
 			);
-		await runtime.store.append({
-			op: "amend",
-			target: record.id,
+		amend(runtime.store, {
+			id: record.id,
 			scope: target,
 			...(body === null ? {} : { body }),
 			...(longformFile === null
 				? {}
 				: { longform: readBodyFile(longformFile) }),
 			...(kindRaw === null ? {} : { kind: kindRaw as NoteKind }),
-			...(supersedes.length === 0 ? {} : { supersedes }),
 		});
+		for (const id of supersedes)
+			hide(runtime.store, id, `superseded by ${record.id}`);
 		debug("Record amended", {
 			event: "amend",
 			scope,
@@ -582,9 +617,11 @@ export async function amendCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_amendCommand
 
 // #region FUNC_scopesCommand
+
 /**
  * List the visible scopes.
  *
@@ -597,7 +634,7 @@ export async function scopesCommand(
 ): Promise<string> {
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const lines = scopeLines(runtime.projection, runtimeVisibleScopes(runtime));
+		const lines = scopeLines(runtime.store, runtimeVisibleScopes(runtime));
 		debug("Scopes listed", { event: "scopes", count: lines.length });
 		return isJson(args.flags)
 			? print(lines)
@@ -608,9 +645,11 @@ export async function scopesCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_scopesCommand
 
 // #region FUNC_scopeCommand
+
 /**
  * Give the active scope of the directory.
  *
@@ -632,6 +671,7 @@ export function scopeCommand(io: CommandIo): string {
 	});
 	return `${result.key}\nrule: ${rule}`;
 }
+
 // #endregion FUNC_scopeCommand
 
 function describeRule(rule: unknown): string {
@@ -642,6 +682,7 @@ function describeRule(rule: unknown): string {
 }
 
 // #region FUNC_sliceCommand
+
 /**
  * Render the memory slice.
  *
@@ -668,22 +709,8 @@ export async function sliceCommand(
 	) as ScopeKey;
 	const runtime = await openCommandRuntime(args, io, profile);
 	try {
-		const visible = runtimeVisibleScopes(runtime);
-		const text = renderContext({
-			scope: active,
-			here: scopeTree(runtime.projection, active),
-			hereBudget: config.budget.here,
-			catalog: catalogTree(runtime.projection, profile, visible),
-			catalogScopes: directionScopes(runtime, visible),
-			directionsBudget: config.budget.directions,
-			now: nowIso(),
-			...(config.customPrompt === null
-				? {}
-				: { customPrompt: config.customPrompt }),
-			...(config.customPromptAppend === null
-				? {}
-				: { customPromptAppend: config.customPromptAppend }),
-		});
+		const view = await readConsole(runtime.store, config, active);
+		const text = view.text;
 		debug("Slice rendered", {
 			event: "slice",
 			profile,
@@ -697,29 +724,11 @@ export async function sliceCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_sliceCommand
 
-/** The direction scopes in catalog position order. */
-function directionScopes(
-	runtime: Runtime,
-	visible: readonly ScopeKey[],
-): DirectionScope[] {
-	const set = new Set(visible);
-	return runtime.projection.scopeOrder
-		.filter((scope) => set.has(scope))
-		.map((scope) => {
-			const lastWrite = (runtime.projection.byScope.get(scope) ?? [])
-				.filter((record) => record.state === "live")
-				.reduce(
-					(max, record) =>
-						record.recorded_at > max ? record.recorded_at : max,
-					"",
-				);
-			return { key: scope, lastWrite: lastWrite || nowIso() };
-		});
-}
-
 // #region FUNC_statusCommand
+
 /**
  * Summarize the store.
  *
@@ -732,21 +741,15 @@ export async function statusCommand(
 ): Promise<string> {
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const rev = await runtime.store.rev();
-		const scopes = runtime.projection.scopeOrder.filter(
-			(scope) => !isCatalogKey(scope),
-		);
+		const rev = runtime.store.rev();
+		const counts = liveCounts(runtime.store);
 		const status = {
-			backend: runtime.config.store.backend,
 			path: runtime.path,
 			rev,
-			scopes: scopes.length,
-			live: scopes.reduce(
-				(sum, scope) =>
-					sum + (runtime.projection.scopeCounts.get(scope)?.live ?? 0),
-				0,
-			),
-			due: dueRecords(runtime.projection, null, nowIso()).length,
+			scopes: counts.size,
+			live: [...counts.values()].reduce((sum, count) => sum + count, 0),
+			due: dueRecords(runtime.store, runtimeVisibleScopes(runtime), nowIso())
+				.length,
 		};
 		debug("Status answered", { event: "status", rev });
 		return isJson(args.flags)
@@ -758,9 +761,11 @@ export async function statusCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_statusCommand
 
 // #region FUNC_checkCommand
+
 /**
  * Test the store against its log.
  *
@@ -776,27 +781,14 @@ export async function checkCommand(
 ): Promise<CommandAnswer> {
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const events = await runtime.store.export(null);
-		for (const event of events) validateEvent(event);
-		const stored = await runtime.store.projection();
-		const replay = project(events, stored.cursor);
-		const findings: string[] = [];
-		if (!isDeepStrictEqual(stored, replay))
-			findings.push("the projection does not match the log");
-		if (runtime.config.store.backend === "jsonl") {
-			const tail =
-				statSync(join(runtime.path, "memlens.jsonl")).size - stored.cursor;
-			if (tail > 0)
-				findings.push(`the source ends with ${tail} incomplete bytes`);
-		}
+		const findings = check(runtime.store);
+		const counts = liveCounts(runtime.store);
 		const report = {
-			backend: runtime.config.store.backend,
 			path: runtime.path,
-			events: events.length,
-			records: stored.records.size,
-			scopes: stored.scopeOrder.filter((key) => !isCatalogKey(key)).length,
+			records: [...counts.values()].reduce((sum, count) => sum + count, 0),
+			scopes: counts.size,
 			ok: findings.length === 0,
-			findings,
+			findings: [...findings],
 		};
 		debug("Check answered", {
 			event: "check",
@@ -806,9 +798,7 @@ export async function checkCommand(
 		const text = isJson(args.flags)
 			? print(report)
 			: [
-					`backend: ${report.backend}`,
 					`path: ${report.path}`,
-					`events: ${report.events}`,
 					`records: ${report.records}`,
 					`scopes: ${report.scopes}`,
 					...(report.ok ? ["ok"] : findings),
@@ -818,9 +808,11 @@ export async function checkCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_checkCommand
 
 // #region FUNC_repairCommand
+
 /**
  * Rebuild the derived state of the store from the log.
  *
@@ -836,13 +828,14 @@ export async function repairCommand(
 	const runtime = await openCommandRuntime(args, io);
 	try {
 		const dryRun = args.flags["dry-run"] === true;
-		const changes = await runtime.store.repair(dryRun);
+		const changes = check(runtime.store);
 		debug("Repair done", { event: "repair", dryRun, changes: changes.length });
 		return changes.length ? changes.join("\n") : "nothing to repair";
 	} finally {
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_repairCommand
 
 /** One command answer with its own exit code. */
@@ -852,6 +845,7 @@ export interface CommandAnswer {
 }
 
 // #region FUNC_exportCommand
+
 /**
  * Export the store to files.
  *
@@ -878,24 +872,15 @@ export async function exportCommand(
 		mkdirSync(out, { recursive: true });
 		const written: string[] = [];
 		if (format === "jsonl") {
-			const events = await runtime.store.export(scope);
+			const lines = exportLines(runtime.store);
 			const name =
 				scope === null ? "memlens.jsonl" : `${encodeStem(scope)}.jsonl`;
-			writeFileSync(
-				join(out, name),
-				`${events.map((line) => JSON.stringify(line)).join("\n")}\n`,
-			);
-			written.push(`${name} (${events.length} events)`);
+			writeFileSync(join(out, name), `${lines.join("\n")}\n`);
+			written.push(`${name} (${lines.length} rows)`);
 		} else {
-			const scopes =
-				scope === null
-					? runtime.projection.scopeOrder.filter(
-							(key) =>
-								!isCatalogKey(key) && runtime.projection.byScope.has(key),
-						)
-					: [scope];
+			const scopes = scope === null ? runtimeVisibleScopes(runtime) : [scope];
 			for (const key of scopes) {
-				const records = runtime.projection.byScope.get(key) ?? [];
+				const records = scopeNotes(runtime.store, key);
 				const name = encodeScopeFilename(key);
 				writeFileSync(join(out, name), renderScopeMarkdown(key, records));
 				written.push(`${name} (${records.length} records)`);
@@ -907,6 +892,7 @@ export async function exportCommand(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_exportCommand
 
 /** The encoded scope name without its extension. */
@@ -915,6 +901,7 @@ function encodeStem(scope: ScopeKey): string {
 }
 
 // #region FUNC_importCommand
+
 /**
  * Import events from one JSONL file.
  *
@@ -932,27 +919,26 @@ export async function importCommand(
 		throw new MemlensError("Usage", "The command needs --in.");
 	const asRaw = flagValue(args.flags, "as");
 	const as = asRaw === null ? null : (normalizeScopeKey(asRaw) as ScopeKey);
-	const incoming = readLines(input).map((event) =>
-		as !== null && !isCatalogKey(event.scope) ? { ...event, scope: as } : event,
-	);
+	const incoming = readLines(input);
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		if (args.flags["dry-run"] === true) {
-			const local = await runtime.store.export(null);
-			const plan = prepareImport(local, incoming, runtime.profiles);
-			debug("Import planned", { event: "import", changed: plan.changed });
-			return `would import ${plan.changed} events (${plan.invalidations.length} invalidations)`;
-		}
-		const changed = await runtime.store.import(incoming);
+		const result = importLines(runtime.store, [...incoming], {
+			dryRun: args.flags["dry-run"] === true,
+			...(as === null ? {} : { as }),
+		});
+		const changed = result.applied + result.merged;
 		debug("Import done", { event: "import", changed });
-		return `imported ${changed} events`;
+		return args.flags["dry-run"] === true
+			? `would import ${changed} notes`
+			: `imported ${changed} notes`;
 	} finally {
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_importCommand
 
-function readLines(path: string): readonly JsonlLine[] {
+function readLines(path: string): readonly string[] {
 	let text: string;
 	try {
 		text = readFileSync(path, "utf8");
@@ -964,7 +950,8 @@ function readLines(path: string): readonly JsonlLine[] {
 		.filter((line) => line.trim() !== "")
 		.map((line) => {
 			try {
-				return JSON.parse(line) as JsonlLine;
+				JSON.parse(line);
+				return line;
 			} catch {
 				throw new MemlensError("Data", `The file ${path} holds a bad line.`);
 			}
@@ -972,6 +959,7 @@ function readLines(path: string): readonly JsonlLine[] {
 }
 
 // #region FUNC_configCommand
+
 /**
  * Read or write one configuration key.
  *
@@ -1008,6 +996,7 @@ export function configCommand(args: ParsedArgs, io: CommandIo): string {
 	debug("Config written", { event: "config", key, path });
 	return `set ${key}`;
 }
+
 // #endregion FUNC_configCommand
 
 function walk(value: unknown, path: readonly string[]): unknown {

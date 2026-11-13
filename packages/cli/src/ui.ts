@@ -1,21 +1,14 @@
+// #region moduleContract
+
 /**
- * #region moduleContract
  * @purpose Give a human a local console without the harness.
  * @scope Loopback HTTP, static assets, profile reads, note actions, proposals, and compaction answers.
- * @invariants The command `ui` starts the console with no harness.
  * @invariants Bind only to 127.0.0.1. Reject foreign hosts and origins. Never enable CORS.
  * @invariants Writes require JSON. Delete requires --allow-delete and explicit confirmation.
- * @invariants An amend takes a destination scope, a kind, and supersede targets of that scope.
  * @invariants Each request opens its selected profile and closes its store, including on failure.
- * @invariants A view combines its projection, proposals, and revision without an intervening write.
- * @invariants A view reads the review lists of its scope, and an absent kind keeps each kind.
- * @invariants The catalog route reads the catalog tree of the default profile, so a console shows
- * the two lines below one catalog range.
- * @invariants Proposal approval uses ordinary write rules and publishes its dismiss event under the same store lock.
- * @invariants Compaction supports scope and catalog trees. Answers retain copied inputs. The store rejects changed inputs before publication.
- * @invariants Log request paths, result codes, and operation counts, without note content.
- * #endregion moduleContract
  */
+
+// #endregion moduleContract
 
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
@@ -26,25 +19,35 @@ import {
 } from "node:http";
 import { debuglog } from "node:util";
 import {
+	accept,
 	addDaysAtTime,
+	amend,
+	amendTx,
 	type BuildInput,
-	catalogChildren,
-	catalogKey,
-	catalogTree,
-	type Event,
+	byAddress,
+	dismiss,
 	filterHits,
-	isCatalogKey,
+	hide,
+	hideTx,
+	linkSupersedes,
+	loadRangeView,
 	MemlensError,
+	type Note,
 	type NoteKind,
-	normalizeScopeKey,
+	note,
+	noteCheckedTx,
 	nowIso,
 	openNote,
 	openRange,
-	type Projection,
 	parseAddress,
+	pending,
 	readConsole,
+	redact,
+	review,
+	reviewTx,
 	type ScopeKey,
-	scopeTree,
+	scopeNotes,
+	search,
 	validateScopeKey,
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
@@ -63,10 +66,8 @@ const KINDS = ["decision", "preference", "fact", "task", "note"] as const;
 type Fields = Record<string, unknown>;
 
 // #region FUNC_startUi
-/**
- * @purpose Start a standalone console and return its address and shutdown operation.
- * @invariants Port zero selects a free port for tests. The CLI uses port 7788 by default.
- */
+
+/** @purpose Start a standalone console and return its address and shutdown operation. */
 export async function startUi(options: {
 	storeFlag: string | null;
 	env?: Record<string, string | undefined>;
@@ -121,9 +122,11 @@ export async function startUi(options: {
 		},
 	};
 }
+
 // #endregion FUNC_startUi
 
 // #region FUNC_uiCommand
+
 /** @purpose Start the console from the CLI with a validated port and delete policy. */
 export async function uiCommand(
 	args: ParsedArgs,
@@ -146,9 +149,11 @@ export async function uiCommand(
 	process.once("SIGTERM", stop);
 	return host.url;
 }
+
 // #endregion FUNC_uiCommand
 
 // #region FUNC_route
+
 /** @purpose Resolve one local request into a console read or a validated human action. */
 async function route(
 	request: IncomingMessage,
@@ -186,9 +191,8 @@ async function route(
 	};
 	const asset = assets[url.pathname];
 	if (asset && request.method === "GET") {
-		const data = await readFile(new URL(`./ui/${asset[0]}`, import.meta.url));
 		response.writeHead(200, { "Content-Type": asset[1] });
-		response.end(data);
+		response.end(await readFile(new URL(`./ui/${asset[0]}`, import.meta.url)));
 		return;
 	}
 	if (!url.pathname.startsWith("/api/")) {
@@ -222,60 +226,47 @@ async function route(
 			fallback;
 		const scope = allowedScope(
 			runtime,
-			requested || (matches(runtime, fallback) ? fallback : first),
+			requested || (profileLists(runtime, fallback) ? fallback : first),
 		);
 		let result: unknown;
 		switch (url.pathname) {
 			case "/api/view": {
 				const kind = text(fields, "kind");
-				const review = kind ? noteKind(kind) : null;
-				for (;;) {
-					const view = await readConsole(
-						runtime.store,
-						runtime.config,
-						scope,
-						undefined,
-						review,
-					);
-					const proposals = await pendingProposals(runtime);
-					if (view.revision !== (await runtime.store.rev())) {
-						debug("View retry", { event: "retry", scope });
-						continue;
-					}
-					result = {
-						...view,
-						proposals,
-						profiles: Object.keys(runtime.base.profile),
-						path: runtime.path,
-						backend: runtime.config.store.backend,
-						allowDelete: options.allowDelete === true,
-						reviewPolicy: runtime.config.review,
-					};
-					break;
-				}
+				const model = await readConsole(
+					runtime.store,
+					runtime.config,
+					scope,
+					undefined,
+					kind ? noteKind(kind) : null,
+				);
+				result = {
+					...model,
+					proposals: pending(runtime.store),
+					profiles: Object.keys(runtime.base.profile),
+					path: runtime.path,
+					backend: "sqlite",
+					allowDelete: options.allowDelete === true,
+					reviewPolicy: runtime.config.review,
+				};
 				break;
 			}
 			case "/api/search": {
-				const limit = text(fields, "limit") || "10";
-				if (!/^\d+$/.test(limit) || Number(limit) > 1000)
+				const raw = text(fields, "limit") || "10";
+				if (!/^\d+$/.test(raw) || Number(raw) > 1000)
 					throw new MemlensError(
 						"Usage",
 						"The limit must be between 0 and 1000.",
 					);
 				const scopes = requested ? [scope] : visible;
-				const hits = (
-					await Promise.all(
-						scopes.map((key) =>
-							runtime.store.search(text(fields, "query"), key, 50),
-						),
-					)
-				).flat();
+				const hits = scopes.flatMap((key) =>
+					search(runtime.store, text(fields, "query"), key, 50),
+				);
 				const kind = text(fields, "kind");
 				result = filterHits(
 					hits,
 					{
 						scopes,
-						limit: Number(limit),
+						limit: Number(raw),
 						since: text(fields, "since"),
 						...(kind ? { kinds: [noteKind(kind)] } : {}),
 					},
@@ -291,17 +282,14 @@ async function route(
 				if (address.kind === "range" || address.kind === "scoped-range")
 					result = openRange(
 						key,
-						scopeTree(runtime.projection, key),
+						loadRangeView(runtime.store, key),
 						address.start,
 						address.end,
 					);
 				else {
-					const record = (runtime.projection.byScope.get(key) ?? []).find(
-						(record) => record.pos === address.pos,
-					);
-					if (!record)
-						throw new MemlensError("Data", "The note does not exist.");
-					result = openNote(key, record, "all");
+					const row = byAddress(runtime.store, key, address.pos);
+					if (!row) throw new MemlensError("Data", "The note does not exist.");
+					result = openNote(key, row, "all");
 				}
 				break;
 			}
@@ -319,14 +307,8 @@ async function route(
 						"Usage",
 						"The catalog target must be a range.",
 					);
-				result = catalogChildren(
-					catalogTree(
-						runtime.projection,
-						runtime.config.defaultProfile,
-						visible,
-					),
-					{ start, level },
-				);
+				const model = await readConsole(runtime.store, runtime.config, scope);
+				result = model.catalog.slice(start, start + 2 ** level);
 				break;
 			}
 			case "/api/action":
@@ -351,10 +333,12 @@ async function route(
 		await runtime.close();
 	}
 }
+
 // #endregion FUNC_route
 
 // #region FUNC_applyAction
-/** @purpose Apply a human edit through the existing store validation and publication boundary. */
+
+/** @purpose Apply a human edit through the row-store operations. */
 async function applyAction(
 	runtime: Runtime,
 	scope: ScopeKey,
@@ -379,8 +363,7 @@ async function applyAction(
 			.map((item) => item.trim())
 			.filter(Boolean)
 			.map((target) => targetRecord(runtime, scope, target).id);
-		const event = await runtime.store.append({
-			op: "note",
+		const saved = note(runtime.store, {
 			scope,
 			body: text(fields, "body"),
 			kind,
@@ -392,19 +375,83 @@ async function applyAction(
 			turn: "ui",
 			preset: "ui",
 		});
-		return { id: event.id };
+		if (!saved.ok) return { duplicate: true };
+		return { id: saved.value.id };
 	}
 	if (action === "accept" || action === "dismiss") {
-		const proposal = (await pendingProposals(runtime)).find(
-			(event) => event.id === text(fields, "target"),
+		const proposal = pending(runtime.store).find(
+			(item) => item.id === text(fields, "target"),
 		);
 		if (!proposal)
 			throw new MemlensError("Data", "The proposal is no longer pending.");
-		await runtime.store.decideProposal(proposal, action === "accept", [
-			...runtimeVisibleScopes(runtime),
-			proposal.scope,
-		]);
-		debug("Proposal closed", { event: "proposal", action, id: proposal.id });
+		if (action === "dismiss") dismiss(runtime.store, proposal.id);
+		else
+			accept(
+				runtime.store,
+				proposal.id,
+				(payload, tx) => {
+					const data = payload as {
+						body?: string;
+						kind?: NoteKind;
+						target?: string;
+						scope?: ScopeKey;
+						review_at?: string | null;
+						longform?: string;
+					};
+					if (proposal.op === "note")
+						noteCheckedTx(tx, {
+							scope: proposal.scope,
+							body: data.body ?? "",
+							kind: data.kind ?? "note",
+							ts: nowIso(),
+							review_at: data.review_at ?? null,
+							session: "ui",
+							turn: "ui",
+							preset: "ui",
+							...(data.longform ? { longform: data.longform } : {}),
+						});
+					else if (proposal.target) {
+						if (proposal.op === "supersede") {
+							const targetId = proposal.target as Note["id"];
+							const payloadNote = data as {
+								scope: ScopeKey;
+								body: string;
+								kind: NoteKind;
+								review_at?: string | null;
+								longform?: string;
+							};
+							noteCheckedTx(tx, {
+								scope: payloadNote.scope,
+								body: payloadNote.body,
+								kind: payloadNote.kind,
+								review_at: payloadNote.review_at ?? null,
+								session: "ui",
+								turn: "ui",
+								preset: "ui",
+								supersedes: [targetId],
+								...(payloadNote.longform
+									? { longform: payloadNote.longform }
+									: {}),
+							});
+						}
+						if (proposal.op === "hide")
+							hideTx(tx, { id: proposal.target as Note["id"] });
+						else if (proposal.op === "review")
+							reviewTx(tx, {
+								id: proposal.target as Note["id"],
+								reviewAt: data.review_at ?? null,
+							});
+						else if (proposal.op === "amend")
+							amendTx(tx, {
+								id: proposal.target as Note["id"],
+								...(data.body ? { body: data.body } : {}),
+								...(data.longform ? { longform: data.longform } : {}),
+								...(data.scope ? { scope: data.scope } : {}),
+							});
+					}
+				},
+				[...runtimeVisibleScopes(runtime), proposal.scope],
+			);
 		return { ok: true };
 	}
 	if (action === "scope-forget" || action === "scope-delete") {
@@ -413,100 +460,84 @@ async function applyAction(
 				"NotAllowed",
 				"The scope action needs confirmation.",
 			);
-		const records = (runtime.projection.byScope.get(scope) ?? []).filter(
-			(record) =>
-				action === "scope-delete"
-					? !record.content_cleared
-					: record.state === "live",
+		const rows = scopeNotes(runtime.store, scope).filter((row) =>
+			action === "scope-delete"
+				? row.state !== "deleted"
+				: row.state === "live",
 		);
-		for (const record of records)
-			await runtime.store.append({
-				op: action === "scope-delete" ? "redact" : "hide",
-				scope,
-				target: record.id,
-				reason: "ui scope action",
-			});
-		return { changed: records.length };
+		for (const row of rows)
+			action === "scope-delete"
+				? redact(runtime.store, row.id, "ui scope action")
+				: hide(runtime.store, row.id, "ui scope action");
+		return { changed: rows.length };
 	}
 	const record = targetRecord(runtime, scope, text(fields, "target"));
-	let event: Event;
 	switch (action) {
 		case "amend": {
 			const destination = text(fields, "dest") || record.scope;
-			const scope = allowedScope(runtime, destination);
 			const kind = text(fields, "kind");
-			const supersedes = text(fields, "supersedes")
+			const targets = text(fields, "supersedes")
 				.split(",")
 				.map((item) => item.trim())
-				.filter(Boolean)
-				.map((target) => targetRecord(runtime, scope, target).id);
-			event = await runtime.store.append({
-				op: "amend",
-				scope,
-				target: record.id,
+				.filter(Boolean);
+			if (targets.length > 0)
+				linkSupersedes(
+					runtime.store,
+					record.id,
+					targets.map(
+						(target) =>
+							targetRecord(runtime, allowedScope(runtime, destination), target)
+								.id,
+					),
+				);
+			amend(runtime.store, {
+				id: record.id,
+				scope: allowedScope(runtime, destination),
 				body: text(fields, "body"),
 				longform: text(fields, "longform"),
 				...(kind ? { kind: noteKind(kind) } : {}),
-				...(supersedes.length ? { supersedes } : {}),
 			});
 			break;
 		}
 		case "review":
-			event = await runtime.store.append({
-				op: "review",
-				scope: record.scope,
-				target: record.id,
-				review_at: addDaysAtTime(
-					Date.now(),
-					runtime.config.review[record.kind],
-				),
-			});
+			review(
+				runtime.store,
+				record.id,
+				addDaysAtTime(Date.now(), runtime.config.review[record.kind]),
+			);
 			break;
 		case "forget":
+			hide(runtime.store, record.id, "ui action");
+			break;
 		case "delete":
-			event = await runtime.store.append({
-				op: action === "delete" ? "redact" : "hide",
-				scope: record.scope,
-				target: record.id,
-				reason: "ui action",
-			});
+			redact(runtime.store, record.id, "ui action");
 			break;
 		default:
 			throw new MemlensError("Usage", "The action is unknown.");
 	}
-	debug("Action done", { event: "applied", action, id: event.id });
+	debug("Action done", { event: "applied", action, id: record.id });
 	return { ok: true };
 }
+
 // #endregion FUNC_applyAction
 
 // #region FUNC_compact
-/**
- * @purpose Give the merge inputs of one tree and publish answers through the store input check.
- * @invariants A catalog job uses the catalog key of the default profile.
- * The job text, the copy publication, and the answer rule are the command rules.
- */
+
+/** @purpose Give merge inputs for one scope and publish answers through row build checks. */
 async function compact(
 	runtime: Runtime,
 	scope: ScopeKey,
 	fields: Fields,
 ): Promise<unknown> {
-	const catalog = fields.catalog === true;
-	const target = catalog ? catalogKey(runtime.config.defaultProfile) : scope;
-	const keys = runtimeVisibleScopes(runtime);
-	const treeOf = (projection: Projection) =>
-		catalog
-			? catalogTree(projection, runtime.config.defaultProfile, keys)
-			: scopeTree(projection, target);
+	if (fields.catalog === true)
+		throw new MemlensError(
+			"Usage",
+			"The catalog is derived and holds no nodes. Compact one scope.",
+		);
+	const target = scope;
 	if (fields.action === "compact") {
-		const job = await prepareCompact(runtime, target, treeOf, {
-			...(catalog ? { scopeKeys: keys } : {}),
-		});
-		debug("Job prepared", {
-			event: "compact",
-			target,
-			inputs: job.inputs.length,
-			copies: job.published - job.joined,
-			joins: job.joined,
+		const job = await prepareCompact(runtime, target, {
+			scopeKeys: runtimeVisibleScopes(runtime),
 		});
 		return {
 			inputs: job.inputs,
@@ -516,24 +547,21 @@ async function compact(
 		};
 	}
 	const answers = parseAnswers(text(fields, "answers"));
-	const copied = Array.isArray(fields.inputs) ? fields.inputs : null;
-	if (copied === null)
+	const copied = Array.isArray(fields.inputs)
+		? (fields.inputs as readonly BuildInput[])
+		: null;
+	if (!copied)
 		throw new MemlensError("Usage", "The answer needs copied inputs.");
 	const { built, rejected } = await applyAnswers(
 		runtime,
 		target,
-		treeOf(await runtime.store.projection()),
+		null,
 		answers,
-		copied as readonly BuildInput[],
+		copied,
 	);
-	debug("Answers applied", {
-		event: "compact-answer",
-		target,
-		built,
-		rejected: rejected.length,
-	});
 	return { built, rejected: rejected.length, rejectedRanges: rejected };
 }
+
 // #endregion FUNC_compact
 
 function text(fields: Fields, key: string): string {
@@ -543,55 +571,35 @@ function text(fields: Fields, key: string): string {
 		throw new MemlensError("Usage", `The field ${key} must be text.`);
 	return value;
 }
-function matches(runtime: Runtime, scope: ScopeKey): boolean {
-	return profileLists(runtime, scope);
-}
 function allowedScope(runtime: Runtime, raw: string): ScopeKey {
-	const scope = normalizeScopeKey(raw) as ScopeKey;
-	if (!validateScopeKey(scope))
+	if (!validateScopeKey(raw))
 		throw new MemlensError("Usage", "The scope key is invalid.");
-	if (!matches(runtime, scope))
+	if (!profileLists(runtime, raw))
 		throw new MemlensError("NotAllowed", "The scope is outside this profile.");
-	return scope;
+	return raw;
 }
-function targetRecord(runtime: Runtime, fallback: ScopeKey, target: string) {
+function targetRecord(
+	runtime: Runtime,
+	fallback: ScopeKey,
+	target: string,
+): Note {
 	const address = parseAddress(target);
 	if (!address || address.kind === "range" || address.kind === "scoped-range")
 		throw new MemlensError("Usage", "The target must name one note.");
 	const scope = allowedScope(runtime, address.scope ?? fallback);
-	const record = (runtime.projection.byScope.get(scope) ?? []).find(
-		(record) => record.pos === address.pos,
-	);
-	if (!record) throw new MemlensError("Data", "The note does not exist.");
-	return record;
+	const row = byAddress(runtime.store, scope, address.pos);
+	if (!row) throw new MemlensError("Data", "The note does not exist.");
+	return row;
 }
 function noteKind(raw: string): NoteKind {
 	if (!(KINDS as readonly string[]).includes(raw))
 		throw new MemlensError("Usage", "The kind is unknown.");
 	return raw as NoteKind;
 }
-async function pendingProposals(runtime: Runtime) {
-	const events = await runtime.store.export(null);
-	const dismissed = new Set(
-		events
-			.filter((event) => event.op === "dismiss")
-			.map((event) => event.target),
-	);
-	return events.filter(
-		(event): event is Extract<Event, { proposed?: true }> =>
-			"proposed" in event &&
-			event.proposed === true &&
-			event.redacted !== true &&
-			!dismissed.has(event.id) &&
-			!isCatalogKey(event.scope),
-	);
-}
+
 // #region FUNC_readBody
-/**
- * @purpose Reject oversized or malformed action payloads before the host opens a store.
- * @invariants Require a JSON object and at most 2 MiB. The limit accommodates 50 copied inputs and their answers.
- * A parse failure writes nothing.
- */
+
+/** @purpose Reject oversized or malformed action payloads before the host opens a store. */
 async function readBody(request: IncomingMessage): Promise<Fields> {
 	if (
 		request.headers["content-type"]?.split(";")[0]?.trim() !==
@@ -616,6 +624,7 @@ async function readBody(request: IncomingMessage): Promise<Fields> {
 		throw new MemlensError("Usage", "The action must be an object.");
 	return value as Fields;
 }
+
 // #endregion FUNC_readBody
 
 function send(response: ServerResponse, status: number, value: unknown) {

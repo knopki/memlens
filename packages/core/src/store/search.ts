@@ -39,6 +39,7 @@ interface Query {
 }
 
 // #region FUNC_parseQuery
+
 /**
  * @purpose Read the tool query with one grammar, so no query word injects FTS5 syntax.
  * @invariants Split the query on whitespace. Quote each word as one phrase and put the star outside.
@@ -76,9 +77,11 @@ function parseQuery(query: string): Query {
 		excluded: excluded.length,
 	};
 }
+
 // #endregion FUNC_parseQuery
 
 // #region FUNC_literalWord
+
 /**
  * @purpose Keep a short CJK word searchable when the trigram index cannot match it.
  * @invariants The fallback needs a trigram tokenizer and a positive word under three characters.
@@ -95,6 +98,7 @@ function literalWord(
 			shortest = word;
 	return shortest;
 }
+
 // #endregion FUNC_literalWord
 
 /** Compose the LIKE pattern of one literal word. */
@@ -104,6 +108,7 @@ function likePattern(word: string): string {
 }
 
 // #region FUNC_hitsFromRows
+
 /**
  * @purpose Build each hit in one place, so each query path gives the same hit shape.
  * @invariants The address holds the scope of the row. A null or empty review time gives null.
@@ -132,9 +137,11 @@ function hitsFromRows(
 		};
 	});
 }
+
 // #endregion FUNC_hitsFromRows
 
 // #region FUNC_search
+
 /**
  * @purpose Give the hits of one query, so the tools and the CLI share one answer.
  * @invariants Apply the scope filter in SQL. Order by rank, then the newest ts, then scope, then id.
@@ -209,9 +216,11 @@ export function search(
 	});
 	return hits;
 }
+
 // #endregion FUNC_search
 
 // #region FUNC_literalScan
+
 /**
  * @purpose Find a short word without the index, so a zh or ja query still gives an answer.
  * @invariants The test is literal containment of the text. No tokenizer and no exclusion word applies.
@@ -249,4 +258,5 @@ function literalScan(
 	});
 	return hits;
 }
+
 // #endregion FUNC_literalScan

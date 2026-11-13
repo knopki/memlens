@@ -29,6 +29,7 @@ const JOURNAL_DAYS = 365;
 const JOURNAL_MAX = 50_000;
 
 // #region TYPE_RepairOptions
+
 /**
  * @purpose Name the retention limits of one check, so the caller keeps the journal in bounds.
  * @invariants A missing limit takes the default of the store.
@@ -38,7 +39,10 @@ export interface RepairOptions {
 	readonly journalDays?: number;
 	/** The journal row limit. The default is 50000. */
 	readonly journalMax?: number;
+	/** Report actions without writing changes. */
+	readonly dryRun?: boolean;
 }
+
 // #endregion TYPE_RepairOptions
 
 /** The primary key of one node row. */
@@ -59,6 +63,7 @@ interface Plan {
 }
 
 // #region FUNC_check
+
 /**
  * @purpose Find each damaged row, repair what a cache may lose, and prune the journal, so a store stays consistent.
  * @invariants The node rows that fail the validity rules go. The node rows over no live note go.
@@ -90,6 +95,11 @@ export function check(
 		debug("Check clean", { event: "check", actions: 0 });
 		return findings;
 	}
+	if (opts.dryRun) {
+		const actions = plannedActions(plan);
+		debug("Check dry run", { event: "check", actions: actions.length });
+		return [...findings, ...actions];
+	}
 	const actions = store.publish((tx) => {
 		const applied: string[] = [];
 		if (drift) {
@@ -117,12 +127,27 @@ export function check(
 	debug("Check done", { event: "check", actions: actions.length });
 	return [...findings, ...actions];
 }
+
 // #endregion FUNC_check
 
 /**
  * @purpose Read the damage of one store in one read transaction.
  * @invariants The node row set is one snapshot, so each decision agrees.
  */
+function plannedActions(plan: Plan): readonly string[] {
+	const actions: string[] = [];
+	if (plan.indexed !== plan.live)
+		actions.push(
+			`repair fts index (${plan.indexed} indexed, ${plan.live} live)`,
+		);
+	if (plan.invalid.length > 0)
+		actions.push(`delete ${plan.invalid.length} invalid node rows`);
+	if (plan.empty.length > 0)
+		actions.push(`delete ${plan.empty.length} empty node rows`);
+	if (plan.journal > 0) actions.push(`prune ${plan.journal} journal rows`);
+	return actions;
+}
+
 function scan(db: DatabaseSync, cutoff: string, max: number): Plan {
 	const problems = quickCheck(db);
 	const indexed = count(db, "SELECT count(*) AS c FROM fts_docsize");

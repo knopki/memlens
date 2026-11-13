@@ -36,13 +36,16 @@ const TOKENIZERS: Record<string, string> = {
 };
 
 // #region FUNC_tokenizerOf
+
 /** @purpose Name the FTS5 tokenizer of a language. Only zh and ja use trigram. */
 export function tokenizerOf(language: string): string {
 	return TOKENIZERS[language] ?? "porter unicode61 remove_diacritics 1";
 }
+
 // #endregion FUNC_tokenizerOf
 
 // #region FUNC_openDatabase
+
 /**
  * @purpose Open one database file with the required settings and the schema.
  * @invariants The open refuses an old event-store database and names the action.
@@ -78,6 +81,7 @@ export function openDatabase(path: string, language: string): DatabaseSync {
 		throw error;
 	}
 }
+
 // #endregion FUNC_openDatabase
 
 /** @purpose Refuse a database that holds the event store of the earlier schema. */
@@ -91,6 +95,7 @@ function legacy(db: DatabaseSync): boolean {
 }
 
 // #region FUNC_create
+
 /**
  * @purpose Create each table and seed the meta rows of a new or an open database.
  * @invariants The call is idempotent, so a later open keeps each stored value.
@@ -178,4 +183,5 @@ export function create(db: DatabaseSync, language: string): void {
 	if (row === undefined) meta.run("fts_tokenizer", tokenizer);
 	debug("Schema ready", { event: "create", tokenizer });
 }
+
 // #endregion FUNC_create
