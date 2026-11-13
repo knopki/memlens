@@ -12,13 +12,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { after, describe, it } from "node:test";
+import { afterAll, describe, it } from "vitest";
 import { deleteCovering, leafKeyOf, validNode } from "../src/store/nodes.js";
 import { openDatabase } from "../src/store/schema.js";
 import { insertSlot, nextSlot } from "../src/store/slots.js";
 
 const dirs: string[] = [];
-after(() => {
+afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 

@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, describe, it } from "node:test";
+import { afterAll, describe, it } from "vitest";
 import {
 	formatVersion,
 	parseVersion,
@@ -22,7 +22,7 @@ import {
 import { openDatabase, SCHEMA_VERSION } from "../src/store/schema.js";
 
 const dirs: string[] = [mkdtempSync(join(tmpdir(), "memlens-"))];
-after(() => {
+afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
