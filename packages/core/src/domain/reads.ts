@@ -1,10 +1,12 @@
 /**
  * #region moduleContract
- * @purpose Answer each memory read from the projection and the index hits, without a log scan.
+ * @purpose Answer each memory read from the store rows or the projection, without a log scan.
  * @scope
  *  - Find filters, the open of one note and of one range, the due review list, and the scope list.
  *  - NOT: the address grammar, the index storage, the locks, and the tool schemas.
  * @invariants
+ *  - A store source reads rows through store/reads.ts and store/view.ts. A projection source serves
+ * the frontend packages until their read path moves to the store.
  *  - Find keeps at most 50 hits for each scope and at most 10 hits in total by default.
  *  - Since and until compare against the ts text, and a date-only bound covers that whole day.
  *  - The due filter and the due list take a record with a review time of now or earlier.
@@ -18,21 +20,57 @@
  *  - A range that matches no node gives one line, and the line holds the first pos.
  *  - Every read uses the supplied projection and hits. No read scans events or waits for a compaction.
  * @dependencies
- *  USES API: domain/address.ts, domain/tree.ts
- *  READS: Projection, IndexHit, Tree
- * @keywords find, filter, open, longform, range, review, due, scopes, reads
+ *  USES API: domain/address.ts, domain/tree.ts, store/reads.ts, store/view.ts
+ *  READS: Projection, IndexHit, Tree, Note, View
+ * @keywords find, filter, open, longform, range, review, due, scopes, reads, store
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
+import { liveCounts, scopeNotes } from "../store/reads.js";
+import type { Store } from "../store/store.js";
+import type { Note } from "../store/types.js";
+import {
+	loadView,
+	nodeAt,
+	nodeValid,
+	notesInRange,
+	type View,
+} from "../store/view.js";
 import type { IsoDate, IsoTime, NoteKind, ScopeKey } from "../types/events.js";
-import type { Projection, ProjectionRecord } from "../types/projection.js";
+import type { Projection } from "../types/projection.js";
 import type { IndexHit } from "../types/store.js";
 import type { Tree } from "../types/tree.js";
 import { renderAddress } from "./address.js";
 import { currentNode, isClean } from "./tree.js";
 
 const debug = debuglog("memlens:reads");
+
+/** A read source: the rows of one store, or the projection of a frontend package. */
+export type ReadSource = Projection | Store;
+
+/** @purpose Report whether one read source holds the row handle of the store. */
+function isStore(source: ReadSource): source is Store {
+	return "handle" in source;
+}
+
+/** @purpose Report whether one range source holds the assigned extent of a projection tree. */
+function isTree(source: Tree | View): source is Tree {
+	return "total" in source;
+}
+
+/** The fields of one note that an open reads. A store note and a projection record both fit. */
+export type OpenSubject = Pick<
+	Note,
+	| "id"
+	| "pos"
+	| "ts"
+	| "body"
+	| "longform"
+	| "review_at"
+	| "modified_at"
+	| "refs"
+>;
 
 /** The filters of a find. Null or absent fields impose no limit. */
 export interface FindFilter {
@@ -138,7 +176,7 @@ export function filterHits(
  */
 export function openNote(
 	scope: ScopeKey,
-	record: ProjectionRecord,
+	record: OpenSubject,
 	mode: LongformMode = "head",
 	offset = 0,
 ): OpenEntry {
@@ -180,10 +218,12 @@ export function openNote(
  */
 export function openRange(
 	scope: ScopeKey,
-	tree: Tree,
+	source: Tree | View,
 	start: number,
 	end: number,
 ): OpenChildren {
+	if (!isTree(source)) return openViewRange(scope, source, start, end);
+	const tree = source;
 	const span = end - start + 1;
 	const level = Math.max(1, Math.ceil(Math.log2(span)));
 	const live = liveNotes(tree, start, end);
@@ -261,12 +301,13 @@ export interface DueRecord {
  * Order by the review value, then the scope, then the position.
  */
 export function dueRecords(
-	projection: Projection,
+	source: ReadSource,
 	scopes: readonly ScopeKey[] | null,
 	now: IsoTime,
 	kind: NoteKind | null = null,
 ): readonly DueRecord[] {
-	const due = reviewList(projection, scopes, (review) => review <= now, kind);
+	if (isStore(source)) return dueFromStore(source, scopes, now, kind);
+	const due = reviewList(source, scopes, (review) => review <= now, kind);
 	debug("Review listed", { event: "due", count: due.length, kind });
 	return due;
 }
@@ -286,13 +327,15 @@ export interface UpcomingPage {
  * Order by the review value, then the scope, then the position.
  */
 export function upcomingRecords(
-	projection: Projection,
+	source: ReadSource,
 	scopes: readonly ScopeKey[] | null,
 	now: IsoTime,
 	limit: number,
 	kind: NoteKind | null = null,
 ): UpcomingPage {
-	const next = reviewList(projection, scopes, (review) => review > now, kind);
+	if (isStore(source))
+		return upcomingFromStore(source, scopes, now, limit, kind);
+	const next = reviewList(source, scopes, (review) => review > now, kind);
 	debug("Review upcoming listed", {
 		event: "upcoming",
 		count: next.length,
@@ -354,19 +397,18 @@ export interface ScopeLine {
  * lastSeen is the UTC date of the latest recorded_at of a live record.
  */
 export function scopeLines(
-	projection: Projection,
+	source: ReadSource,
 	scopes: readonly ScopeKey[] | null,
 ): readonly ScopeLine[] {
+	if (isStore(source)) return scopeLinesFromStore(source, scopes);
+	const projection = source;
 	const visible = scopes === null ? projection.scopeOrder : scopes;
 	const lines = visible.flatMap((scope) => {
 		const live = (projection.byScope.get(scope) ?? []).filter(
 			(record) => record.state === "live",
 		);
 		if (!live.length) return [];
-		const latest = live.reduce(
-			(max, record) => (record.recorded_at > max ? record.recorded_at : max),
-			live[0]?.recorded_at ?? "",
-		);
+		const latest = latestOf(live.map((record) => record.recorded_at));
 		return [{ key: scope, notes: live.length, lastSeen: latest.slice(0, 10) }];
 	});
 	debug("Scopes listed", { event: "scopes", count: lines.length });
@@ -384,6 +426,11 @@ function liveNotes(
 			(note) => note.state === "live" && note.pos >= start && note.pos <= end,
 		)
 		.sort((a, b) => a.pos - b.pos);
+}
+
+/** @purpose Give the greatest text of a non-empty list, so a date compare stays one rule. */
+function latestOf(values: readonly string[]): string {
+	return [...values].sort().at(-1) ?? "";
 }
 
 function period(notes: readonly { readonly ts: string }[]): {
@@ -412,3 +459,203 @@ function line(
 		chars: 0,
 	};
 }
+
+// #region FUNC_dueFromStore
+/**
+ * @purpose List the due notes of the supplied scopes from the rows of one store.
+ * @invariants The read takes the live rows of the scope list, or of each scope when the list is null.
+ * Order by the review value, then the scope, then the slot.
+ */
+function dueFromStore(
+	store: Store,
+	scopes: readonly ScopeKey[] | null,
+	now: IsoTime,
+	kind: NoteKind | null,
+): readonly DueRecord[] {
+	const due = storeReviewList(
+		store,
+		scopes,
+		(row) => row.review_at !== null && row.review_at <= now,
+		kind,
+	);
+	debug("Review listed", { event: "due", count: due.length, kind });
+	return due;
+}
+// #endregion FUNC_dueFromStore
+
+// #region FUNC_upcomingFromStore
+/**
+ * @purpose List the notes that come due next from the rows of one store.
+ * @invariants A note is upcoming when its review value is after now. The total counts each row before the cap.
+ */
+function upcomingFromStore(
+	store: Store,
+	scopes: readonly ScopeKey[] | null,
+	now: IsoTime,
+	limit: number,
+	kind: NoteKind | null,
+): UpcomingPage {
+	const next = storeReviewList(
+		store,
+		scopes,
+		(row) => row.review_at !== null && row.review_at > now,
+		kind,
+	);
+	debug("Review upcoming listed", {
+		event: "upcoming",
+		count: next.length,
+		limit,
+		kind,
+	});
+	return { records: next.slice(0, limit), total: next.length };
+}
+// #endregion FUNC_upcomingFromStore
+
+/** @purpose Collect the live notes of the scopes that pass the kind test and the review test. */
+function storeReviewList(
+	store: Store,
+	scopes: readonly ScopeKey[] | null,
+	keep: (row: Note) => boolean,
+	kind: NoteKind | null,
+): DueRecord[] {
+	const visible = scopes ?? [...liveCounts(store).keys()];
+	const list: DueRecord[] = [];
+	for (const scope of visible) {
+		for (const row of scopeNotes(store, scope))
+			if (
+				row.state === "live" &&
+				(kind === null || row.kind === kind) &&
+				keep(row)
+			)
+				list.push({
+					addr: renderAddress(scope, row.pos, null),
+					scope,
+					pos: row.pos,
+					ts: row.ts,
+					kind: row.kind,
+					body: row.body,
+					review_at: row.review_at,
+				});
+	}
+	list.sort(
+		(a, b) =>
+			(a.review_at ?? "").localeCompare(b.review_at ?? "") ||
+			a.scope.localeCompare(b.scope) ||
+			a.pos - b.pos,
+	);
+	return list;
+}
+
+// #region FUNC_scopeLinesFromStore
+/**
+ * @purpose List the scopes with a live count and the date of the latest live write, from the rows.
+ * @invariants The read takes the live counts of the store. A null scope list takes each live scope.
+ * lastSeen is the UTC date of the latest modified_at of a live note.
+ */
+function scopeLinesFromStore(
+	store: Store,
+	scopes: readonly ScopeKey[] | null,
+): readonly ScopeLine[] {
+	const counts = liveCounts(store);
+	const visible = scopes ?? [...counts.keys()];
+	const lines = visible.flatMap((scope) => {
+		const notes = scopeNotes(store, scope).filter(
+			(row) => row.state === "live",
+		);
+		if (notes.length === 0) return [];
+		const latest = latestOf(notes.map((row) => row.modified_at));
+		return [
+			{
+				key: scope,
+				notes: counts.get(scope) ?? notes.length,
+				lastSeen: latest.slice(0, 10),
+			},
+		];
+	});
+	debug("Scopes listed", { event: "scopes", count: lines.length });
+	return lines;
+}
+// #endregion FUNC_scopeLinesFromStore
+
+// #region FUNC_openViewRange
+/**
+ * @purpose Give the non-empty child lines of one range from the rows of one view.
+ * @invariants An aligned range splits into its two halves. Each non-empty half gives one line.
+ * A live note half gives its body. A valid node half gives its summary. Another half gives a
+ * temporary line with its dates and no text.
+ * A range that matches no node geometry gives one line that holds the first pos.
+ */
+function openViewRange(
+	scope: ScopeKey,
+	view: View,
+	start: number,
+	end: number,
+): OpenChildren {
+	const span = end - start + 1;
+	const level = Math.max(1, Math.ceil(Math.log2(span)));
+	const children: OpenLine[] = [];
+	if (span !== 2 ** level || start % 2 ** level !== 0) {
+		debug("Range opened", { event: "open_range", start, end, lines: 1 });
+		return {
+			kind: "children",
+			children: [
+				line(scope, period(notesInRange(view, start, end + 1)), start, null),
+			],
+		};
+	}
+	for (const half of [
+		{ start, level: level - 1 },
+		{ start: start + 2 ** (level - 1), level: level - 1 },
+	]) {
+		const notes = notesInRange(view, half.start, half.start + 2 ** half.level);
+		if (notes.length === 0) continue;
+		if (half.level === 0) {
+			const note = notes[0];
+			if (note === undefined) continue;
+			children.push({
+				addr: renderAddress(scope, note.pos, null),
+				ts_from: note.ts,
+				ts_to: note.ts,
+				text: note.body,
+				built: true,
+				chars: note.body.length,
+			});
+			continue;
+		}
+		const node = nodeAt(view, half.level, half.start);
+		children.push(
+			node !== undefined && nodeValid(view, node)
+				? {
+						addr: renderAddress(
+							scope,
+							node.start,
+							node.start + 2 ** node.level - 1,
+						),
+						ts_from: node.ts_from,
+						ts_to: node.ts_to,
+						text: node.summary,
+						built: true,
+						chars: node.summary.length,
+					}
+				: line(scope, period(notes), half.start, half),
+		);
+	}
+	debug("Range opened", {
+		event: "open_range",
+		start,
+		end,
+		lines: children.length,
+	});
+	return { kind: "children", children };
+}
+// #endregion FUNC_openViewRange
+
+// #region FUNC_loadRangeView
+/**
+ * @purpose Read the rows of one scope for an open of a range.
+ * @invariants The view holds each note row and each node row of the scope.
+ */
+export function loadRangeView(store: Store, scope: ScopeKey): View {
+	return loadView(store.handle(), scope);
+}
+// #endregion FUNC_loadRangeView

@@ -1,7 +1,8 @@
 /**
  * #region moduleContract
  * @purpose Derive clean summaries and bounded slices from the current tree projection.
- * @scope Tree reads and copied build inputs. No log scans, event appends, storage, or model calls.
+ * @scope Tree reads, copied build inputs, and the pure frontier over a sorted live position list.
+ * No log scans, event appends, storage, or model calls.
  * @invariants
  * - A node key is (level, start). A level covers 2^level positions; node levels start at one.
  * - The tree has no depth limit: the levels grow with the highest live position.
@@ -10,6 +11,7 @@
  * the render only. No hash check, no model call, and no stored node are involved.
  * - Scope trees and catalogs use the same engine. A catalog leaf resolves its scope tree through scope_roots.
  * - Every read uses the supplied projection. No read waits for a compaction or retains state between calls.
+ * - The frontier over a position list is pure, so the row view of the store and the projection use it alike.
  * #endregion moduleContract
  */
 import { debuglog } from "node:util";
@@ -281,16 +283,26 @@ class Model {
 }
 // #endregion CLASS_Model
 
-// #region FUNC_topRange
+// #region FUNC_topRangeOf
 /**
- * @purpose Keep the root extent tied to all assigned positions.
+ * @purpose Keep the root extent tied to all assigned positions, without a tree.
  * @invariants Positive total gives start 0 and level max(1, ceil(log2(total))). Zero total gives null.
  * Total includes hidden and deleted positions. The root has no fixed depth limit.
  */
-export function topRange(tree: Tree): Range | null {
-	return tree.total > 0
-		? { start: 0, level: Math.max(1, Math.ceil(Math.log2(tree.total))) }
+export function topRangeOf(total: Pos): Range | null {
+	return total > 0
+		? { start: 0, level: Math.max(1, Math.ceil(Math.log2(total))) }
 		: null;
+}
+// #endregion FUNC_topRangeOf
+
+// #region FUNC_topRange
+/**
+ * @purpose Keep the root extent tied to all assigned positions.
+ * @invariants The total of the tree names the extent. A zero total gives null.
+ */
+export function topRange(tree: Tree): Range | null {
+	return topRangeOf(tree.total);
 }
 // #endregion FUNC_topRange
 
@@ -443,13 +455,50 @@ type MergePick = {
 	reduction: number;
 };
 
+/** The index of the first live position at or above one slot. */
+function lowerBound(positions: readonly Pos[], pos: Pos): number {
+	let start = 0;
+	let end = positions.length;
+	while (start < end) {
+		const middle = Math.floor((start + end) / 2);
+		if ((positions[middle] ?? Infinity) < pos) start = middle + 1;
+		else end = middle;
+	}
+	return start;
+}
+
+/** The index above the last live position at or below one slot. */
+function upperBound(positions: readonly Pos[], pos: Pos): number {
+	let start = 0;
+	let end = positions.length;
+	while (start < end) {
+		const middle = Math.floor((start + end) / 2);
+		if ((positions[middle] ?? Infinity) <= pos) start = middle + 1;
+		else end = middle;
+	}
+	return start;
+}
+
+// #region FUNC_liveCount
+/**
+ * @purpose Count the live leaves of one range from the sorted positions.
+ * @invariants The count is the slice of the positions inside the range.
+ */
+function liveCount(positions: readonly Pos[], range: Range): number {
+	return (
+		upperBound(positions, range.start + 2 ** range.level - 1) -
+		lowerBound(positions, range.start)
+	);
+}
+// #endregion FUNC_liveCount
+
 // #region FUNC_sparseBlocks
 /**
  * @purpose Tile empty gaps without allocating every assigned position.
  * @invariants Blocks tile [0, total) in position order with no gap or overlap.
  * Every block start is a multiple of 2^level. Empty gaps need no dense prefix.
  */
-function sparseBlocks(model: Model): Range[] {
+function sparseBlocks(positions: readonly Pos[], total: Pos): Range[] {
 	const blocks: Range[] = [];
 	let cursor = 0;
 	const empty = (end: number) => {
@@ -460,12 +509,12 @@ function sparseBlocks(model: Model): Range[] {
 			cursor += 2 ** level;
 		}
 	};
-	for (const leaf of model.leaves) {
-		empty(leaf.pos);
-		blocks.push({ start: leaf.pos, level: 0 });
-		cursor = leaf.pos + 1;
+	for (const pos of positions) {
+		empty(pos);
+		blocks.push({ start: pos, level: 0 });
+		cursor = pos + 1;
 	}
-	empty(model.tree.total);
+	empty(total);
 	return blocks;
 }
 // #endregion FUNC_sparseBlocks
@@ -479,9 +528,10 @@ function sparseBlocks(model: Model): Range[] {
  * Resolve ties with the order from candidates.
  */
 function selectMerge(
-	model: Model,
+	positions: readonly Pos[],
 	blocks: readonly Range[],
 	highest: Pos,
+	total: Pos,
 ): MergePick | null {
 	let best: MergePick | null = null;
 	for (let index = 0; index + 1 < blocks.length; index += 1) {
@@ -501,13 +551,13 @@ function selectMerge(
 			0,
 		);
 		const reduction =
-			Number(model.live(left).length > 0) +
-			Number(model.live(right).length > 0) -
-			Number(model.live(range).length > 0);
+			Number(liveCount(positions, left) > 0) +
+			Number(liveCount(positions, right) > 0) -
+			Number(liveCount(positions, range) > 0);
 		if (
 			!best ||
 			jump < best.jump ||
-			(jump === best.jump && priority(model.tree.total, range, best.range) < 0)
+			(jump === best.jump && priority(total, range, best.range) < 0)
 		) {
 			best = { index, range, jump, reduction };
 		}
@@ -516,34 +566,53 @@ function selectMerge(
 }
 // #endregion FUNC_selectMerge
 
-// #region FUNC_frontier
+// #region FUNC_foldPositions
 /**
  * @purpose Fold selected pairs until the rendered count fits, then evict excess oldest lines.
+ * @scope A pure frontier over one sorted list of live positions and the assigned extent.
+ * @requires The supplied positions are sorted and distinct.
  * @invariants Merge one pair only while the live line count exceeds the supplied line budget. Stop as soon as it fits.
  * Empty blocks never render or count against the budget. No range appears beside its descendants.
  * When no pair remains, evict the oldest excess lines. Preserve at least the greatest live leaf, even at budget zero.
+ * @returns The frontier ranges from the oldest to the newest.
  */
-function frontier(model: Model, budget: Lines): Range[] {
-	if (!model.leaves.length) return [];
-	const highest = model.leaves[model.leaves.length - 1]?.pos ?? 0;
-	const blocks = sparseBlocks(model);
-	let count = model.leaves.length;
+export function foldPositions(
+	positions: readonly Pos[],
+	total: Pos,
+	budget: Lines,
+): readonly Range[] {
+	if (!positions.length) return [];
+	const highest = positions[positions.length - 1] ?? 0;
+	const blocks = sparseBlocks(positions, total);
+	let count = positions.length;
 	while (count > budget) {
-		const best = selectMerge(model, blocks, highest);
+		const best = selectMerge(positions, blocks, highest, total);
 		if (!best) break;
 		blocks.splice(best.index, 2, best.range);
 		count -= best.reduction;
 	}
-	const visible = blocks.filter((range) => model.live(range).length);
-	const result = visible.slice(
-		Math.max(0, visible.length - Math.max(1, budget)),
+	const visible = blocks.filter((range) => liveCount(positions, range) > 0);
+	return visible.slice(Math.max(0, visible.length - Math.max(1, budget)));
+}
+// #endregion FUNC_foldPositions
+
+// #region FUNC_frontier
+/**
+ * @purpose Fold the model of one projection into the frontier ranges.
+ * @invariants The live leaves give the positions, and the assigned extent gives the total.
+ */
+function frontier(model: Model, budget: Lines): Range[] {
+	const result = foldPositions(
+		model.leaves.map((leaf) => leaf.pos),
+		model.tree.total,
+		budget,
 	);
 	debug("Fold result", {
 		total: model.tree.total,
 		budget,
 		count: result.length,
 	});
-	return result;
+	return [...result];
 }
 // #endregion FUNC_frontier
 
@@ -586,7 +655,7 @@ function rangeBody(model: Model, range: Range, limit: number): string {
  * proportion to its own length, and a half below its share keeps its whole text.
  * A half at the limit stands for a longer text, so the other half keeps its whole text.
  */
-function joinBody(first: string, rest: string, limit: number): string {
+export function joinBody(first: string, rest: string, limit: number): string {
 	if (!first) return rest.slice(0, limit);
 	if (!rest) return first.slice(0, limit);
 	const room = Math.max(0, limit - 2);

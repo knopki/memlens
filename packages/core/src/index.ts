@@ -97,7 +97,11 @@ export {
 	ttlSeconds,
 	xdgDirs,
 } from "./domain/config.js";
-export { type ConsoleModel, readConsole } from "./domain/console.js";
+export {
+	type ConsoleModel,
+	candidatesOf,
+	readConsole,
+} from "./domain/console.js";
 export {
 	CONTEXT_TEMPLATE,
 	type ContextInput,
@@ -107,6 +111,9 @@ export {
 	hereLines,
 	POLICY,
 	renderContext,
+	type TreeContextInput,
+	treeDirectionLines,
+	treeHereLines,
 } from "./domain/context.js";
 export {
 	type InvalidationPlan,
@@ -137,11 +144,14 @@ export {
 	LONGFORM_ALL,
 	LONGFORM_HEAD,
 	type LongformMode,
+	loadRangeView,
 	type OpenChildren,
 	type OpenEntry,
 	type OpenLine,
+	type OpenSubject,
 	openNote,
 	openRange,
+	type ReadSource,
 	type ScopeLine,
 	scopeLines,
 } from "./domain/reads.js";
@@ -168,14 +178,19 @@ export {
 	candidates,
 	catalogChildren,
 	currentNode,
+	cutAtWord,
 	due,
 	fold,
+	foldPositions,
 	inputUnchanged,
 	isBuilt,
 	isClean,
+	joinBody,
+	LINE_LIMIT,
 	rev,
 	slice,
 	topRange,
+	topRangeOf,
 } from "./domain/tree.js";
 export { isUlid, ulid } from "./domain/ulid.js";
 export {
@@ -191,6 +206,40 @@ export {
 export { FtsIndex } from "./storage/fts.js";
 export { JsonlStore } from "./storage/jsonl.js";
 export { SqliteStore } from "./storage/sqlite.js";
+export {
+	byAddress,
+	type DirectionLine,
+	type DirectionsData,
+	directionsData,
+	dueReviews,
+	liveCounts,
+	nodesOf,
+	scopeNotes,
+} from "./store/reads.js";
+export { Store } from "./store/store.js";
+export type {
+	Node,
+	Note,
+	NoteState,
+	Proposal,
+	ProposalStatus,
+	StoreRev as RowStoreRev,
+	WriteResult,
+} from "./store/types.js";
+export {
+	joinText,
+	loadView,
+	nodeAt,
+	nodeValid,
+	notesInRange,
+	sliceOf,
+	textOfLine,
+	topLineOf,
+	totalOf,
+	type View,
+	type ViewNode,
+	type ViewNote,
+} from "./store/view.js";
 export { type ErrorCode, MemlensError } from "./types/errors.js";
 // Type exports
 export type {

@@ -1,6 +1,9 @@
 /**
  * #region moduleContract
- * @purpose Check tree freshness, copied inputs, and the minimal slice fold.
+ * @purpose Check tree freshness, copied inputs, the minimal slice fold, and the pure frontier.
+ * @scope The projection tree of the frontend branch and the fold over a sorted position list.
+ * @invariants The fold over a position list equals the fold over the tree of the same positions.
+ * @keywords test, tree, fold, frontier, position, slice
  * #endregion moduleContract
  */
 import { describe, expect, it } from "vitest";
@@ -11,6 +14,7 @@ import {
 	currentNode,
 	due,
 	fold,
+	foldPositions,
 	inputUnchanged,
 	isBuilt,
 	isClean,
@@ -18,9 +22,11 @@ import {
 	rev,
 	slice,
 	topRange,
+	topRangeOf,
 } from "../src/domain/tree.js";
 import type {
 	Order,
+	Pos,
 	Range,
 	Tree,
 	TreeNode,
@@ -580,5 +586,60 @@ describe("minimal fold", () => {
 				body: `body ${high}`,
 			},
 		]);
+	});
+});
+
+describe("pure frontier", () => {
+	// #region FUNC_referenceFrontier
+	/** @purpose Compare the pure fold with the fold over the projection tree of the same positions. */
+	function referenceFrontier(
+		positions: readonly Pos[],
+		total: Pos,
+		budget: number,
+	): Range[] {
+		const input: Tree = {
+			total,
+			notes: positions.map((pos) => record(pos)),
+			nodes: [],
+			invalidated: [],
+		};
+		return [...fold(input, budget)];
+	}
+	// #endregion FUNC_referenceFrontier
+
+	it("keeps the top range of the assigned extent", () => {
+		expect(topRangeOf(0)).toBeNull();
+		expect(topRangeOf(1)).toEqual(range(0, 1));
+		expect(topRangeOf(5)).toEqual(range(0, 3));
+		expect(topRangeOf(2 ** 40)).toEqual(range(0, 40));
+	});
+
+	it("gives no range for an empty position list", () => {
+		expect(foldPositions([], 0, 3)).toEqual([]);
+		expect(foldPositions([], 8, 3)).toEqual([]);
+	});
+
+	it("folds a sorted position list like the tree of the same positions", () => {
+		for (const count of [1, 2, 3, 5, 8, 11, 23]) {
+			for (const budget of [0, 1, 2, 3, 5, 8]) {
+				const positions = Array.from({ length: count }, (_, pos) => pos);
+				expect(
+					foldPositions(positions, count, budget),
+					`count=${count}`,
+				).toEqual(referenceFrontier(positions, count, budget));
+			}
+		}
+	});
+
+	it("keeps the greatest live slot at a budget of zero", () => {
+		const positions = [0, 1, 2, 3, 7];
+		expect(foldPositions(positions, 8, 0)).toEqual([range(7, 0)]);
+		expect(foldPositions(positions, 8, 1)).toEqual([range(7, 0)]);
+		expect(foldPositions(positions, 8, 2)).toEqual([range(0, 2), range(7, 0)]);
+	});
+
+	it("skips empty gaps without a dense scan", () => {
+		const high = 2 ** 40 - 1;
+		expect(foldPositions([high], high + 1, 1)).toEqual([range(high, 0)]);
 	});
 });
