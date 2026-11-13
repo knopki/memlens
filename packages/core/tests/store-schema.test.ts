@@ -87,6 +87,19 @@ describe("schema", () => {
 		db.close();
 	});
 
+	it("refuses an old event-store database with a message that names the action", () => {
+		const dir = mkdtempSync(join(tmpdir(), "memlens-"));
+		dirs.push(dir);
+		const path = join(dir, "memlens.db");
+		const old = openDatabase(path, "en");
+		old.exec("CREATE TABLE events (id TEXT PRIMARY KEY)");
+		old.close();
+		assert.throws(
+			() => openDatabase(path, "en"),
+			/move the store directory away/i,
+		);
+	});
+
 	it("removes the marker bytes from the database file and the log", () => {
 		const dir = mkdtempSync(join(tmpdir(), "memlens-"));
 		dirs.push(dir);

@@ -264,7 +264,8 @@ by rowid. Query results join `notes` for scope, state, kind, and times.
 - Order: `rank, ts DESC, scope, id`. The record id is the final tie-break key.
 - The query grammar keeps the escaped prefix phrases of today.
 - A trigram tokenizer serves zh and ja. A query shorter than three characters falls
-  back to a bounded literal scan of live rows.
+  back to a bounded literal scan of live rows. The scan matches literal containment
+  and applies no exclusion word.
 - The tokenizer stored in `meta` is authoritative. A language change is one
   explicit step: `memlens config set language <key>` (or `memlens repair` on a
   detected mismatch) drops and recreates the table, rebuilds it from notes, and
@@ -295,7 +296,7 @@ text and is not redacted.
 Full-state JSONL. Line 1 is a header: format version, store_id, last version. Then
 one line per note in `(scope, pos)` source order, then a trailer with counts and a
 digest. Proposals, nodes, slots, and the journal never travel. Deleted notes travel
-as tombstones: id, ts, state, versions, `cleared`. No content, no slot.
+as tombstones: id, scope, ts, state, versions, `cleared`. No content, no slot.
 
 Import runs one transaction for the whole file:
 

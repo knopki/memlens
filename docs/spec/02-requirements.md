@@ -128,23 +128,23 @@ Use module invariants for module-wide rules. Use entity contracts for rules with
 | REQ-518 | A compaction job without a merge input states that fact and opens no answer form. | FR | accepted | S-144 | Prepare a job in a settled scope. The console shows the state and no form. |
 | REQ-519 | A record carries `modified_at`, the `at` of the latest event that affects it. `recorded_at` stays the write time. | FR | rejected | S-158 | Refused by the storage pivot: ADR 0020. |
 | REQ-520 | A record is due for review when its `review_at` is now or earlier. | FR | accepted | S-158 | A record with no `review_at` is never due. A record turns due inside a day. |
-| REQ-521 | The store is one SQLite database, and no second storage backend exists. | FR | draft | ADR 0020 | The core opens one database, and the source holds no JSONL backend. |
-| REQ-522 | A note orders by its immutable `(ts, id)` key, and its slot is the rank of that key among all note rows of its scope. | FR | draft | ADR 0020 | A note with an old `ts` lands between its neighbors in the slice. |
-| REQ-523 | A hidden or deleted note keeps its slot, a hide keeps the content, and no path restores a deleted note. | FR | draft | ADR 0020 | Hide and redact a note, then import old rows in any order. |
-| REQ-524 | A merge applies five channels: content and review by version, lifecycle by maximum, cleared by latch, and the supersede link by first write. | FR | draft | ADR 0020 | Merge two diverged stores in both orders and compare the rows. |
-| REQ-525 | An old export cannot unhide or undelete a note, and a redaction clears a younger amendment on every later exchange. | FR | draft | ADR 0020 | Redact on one store, amend on the other, then import both ways. |
-| REQ-526 | A repeated import of the same file changes no row. | FR | draft | ADR 0020 | Import one file twice and compare the full row set. |
-| REQ-527 | A redact is one transaction, and after its checkpoint the redacted marker text is absent from the database file and the WAL. | FR | draft | ADR 0020 | Redact a note with a unique marker, then scan the raw bytes. |
-| REQ-528 | A summary never renders after its input changed, and the render gives children text until compaction rebuilds the node. | FR | draft | ADR 0020 | Amend a note, render, and compare with the rebuilt render. |
-| REQ-529 | A render reads rows only, calls no model, and waits for no compaction. | NFR | draft | ADR 0020 | Count the model calls of one render on a dirty scope. |
-| REQ-530 | The directions block holds the newest scopes of the profile within its budget, from the oldest to the newest. | FR | draft | ADR 0020 | Fill more scopes than the budget and read the block. |
-| REQ-531 | The transfer format is JSONL of full note rows with a header and a trailer, and proposals, summaries, and slots never travel. | FR | draft | ADR 0020 | Export, then import into an empty store and compare. |
-| REQ-532 | Versions come from one hybrid logical clock, and a local write after an import outranks the imported state. | FR | draft | ADR 0020 | Import, write locally, and merge in both directions. |
-| REQ-533 | A review moves `review_at` and `reviewed_at`, moves no `modified_at`, and touches no node row. | FR | draft | ADR 0020 | Review a note and read the row and the nodes. |
-| REQ-534 | The journal holds no content and no hash, and no state path reads it. | FR | draft | ADR 0020 | Run each operation with a marker, then dump the journal. |
-| REQ-535 | The `id` of a note is a ULID and the only cross-store identity. | FR | draft | ADR 0020 | Sync two stores and address a note by `id`. |
-| REQ-536 | An open of an old event-store file refuses with a message that names the action. | FR | draft | ADR 0020 | Open a store directory that holds the old schema. |
-| REQ-537 | Every scope older than the directions budget forms one comma list of keys with no description. | FR | draft | ADR 0020 | Fill more scopes than the budget and read the block. |
+| REQ-521 | The store is one SQLite database, and no second storage backend exists. | FR | accepted | ADR 0020 | The isolation test opens one database, and the source holds no storage directory. |
+| REQ-522 | A note orders by its immutable `(ts, id)` key, and its slot is the rank of that key among all note rows of its scope. | FR | accepted | ADR 0020 | A note with an old `ts` lands between its neighbors in the slot order. |
+| REQ-523 | A hidden or deleted note keeps its slot, a hide keeps the content, and no path restores a deleted note. | FR | accepted | ADR 0020 | Hide and redact a note, then import old rows in each order. |
+| REQ-524 | A merge applies five channels: content and review by version, lifecycle by maximum, cleared by latch, and the supersede link by first write. | FR | accepted | ADR 0020 | Merge two diverged stores in both orders and compare the rows. |
+| REQ-525 | An old export cannot unhide or undelete a note, and a redaction clears a younger amendment on every later exchange. | FR | accepted | ADR 0020 | Redact on one store, amend on the other, then import both ways. |
+| REQ-526 | A repeated import of the same file changes no row. | FR | accepted | ADR 0020 | Import one file twice and compare the full row set. |
+| REQ-527 | A redact is one transaction, and after its checkpoint the redacted marker text is absent from the database file and the WAL. | FR | accepted | ADR 0020 | Redact a note with a unique marker, then scan the raw bytes of both files. |
+| REQ-528 | A summary never renders after its input changed, and the render gives children text until compaction rebuilds the node. | FR | accepted | ADR 0020 | Amend a note, render, and compare with the rebuilt render. |
+| REQ-529 | A render reads rows only, calls no model, and waits for no compaction. | NFR | accepted | ADR 0020 | Count the model calls of one render on a dirty scope. |
+| REQ-530 | The directions block holds the newest scopes of the profile within its budget, from the oldest to the newest. | FR | accepted | ADR 0020 | Fill more scopes than the budget and read the directions block. |
+| REQ-531 | The transfer format is JSONL of full note rows with a header and a trailer, and proposals, summaries, and slots never travel. | FR | accepted | ADR 0020 | Export, then import into an empty store and compare. |
+| REQ-532 | Versions come from one hybrid logical clock, and a local write after an import outranks the imported state. | FR | accepted | ADR 0020 | Import, write locally, and merge in both directions. |
+| REQ-533 | A review moves `review_at` and `reviewed_at`, moves no `modified_at`, and touches no node row. | FR | accepted | ADR 0020 | Review a note and read the row and the node rows. |
+| REQ-534 | The journal holds no content and no hash, and no state path reads it. | FR | accepted | ADR 0020 | The journal writer takes no content argument, and the prune test caps the rows. |
+| REQ-535 | The `id` of a note is a ULID and the only cross-store identity. | FR | accepted | ADR 0020 | Sync two stores and address one note by `id`. |
+| REQ-536 | An open of an old event-store file refuses with a message that names the action. | FR | accepted | ADR 0020 | Open a store directory that holds the old event schema. |
+| REQ-537 | Every scope older than the directions budget forms one comma list of keys with no description. | FR | accepted | ADR 0020 | Fill more scopes than the budget and read the comma list. |
 
 ## Rules for new requirements
 

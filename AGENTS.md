@@ -1,9 +1,9 @@
 # Work rules for agents
 
-The core library implements the domain, both persistent backends, the background compaction, the slice, and
-the configuration. The CLI implements the command surface, including `compact`, `check`, `repair`,
-and `ui`. The session import is pending. The plugin has a scaffold, and the console tab of the
-plugin is pending.
+The core library implements the domain, one SQLite row store, the slice, and the configuration. The
+CLI implements the command surface, including `compact`, `check`, `repair`, and `ui`. The session
+import and the background compaction host are pending. The plugin has a scaffold, and the console
+tab of the plugin is pending.
 See [06-architecture.md](docs/spec/06-architecture.md) for the current state.
 The specification in `docs/spec/` owns cross-module requirements and pending behavior.
 Code contracts own implemented rules within one module. Read the module contract and the relevant

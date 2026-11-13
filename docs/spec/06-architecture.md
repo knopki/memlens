@@ -8,10 +8,9 @@ The global requirements define cross-module behavior. Code contracts define impl
 One SQLite database holds normalized note and summary rows. Current rows are the truth. Reads and writes do not replay history. A tree of summary rows stands above notes:
 
 - The notes of a scope make the leaves.
-- The catalog of nodes is the level above the notes. It has its own tree and belongs
-  to one profile.
+- Summary node rows stand above the notes, one row per aligned range.
 
-The agent reads one map of directions: the catalog in the `<directions>` section.
+The agent reads one map of directions: the derived scope list in the `<directions>` section.
 
 ## Parts
 
@@ -44,38 +43,23 @@ makes the bundles. prek runs the git hooks. See [0010 Process and stack](../adr/
 `pnpm build` runs the builds in the dependency order of the workspace. The plugin keeps the packages
 external, because the harness gives them at run time.
 
-## Event log
+## Write path
 
-The database holds current note, node, and proposal rows. A note has a stable id, scope, content, and metadata. A redact clears the target content.
+The database holds current note, node, and proposal rows. A note has a stable id, scope, slot, content, and metadata. Each operation writes its rows in one transaction.
 
-| Op        | Payload                                                                                                                                                   |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `note`    | `body`, `kind`, `ts`, `review_at`, `proposed`, `session`, `turn`, `preset`, and the optional `longform`, `refs`, `supersedes` |
-| `amend`   | `target`, and one or more of `body`, `longform`, `scope`, `kind`, and `supersedes`                                                                         |
-| `hide`    | `target`, `reason`                                                                                                                                        |
-| `redact`  | `target`, `reason`                                                                                                                                        |
-| `review`  | `target`, `review_at`                                                                                                                                     |
-| `dismiss` | `target`, `reason`                                                                                                                                        |
-| `node`    | `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`, `chars`, `truncated`, `ts_from`, `ts_to`                                                  |
-| `invalidate` | `targets`, the ids of node events whose summaries must stay unusable |
+| Op | Effect |
+| -- | ------ |
+| `note` | Insert one row at its `(ts, id)` rank. A duplicate of a live note writes nothing. |
+| `amend` | Update the content group. A scope change moves the row at its key rank. |
+| `hide` | Set the state to hidden. The content stays. |
+| `redact` | Set the state to deleted, clear the content, and delete the index row. |
+| `review` | Set the next review time and the last review time. |
 
-The proposed modifier marks an ordinary write operation, and the projection ignores that operation.
-Approval applies the ordinary operation and closes the selected proposal with a dismiss event.
-No separate acceptance field or event form is necessary. See [0012 Proposals](../adr/0012-proposals.md).
+The store validates required fields, dates, and targets before each write. A body above its limit moves the overflow into the longform.
 
-A node is a `node` event. Its `at` is the time of the build.
-The projection takes the latest candidate whose id has no invalidation.
-An `invalidate` event changes no note and deletes no text. See [0015 Node invalidation](../adr/0015-node-invalidation.md).
+A slot is the rank of the note in the immutable `(ts, id)` order of its scope. An insert into the middle shifts the later slots by one. An export holds no slot. A deleted note keeps its slot as a tombstone with no content. See [0020 Storage pivot](../adr/0020-storage-pivot.md).
 
-An event has two times: `at` is the time of the log, and `ts` is the time of the write of a note. Only
-the `note` event carries `session`, `turn`, and `preset`.
-The store validates required fields, dates, and targets before each write.
-
-A position is not an event field. It derives from real record entries into a scope in canonical event order,
-and an export holds no `pos`. A sanitized event keeps its operation and structural metadata, with `redacted: true`.
-A note has empty body and null longform. An amendment clears present content fields and retains absent fields.
-A node has empty summary and zero chars. See [0002 Event log](../adr/0002-event-log.md), [0008 Redaction](../adr/0008-redaction.md), and
-[Q-030](03-open-questions.md#q-030).
+A proposal is a local row with a payload and an expiry. Approval applies the operation and closes the row in the same transaction. No event, no replay, and no cursor exists. See [0012 Proposals](../adr/0012-proposals.md) for the workflow history.
 
 ## Projection
 
@@ -83,25 +67,15 @@ Reads query current rows. Store writes maintain note, node, search index, and jo
 
 ## Catalog
 
-The catalog has one scope for each profile: `__catalog__:<profile>`. The key is hidden from the
-agent. The catalog is a tree over the scopes of the profile. One position holds one scope, and the
-content of the position is the top node of the tree of that scope. A node above the leaves lives in
-the catalog scope. A node of the catalog carries no `review_at`, no `proposed`, no `session`, no
-`turn`, and no `preset`. See [0011 Nodes are events](../adr/0011-nodes-are-events.md) and
-[S-104](../statements.md#s-104).
-
-The store derives visible directions from the configured profile scopes. A catalog line uses the current top summary of its scope.
-
-The catalog renders in `<directions>`, and the direction line of a scope is the line of its top node.
-When the top node is not ready, its direction line is a temporary line with the keys and the age.
-That line also holds the text assembled from the two child bodies. A scope with no live note gives no
-direction line. A shared scope gets one position in each profile where it is
-visible. See [REQ-108](02-requirements.md) and the [context contract](../../packages/core/src/domain/context.ts).
+The store derives the catalog. No catalog scope, no catalog position, and no catalog node row exists. The
+directions block lists the newest scopes of the profile within its budget, from the oldest to the
+newest. Each line uses the current top summary of its scope. Every older scope forms one comma list
+of keys with no description. A scope with no live note gives no line. See the
+[context contract](../../packages/core/src/domain/context.ts) and [REQ-530](02-requirements.md).
 
 A note change deletes each covering node row in the same transaction. Compaction rebuilds the node from its two children. [REQ-113](02-requirements.md), [REQ-117](02-requirements.md), and [REQ-192](02-requirements.md) define the build guarantees.
 
-A `redact` clears historical dependent nodes through their child ids, including earlier scope paths and catalog ancestors.
-The placeholder `[redacted]` appears in the console and the view only, and no event holds it.
+A `redact` deletes the covering node rows of the target. No historical node row exists, so no summary holds cleared content.
 
 ## Configuration
 
@@ -187,14 +161,13 @@ template is in [09-prompts.md](09-prompts.md), and each placeholder takes its va
 The `<how-to>` part holds the policy text and the value of `customPromptAppend`. A `customPrompt`
 value replaces the whole template, and the placeholders apply in it.
 
-The `<directions>` part holds one direction line for each range of the scopes. A direction line has
-the form `[<keys>] <age> <summary>`. A line above one scope joins its keys with a comma and gives the
-range of their idle times, as `10..20d`. The [context contract](../../packages/core/src/domain/context.ts)
-owns the age unit. The
-line holds no count and no active marker. The text is the body of the top node of the range, and the catalog shows that body. An
-unready top node gives a temporary line with the keys, the age range, and the text assembled from the
-two child bodies. That line renders at once, and the render calls no model and waits for no compaction.
-A scope with no live records gives no line. The catalog follows the same minimal fold and line budget.
+The `<directions>` part holds one direction line for each of the newest scopes of the profile, from
+the oldest to the newest. A direction line has the form `[<key>] <age> <summary>`. The
+[context contract](../../packages/core/src/domain/context.ts) owns the age unit. The line holds no
+count and no active marker. The text is the summary of the top node of the scope. An unready top node
+gives a temporary line with the key, the age, and the text assembled from the two child bodies. That
+line renders at once, and the render calls no model and waits for no compaction. A scope with no live
+note gives no line. Every scope older than the budget forms one comma list of keys.
 
 The `<here>` part holds the frontier of the active scope. A leaf gives `#<pos> <YYYY-MM-DD> <body>`,
 and a range gives `#<a>-<b> <start>..<end> <summary>`, or its assembled text for a temporary line.
@@ -203,14 +176,13 @@ The span names the dates only, and it writes the shared year and month once, as 
 The [context contract](../../packages/core/src/domain/context.ts) owns the line budget of each part.
 The `<how-to>` part is never cut.
 
-Each part is a tree. The tree of the active scope gives the `<here>` part, and the catalog tree gives
-the `<directions>` part.
+The tree of the active scope gives the `<here>` part. The derived scope list gives the `<directions>` part.
 
 A part above its budget merges one pair at a time, and it stops as soon as the count of lines fits the
 budget. The line of the parent takes the place of the two lines of the pair. Among the pairs, a merge
 minimizes the demo jump penalty before comparing due, level, and start. No pair that covers the greatest live position merges.
-A scope slice therefore ends with its last live record, even when later assigned positions are empty.
-The catalog keeps its greatest non-empty scope leaf unfolded by the same rule.
+A scope slice therefore ends with its last live record, even when later assigned slots are empty.
+
 
 A pair merges though the node of its range is not built, and a temporary line takes the place of the
 two lines. So the part always reaches its budget. When no pair merges and the part is still above its
@@ -222,10 +194,10 @@ slice fits its budget at once.
 An open of a note gives the note and its `longform`. An open of a node gives its non-empty children as slice lines. A range that matches no built node gives one line: the level follows
 the span of the range, and the line holds the first `pos`.
 
-A range gives a temporary line, unless its node passes both tests: `built` and `clean`. That line
+A range gives a temporary line, unless its node row passes the validity keys of its halves. That line
 holds the period of the range and the text assembled from its two children. The render calls no model
-and stores no node. A rebuild keeps each address, because a merge with another log is the only change
-of the order.
+and stores no node. A backdated insert shifts the later slots, so a numeric address is not stable in
+time.
 
 A `redact` cleans the store. The copy in the session history stays. See
 [0007 Slice and context](../adr/0007-slice-context.md).
@@ -269,39 +241,32 @@ holds the address, the range of dates, and the text. See [0004 Tree and writer](
 
 ## Erasure
 
-A `hide` or an `amend` makes the ancestors of the position dirty. A review makes no node dirty,
-because it changes no summary input. A dirty node does not
-render, and its children take its place down to a clean node or a record. The rebuild goes bottom-up
-and builds one node on each dirty level. One change costs a depth of the tree, not a count of the
-records. A changed leaf order makes each moved record dirty. See the
-[slice contract](../../packages/core/src/domain/tree.ts).
+A `hide` or an `amend` deletes the covering node rows of the changed slot in the same transaction. A
+review changes no node row, because it changes no summary input. A deleted node row leaves a dirty
+range: the render gives the children text, and the compaction rebuilds the node. One change costs a
+depth of the tree, not a count of the records.
 
-A redaction clears the note, every historical amendment, and every historical node whose child dependencies reach cleared event ids.
-The clearing follows source ids across scopes and catalogs. Current numeric positions do not determine historical dependencies.
-A cleared parent summary does not clear its unaffected child notes or sibling subtree.
-The store invalidates affected node ids and excludes sanitized nodes from current candidates.
+A redact clears the note row, its index row, and the covering node rows. It deletes the proposals
+that carry the target. No historical amendment and no historical node row exists, so the clearing
+stays within current rows. The write runs in one transaction, and a truncating checkpoint runs after
+the commit. One byte test proves the claim: after a redact, the marker text is absent from the
+database file and the write-ahead log. See [REQ-527](02-requirements.md) and
+[0020 Storage pivot](../adr/0020-storage-pivot.md).
 
-Sanitized notes and amendments set their record to `deleted` and `content_cleared`, including imports without the original redact event.
-The store clears the index and content rows. A late compaction answer does not match the exact input.
-Already delivered session messages stay unchanged.
-
-Publication uses one exclusive store lock and an atomic source replacement. SQLite journals and the disposable JSONL index cannot accompany the sanitized source with stale content.
-A successful operation leaves no cleared content in store-owned named files or journals.
-A crash leaves either the earlier complete source or the complete sanitized source. Recovery runs before a read.
-See [0008 Redaction](../adr/0008-redaction.md) for the redaction decision.
-[REQ-219](02-requirements.md) and [REQ-222](02-requirements.md) define atomic publication and cache clearing.
+A late compaction answer does not match the captured validity keys. Already delivered session
+messages stay unchanged.
 
 ## Fold
 
 The [fold and slice contracts](../../packages/core/src/domain/tree.ts) own pair selection, line budgets, temporary lines, and last-leaf preservation.
 The demo supplies the comparison cases for the existing tree tests.
-The cache key remains `epoch = hash(storeRev, sorted built nodes)` under [REQ-173](02-requirements.md).
+The context epoch is the hash of the store clock value.
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
 ## Compaction
 
 The background compaction computes candidates from dirty non-empty aligned ranges through the root.
-A missing node event is a dirty candidate. A range waits for clean non-empty children before a build.
+A missing node row is a dirty candidate. A range waits for clean non-empty children before a build.
 The [tree contract](../../packages/core/src/domain/tree.ts) owns the candidate order. The compaction
 stores no queue, job row, or lease.
 A restart derives candidates again from the tree. In-flight attempts and retry delays are local runtime state.
@@ -313,32 +278,28 @@ The model sees the two child inputs only. One non-empty child copies its text wi
 
 Each attempt copies exact child inputs as `BuildInput`. The store compares both current children under the write lock before publication.
 A changed input, a hidden record, or a dirty child rejects the result. The revision equality alone does not permit a result.
-The compaction starts when dirty candidates reach `compaction.batch`, after `store.idle` seconds without an event, or at `memlens compact`.
+The compaction starts when dirty candidates reach `compaction.batch`, after `store.idle` seconds without a write, or at `memlens compact`.
 Rendering returns immediately with current clean summaries and temporary lines.
-See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0015 Node invalidation](../adr/0015-node-invalidation.md).
+See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0020 Storage pivot](../adr/0020-storage-pivot.md).
 
 ## Invalidation
 
-An import preserves the unaffected branches of the common prefix. A changed record or position invalidates its old and new ancestor paths.
-The import invalidates all historical candidates of those ranges, so an older summary cannot return as a fallback.
-Each new imported node candidate also starts unusable. Reuse of new imported summaries is outside this version.
-A repeated import with no new event or payload change writes no invalidation.
+An import applies the five merge channels and deletes the covering node rows of each changed or
+shifted slot. No historical candidate exists, so an older summary cannot return as a fallback. A
+repeated import changes no row.
 
-A local change of summary input uses the same rule. Target selection and the write share one store lock or transaction.
-SQLite appends ordinary data changes and invalidations in one transaction. JSONL flushes invalidations before an ordinary append.
-An import that clears stored content uses the redaction publication protocol in [0008 Redaction](../adr/0008-redaction.md).
-A crash can leave an unnecessary rebuild, but it must not leave changed data with a usable stale summary.
-The projection derives invalidation from the log after a restart or a rebuild. A rebuilt node has a new id.
-See [0015 Node invalidation](../adr/0015-node-invalidation.md), the
-[row validity rules](../../packages/core/src/store/view.ts), and [REQ-512](02-requirements.md) to
-[REQ-513](02-requirements.md).
+A local change uses the same rule: the write deletes the covering node rows of the changed slot in
+the same transaction. The read compares the validity keys of each rendered node. A missed path
+degrades to a dirty range, never to stale text. See the
+[row validity rules](../../packages/core/src/store/view.ts) and [REQ-528](02-requirements.md).
 
 ## Session and store
 
-A session writes the store. The export and the import move the records between stores. An import is
-a union of events by `id`. A note can supersede an earlier note. The index is a cache over the log:
-the store rebuilds it from note rows after a loss. See
-[REQ-375](02-requirements.md), and [REQ-377](02-requirements.md).
+A session writes the store. The export and the import move the rows between stores. An import applies
+the five merge channels by `id`. Content and review merge by version, lifecycle by maximum, cleared
+by latch, and the supersede link by first write. A note can supersede an earlier note. The index is a
+cache over the note rows. The store rebuilds it after a loss. See
+[REQ-375](02-requirements.md), [REQ-377](02-requirements.md), and [REQ-524](02-requirements.md).
 
 ## Harness surface
 
@@ -386,8 +347,8 @@ The tool behavior and the errors are in [REQ-293](02-requirements.md) to
 
 ## Human surface
 
-Only the CLI or the GUI can redact and amend. Review uses the `review` event and stays out of the
-slice. See [0002 Event log](../adr/0002-event-log.md) and [REQ-024](02-requirements.md).
+Only the CLI or the GUI can redact and amend. Review sets the next review time and stays out of the
+slice. See [0020 Storage pivot](../adr/0020-storage-pivot.md) and [REQ-024](02-requirements.md).
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui`, and the [core entry
 contract](../../packages/core/src/index.ts) exports the console models. The console
@@ -435,8 +396,8 @@ command `check` tests store health, and the command `repair` fixes damaged cache
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui` and its local HTTP boundary.
 The store validates proposal acceptance and applies it in one transaction.
-The console gives separate compaction jobs for scope trees and the profile catalog. A catalog job names each child by its scope key.
-The [console models](../../packages/core/src/domain/console.ts) supply the shared view through the store port.
+The console gives a compaction job for one scope tree. The console refuses a catalog job, because the store derives the catalog.
+The [console models](../../packages/core/src/domain/console.ts) supply the shared view through the store.
 The [browser client](../../packages/ui/src/client.ts) supplies seven screens in a separate bundle.
 The flag `--from` of `import` and the import from harness sessions remain pending.
 
@@ -491,6 +452,7 @@ customer words as given.
 
 The CLI owes the import from harness sessions. See [REQ-413](02-requirements.md) and
 [Q-514](03-open-questions.md#q-514).
+The background compaction host owes its wiring: the core exports `compactionPass`, and no trigger calls it.
 The plugin and its session tab remain pending. See [08-ui.md](08-ui.md) and [REQ-028](02-requirements.md).
 The standalone console states no compaction state and no session snapshot state. See the
 [client contract](../../packages/ui/src/client.ts).
