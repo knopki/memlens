@@ -294,6 +294,46 @@ describe("store console", () => {
 		});
 	});
 
+	it("takes the direction summary and the catalog line from the top node", async () => {
+		const store = newStore();
+		addLive(store, 2);
+		addNode(store, {
+			level: 1,
+			start: 0,
+			summary: "pair summary",
+			a_key: leafKey("project:a", 0),
+			b_key: leafKey("project:a", 1),
+		});
+		const model = await readConsole(store, config(), "project:a", now);
+		expect(model.candidates).toEqual([]);
+		expect(model.directions).toBe("[project:a] 0d pair summary");
+		expect(model.catalog).toEqual([
+			{
+				kind: "summary",
+				range: { start: 0, level: 0 },
+				from: now,
+				to: now,
+				summary: "pair summary",
+			},
+		]);
+	});
+
+	it("gives the assembled top text when no top node is built", async () => {
+		const store = newStore();
+		addLive(store, 2);
+		const model = await readConsole(store, config(), "project:a", now);
+		expect(model.directions).toBe("[project:a] 0d note 0; note 1");
+		expect(model.catalog).toEqual([
+			{
+				kind: "temporary",
+				range: { start: 0, level: 0 },
+				from: now,
+				to: now,
+				text: "note 0; note 1",
+			},
+		]);
+	});
+
 	it("puts each older scope before the budgeted direction line", async () => {
 		const store = newStore();
 		addNote(store, {

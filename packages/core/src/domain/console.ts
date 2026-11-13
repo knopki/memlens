@@ -7,6 +7,8 @@
  * @invariants The review list holds the due notes of the selected scope. The reviewNext list holds
  * the nearest notes of the selected scope with a later review time, at most ten, and reviewNextTotal
  * counts them before the cap. A kind selects one kind and null takes each kind.
+ * @invariants A direction summary and a catalog line take the top line of the scope. The top line
+ * gives the summary of a valid top node, or the assembled text of the same range.
  * @invariants The frontier holds the slice lines of the selected scope, in the same order and with
  * the same fold as the text of the slice. A range line hides the notes inside that range.
  * @dependencies store/reads.ts, store/view.ts, domain/context.ts, domain/reads.ts, domain/tree.ts
@@ -23,6 +25,7 @@ import {
 	nodeValid,
 	sliceOf,
 	textOfLine,
+	topLineOf,
 	type View,
 } from "../store/view.js";
 import { MemlensError } from "../types/errors.js";
@@ -124,6 +127,8 @@ export async function readConsole(
  * @invariants The revision is the store clock of one read, so the model and the epoch agree.
  * @invariants The directions come from the store read and the top line of each budgeted scope.
  * @invariants The catalog holds one leaf for each budgeted scope, in the order of the directions.
+ * Each catalog line carries the kind, the dates, and the text of the top line of its scope. The
+ * range of a catalog line holds the catalog position, not the range of the scope tree.
  */
 function readStoreConsole(
 	store: Store,
@@ -141,10 +146,13 @@ function readStoreConsole(
 	const hereView = requireView(views, set.selected);
 	const links = supersedesOf(store, set.keys);
 	const data = directionsData(store, set.keys, config.budget.directions);
-	const lines = data.lines.map((line) => ({
-		...line,
-		summary: topText(store, line.scope),
-	}));
+	const tops = new Map<ScopeKey, SliceLine | null>(
+		set.keys.map((key) => [key, topLineOf(requireView(views, key))]),
+	);
+	const lines = data.lines.map((line) => {
+		const top = tops.get(line.scope) ?? null;
+		return { ...line, summary: top === null ? null : textOfLine(top) };
+	});
 	const next = upcomingRecords(store, [set.selected], time, NEXT_LIMIT, kind);
 	const model: ConsoleModel = {
 		profile,
@@ -190,13 +198,19 @@ function readStoreConsole(
 				ready: true,
 			})),
 		),
-		catalog: lines.map((line, pos) => ({
-			kind: "temporary",
-			range: { start: pos, level: 0 },
-			from: line.lastWrite,
-			to: line.lastWrite,
-			text: line.summary ?? "",
-		})),
+		catalog: lines.map((line, pos) => {
+			const top = tops.get(line.scope) ?? null;
+			const range = { start: pos, level: 0 };
+			return top === null
+				? {
+						kind: "temporary",
+						range,
+						from: line.lastWrite,
+						to: line.lastWrite,
+						text: "",
+					}
+				: { ...top, range };
+		}),
 		catalogScopes: lines.map((line) => line.scope),
 		frontier: sliceOf(hereView, config.budget.here),
 		review: dueRecords(store, [set.selected], time, kind),
@@ -237,12 +251,6 @@ function scopePanel(
 		deleted: count("deleted"),
 		frontier: hereLines(view, config.budget.here),
 	};
-}
-
-/** @purpose Give the top line text of one scope from its rows. */
-function topText(store: Store, scope: ScopeKey): string | null {
-	const top = sliceOf(loadView(store.handle(), scope), 1).at(-1);
-	return top === undefined ? null : textOfLine(top);
 }
 
 // #region FUNC_candidatesOf
