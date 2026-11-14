@@ -6,7 +6,7 @@ A blocking question stops the current portion of the specification until the cus
 
 ### Q-514
 
-Which rule turns a harness session into notes at `import --from dsh-sessions`?
+Which rule turns a harness session into notes at the pending session import?
 
 The requirement [REQ-413](02-requirements.md) says that the import writes new notes of each
 session. The rule that selects the note text is open.
@@ -16,7 +16,47 @@ session. The rule that selects the note text is open.
 - Option B: The import reads the user messages of the session only. Each message becomes one note
   body, and the import calls no model.
 
+### Q-515
+
+Which command gives a copied store file a new identity?
+
+The store identity is one value in `meta`, and it breaks each version tie. A file copy keeps the
+identity, so two stores issue versions with one tie-break part. The design named a command, and the
+CLI has no `store` command. See [0020 Storage pivot](../adr/0020-storage-pivot.md) and the
+[schema contract](../../packages/core/src/store/schema.ts).
+
+- Option A: Add the command `memlens store new-id`. It writes one new identity.
+- Option B: A user copies the store and imports it into a new one. No command exists.
+
+### Q-516
+
+Which rule applies a change of the `language` key to the index tokenizer?
+
+The tokenizer is a value in `meta`. The index holds the tokenizer of its build. A change of the key
+rebuilds nothing, and a plain open keeps the stored value. See the
+[schema contract](../../packages/core/src/store/schema.ts) and the
+[search contract](../../packages/core/src/store/search.ts).
+
+- Option A: One explicit command drops and rebuilds the index in one transaction. A plain open with a
+  mismatch logs a warning and keeps the stored tokenizer.
+- Option B: `memlens repair` rebuilds the index, and the config change sets the key only.
+
+### Q-517
+
+Does the export take a version filter for a later import?
+
+The export writes the whole store or one scope. The design named an incremental export as a filter on
+the same rows, and the command has no such filter. See the
+[transfer contract](../../packages/core/src/store/transfer.ts).
+
+- Option A: Add a filter by version. It writes the notes above one version.
+- Option B: Keep the whole-store export. The import is idempotent, and no filter is necessary.
+
 ## Closed questions
+
+The answers below keep the words of their date. The storage pivot replaced the event log, the
+projection, the replay cursor, and the two backends. A closed answer that names one of them describes
+the earlier design. See [0020 Storage pivot](../adr/0020-storage-pivot.md).
 
 ### Q-463
 
@@ -164,12 +204,12 @@ See [S-135](../statements.md#s-135) and [0015 Node invalidation](../adr/0015-nod
 | Q-114 | Does an import join the events by `id` or by `idem`?                          | The events join by `id`. The key `idem` stops a repeated write of one tool call. See Q-101 and S-088.                                              | 2026-11-05 |
 | Q-116 | Does the product localize eight languages, or English, Russian, and Chinese?  | The eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. See Q-108 and S-088.                                       | 2026-11-05 |
 | Q-117 | Where does the store keep the `title` and the `description` of a scope?       | None. A scope has a name only. The first node of the scope gives the text. See Q-044 and S-088.                                                    | 2026-11-05 |
-| Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | The `redact` event is new. The content of the old event becomes empty. See the [sanitization contract](../../packages/core/src/domain/sanitization.ts) and S-088.                                                      | 2026-11-05 |
+| Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | Closed by the storage pivot: no event exists. A redact is one transaction, and the row takes `deleted` with an empty body. See the [notes contract](../../packages/core/src/store/notes.ts) and S-088. | 2026-11-05 |
 | Q-115 | Does the card render in `<directions>` or in `<here>`?                        | The card is the direction line. `<here>` holds no card line. See S-089.                                                                            | 2026-11-05 |
 | Q-456 | What does the policy text of the slice hold? | The research of the prior art gives the text. The first form was the block of [S-067](../statements.md#s-067). See [S-130](../statements.md#s-130) and [REQ-509](02-requirements.md). | 2026-11-06 |
 | Q-457 | How does a proposal change an existing record? | An ordinary write operation can carry proposed true. Approval applies the ordinary operation and closes the proposal with dismiss. Updated by S-142. | 2026-11-06 |
-| Q-458 | What happens to one `id` with two payloads at one `at`? | The payload with the greater SHA-256 of its canonical JSON wins, and the sanitized form wins over each payload. See [S-101](../statements.md#s-101) and the [conflict comparison contract](../../packages/core/src/domain/merge.ts). | 2026-11-06 |
-| Q-459 | When does the index show a note that a write just added? | The index add is part of the append transaction in the SQLite backend and follows the append in the JSONL backend. A rebuild covers the gap. See [S-101](../statements.md#s-101) and the [sqlite contract](../../packages/core/src/storage/sqlite.ts). | 2026-11-06 |
+| Q-458 | What happens to one `id` with two payloads at one `at`? | Closed by the storage pivot: no payload hash exists. A merge compares five channels by version, by lifecycle rank, and by the cleared latch. See [S-101](../statements.md#s-101) and the [transfer contract](../../packages/core/src/store/transfer.ts). | 2026-11-06 |
+| Q-459 | When does the index show a note that a write just added? | The index row changes in the same transaction as the note row. A read after the commit sees the note. See [S-101](../statements.md#s-101) and the [notes contract](../../packages/core/src/store/notes.ts). | 2026-11-06 |
 | Q-460 | Which tokenizer does the index take for each language? | One value of `language` for the installation. `porter unicode61 remove_diacritics 1` for `en`, `unicode61 remove_diacritics 1` for the other languages with spaces, and `trigram` for `zh` and `ja`. See [S-101](../statements.md#s-101) and [REQ-450](02-requirements.md). | 2026-11-06 |
 | Q-510 | Does a range with one non-empty child build a node? | Yes. The node copies the text and the dates of that child with no model call. The console shows the range line only, so a note never has two lines. See [S-144](../statements.md#s-144) and [REQ-516](02-requirements.md). | 2026-11-11 |
 | Q-511 | Does a direction line of an unready scope hold its period? | No period of timestamps. The range renders a temporary line with the keys and the age, and it needs no model call. The summary replaces that text when the node is ready. See [S-147](../statements.md#s-147), [S-151](../statements.md#s-151), and [REQ-451](02-superseded.md). | 2026-11-11 |

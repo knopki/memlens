@@ -1,6 +1,6 @@
 # 0004. Tree and writer
 
-Status: accepted
+Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the projection and the node events.
 
 ## Context
 

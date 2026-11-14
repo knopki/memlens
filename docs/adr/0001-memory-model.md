@@ -1,6 +1,6 @@
 # 0001. Memory model
 
-Status: accepted
+Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the log and the catalog.
 
 ## Context
 

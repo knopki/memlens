@@ -1,6 +1,6 @@
 # 0013. The tree model
 
-Status: accepted
+Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the revision fields with the validity keys.
 
 ## Context
 
@@ -17,7 +17,7 @@ A node is `built` when each non-null child names the live record or node at its 
 A null child means that the half has no live record. A missing summary of a non-empty half is not an empty child.
 Two empty halves need no node event. With one non-empty half, the parent copies its text and dates without a model call.
 This rule also builds a partial root, whose other half can extend beyond `total`.
-A clean node is built, has no invalidation, and has clean child nodes. Its child revision must equal `input_rev`.
+The store builds a clean node with no invalidation, and it has clean child nodes. Its child revision must equal `input_rev`.
 An import can change the input without a change of the maximum order. The revision equality alone does not prove freshness.
 [0015 Node invalidation](0015-node-invalidation.md) defines durable invalidation and the writer check.
 

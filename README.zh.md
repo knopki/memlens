@@ -2,7 +2,7 @@
 
 memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构成的树。
 
-**状态：** 规范阶段。脚手架可以构建，测试通过。目前没有任何部分完成实际工作。
+**状态：** 核心库与 CLI 已进入代码。独立控制台使用行存储。插件仍是脚手架，会话导入尚未实现。
 
 ## 组成部分
 
@@ -18,14 +18,17 @@ memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构
 | ------------------------------------------ | --------------------- | -------------------------------- |
 | [packages/core](packages/core)             | `@memlens/core`       | 无头库。                         |
 | [packages/cli](packages/cli)               | `@memlens/cli`        | CLI 前端。可执行文件 `memlens`。 |
+| [packages/ui](packages/ui)                 | `@memlens/ui`         | 控制台的浏览器客户端。           |
 | [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | DSH 插件。标识符 `dsh-memlens`。 |
 
 ## 文档
 
 | 文件                                                             | 内容                   |
 | ---------------------------------------------------------------- | ---------------------- |
+| [docs/spec/00-overview.md](docs/spec/00-overview.md)             | 产品边界。             |
 | [docs/spec/README.md](docs/spec/README.md)                       | 规范的目录与维护规则。 |
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | 带标识符和状态的需求。 |
+| [docs/spec/04-data.md](docs/spec/04-data.md)                     | 表、字段组与合并通道。 |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | 阻塞工作的未决问题。   |
 | [docs/statements.md](docs/statements.md)                         | 客户的原始陈述。       |
 | [AGENTS.md](AGENTS.md)                                           | 代理工作规则。         |
@@ -47,7 +50,7 @@ prek install
 | 命令                 | 作用                          |
 | -------------------- | ----------------------------- |
 | `pnpm install`       | 安装工作区。                  |
-| `pnpm run build`     | 构建三个包。                  |
+| `pnpm run build`     | 构建四个包。                  |
 | `pnpm run typecheck` | 检查类型。                    |
 | `pnpm run test`      | 运行测试。                    |
 | `pnpm run lint`      | 用 biome 检查代码与格式。     |
@@ -66,6 +69,7 @@ prek install
 
 ## 下一步
 
-规范正在验收。验收按切片进行，第一个切片是数据路径：事件日志、存储、擦除和传输。
+核心库、CLI 与控制台已进入代码。插件表面与会话导入尚未实现。
+见 [06-architecture.md](docs/spec/06-architecture.md#remaining-work)。
 
 切片的 policy text 尚未设计。见 [Q-456](docs/spec/03-open-questions.md#q-456)。

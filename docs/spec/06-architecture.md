@@ -73,7 +73,7 @@ newest. Each line uses the current top summary of its scope. Every older scope f
 of keys with no description. A scope with no live note gives no line. See the
 [context contract](../../packages/core/src/domain/context.ts) and [REQ-530](02-requirements.md).
 
-A note change deletes each covering node row in the same transaction. Compaction rebuilds the node from its two children. [REQ-113](02-requirements.md), [REQ-117](02-requirements.md), and [REQ-192](02-requirements.md) define the build guarantees.
+A note change deletes each covering node row in the same transaction. Compaction rebuilds the node from its two children. The [node contract](../../packages/core/src/store/nodes.ts) and the [build contract](../../packages/core/src/store/build.ts) own the build rules.
 
 A `redact` deletes the covering node rows of the target. No historical node row exists, so no summary holds cleared content.
 
@@ -102,12 +102,13 @@ The store path comes from `--store` first, then the patch, then `MEMLENS_STORE`,
 The CLI has no patch, so its order is `--store`, `MEMLENS_STORE`, the base file.
 
 The `budget` keys `here` and `directions` count lines. The [context contract](../../packages/core/src/domain/context.ts) owns the independence of the two budgets.
-The `language` key has one value for the store, and it selects the tokenizer of the index. See
-[REQ-291](02-requirements.md) and [REQ-450](02-requirements.md).
+The `language` key has one value for the store, and it selects the tokenizer of the index. See the
+[schema contract](../../packages/core/src/store/schema.ts) and the
+[search contract](../../packages/core/src/store/search.ts).
 
 The `customPrompt` key replaces the whole template of the slice, and the placeholders apply in it. The
-`customPromptAppend` key is the value of `{{append}}`. See [REQ-453](02-requirements.md) and
-[REQ-454](02-requirements.md).
+`customPromptAppend` key is the value of `{{append}}`. The
+[context contract](../../packages/core/src/domain/context.ts) owns both keys.
 
 ## Defaults
 
@@ -130,13 +131,15 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 
 ## Store
 
-One store holds many profiles, scopes, and records.
+One store holds many profiles, scopes, and records. The tables, the field groups, the versions, and
+the merge channels are in [04-data.md](04-data.md).
 
 A scope is a key with the form `kind:name`. The store lowercases the key before a write. A scope exists when a note row names its key. See [0006 Scope and config](../adr/0006-scope-config.md) and the [scope grammar](../../packages/core/src/domain/scope.ts).
 
 The store has one SQLite backend. Every write uses one transaction. The index and node cache stay in the database. The store keeps no job queue. Compaction candidates derive from dirty ranges. See [0004 Tree and writer](../adr/0004-tree-writer.md).
 
-A change of the `language` value rebuilds the index from note rows. See [REQ-476](02-requirements.md).
+A change of the `language` value rebuilds the index from note rows. See the
+[repair contract](../../packages/core/src/store/repair.ts).
 
 The row store holds current notes, nodes, proposals, and metadata. It has no event log, replay cursor, or projection. Reads query rows. Writes update rows in one transaction.
 
@@ -226,16 +229,16 @@ An address with no scope waits for the tool input rules in [REQ-260](02-requirem
 
 ## Tree
 
-The [tree contracts](../../packages/core/src/domain/tree.ts) own range geometry, root selection, child readiness, revisions, and live dates.
+The [tree contract](../../packages/core/src/domain/tree.ts) owns range geometry, the fold, and the line limit.
 The [tree types](../../packages/core/src/types/tree.ts) define the input and output shapes.
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
-The store verifies aligned node starts and summary metadata.
-It handles empty halves and single-child copies under the [build input contract](../../packages/core/src/domain/tree.ts) and the [compaction contract](../../packages/core/src/domain/compaction.ts).
+The store verifies aligned node starts and the summary text.
+It handles empty halves and single-child copies under the [node contract](../../packages/core/src/store/nodes.ts) and the [build contract](../../packages/core/src/store/build.ts).
 
 ## Frontier
 
-The tree has a frontier: levels of fixed width, and one level covers 2^k leaves. The frontier lists
+The tree has a frontier: levels of a set width, and one level covers 2^k leaves. The frontier lists
 the lines from the oldest to the newest: the coarse lines first and the fresh records last. A line
 holds the address, the range of dates, and the text. See [0004 Tree and writer](../adr/0004-tree-writer.md).
 
@@ -265,7 +268,7 @@ See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
 ## Compaction
 
-The background compaction computes candidates from dirty non-empty aligned ranges through the root.
+The compaction computes candidates from dirty non-empty aligned ranges through the root.
 A missing node row is a dirty candidate. A range waits for clean non-empty children before a build.
 The [tree contract](../../packages/core/src/domain/tree.ts) owns the candidate order. The compaction
 stores no queue, job row, or lease.
@@ -277,8 +280,8 @@ Auto follows the model family. The existing retry waits are ten, sixty, then thr
 The model sees the two child inputs only. One non-empty child copies its text without a model call.
 
 Each attempt copies exact child inputs as `BuildInput`. The store compares both current children under the write lock before publication.
-A changed input, a hidden record, or a dirty child rejects the result. The revision equality alone does not permit a result.
-The compaction starts when dirty candidates reach `compaction.batch`, after `store.idle` seconds without a write, or at `memlens compact`.
+A changed input, a hidden record, or a dirty child rejects the result. One matching key alone does not permit a result.
+The compaction starts at `memlens compact` or at a console job. It starts no background run, because no host calls `compactionPass`.
 Rendering returns immediately with current clean summaries and temporary lines.
 See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0020 Storage pivot](../adr/0020-storage-pivot.md).
 
@@ -302,6 +305,8 @@ cache over the note rows. The store rebuilds it after a loss. See
 [REQ-375](02-requirements.md), [REQ-377](02-requirements.md), and [REQ-524](02-requirements.md).
 
 ## Harness surface
+
+This surface is a target. The plugin is a scaffold, and it registers nothing yet.
 
 The plugin registers the slice as `systemPrompt.context`. It does not use a system prompt section: a
 change of the section invalidates the whole cached prefix. See [0007 Slice and context](../adr/0007-slice-context.md).
@@ -330,6 +335,8 @@ orders, so 220 places the memory after each built-in context and before no tool 
 
 ## Agent surface
 
+These tools are a target. The plugin registers none of them yet.
+
 | Tool          | Who        | Effect                                                                  |
 | ------------- | ---------- | ----------------------------------------------------------------------- |
 | memory_note   | main agent | A new note, or the live note with the same four fields.                 |
@@ -339,11 +346,12 @@ orders, so 220 places the memory after each built-in context and before no tool 
 | memory_review | main agent | The due records, or the count of the reviewed records.                  |
 | memory_scopes | main agent | The visible scopes, each with its count and its last write.              |
 
-The tool behavior and the errors are in [REQ-293](02-requirements.md) to
-[REQ-352](02-requirements.md). The subagent modes are in [REQ-353](02-requirements.md) to
-[REQ-362](02-requirements.md), and the log keeps the content of a dismissed proposal in the
-[config contract](../../packages/core/src/domain/config.ts). The nudge is in [REQ-232](02-requirements.md) to
-[REQ-246](02-requirements.md). See [0009 Agent surface](../adr/0009-agent-surface.md).
+The tool behavior and the errors are in the [tool types](tools.d.ts) and in
+[REQ-024](02-requirements.md) to [REQ-477](02-requirements.md). The subagent modes are in
+[REQ-353](02-requirements.md) to [REQ-361](02-requirements.md), and the log keeps the content of a
+dismissed proposal in the [config contract](../../packages/core/src/domain/config.ts). The nudge is in
+[REQ-233](02-requirements.md) to [REQ-242](02-requirements.md). See
+[0009 Agent surface](../adr/0009-agent-surface.md).
 
 ## Human surface
 
@@ -379,7 +387,6 @@ memlens check [--json]
 memlens repair [--dry-run]
 memlens export --format md|jsonl --out dir [--scope key]
 memlens import --in path [--as key] [--dry-run]
-memlens import --from dsh-sessions dir [--since date] [--dry-run]
 memlens config get|set key [value]
 memlens ui [--port 7788] [--allow-delete]
 ```
@@ -392,14 +399,14 @@ and the exit codes.
 
 The CLI command `compact` publishes each copy input and gives the merge inputs of one scope as one
 job. The flag `--answer` applies one answer file, and the store verifies each exact input again. The
-command `check` tests store health, and the command `repair` fixes damaged cache rows. Each command contract owns its rules.
+command `check` tests store health, and the command `repair` rebuilds damaged cache rows. Each command contract owns its rules.
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui` and its local HTTP boundary.
 The store validates proposal acceptance and applies it in one transaction.
 The console gives a compaction job for one scope tree. The console refuses a catalog job, because the store derives the catalog.
 The [console models](../../packages/core/src/domain/console.ts) supply the shared view through the store.
 The [browser client](../../packages/ui/src/client.ts) supplies seven screens in a separate bundle.
-The flag `--from` of `import` and the import from harness sessions remain pending.
+The command `import` reads one JSONL file. The import from harness sessions is pending.
 
 The exit code marks the result: `0` a success, `1` an error of the data, `2` an error of the usage,
 and `3` a refusal by a policy.
@@ -450,9 +457,14 @@ customer words as given.
 
 ## Remaining work
 
-The CLI owes the import from harness sessions. See [REQ-413](02-requirements.md) and
-[Q-514](03-open-questions.md#q-514).
-The background compaction host owes its wiring: the core exports `compactionPass`, and no trigger calls it.
-The plugin and its session tab remain pending. See [08-ui.md](08-ui.md) and [REQ-028](02-requirements.md).
-The standalone console states no compaction state and no session snapshot state. See the
-[client contract](../../packages/ui/src/client.ts).
+The following items are not in the code. The other slices of this document describe the current code.
+
+- The CLI owes the import from harness sessions. The CLI accepts no `--from` flag, and no reader of a
+  session exists. See [REQ-413](02-requirements.md) and [Q-514](03-open-questions.md#q-514).
+- No host calls `compactionPass` or `sweep`. Only `memlens compact` and the console job start a build.
+  The store refuses an expired proposal, and no write closes the row. See
+  [REQ-204](02-requirements.md) and [REQ-024](02-requirements.md).
+- The plugin is a scaffold. It registers no tool, no runtime context, and no nudge. See
+  [REQ-028](02-requirements.md) and [08-ui.md](08-ui.md).
+- The standalone console gives a manual compaction job. It holds no background compaction state and
+  no session snapshot state. See the [client contract](../../packages/ui/src/client.ts).

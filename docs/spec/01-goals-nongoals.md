@@ -17,7 +17,7 @@ Explicitly excluded items. A non-goal must not become a hidden requirement.
 | ID    | Non-goal                                                                                       | Reason   | Source |
 | ------ | ------------------------------------------------------- | --------------------------------------------------------- | ------ |
 | NG-001 | A replacement for compaction.                           | Compaction stays. The memory holds facts across sessions. | S-013  |
-| NG-002 | An "infinite chat".                                     | The memory is a log of notes, not a transcript.           | S-013  |
+| NG-002 | An "infinite chat".                                     | The memory is a set of notes, not a transcript.           | S-013  |
 | NG-003 | A vector search and embeddings.                         | The search is lexical: FTS5.                              | S-013  |
 | NG-004 | An entity graph and bitemporality of the Zep level.     | Out of scope for the first version.                       | S-013  |
 | NG-005 | A live synchronization between machines.                | Export and import give the transfer.                      | S-013  |

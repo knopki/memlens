@@ -1,6 +1,6 @@
 # 0011. Nodes are events
 
-Status: accepted
+Status: replaced by [0020 Storage pivot](0020-storage-pivot.md)
 
 ## Context
 
@@ -12,7 +12,7 @@ node out of the log, so a rebuild had no event to travel. A session is not a sou
 
 A node is a `node` event. It holds `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`,
 `chars`, `truncated`, `ts_from`, and `ts_to`. Its `at` is the time of the build. The current node of
-a key is the latest candidate whose id has no invalidation. A clean node is built and has clean child nodes.
+a key is the latest candidate whose id has no invalidation. The store builds a clean node, and it has clean child nodes.
 Its child revision must equal `input_rev`, but that equality alone does not prove freshness.
 [0015 Node invalidation](0015-node-invalidation.md) defines the invalidation events and the writer check. The
 writer computes dirty range candidates and stores no queue. The catalog is a tree of the same nodes in the scope

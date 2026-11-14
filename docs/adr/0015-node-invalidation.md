@@ -1,6 +1,6 @@
 # 0015. Node invalidation
 
-Status: accepted. See [S-135](../statements.md#s-135) and [Q-461](../spec/03-open-questions.md#q-461).
+Status: replaced by [0020 Storage pivot](0020-storage-pivot.md). See [S-135](../statements.md#s-135) and [Q-461](../spec/03-open-questions.md#q-461).
 
 This decision replaces the freshness and writer checks of ADR 0013, ADR 0011, and ADR 0004.
 Their other decisions stay in effect.

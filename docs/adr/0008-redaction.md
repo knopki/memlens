@@ -1,6 +1,6 @@
 # 0008. Redaction
 
-Status: accepted
+Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the event mechanism.
 
 ## Context
 

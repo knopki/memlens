@@ -3,7 +3,7 @@
 memlens is the long-term memory of an agent. It keeps curated notes across sessions and folds them
 into a tree of summaries. The agent gets a small map at the start of each session.
 
-**Status:** specification phase. The scaffold builds and the tests pass. No part does work yet.
+**Status:** the core library and the CLI are in the code. The standalone console uses the store. The plugin is a scaffold, and the session import is pending.
 
 ## The problem
 
@@ -12,46 +12,46 @@ chat is not the answer: each token costs, and the model still loses the old fact
 
 ## The idea
 
-The memory is a log of curated notes, not a chat history. A note holds one fact in a short `body` and
-an optional `longform` document.
+The memory holds current note rows in one SQLite database. It is not a chat history. A note holds one
+fact in a short `body` and an optional `longform` document.
 
 The store folds the notes into a tree. A background compaction merges two adjacent notes into one line,
 then two lines into one, and so on. A line stands in for its notes for weeks or years, and the agent
 opens it back into the two lines below.
 
-The catalog is a second tree over the scopes. Its leaves are the top nodes of the scopes, so the agent
-sees each scope of the profile in one line.
+The directions list gives the scopes of the profile, so the agent sees each scope in one line. The
+store derives the list from the note rows, and no second tree exists.
 
 The slice is the text in the agent context. It holds the policy, the `directions` block with one line
 for each scope, and the `here` block with the frontier of the active scope.
 
 ```text
-the log of events
+ the note rows
       │
       ▼
- the records ──► the tree of a scope ──► the catalog ──► the slice ──► the agent
-      ▲                                                    │
-      └────────────────── memory_note ◄────────────────────┘
+ the tree of a scope ──► the directions list ──► the slice ──► the agent
+      ▲                                               │
+      └─────────────── memory_note ◄──────────────────┘
 ```
 
 ## The objects
 
-| Object  | Role                                                                                                |
-| ------- | --------------------------------------------------------------------------------------------------- |
-| Event   | One immutable record of the log. The ops are `note`, `amend`, `hide`, `redact`, `review`, `dismiss`, and `node`. |
-| Record  | One note after the projection. It holds the copied fields, the state, and the position `pos`.       |
-| Node    | One line that stands in for a range of notes. A node is a `node` event.                             |
-| Scope   | A key of the form `kind:name`, for example `project:dsh/memlens`. A record names its scope.         |
-| Profile | The set of scopes, the budgets, and the settings of one agent group.                                |
-| Slice   | The text in the agent context.                                                                      |
+| Object   | Role                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------- |
+| Note row | One stored note: the body, the kind, the scope, the state, and the times.                             |
+| Slot     | The rank of the `(ts, id)` key inside the scope. The slot gives the address of the note.              |
+| Node row | One summary of an aligned range of slots. It is a cache, and the store rebuilds it from the notes.    |
+| Scope    | A key of the form `kind:name`, for example `project:dsh/memlens`. A note row names its scope.         |
+| Profile  | The set of scopes, the budgets, and the settings of one agent group.                                  |
+| Slice    | The text in the agent context.                                                                        |
 
 ## A session
 
 1. The harness starts a session. The plugin renders the slice from the store and puts the text in the agent context.
 2. The agent reads the map. The `directions` block gives one line for each scope, and the `here` block gives the frontier of the active scope.
 3. The agent opens a line that it needs. The store gives the note word for word, or the two lines below a summary.
-4. The agent writes a note. The log grows, and the tree of the scope becomes dirty.
-5. The compaction merges the dirty nodes in the background. A compaction or an idle time renders a new slice.
+4. The agent writes a note. The store gains one row, and the ranges over its slot become dirty.
+5. The compaction merges the dirty ranges. The command `memlens compact` starts a build, and a build renders a new slice.
 
 A read costs no model call. A note costs one model call in its life, at the merge of its tree.
 
@@ -66,16 +66,16 @@ A read costs no model call. A note costs one model call in its life, at the merg
 | `memory_review` | Give the notes that are due for review.                                   |
 | `memory_scopes` | List the scopes.                                                          |
 
-A subagent writes proposals. A proposal is a write with the field `proposed`, and the projection
-ignores it. A human or the parent agent writes the real change.
+A subagent writes proposals. A proposal is a local row with a payload and a thirty-day expiry. A human
+or the parent agent applies the real change.
 
 ## Why this shape
 
-- The log is the only truth. An import, a rebuild, and a redaction give one answer for any order of arrival.
+- The note rows are the only truth. An import, a rebuild, and a redaction give one answer for any order of arrival.
 - The tree gives a bounded view with a cheap read. The agent sees a map, and it opens what it needs.
 - A note costs one model call in its life, because the tree merges once.
 - The agent curates the notes, so the tree holds facts and decisions, not messages.
-- The index is a cache. A lost index comes back from the log.
+- The index is a cache. The command `repair` rebuilds it from the rows.
 
 ## What it is not
 
@@ -96,6 +96,7 @@ synchronization between machines. See [01-goals-nongoals.md](docs/spec/01-goals-
 | ------------------------------------------ | --------------------- | ----------------------------------------- |
 | [packages/core](packages/core)             | `@memlens/core`       | The headless library.                     |
 | [packages/cli](packages/cli)               | `@memlens/cli`        | The CLI frontend. Binary `memlens`.       |
+| [packages/ui](packages/ui)                 | `@memlens/ui`         | The browser client of the console.        |
 | [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | The DSH plugin. Identifier `dsh-memlens`. |
 
 ## Documents
@@ -105,6 +106,7 @@ synchronization between machines. See [01-goals-nongoals.md](docs/spec/01-goals-
 | [docs/spec/00-overview.md](docs/spec/00-overview.md)             | The product boundary.                     |
 | [docs/spec/README.md](docs/spec/README.md)                       | Specification index and rules.            |
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | Requirements with identifiers and status. |
+| [docs/spec/04-data.md](docs/spec/04-data.md)                     | Tables, field groups, and merge channels. |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Open questions that block work.           |
 | [docs/statements.md](docs/statements.md)                         | Customer statements, word for word.       |
 | [AGENTS.md](AGENTS.md)                                           | Work rules for agents.                    |
@@ -127,7 +129,7 @@ Run the commands in a shell that mise activates, or start each command with `mis
 | Command              | Action                                      |
 | -------------------- | ------------------------------------------- |
 | `pnpm install`       | Install the workspace.                      |
-| `pnpm run build`     | Build the three packages.                   |
+| `pnpm run build`     | Build the four packages.                    |
 | `pnpm run typecheck` | Check the types.                            |
 | `pnpm run test`      | Run the tests.                              |
 | `pnpm run lint`      | Check the code and the format with biome.   |
@@ -146,5 +148,6 @@ Run the commands in a shell that mise activates, or start each command with `mis
 
 ## Next step
 
-The customer accepted each slice of the specification. No requirement is `draft`. The policy text of
-the slice is a working copy, and the research of the prior art can change it.
+The core, the CLI, and the console are in the code. The plugin surface and the session import are
+pending. See [06-architecture.md](docs/spec/06-architecture.md#remaining-work). The policy text of the
+slice is a working copy.

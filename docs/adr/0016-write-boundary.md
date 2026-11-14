@@ -1,6 +1,6 @@
 # 0016. Write boundary
 
-Status: accepted. The write boundary follows the accepted requirements. Idem leaves the event model.
+Status: accepted. The write boundary follows the accepted requirements. Idem leaves the event model. [0020 Storage pivot](0020-storage-pivot.md) removes the payload hash.
 
 ## Context
 

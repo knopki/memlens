@@ -6,7 +6,7 @@ of a word is a change of the product.
 ## The slice
 
 The slice is one template. The `how-to` section holds the policy text, and each section holds its own
-guide line. See [REQ-178](02-requirements.md) and [REQ-475](02-requirements.md).
+guide line. See the [context contract](../../packages/core/src/domain/context.ts).
 
 ```text
 <memory>
@@ -123,10 +123,10 @@ catalog. The id of the input stays the catalog range.
 
 The input holds the two children only. It holds no frontier and no `<context>`. A summary that reads a
 record outside its range depends on that record. A delete of the record then has an effect that the
-store cannot derive. See [REQ-433](02-requirements.md).
+store cannot derive. See the [build input contract](../../packages/core/src/domain/compaction.ts).
 
 At level 1, each child carries the preview of its `longform`, at most 1 024 characters. The preview belongs to the
-child. See [REQ-434](02-requirements.md).
+child. See the [build input contract](../../packages/core/src/domain/compaction.ts).
 
 A child line holds no time of day. A record gives `#<pos> <YYYY-MM-DD>` and its body. A node gives
 `#<a>-<b> <start>..<end>` and its summary. The span writes the shared year and month once, as
@@ -135,13 +135,13 @@ A child line holds no time of day. A record gives `#<pos> <YYYY-MM-DD>` and its 
 ## Sizes and retries
 
 The target is 512 characters, and the limit is 640 characters. The call accepts an answer up to 640
-characters with no retry. See [REQ-435](02-requirements.md).
+characters with no retry. See the [compaction contract](../../packages/core/src/domain/compaction.ts).
 
 A retry asks for 0.75 times the target, and the call makes three attempts at most. The answer is the
-shortest of the attempts. See [REQ-436](02-requirements.md) and [REQ-437](02-requirements.md).
+shortest of the attempts. See the [compaction contract](../../packages/core/src/domain/compaction.ts).
 
 An answer above 640 characters after the attempts cuts at a word boundary, and the node takes
-`truncated: true`. See [REQ-438](02-requirements.md).
+`truncated: true`. See the [compaction contract](../../packages/core/src/domain/compaction.ts).
 
 The check "the line is shorter than the two children" applies to a model merge of two non-empty children
 only. The fold takes the length of each line from the field `chars`. See the

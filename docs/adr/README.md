@@ -36,8 +36,8 @@ What becomes easy. What becomes difficult. What a reader must know.
 | ID   | Title | Status |
 | ---- | ----- | ------ |
 | 0001 | Memory model | accepted |
-| 0002 | Event log | accepted |
-| 0003 | Store | accepted |
+| 0002 | Event log | replaced by 0020 |
+| 0003 | Store | replaced by 0020 |
 | 0004 | Tree and writer | accepted |
 | 0005 | Catalog | replaced by 0011 |
 | 0006 | Scope and config | accepted |
@@ -45,12 +45,18 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0008 | Redaction | accepted |
 | 0009 | Agent surface | accepted |
 | 0010 | Process and stack | accepted |
-| 0011 | Nodes are events | accepted |
+| 0011 | Nodes are events | replaced by 0020 |
 | 0012 | Proposals | accepted |
 | 0013 | Tree model | accepted |
-| 0014 | Store projection | accepted |
-| 0015 | Node invalidation | accepted |
+| 0014 | Store projection | replaced by 0020 |
+| 0015 | Node invalidation | replaced by 0020 |
 | 0016 | Write boundary | accepted |
-| 0017 | Store publication | accepted |
+| 0017 | Store publication | replaced by 0020 |
+| 0018 | Amend metadata | accepted |
+| 0019 | Review time | accepted |
+| 0020 | Storage pivot | accepted |
 
 The decision texts of 2026-11-10 call the compaction the writer. The product renamed the term on 2026-11-11, and the texts stay as decided.
+
+ADR 0002, 0003, 0011, 0014, 0015, and 0017 describe the event store. [0020](0020-storage-pivot.md) replaces them.
+ADR 0001, 0004, 0008, 0013, and 0016 stay accepted, and 0020 replaces their event mechanism.

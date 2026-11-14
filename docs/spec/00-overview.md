@@ -14,17 +14,20 @@ chat is not the answer: each token costs, and the model still loses the old fact
 
 ## What the memory is
 
-The memory is a log of curated notes with a tree of retellings above the notes. It is not a chat
-history.
+The memory holds current note rows in one SQLite database. A summary row stands above the notes, and
+the agent reads a map of the scopes. It is not a chat history and it is not an event log.
 
-A write makes one note: a `body` of 384 characters for the tree and a `longform` document of 16 384 characters for
-the full text. The `body` becomes a leaf of the tree. The `longform` stays out of the tree.
+A write makes one note: a `body` of 384 characters for the tree and a `longform` document of
+16 384 characters for the full text. The `body` becomes a leaf of the tree. The `longform` stays out
+of the tree.
 
 ## Two levels
 
-The leaves are the notes of a scope. Above them is a catalog of nodes with
-its own tree. The catalog belongs to a profile, so a scope of another profile does not enter a
-shared node.
+The leaves are the notes of a scope. Above them are summary rows, one row for each aligned range of
+slots. A summary row is a cache entry, and a change deletes the rows over the changed slot.
+
+The map of directions comes from the scopes of the profile. The store derives it at read time, and
+the profile gives its line budget. There is no catalog scope and no catalog tree.
 
 ## Users
 

@@ -1,6 +1,6 @@
 # 0003. Store
 
-Status: accepted
+Status: replaced by [0020 Storage pivot](0020-storage-pivot.md)
 
 ## Context
 

@@ -1,12 +1,12 @@
 # 0020. Storage pivot
 
-Status: accepted. The design is in [DESIGN.md](../../DESIGN.md). The replacement requirements are draft, and the implementation is pending.
+Status: accepted. The code holds the row store. The pending items are in [06-architecture.md](../spec/06-architecture.md#remaining-work).
 
 ## Context
 
 The event-sourced core replays the full history on every write and parses a projection blob on every read. Publication rewrites every event row on each change. The core counts about 8,700 lines. The product is a prototype with no users.
 
-The owner called the event model overcomplex for fork, merge, import, and export at personal scale. Six independent council reports agreed on the direction and supplied probes for the erasure and index claims.
+The owner called the event model overcomplex for fork, merge, import, and export at personal scale.
 
 ## Decision
 
@@ -19,7 +19,7 @@ The owner called the event model overcomplex for fork, merge, import, and export
 - Search uses one external-content FTS5 table created with the FTS5 secure-delete option.
 - Redaction is one transaction plus one truncating checkpoint, guarded by one byte test of the database file and the WAL.
 - The audit journal holds no content and no hash, and never syncs.
-- No revision counter, no scopes table, no fingerprints, and no numeric line budget. Property tests guard the shape: no replay exports, a constant read budget per write, and package isolation.
+- No revision counter, no scopes table, no fingerprints, and no numeric line budget. The package isolation test guards the shape, and the core exports no replay.
 
 ## Alternatives
 
@@ -29,4 +29,4 @@ Use key-interval tree nodes without slots. This avoids the tail shift but rewrit
 
 ## Consequences
 
-The CLI, the console, and the plugin move to SQL read models. No whole-store view remains. A backdated insert moves later slots, so a numeric address is not stable in time, and the console shows the date beside the position. Tombstones never expire, or an old export restores deleted content. Summaries rebuild per store, and a file copy plus `store new-id` bootstraps a second machine. The directions block becomes a derived scope list with no stored catalog. The storage pivot refuses the requirements that name events, the cursor, the projection, or two backends. The replacement requirements are draft.
+The CLI and the console read SQL rows. No whole-store view remains. The plugin is a scaffold, and it reads the same rows when its surface arrives. A backdated insert moves later slots, so a numeric address is not stable in time, and the console shows the date beside the position. Tombstones never expire, or an old export restores deleted content. Summaries rebuild per store. A file copy needs a new store identity, and [Q-515](../spec/03-open-questions.md#q-515) holds that open point. The directions block becomes a derived scope list with no stored catalog. The storage pivot refuses the requirements that name events, the cursor, the projection, or two backends. The storage pivot accepts REQ-521 to REQ-537.

@@ -1,6 +1,6 @@
 # 0017. Store publication
 
-Status: accepted. The publication follows the accepted requirements and the store tests.
+Status: replaced by [0020 Storage pivot](0020-storage-pivot.md)
 
 ## Context
 
