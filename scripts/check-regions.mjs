@@ -3,6 +3,7 @@
  * @purpose Keep the semantic markup and the blank-line layout of the sources readable.
  * @scope
  *  - The module contract of each source file.
+ *  - The files of one call, so a hook checks the staged files only.
  *  - The pairing and the name of each region marker.
  *  - The blank lines around a marker, a doc comment, and a top-level declaration.
  *  - NOT: the code style inside a construct.
@@ -13,7 +14,7 @@
  * #endregion moduleContract
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const PACKAGES = ["core", "cli", "ui", "dsh-plugin"];
@@ -101,22 +102,28 @@ function inspect(file) {
 	return faults;
 }
 
-let violations = 0;
-for (const pkg of PACKAGES) {
-	for (const dir of ["src", "tests"]) {
-		let files;
-		try {
-			files = sources(join("packages", pkg, dir));
-		} catch {
-			continue;
-		}
-		for (const file of files) {
-			const faults = inspect(file);
-			for (const fault of faults) {
-				console.log(fault);
-				violations++;
+const given = process.argv
+	.slice(2)
+	.filter((path) => path.endsWith(".ts") && !path.endsWith(".d.ts"));
+const checked = given.length > 0 ? given : [];
+if (given.length === 0) {
+	for (const pkg of PACKAGES) {
+		for (const dir of ["src", "tests"]) {
+			try {
+				checked.push(...sources(join("packages", pkg, dir)));
+			} catch {
+				// The package holds no such directory.
 			}
 		}
+	}
+}
+
+let violations = 0;
+for (const file of checked) {
+	if (!existsSync(file)) continue;
+	for (const fault of inspect(file)) {
+		console.log(fault);
+		violations++;
 	}
 }
 console.log(

@@ -18,7 +18,6 @@ repos:
         entry: node scripts/check-regions.mjs
         language: system
         types_or: [ts]
-        pass_filenames: false
 
       - id: ste-lint
         name: ste lint
