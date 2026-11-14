@@ -49,6 +49,8 @@ const DSH_PEERS: Record<string, string> = {
 	"@deepseek-ai/dsh-agent": ">=0.2.1-0 <0.3.0",
 	"@deepseek-ai/dsh-llm": ">=0.2.1-0 <0.3.0",
 	"@deepseek-ai/dsh-scope": ">=0.2.1-0 <0.3.0",
+	"@deepseek-ai/dsh-system-prompt": ">=0.2.1-0 <0.3.0",
+	"@deepseek-ai/dsh-tools": ">=0.2.1-0 <0.3.0",
 };
 
 /** Read one export target as an object with the type and the default paths. */
@@ -163,15 +165,6 @@ describe("plugin manifest", () => {
 		expect(
 			manifest.peerDependencies?.["@deepseek-ai/cordis-plugin-loader"],
 		).toBe(undefined);
-	});
-
-	it("removes the unused tool scaffold dependency", () => {
-		expect(
-			manifest.devDependencies?.["@deepseek-ai/dsh-tools"],
-		).toBeUndefined();
-		expect(
-			manifest.peerDependencies?.["@deepseek-ai/dsh-tools"],
-		).toBeUndefined();
 	});
 
 	it("supports DeepSeek Harness 0.2.1 and later", () => {
