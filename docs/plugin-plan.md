@@ -1,8 +1,8 @@
 # DSH plugin plan
 
 Status: stages 1 to 5 implemented, 2026-11-14. The packed artifact installs by path and loads in
-an isolated profile. A live agent run needs credentials. The plugin console stays outside this
-plan.
+an isolated profile. A live agent run needs credentials. Stage 6, the plugin console tab, is in
+progress. [S-162](statements.md#s-162) gives the component and backend rule of the two hosts.
 
 ## Goal and boundary
 
@@ -125,6 +125,28 @@ Report unsupported or untested version boundaries explicitly.
 Acceptance: the built package completes agent start, memory context, tool call, result, session reload, and plugin disposal.
 Keep credentials and paid model calls outside the automatic checks.
 
+### 6. Plugin console tab
+
+The tab is one entry of the slot `conversation.view`. No slot takes a kind for a tab, and the header
+slot holds buttons only. See [08-ui.md](spec/08-ui.md) and [S-162](statements.md#s-162).
+
+The two hosts share one component layer in `packages/ui`. A component holds no style, no transport,
+and no address. The shell of each host supplies its own styles, transport, and address.
+`memlens ui` keeps its own backend. The plugin uses the harness HTTP server.
+
+The client artifact is a classic script. It calls `window.__ModuleLoader__.load({ id, factory })`,
+and the factory returns `{ apply, inject }`. React and the JSX runtime stay external and come from
+the harness module table. The host package declares `dsh.client` with `platform: "web"` and the
+`./client` export.
+
+The plugin data route takes the prefix `/plugins/memlens/`. It applies
+`ctx.connection.requestRejection` before it answers, and it resolves the session profile and scope
+through the plugin service. It serves the console reads, the note actions, and the runtime state.
+
+Acceptance: the tab appears in a live session, shows each of the seven screens, and applies the five
+note actions. The tests cover each route answer and each component contract. The packed artifact
+carries the client bundle.
+
 ## Delegation and integration
 
 | Owner | Owned work | Boundary |
@@ -132,7 +154,11 @@ Keep credentials and paid model calls outside the automatic checks.
 | Entry agent | Manifest, bundle patch, build, host entry, preset entry, configuration | No context provider or tool handlers. |
 | Context agent | Snapshot lifecycle, session history, runtime context | No manifest, configuration parser, or tool writes. |
 | Tools agent | Tool schemas, handlers, child modes, proposal reports | No context snapshot lifecycle or build changes. |
-| Lead | Shared contracts, integration, background work, final checks | Resolve shared edits before agents write. |
+| UI foundation agent | The model layer, the transport port, the controller, the message hook, and the primitives of `packages/ui` | No screen file and no shell. |
+| Screen agents | One screen file each under `packages/ui/src/components/` | No model file, no primitive, and no shell. |
+| Data route agent | The plugin console route, the runtime state, and the store access | No client source and no `packages/ui` file. |
+| Client agent | The client artifact, the slot registration, the plugin styles, and the transport call | No host route and no `packages/ui` component. |
+| Lead | Shared contracts, entry wiring, build, manifest, the standalone shell, integration, and final checks | Resolve shared edits before agents write. |
 
 Each implementation agent must load `grace-lite`, `ponytail`, `dsh-doc`, and `plugin-write`.
 Each agent must read the relevant module contracts before a change.

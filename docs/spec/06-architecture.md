@@ -369,8 +369,9 @@ slice. See [0020 Storage pivot](../adr/0020-storage-pivot.md) and [REQ-024](02-r
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui`, and the [core entry
 contract](../../packages/core/src/index.ts) exports the console models. The console
-gives its own styles, and the plugin uses the components of the harness UI. The plugin mounts the tab
-`Memory` on the session page and narrows it to one profile. See [08-ui.md](08-ui.md).
+gives its own styles. Both hosts share one component layer, and the plugin supplies the harness
+surfaces. The plugin mounts the tab `Memory` on the session page and narrows it to one profile. See
+[08-ui.md](08-ui.md) and [S-162](../statements.md#s-162).
 
 ## CLI
 
