@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "memlens 无头库、它的 CLI 前端以及 DeepSeek Harness 插件。"
+		"description": "为每个智能体提供记忆上下文、六个记忆工具、写入提示和后台压缩。"
 	}
 }

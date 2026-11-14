@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "Die Headless-Bibliothek von memlens, ihre CLI-Oberfläche und ihr DeepSeek-Harness-Plugin."
+		"description": "Gibt jedem Agenten einen Speicherkontext, sechs Speicherwerkzeuge, einen Schreibhinweis und eine Hintergrundverdichtung."
 	}
 }

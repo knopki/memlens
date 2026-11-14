@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "memlens のヘッドレスライブラリ、その CLI フロントエンド、および DeepSeek Harness プラグイン。"
+		"description": "各エージェントにメモリコンテキスト、6 つのメモリツール、書き込みのナッジ、バックグラウンドコンパクションを与えます。"
 	}
 }

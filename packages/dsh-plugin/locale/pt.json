@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "A biblioteca sem interface do memlens, a sua interface de linha de comandos e o seu plugin do DeepSeek Harness."
+		"description": "Dá a cada agente um contexto de memória, seis ferramentas de memória, um aviso de escrita e compactação em segundo plano."
 	}
 }

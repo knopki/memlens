@@ -2,8 +2,35 @@
 
 The DeepSeek Harness plugin of memlens.
 
-**Status:** stage 1. The plugin opens the memory store and reads the configuration for each session.
-It gives no memory tool and no memory context yet.
+**Status:** stages 1 to 4. The plugin opens the memory store, gives each agent its memory context,
+its memory tools, and the nudge, and runs the background compaction. The plugin console stays
+outside this package.
+
+## Memory surface
+
+The plugin registers one runtime context for each agent. The context holds the memory slice and
+stays stable between the accepted triggers: a fresh session, a successful harness compaction, and
+an idle time above the model TTL.
+
+The plugin registers these tools in the context of each agent:
+
+| Tool          | Main agent | Propose child | Read child |
+| ------------- | ---------- | ------------- | ---------- |
+| memory_note   | yes        | yes, proposal | no         |
+| memory_find   | yes        | yes           | yes        |
+| memory_open   | yes        | yes           | yes        |
+| memory_map    | yes        | yes           | yes        |
+| memory_forget | yes        | no            | no         |
+| memory_review | yes        | no            | no         |
+
+An `off` child gets no memory tool and no memory context. A child proposal collects under the child
+session id, and the parent receives one report line per proposal when the child ends.
+
+The nudge counts the tool calls and the turns of the main agent. A reached limit injects one line,
+and a note write or a nudge resets both counters.
+
+The background worker starts a compaction at the dirty threshold and at the store idle limit. The
+worker calls the configured LLM route and keeps its call limits.
 
 ## Entries
 
@@ -57,5 +84,6 @@ pnpm run test
 
 ## Version
 
-The tested version is DeepSeek Harness `0.2.2-rc.3`. The manifest accepts `>=0.2.1-0`. No test
-covers an older version.
+The tested version is DeepSeek Harness `0.2.2-rc.3`. The manifest accepts `>=0.2.1-0`. A load check
+of `0.2.1-rc.5` passes: the plugin registers its service and disposes cleanly. The full memory
+surface has tests on `0.2.2-rc.3` only.
