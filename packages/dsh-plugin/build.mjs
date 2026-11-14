@@ -13,7 +13,10 @@ const HOST_PACKAGES = [
 	"@deepseek-ai/dsh-session",
 	"@deepseek-ai/dsh-system-prompt",
 	"@deepseek-ai/dsh-tools",
+	"@deepseek-ai/dsh-typert-protocol",
+	"@deepseek-ai/dsh-typert-registry",
 	"@deepseek-ai/dsh-workspace",
+	"zod",
 ];
 
 await build({

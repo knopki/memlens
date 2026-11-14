@@ -5,7 +5,7 @@
  * @scope
  *  - The request fields, the note kind, the listed scope check, the request scope, and the target
  *    row.
- *  - NOT: the HTTP transport, the reads, the actions, and the status.
+ *  - NOT: the transport, the reads, the actions, and the status.
  * @invariants An invalid scope key gives Usage. A scope outside the session profile gives
  *   NotAllowed.
  * @invariants The session supplies the active scope and the profile. The request supplies neither.

@@ -203,11 +203,11 @@ export interface ConsoleRuntime {
 // #region INTERFACE_StorePort
 /**
  * @purpose Give the console one transport to the store, so each shell supplies its own backend.
- * @invariants The port holds no address. The shell supplies the base path.
+ * @invariants The port holds no address. The shell supplies its transport.
  * @invariants The port gives the shapes of the CLI routes view, search, open, catalog, and action.
  * @usecases
  *  - View: controller => asks for one scope => gets the console model
- * @dependencies USES API: the CLI host routes and the harness HTTP server.
+ * @dependencies USES API: the CLI host routes and the harness Remote service.
  * @keywords port, transport, view, search, open, catalog, action, runtime
  */
 export interface StorePort {

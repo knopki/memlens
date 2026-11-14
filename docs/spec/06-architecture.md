@@ -475,6 +475,5 @@ The following items are not in the code. The other slices of this document descr
   session exists. See [REQ-413](02-requirements.md) and [Q-514](03-open-questions.md#q-514).
 - The plugin worker calls `compactionPass` and `sweep` at the accepted triggers. The CLI starts a
   build only at `memlens compact` and at the console job.
-- The plugin console tab and its browser routes remain pending. The standalone console gives a
-  manual compaction job. It holds no background compaction state and
+- The standalone console gives a manual compaction job. It holds no background compaction state and
   no session snapshot state. See the [client contract](../../packages/ui/src/client.ts).

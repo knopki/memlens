@@ -1,21 +1,21 @@
 /**
  * #region moduleContract
- * @purpose Guard the memory tab against a lost session, a lost locale fallback, and a broken screen
- *   registry, so the tab draws each screen inside the harness page.
+ * @purpose Guard the memory tab against a lost session, a lost locale fallback, a broken screen
+ *   registry, and a lost Remote, so the tab draws each screen inside the harness page.
  * @scope The tab registration, the locale dictionaries and their fallback, the tab console port,
- *   the tab body, the screen registry, and the stylesheet rules.
- * NOT: the host route and the built artifact.
- * @invariants Each test renders from a fake port or a fake console API. No host call leaves the
+ *   the Remote mount, the tab body, the screen registry, and the stylesheet rules.
+ * NOT: the host service and the built artifact.
+ * @invariants Each test renders from a fake namespace or a fake console API. No host call leaves the
  * test.
  * @dependencies USES: the client entry, the tab body, the screen registry, the message table, and
  * the server renderer of the console package.
- * @keywords test, client, tab, session, locale, fallback, screen, style
+ * @keywords test, client, tab, session, locale, fallback, screen, style, remote
  * #endregion moduleContract
  */
 
 import { createRequire } from "node:module";
 import type { ComponentType, ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { SCREEN_COMPONENTS } from "../../ui/src/components/screens/index.js";
 import { fill, messages } from "../../ui/src/i18n.js";
 import type {
@@ -26,13 +26,14 @@ import type {
 } from "../../ui/src/model/console.js";
 import { DEFAULT_ROUTE, SCREENS } from "../../ui/src/route.js";
 import type { View } from "../../ui/src/types.js";
-import { createTabConsole } from "../src/client/console.js";
+import { createTabConsole, mountConsole } from "../src/client/console.js";
 import type {
 	ClientContext,
 	LocaleService,
+	RemoteNamespace,
 	SlotRegistration,
 } from "../src/client/context.js";
-import { apply } from "../src/client/index.js";
+import { apply, inject } from "../src/client/index.js";
 import { NS, TAB_KEY } from "../src/client/locales.js";
 import { TAB_CSS } from "../src/client/styles.js";
 import { MemoryView } from "../src/client/view.js";
@@ -46,6 +47,30 @@ const { renderToStaticMarkup } = requireUi(
 /** The English text function of the test. */
 const english: Translate = (key, values = {}) =>
 	fill(messages("en")[key] ?? "", values);
+
+/** The six methods of the console namespace. */
+const METHODS = [
+	"view",
+	"search",
+	"open",
+	"catalog",
+	"status",
+	"action",
+] as const;
+
+/** One recorded call of the fake namespace. */
+interface Call {
+	readonly method: string;
+	readonly input: Record<string, unknown>;
+}
+
+/** One fake namespace with its recorded calls and its optional refusals. */
+interface FakeRemote {
+	readonly namespace: RemoteNamespace;
+	readonly calls: Call[];
+	readonly mounted: { count: number; disposed: boolean };
+	injectDisposed: boolean;
+}
 
 // #region FUNC_viewOf
 /**
@@ -117,6 +142,63 @@ function viewOf(): View {
 }
 // #endregion FUNC_viewOf
 
+// #region FUNC_fakeRemote
+/**
+ * @purpose Build one fake namespace that records each call and answers with a fixed value.
+ * @param refuse - A message per method name; a refused method returns the false branch.
+ * @invariants The view answer holds the fixed view. The status answer holds one saved snapshot.
+ */
+function fakeRemote(refuse: Record<string, string> = {}): FakeRemote {
+	const calls: Call[] = [];
+	const mounted = { count: 0, disposed: false };
+	const namespace = Object.fromEntries(
+		METHODS.map((method) => [
+			method,
+			async (input: object) => {
+				calls.push({ method, input: input as Record<string, unknown> });
+				const message = refuse[method];
+				if (message !== undefined) {
+					return { ok: false, error: { code: "memlens/refused", message } };
+				}
+				return { ok: true, value: answerOf(method) };
+			},
+		]),
+	) as RemoteNamespace;
+	return { namespace, calls, mounted, injectDisposed: false };
+}
+// #endregion FUNC_fakeRemote
+
+// #region FUNC_answerOf
+/**
+ * @purpose Give the fixed answer of one method.
+ * @param method - The name of the console method.
+ */
+function answerOf(method: string): unknown {
+	if (method === "view") return viewOf();
+	if (method === "status") {
+		return {
+			session: "session-1",
+			snapshot: {
+				saved: true,
+				chars: 12,
+				materializedAt: "2026-11-01T00:00:00Z",
+				nextTrigger: "2026-11-02T00:00:00Z",
+				nextRefreshAt: null,
+			},
+			compaction: {
+				attempts: 1,
+				active: 0,
+				backoff: 5,
+				failures: 0,
+				dirty: 0,
+			},
+		};
+	}
+	if (method === "action") return { changed: 1 };
+	return [];
+}
+// #endregion FUNC_answerOf
+
 // #region FUNC_stateOf
 /**
  * @purpose Build one console state from the fixed view and an optional patch.
@@ -167,20 +249,29 @@ function apiOf(state: ConsoleState): ConsoleApi {
 
 // #region FUNC_fakeContext
 /**
- * @purpose Build one client context with a fake slot service and a fake locale service.
+ * @purpose Build one client context with a fake slot service, a fake locale service, and one fake
+ *   Remote namespace.
+ * @param remote - The fake namespace of the test. The default name is `session-1`.
  * @param refuse - True gives a locale service that refuses each registration.
  * @invariants The fake keeps the registered dictionaries, so a test reads the registered texts.
+ * @invariants The fake mount answers the fake namespace through the inject callback.
+ * @invariants The fake keeps its disposers, so a test withdraws the mount.
  */
-function fakeContext(refuse = false): {
+function fakeContext(
+	remote = fakeRemote(),
+	refuse = false,
+): {
 	ctx: ClientContext;
 	options: SlotRegistration[];
 	dictionaries: Map<string, Record<string, Record<string, string>>>;
+	dispose(): void;
 } {
 	const options: SlotRegistration[] = [];
 	const dictionaries = new Map<
 		string,
 		Record<string, Record<string, string>>
 	>();
+	const disposers: Array<() => void> = [];
 	const locale: LocaleService = {
 		register(namespace, all) {
 			if (refuse) throw new Error("The namespace is taken.");
@@ -205,41 +296,37 @@ function fakeContext(refuse = false): {
 				},
 			},
 			locale,
-			effect: (setup) => setup(),
+			remote: {
+				$mount: async () => {
+					remote.mounted.count += 1;
+					return () => {
+						remote.mounted.disposed = true;
+					};
+				},
+			},
+			inject: (_keys, callback) => {
+				const undo = callback({ remote: { memlens: remote.namespace } });
+				return {
+					dispose: () => {
+						remote.injectDisposed = true;
+						if (typeof undo === "function") undo();
+					},
+				};
+			},
+			effect: (setup) => {
+				const disposer = setup();
+				if (disposer !== undefined) disposers.push(disposer);
+				return () => {};
+			},
 		},
 		options,
 		dictionaries,
+		dispose: () => {
+			for (const disposer of disposers) disposer();
+		},
 	};
 }
 // #endregion FUNC_fakeContext
-
-// #region FUNC_respond
-/**
- * @purpose Put one fake fetch on the global scope and collect the request URLs.
- * @param value - The JSON answer of each request.
- */
-function respond(value: unknown): { urls: string[]; bodies: string[] } {
-	const urls: string[] = [];
-	const bodies: string[] = [];
-	vi.stubGlobal(
-		"fetch",
-		vi.fn(async (url: string, init?: { body?: string }) => {
-			urls.push(url);
-			if (init?.body !== undefined) bodies.push(init.body);
-			return {
-				ok: true,
-				status: 200,
-				text: async () => JSON.stringify(value),
-			} as unknown as Response;
-		}),
-	);
-	return { urls, bodies };
-}
-// #endregion FUNC_respond
-
-afterEach(() => {
-	vi.unstubAllGlobals();
-});
 
 describe("tab registration", () => {
 	it("registers one entry of the conversation view slot", () => {
@@ -252,6 +339,10 @@ describe("tab registration", () => {
 		expect(entry?.order).toBe(20);
 		expect(entry?.locale).toBe(NS);
 		expect(typeof entry?.label).toBe("function");
+	});
+
+	it("declares the slot service, the locale service, and the Remote service", () => {
+		expect(inject).toEqual(["slots", "locale", "remote"]);
 	});
 
 	it("gives the session id and the translate function to the tab", () => {
@@ -293,7 +384,7 @@ describe("tab registration", () => {
 	});
 
 	it("keeps the English text when the locale service refuses the registration", () => {
-		const { ctx, options } = fakeContext(true);
+		const { ctx, options } = fakeContext(fakeRemote(), true);
 		apply(ctx);
 		const label = options[0]?.label as () => string;
 		expect(label()).toBe("Memory");
@@ -303,25 +394,189 @@ describe("tab registration", () => {
 	});
 });
 
-describe("tab console", () => {
-	it("sends the session id on each read of the plugin route", async () => {
-		const { urls } = respond(viewOf());
-		const api = createTabConsole("session-1", english);
-		await api.call.restore(DEFAULT_ROUTE);
-		expect(urls.length).toBeGreaterThan(0);
-		for (const url of urls) {
-			expect(url.startsWith("/plugins/memlens/")).toBe(true);
-			expect(url).toContain("session=session-1");
-		}
-		expect(urls[0]).toContain("/plugins/memlens/view?");
+describe("Remote mount", () => {
+	it("mounts the contribution once and injects the memlens namespace", () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		expect(remote.mounted.count).toBe(1);
 	});
 
-	it("posts the action with the session in its query and its fields in its body", async () => {
-		const { urls, bodies } = respond({});
+	it("withdraws the namespace and the contribution with the plugin", async () => {
+		const remote = fakeRemote();
+		const { ctx, dispose } = fakeContext(remote);
+		apply(ctx);
+		await Promise.resolve();
+		await Promise.resolve();
+		dispose();
+		expect(remote.injectDisposed).toBe(true);
+		expect(remote.mounted.disposed).toBe(true);
+	});
+
+	it("withdraws the contribution when the plugin dies before the mount settles", async () => {
+		const remote = fakeRemote();
+		const { ctx, dispose } = fakeContext(remote);
+		apply(ctx);
+		dispose();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(remote.mounted.disposed).toBe(true);
+	});
+
+	it("settles a read that waits for the mount when the plugin dies", async () => {
+		const remote = fakeRemote();
+		const { ctx, dispose } = fakeContext(remote);
+		ctx.remote.$mount = () => new Promise(() => {});
+		apply(ctx);
+		const api = createTabConsole("session-1", english);
+		const pending = api.call.restore(DEFAULT_ROUTE);
+		dispose();
+		await pending;
+		expect(api.state.status.error).toBe(true);
+		expect(api.state.status.text).toBe("The memory transport is not ready.");
+	});
+
+	it("keeps the namespace of a newer mount when an older mount dies", async () => {
+		const first = fakeRemote();
+		const second = fakeRemote();
+		const one = fakeContext(first);
+		const two = fakeContext(second);
+		apply(one.ctx);
+		apply(two.ctx);
+		await Promise.resolve();
+		await Promise.resolve();
+		one.dispose();
+		const api = createTabConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.status.error).toBe(false);
+		expect(second.calls.length).toBeGreaterThan(0);
+		expect(first.calls.length).toBe(0);
+	});
+
+	it("fails a call that waits on a replaced mount", async () => {
+		const first = fakeRemote();
+		const second = fakeRemote();
+		const one = fakeContext(first);
+		const two = fakeContext(second);
+		one.ctx.remote.$mount = () => new Promise(() => {});
+		apply(one.ctx);
+		const api = createTabConsole("session-1", english);
+		const pending = api.call.action("review", { target: "project:alpha#1" });
+		apply(two.ctx);
+		await pending;
+		expect(api.state.status.error).toBe(true);
+		expect(api.state.status.text).toBe("The memory transport is not ready.");
+		expect(second.calls.length).toBe(0);
+	});
+
+	it("keeps the namespace when two mounts share one facade object", async () => {
+		const shared = fakeRemote();
+		const one = fakeContext(shared);
+		const two = fakeContext(shared);
+		apply(one.ctx);
+		apply(two.ctx);
+		await Promise.resolve();
+		await Promise.resolve();
+		one.dispose();
+		const api = createTabConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.status.error).toBe(false);
+		expect(shared.calls.length).toBeGreaterThan(0);
+	});
+
+	it("does not use the namespace of a replaced mount", async () => {
+		const first = fakeRemote();
+		const second = fakeRemote();
+		const one = fakeContext(first);
+		const two = fakeContext(second);
+		apply(one.ctx);
+		await Promise.resolve();
+		await Promise.resolve();
+		const api = createTabConsole("session-1", english);
+		const pending = api.call.action("review", { target: "project:alpha#1" });
+		apply(two.ctx);
+		await pending;
+		expect(first.calls.length).toBe(0);
+		expect(second.calls.length).toBe(0);
+		expect(api.state.status.text).toBe("The memory transport is not ready.");
+	});
+
+	it("keeps the newer namespace when an older injection is withdrawn", async () => {
+		const first = fakeRemote();
+		const second = fakeRemote();
+		let install:
+			| ((scope: { remote: Record<string, RemoteNamespace> }) => unknown)
+			| undefined;
+		const undo: Array<() => void> = [];
+		const { ctx } = fakeContext(first);
+		ctx.inject = (_keys, callback) => {
+			install = callback;
+			const again = callback({ remote: { memlens: first.namespace } });
+			if (typeof again === "function") undo.push(again as () => void);
+			return { dispose: () => {} };
+		};
+		apply(ctx);
+		await Promise.resolve();
+		await Promise.resolve();
+		install?.({ remote: { memlens: second.namespace } });
+		undo[0]?.();
+		const api = createTabConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(second.calls.length).toBeGreaterThan(0);
+		expect(first.calls.length).toBe(0);
+	});
+
+	it("reports each call when the mount fails", async () => {
+		const { ctx } = fakeContext();
+		ctx.remote.$mount = () => Promise.reject(new Error("no Remote"));
+		mountConsole(ctx);
+		const api = createTabConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.status.error).toBe(true);
+		expect(api.state.status.text).toBe("The memory transport is not ready.");
+	});
+});
+
+describe("tab console", () => {
+	it("sends the session id in each input of the Remote", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createTabConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(remote.calls.length).toBeGreaterThan(0);
+		expect(remote.calls[0]?.method).toBe("view");
+		for (const call of remote.calls) {
+			expect(call.input.session).toBe("session-1");
+		}
+		expect(remote.calls[0]?.input).toMatchObject({
+			profile: "",
+			scope: "",
+			kind: "",
+		});
+		expect(remote.calls.some((call) => call.method === "status")).toBe(true);
+	});
+
+	it("reads the runtime state of the session", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createTabConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.runtime?.session).toBe("session-1");
+		expect(api.state.runtime?.snapshotSaved).toBe(true);
+		expect(api.state.runtime?.compaction?.backoffMs).toBe(5000);
+	});
+
+	it("sends the action with the session and the fields of the controller", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
 		const api = createTabConsole("session-1", english);
 		await api.call.action("review", { target: "project:alpha#1" });
-		expect(urls[0]).toBe("/plugins/memlens/action?session=session-1");
-		expect(JSON.parse(bodies[0] ?? "{}")).toEqual({
+		const action = remote.calls.find((call) => call.method === "action");
+		expect(action?.input).toEqual({
+			session: "session-1",
 			profile: "",
 			scope: "",
 			target: "project:alpha#1",
@@ -329,8 +584,20 @@ describe("tab console", () => {
 		});
 	});
 
+	it("shows the cause text of a refused call", async () => {
+		const remote = fakeRemote({ view: "The store is locked." });
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createTabConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.status.error).toBe(true);
+		expect(api.state.status.text).toBe("The store is locked.");
+	});
+
 	it("restores the place without a page address", async () => {
-		respond(viewOf());
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
 		const api = createTabConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(api.state.model?.scope).toBe("project:alpha");

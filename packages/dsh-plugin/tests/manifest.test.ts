@@ -52,6 +52,8 @@ const DSH_PEERS: Record<string, string> = {
 	"@deepseek-ai/dsh-session": ">=0.2.2-rc.3 <0.3.0",
 	"@deepseek-ai/dsh-system-prompt": ">=0.2.2-rc.3 <0.3.0",
 	"@deepseek-ai/dsh-tools": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-typert-protocol": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-typert-registry": ">=0.2.2-rc.3 <0.3.0",
 };
 
 /** Read one export target as an object with the type and the default paths. */
@@ -152,6 +154,8 @@ describe("plugin manifest", () => {
 	it("mirrors each host peer in the development dependencies", () => {
 		expect(manifest.peerDependencies?.["@deepseek-ai/cordis"]).toBe("^4.0.2");
 		expect(manifest.devDependencies?.["@deepseek-ai/cordis"]).toBe("4.1.0");
+		expect(manifest.peerDependencies?.zod).toBe("^4.6.6");
+		expect(manifest.devDependencies?.zod).toBe("4.6.6");
 
 		for (const [name, range] of Object.entries(DSH_PEERS)) {
 			expect(manifest.peerDependencies?.[name]).toBe(range);

@@ -1,25 +1,27 @@
 /**
  * #region moduleContract
- * @purpose Prove the console route, the reads, the actions, and the status through the actual
- *   plugin service and the actual store.
- * @scope The trust answer, the route answers, the session and scope resolution, each action, the
- *   status answer, and the disposer.
+ * @purpose Prove the console Remote service, the reads, the actions, and the status through the
+ *   actual Typert registry, the actual plugin service, and the actual store.
+ * @scope The registration and its disposer, the descriptor call path, the session and scope
+ *   resolution, each read, each action, the status answer, and the strict result codec.
  * @invariants Tests use a temporary XDG root and a temporary store per case, and clean them up.
- * @invariants Tests use a stub Web server, a stub Connection service, and a stub LLM. No test
- *   opens a socket and no test makes a paid call.
+ * @invariants Tests use the real registry and a stub LLM. No test opens a socket and no test makes
+ *   a paid call.
+ * @invariants The call helper follows the installed Gateway: resolve the local descriptor, parse the
+ *   strict input codec, call the service method, then encode the answer through the strict result
+ *   codec.
  * #endregion moduleContract
  */
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Readable } from "node:stream";
 import { debuglog } from "node:util";
 import { Context } from "@deepseek-ai/cordis";
 import type { Agent } from "@deepseek-ai/dsh-agent";
 import type { GenerateOptions, StreamChunk } from "@deepseek-ai/dsh-llm";
 import { createScope } from "@deepseek-ai/dsh-scope";
+import { TypertRegistry } from "@deepseek-ai/dsh-typert-registry";
 import {
 	byAddress,
 	type CompactionConfig,
@@ -31,7 +33,13 @@ import {
 	ttlSeconds,
 } from "@memlens/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registerConsole } from "../src/console/http.js";
+import { registerConsoleRemote } from "../src/console/remote.js";
+import {
+	CONSOLE_NAMESPACE,
+	CONSOLE_SERVICE,
+	type ConsoleMethod,
+	type ConsoleResults,
+} from "../src/console/remote-contract.js";
 import { Memlens } from "../src/service.js";
 import { MemoryWorker, type WorkerLlm } from "../src/worker.js";
 
@@ -73,18 +81,6 @@ class StubLlm implements WorkerLlm {
 }
 // #endregion CLASS_StubLlm
 
-// #region INTERFACE_RecordedRoute
-/** One route that the stub Web server recorded. */
-interface RecordedRoute {
-	kind: string;
-	path: string;
-	handler: (
-		request: IncomingMessage,
-		response: ServerResponse,
-	) => void | Promise<void>;
-}
-// #endregion INTERFACE_RecordedRoute
-
 // #region INTERFACE_Case
 /** One running console case. */
 interface Case {
@@ -92,7 +88,6 @@ interface Case {
 	readonly memlens: Memlens;
 	readonly worker: MemoryWorker;
 	readonly agent: Agent;
-	readonly routes: RecordedRoute[];
 	readonly llm: StubLlm;
 }
 // #endregion INTERFACE_Case
@@ -137,15 +132,11 @@ function workerInputs(): {
 
 // #region FUNC_composition
 /**
- * @purpose Start the real host service under a temporary configuration root and a stub carrier.
- * @param options - An optional base file, an optional Connection stub, and the Web server choice.
+ * @purpose Start the real host service and the real registry under a temporary configuration root.
+ * @param options - An optional base file and the Typert registry choice.
  */
 function composition(
-	options: {
-		readonly base?: string;
-		readonly connection?: unknown;
-		readonly webServer?: boolean;
-	} = {},
+	options: { readonly base?: string; readonly typert?: boolean } = {},
 ): Case {
 	const directory = mkdtempSync(join(tmpdir(), "memlens-console-"));
 	directories.push(directory);
@@ -163,110 +154,22 @@ function composition(
 	root.provide("agents", {
 		get: (id: string) => (id === agent.id ? agent : undefined),
 	} as unknown as Context["agents"]);
-	if (options.connection !== undefined)
-		root.provide("connection", options.connection);
-	const routes: RecordedRoute[] = [];
-	if (options.webServer !== false)
-		root.provide("webServer", {
-			register: (route: RecordedRoute) => {
-				routes.push(route);
-				return () => {
-					const index = routes.indexOf(route);
-					if (index >= 0) routes.splice(index, 1);
-				};
-			},
-		});
+	if (options.typert !== false) new TypertRegistry(root);
 	const llm = new StubLlm();
 	const worker = new MemoryWorker(root, memlens.store, workerInputs(), llm);
 	debug("Case start", { event: "start", directory, session: agent.id });
-	return { root, memlens, worker, agent, routes, llm };
+	return { root, memlens, worker, agent, llm };
 }
 // #endregion FUNC_composition
 
-/** @purpose Create one request with a body stream and the headers of the console client. */
-function requestOf(
-	method: string,
-	url: string,
-	body?: unknown,
-): IncomingMessage {
-	const text = body === undefined ? "" : JSON.stringify(body);
-	const stream = Readable.from(text === "" ? [] : [Buffer.from(text)]);
-	const headers: Record<string, string> =
-		body === undefined ? {} : { "content-type": "application/json" };
-	return Object.assign(stream, {
-		method,
-		url,
-		headers,
-	}) as unknown as IncomingMessage;
-}
-
-// #region FUNC_call
-/**
- * @purpose Answer one request through the route of the stub Web server.
- * @param testCase - The running console case.
- * @param method - The HTTP method of the request.
- * @param suffix - The path after the route prefix.
- * @param options - The query fields, the body, and the session choice.
- */
-async function call(
-	testCase: Case,
-	method: "GET" | "POST",
-	suffix: string,
-	options: {
-		readonly query?: Record<string, string>;
-		readonly body?: unknown;
-		readonly session?: string | null;
-	} = {},
-): Promise<{
-	readonly status: number;
-	// biome-ignore lint/suspicious/noExplicitAny: The answer body differs for each case.
-	readonly value: any;
-	readonly headers: Record<string, unknown>;
-}> {
-	const route = testCase.routes[0];
-	if (route === undefined) throw new Error("The console route is absent.");
-	const query = new URLSearchParams(options.query ?? {});
-	const session =
-		options.session === undefined ? testCase.agent.id : options.session;
-	if (session !== null) query.set("session", session);
-	const url = `/plugins/memlens${suffix}${query.size > 0 ? `?${query}` : ""}`;
-	const answer = {
-		status: 0,
-		headers: {} as Record<string, unknown>,
-		body: "",
-	};
-	const response = {
-		headersSent: false,
-		writeHead(status: number, headers?: Record<string, string>) {
-			answer.status = status;
-			Object.assign(answer.headers, headers ?? {});
-			response.headersSent = true;
-			return response;
-		},
-		end(body?: string) {
-			if (body !== undefined) answer.body = body;
-		},
-	};
-	await route.handler(
-		requestOf(method, url, options.body),
-		response as unknown as ServerResponse,
-	);
-	return {
-		status: answer.status,
-		value: answer.body === "" ? null : JSON.parse(answer.body),
-		headers: answer.headers,
-	};
-}
-// #endregion FUNC_call
-
 // #region FUNC_registered
 /**
- * @purpose Register the console route and wait until its fiber starts.
+ * @purpose Register the console Remote and wait until its fiber starts.
  * @invariants The injected fiber runs one tick after the registration.
  * @param testCase - The running console case.
  */
 async function registered(testCase: Case): Promise<() => Promise<void>> {
-	const dispose = registerConsole(
+	const dispose = registerConsoleRemote(
 		testCase.root,
 		testCase.memlens,
 		testCase.worker,
@@ -275,6 +178,88 @@ async function registered(testCase: Case): Promise<() => Promise<void>> {
 	return dispose;
 }
 // #endregion FUNC_registered
+
+// #region FUNC_call
+/**
+ * @purpose Answer one call through the local descriptor, as the installed Gateway does.
+ * @invariants The strict input codec of the descriptor parses the input before the call.
+ * @param testCase - The running console case.
+ * @param method - The console method of the call.
+ * @param input - The input object of the call.
+ */
+async function call<M extends ConsoleMethod>(
+	testCase: Case,
+	method: M,
+	input: Record<string, unknown> = {},
+): Promise<ConsoleResults[M]> {
+	const endpoint = `${CONSOLE_NAMESPACE}/${method}`;
+	const descriptor = testCase.root.typert.local.get(endpoint);
+	if (descriptor === undefined)
+		throw new Error(`The ${endpoint} endpoint is absent.`);
+	const parameter = descriptor.parameters[0];
+	if (parameter === undefined || descriptor.parameters.length !== 1)
+		throw new Error(`The ${endpoint} endpoint needs one input parameter.`);
+	if (parameter.codec.mode !== "strict")
+		throw new Error(`The ${endpoint} input codec is not strict.`);
+	const receiver = testCase.root.get(descriptor.service) as
+		| Record<string, ((value: unknown) => Promise<unknown>) | undefined>
+		| undefined;
+	const invoke = receiver?.[method];
+	if (typeof invoke !== "function")
+		throw new Error(`The ${endpoint} method is absent.`);
+	const value = parameter.codec.create().parse(input);
+	const answer = await invoke.call(receiver, value);
+	// The Gateway encodes through the strict result codec, so the test does the same.
+	if (descriptor.result.mode !== "strict") return answer as ConsoleResults[M];
+	const encode = descriptor.result.encode;
+	return (
+		encode === undefined ? answer : encode(answer, () => null)
+	) as ConsoleResults[M];
+}
+// #endregion FUNC_call
+
+// #region FUNC_direct
+/**
+ * @purpose Call one service method with no descriptor codec, so an operation guard is reachable.
+ * @param testCase - The running console case.
+ * @param method - The console method of the call.
+ * @param input - The raw input object of the call.
+ */
+async function direct(
+	testCase: Case,
+	method: ConsoleMethod,
+	input: unknown,
+): Promise<unknown> {
+	const receiver = testCase.root.get(CONSOLE_SERVICE) as
+		| Record<string, ((value: unknown) => Promise<unknown>) | undefined>
+		| undefined;
+	const invoke = receiver?.[method];
+	if (typeof invoke !== "function")
+		throw new Error(`The ${method} method is absent.`);
+	return invoke.call(receiver, input);
+}
+// #endregion FUNC_direct
+
+// #region FUNC_failure
+/**
+ * @purpose Give the code and the message of one failed call.
+ * @invariants The call must fail, and the error keeps the Remote code and the cause text.
+ * @param promise - The pending call.
+ */
+async function failure(
+	promise: Promise<unknown>,
+): Promise<{ code: string | undefined; message: string }> {
+	try {
+		await promise;
+	} catch (error) {
+		return {
+			code: (error as { code?: string }).code,
+			message: error instanceof Error ? error.message : String(error),
+		};
+	}
+	throw new Error("The call did not fail.");
+}
+// #endregion FUNC_failure
 
 /** @purpose Insert one note in the default scope at a fixed time. */
 function insert(testCase: Case, body: string, day: number): void {
@@ -289,74 +274,88 @@ function insert(testCase: Case, body: string, day: number): void {
 	});
 }
 
-describe("console route", () => {
-	it("registers one prefix route and removes it with its disposer", async () => {
+describe("console remote registration", () => {
+	it("registers one method for each operation and removes them with its disposer", async () => {
 		const testCase = composition();
-		expect(testCase.routes).toHaveLength(0);
+		expect(testCase.root.typert.local.list()).toHaveLength(0);
 		const dispose = await registered(testCase);
-		expect(testCase.routes).toHaveLength(1);
-		expect(testCase.routes[0]?.kind).toBe("prefix");
-		expect(testCase.routes[0]?.path).toBe("/plugins/memlens");
-		await dispose();
-		expect(testCase.routes).toHaveLength(0);
+		const live = testCase.root.typert.local.list();
+		expect(live.map((descriptor) => descriptor.method)).toEqual([
+			"view",
+			"search",
+			"open",
+			"catalog",
+			"status",
+			"action",
+		]);
+		expect(
+			live.every(
+				(descriptor) =>
+					descriptor.namespace === CONSOLE_NAMESPACE &&
+					descriptor.service === CONSOLE_SERVICE,
+			),
+		).toBe(true);
+		expect(live[0]?.id).toBe("@memlens/dsh-plugin#memlens/view");
+		const binding = (
+			testCase.root.get(CONSOLE_SERVICE) as {
+				readonly typertRemote: {
+					readonly serviceKey: string;
+					readonly namespace: string;
+				};
+			}
+		).typertRemote;
+		expect(binding.serviceKey).toBe(CONSOLE_SERVICE);
+		expect(binding.namespace).toBe(CONSOLE_NAMESPACE);
+		const stopped = dispose();
+		await expect(stopped).resolves.toBeUndefined();
+		expect(testCase.root.typert.local.list()).toHaveLength(0);
+		expect(testCase.root.get(CONSOLE_SERVICE)).toBeUndefined();
 	});
 
-	it("registers no route without a web server", async () => {
-		const testCase = composition({ webServer: false });
+	it("registers nothing without a Typert service", async () => {
+		const testCase = composition({ typert: false });
 		const dispose = await registered(testCase);
-		expect(testCase.routes).toHaveLength(0);
+		expect(testCase.root.get(CONSOLE_SERVICE)).toBeUndefined();
 		await expect(dispose()).resolves.toBeUndefined();
 	});
 
-	it("answers the trust rejection of the Connection service", async () => {
-		let rejection: 401 | 403 | undefined = 403;
-		const testCase = composition({
-			connection: { requestRejection: () => rejection },
-		});
-		await registered(testCase);
-		const forbidden = await call(testCase, "GET", "/view");
-		expect(forbidden.status).toBe(403);
-		expect(forbidden.value.error).toMatch(/this console/);
-		rejection = 401;
-		const unauthenticated = await call(testCase, "GET", "/view");
-		expect(unauthenticated.status).toBe(401);
-		expect(unauthenticated.value.error).toMatch(/authentication/);
-		rejection = undefined;
-		const allowed = await call(testCase, "GET", "/view");
-		expect(allowed.status).toBe(200);
-	});
-
-	it("serves requests when the Connection service is absent", async () => {
+	it("rejects an unknown input field before the operation", async () => {
 		const testCase = composition();
 		await registered(testCase);
-		const answer = await call(testCase, "GET", "/view");
-		expect(answer.status).toBe(200);
+		const descriptor = testCase.root.typert.local.get("memlens/view");
+		expect(descriptor).toBeDefined();
+		const codec = descriptor?.parameters[0]?.codec;
+		expect(codec?.mode).toBe("strict");
+		expect(() =>
+			codec?.mode === "strict"
+				? codec.create().parse({ session: testCase.agent.id, bogus: 1 })
+				: undefined,
+		).toThrow();
 	});
 
-	it("answers 404 for an unknown path and 405 for a wrong method", async () => {
+	it("carries a strict result codec for each method", async () => {
 		const testCase = composition();
 		await registered(testCase);
-		const unknown = await call(testCase, "GET", "/unknown");
-		expect(unknown.status).toBe(404);
-		expect(unknown.value).toEqual({ error: "No such route." });
-		const wrongRead = await call(testCase, "POST", "/view");
-		expect(wrongRead.status).toBe(405);
-		const wrongWrite = await call(testCase, "GET", "/action");
-		expect(wrongWrite.status).toBe(405);
-		expect(wrongWrite.value.error).toMatch(/method/);
+		const descriptor = testCase.root.typert.local.get("memlens/view");
+		expect(descriptor?.result.mode).toBe("strict");
+		if (descriptor?.result.mode !== "strict")
+			throw new Error("The view result codec is not strict.");
+		const encode = descriptor.result.encode;
+		expect(encode).toBeTypeOf("function");
+		expect(() => encode?.({ bogus: true }, () => null)).toThrow();
 	});
 
-	it("answers 404 for an unknown session and 400 for no session", async () => {
+	it("refuses a session that the host does not hold", async () => {
 		const testCase = composition();
 		await registered(testCase);
-		const unknown = await call(testCase, "GET", "/view", {
-			session: "session-missing",
-		});
-		expect(unknown.status).toBe(404);
-		expect(unknown.value).toEqual({ error: "The session is unknown." });
-		const missing = await call(testCase, "GET", "/view", { session: null });
-		expect(missing.status).toBe(400);
-		expect(missing.value.error).toMatch(/session/);
+		const unknown = await failure(
+			call(testCase, "view", { session: "session-missing" }),
+		);
+		expect(unknown.code).toBe("gateway/bad-request");
+		expect(unknown.message).toBe("The session is unknown.");
+		const missing = await failure(direct(testCase, "view", {}));
+		expect(missing.code).toBe("gateway/bad-request");
+		expect(missing.message).toBe("The request needs a session.");
 	});
 
 	it("resolves the profile and the scope from the session, not from the request", async () => {
@@ -367,33 +366,38 @@ describe("console route", () => {
 			),
 		});
 		await registered(testCase);
-		const view = await call(testCase, "GET", "/view", {
-			query: { profile: "another", scope: "user:notes" },
+		const view = await call(testCase, "view", {
+			session: testCase.agent.id,
+			profile: "another",
+			scope: "user:notes",
 		});
-		expect(view.status).toBe(200);
-		expect(view.value.profile).toBe("default");
-		expect(view.value.profiles).toEqual(["default"]);
-		const fallback = await call(testCase, "GET", "/view");
-		expect(fallback.value.scope).toBe("user:notes");
-		const outside = await call(testCase, "GET", "/view", {
-			query: { scope: "project:other" },
+		expect(view.profile).toBe("default");
+		expect(view.profiles).toEqual(["default"]);
+		const fallback = await call(testCase, "view", {
+			session: testCase.agent.id,
 		});
-		expect(outside.status).toBe(403);
-		expect(outside.value.error).toMatch(/outside this profile/);
-		const invalid = await call(testCase, "GET", "/view", {
-			query: { scope: "Bad Key" },
-		});
-		expect(invalid.status).toBe(400);
-		expect(invalid.value.error).toMatch(/invalid/);
+		expect(fallback.scope).toBe("user:notes");
+		const outside = await failure(
+			call(testCase, "view", {
+				session: testCase.agent.id,
+				scope: "project:other",
+			}),
+		);
+		expect(outside.code).toBe("gateway/bad-request");
+		expect(outside.message).toMatch(/outside this profile/);
+		const invalid = await failure(
+			call(testCase, "view", { session: testCase.agent.id, scope: "Bad Key" }),
+		);
+		expect(invalid.message).toMatch(/invalid/);
 	});
+});
 
+describe("console reads", () => {
 	it("answers the view with the model, the proposals, and the policy", async () => {
 		const testCase = composition();
 		insert(testCase, "alpha beta", 1);
 		await registered(testCase);
-		const answer = await call(testCase, "GET", "/view");
-		expect(answer.status).toBe(200);
-		const view = answer.value;
+		const view = await call(testCase, "view", { session: testCase.agent.id });
 		expect(view.profile).toBe("default");
 		expect(view.scope).toBe("user:notes");
 		expect(Array.isArray(view.scopes)).toBe(true);
@@ -405,30 +409,33 @@ describe("console route", () => {
 		expect(view.backend).toBe("sqlite");
 		expect(view.allowDelete).toBe(true);
 		expect(view.reviewPolicy).toBeTypeOf("object");
-		expect(answer.headers["Cache-Control"]).toBe("no-store");
-		expect(answer.headers["Access-Control-Allow-Origin"]).toBeUndefined();
 	});
 
 	it("answers search with the hits and the limit rule", async () => {
 		const testCase = composition();
 		insert(testCase, "alpha beta gamma", 1);
 		await registered(testCase);
-		const found = await call(testCase, "GET", "/search", {
-			query: { q: "alpha" },
+		const found = await call(testCase, "search", {
+			session: testCase.agent.id,
+			q: "alpha",
 		});
-		expect(found.status).toBe(200);
-		expect(Array.isArray(found.value)).toBe(true);
-		expect(found.value[0]?.scope).toBe("user:notes");
-		expect(found.value[0]?.pos).toBe(0);
-		const alias = await call(testCase, "GET", "/search", {
-			query: { query: "alpha" },
+		expect(Array.isArray(found)).toBe(true);
+		expect(found[0]?.scope).toBe("user:notes");
+		expect(found[0]?.pos).toBe(0);
+		const alias = await call(testCase, "search", {
+			session: testCase.agent.id,
+			query: "alpha",
 		});
-		expect(alias.value).toHaveLength(found.value.length);
-		const badLimit = await call(testCase, "GET", "/search", {
-			query: { q: "alpha", limit: "many" },
-		});
-		expect(badLimit.status).toBe(400);
-		expect(badLimit.value.error).toMatch(/limit/);
+		expect(alias).toHaveLength(found.length);
+		const badLimit = await failure(
+			call(testCase, "search", {
+				session: testCase.agent.id,
+				q: "alpha",
+				limit: "many",
+			}),
+		);
+		expect(badLimit.code).toBe("gateway/bad-request");
+		expect(badLimit.message).toMatch(/limit/);
 	});
 
 	it("answers open with a note, a range, and an offset", async () => {
@@ -436,36 +443,50 @@ describe("console route", () => {
 		insert(testCase, `${"long body ".repeat(20)}one`, 1);
 		insert(testCase, `${"long body ".repeat(20)}two`, 2);
 		await registered(testCase);
-		const entry = await call(testCase, "GET", "/open", {
-			query: { target: "user:notes#0" },
+		const entry = await call(testCase, "open", {
+			session: testCase.agent.id,
+			target: "user:notes#0",
 		});
-		expect(entry.status).toBe(200);
-		expect(entry.value.kind).toBe("entry");
-		expect(entry.value.pos).toBe(0);
-		expect(entry.value.scope).toBe("user:notes");
-		expect(entry.value.longformChars).toBeTypeOf("number");
-		const offset = await call(testCase, "GET", "/open", {
-			query: { target: "0", offset: "10" },
+		expect(entry.kind).toBe("entry");
+		if (entry.kind !== "entry") throw new Error("The open answer is no entry.");
+		expect(entry.pos).toBe(0);
+		expect(entry.scope).toBe("user:notes");
+		expect(entry.longformChars).toBeTypeOf("number");
+		const offset = await call(testCase, "open", {
+			session: testCase.agent.id,
+			target: "0",
+			offset: "10",
 		});
-		expect(offset.value.longformOffset).toBeGreaterThanOrEqual(10);
-		const children = await call(testCase, "GET", "/open", {
-			query: { target: "#0-1" },
+		if (offset.kind !== "entry")
+			throw new Error("The open answer is no entry.");
+		expect(offset.longformOffset).toBeGreaterThanOrEqual(10);
+		const children = await call(testCase, "open", {
+			session: testCase.agent.id,
+			target: "#0-1",
 		});
-		expect(children.value.kind).toBe("children");
-		expect(Array.isArray(children.value.children)).toBe(true);
-		const missing = await call(testCase, "GET", "/open", {
-			query: { target: "9" },
-		});
-		expect(missing.status).toBe(422);
-		expect(missing.value.error).toMatch(/does not exist/);
-		const badTarget = await call(testCase, "GET", "/open", {
-			query: { target: "not an address" },
-		});
-		expect(badTarget.status).toBe(400);
-		const badOffset = await call(testCase, "GET", "/open", {
-			query: { target: "0", offset: "half" },
-		});
-		expect(badOffset.status).toBe(400);
+		expect(children.kind).toBe("children");
+		if (children.kind !== "children")
+			throw new Error("The open answer is no children list.");
+		expect(Array.isArray(children.children)).toBe(true);
+		const missing = await failure(
+			call(testCase, "open", { session: testCase.agent.id, target: "9" }),
+		);
+		expect(missing.message).toMatch(/does not exist/);
+		const badTarget = await failure(
+			call(testCase, "open", {
+				session: testCase.agent.id,
+				target: "not an address",
+			}),
+		);
+		expect(badTarget.code).toBe("gateway/bad-request");
+		const badOffset = await failure(
+			call(testCase, "open", {
+				session: testCase.agent.id,
+				target: "0",
+				offset: "half",
+			}),
+		);
+		expect(badOffset.code).toBe("gateway/bad-request");
 	});
 
 	it("answers catalog with one level and the budget alias", async () => {
@@ -473,21 +494,26 @@ describe("console route", () => {
 		insert(testCase, "alpha beta", 1);
 		insert(testCase, "gamma delta", 2);
 		await registered(testCase);
-		const lines = await call(testCase, "GET", "/catalog", {
-			query: { start: "0", level: "1" },
+		const lines = await call(testCase, "catalog", {
+			session: testCase.agent.id,
+			start: "0",
+			level: "1",
 		});
-		expect(lines.status).toBe(200);
-		expect(Array.isArray(lines.value)).toBe(true);
-		const alias = await call(testCase, "GET", "/catalog", {
-			query: { start: "0", budget: "1" },
+		expect(Array.isArray(lines)).toBe(true);
+		const alias = await call(testCase, "catalog", {
+			session: testCase.agent.id,
+			start: "0",
+			budget: "1",
 		});
-		expect(alias.status).toBe(200);
-		expect(alias.value).toEqual(lines.value);
-		const bad = await call(testCase, "GET", "/catalog", {
-			query: { start: "0", level: "0" },
-		});
-		expect(bad.status).toBe(400);
-		expect(bad.value.error).toMatch(/range/);
+		expect(alias).toEqual(lines);
+		const bad = await failure(
+			call(testCase, "catalog", {
+				session: testCase.agent.id,
+				start: "0",
+				level: "0",
+			}),
+		);
+		expect(bad.message).toMatch(/range/);
 	});
 });
 
@@ -499,17 +525,22 @@ describe("console actions", () => {
 		});
 		const testCase = composition();
 		await registered(testCase);
-		const saved = await call(testCase, "POST", "/action", {
-			body: { action: "note", scope: "user:notes", body: "first record" },
+		const saved = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "note",
+			scope: "user:notes",
+			body: "first record",
 		});
-		expect(saved.status).toBe(200);
-		expect(saved.value.id).toBeTypeOf("string");
-		const duplicate = await call(testCase, "POST", "/action", {
-			body: { action: "note", scope: "user:notes", body: "first record" },
+		expect("id" in saved ? saved.id : undefined).toBeTypeOf("string");
+		const duplicate = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "note",
+			scope: "user:notes",
+			body: "first record",
 		});
-		expect(duplicate.value).toEqual({ duplicate: true });
-		const two = await call(testCase, "GET", "/view");
-		expect(two.value.records).toHaveLength(1);
+		expect(duplicate).toEqual({ duplicate: true });
+		const two = await call(testCase, "view", { session: testCase.agent.id });
+		expect(two.records).toHaveLength(1);
 	});
 
 	it("amends, reviews, hides, and deletes one note", async () => {
@@ -517,47 +548,69 @@ describe("console actions", () => {
 		insert(testCase, "alpha beta", 1);
 		insert(testCase, "gamma delta", 2);
 		await registered(testCase);
-		const amended = await call(testCase, "POST", "/action", {
-			body: {
-				action: "amend",
-				target: "user:notes#0",
-				dest: "user:notes",
-				body: "changed body",
-				kind: "fact",
-			},
+		const amended = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "amend",
+			target: "user:notes#0",
+			dest: "user:notes",
+			body: "changed body",
+			kind: "fact",
 		});
-		expect(amended.value).toEqual({ ok: true });
+		expect(amended).toEqual({ ok: true });
 		expect(byAddress(testCase.memlens.store, "user:notes", 0)?.body).toBe(
 			"changed body",
 		);
-		const reviewed = await call(testCase, "POST", "/action", {
-			body: { action: "review", target: "0" },
+		const reviewed = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "review",
+			target: "0",
 		});
-		expect(reviewed.value).toEqual({ ok: true });
-		const forgotten = await call(testCase, "POST", "/action", {
-			body: { action: "forget", target: "1" },
+		expect(reviewed).toEqual({ ok: true });
+		const forgotten = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "forget",
+			target: "1",
 		});
-		expect(forgotten.value).toEqual({ ok: true });
+		expect(forgotten).toEqual({ ok: true });
 		expect(byAddress(testCase.memlens.store, "user:notes", 1)?.state).toBe(
 			"hidden",
 		);
-		const refused = await call(testCase, "POST", "/action", {
-			body: { action: "delete", target: "0" },
+		const refused = await failure(
+			call(testCase, "action", {
+				session: testCase.agent.id,
+				action: "delete",
+				target: "0",
+			}),
+		);
+		expect(refused.code).toBe("gateway/bad-request");
+		expect(refused.message).toMatch(/confirmation/);
+		const deleted = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "delete",
+			target: "0",
+			confirm: true,
 		});
-		expect(refused.status).toBe(403);
-		expect(refused.value.error).toMatch(/confirmation/);
-		const deleted = await call(testCase, "POST", "/action", {
-			body: { action: "delete", target: "0", confirm: true },
-		});
-		expect(deleted.value).toEqual({ ok: true });
+		expect(deleted).toEqual({ ok: true });
 		expect(byAddress(testCase.memlens.store, "user:notes", 0)?.state).toBe(
 			"deleted",
 		);
-		const unknown = await call(testCase, "POST", "/action", {
-			body: { action: "shout", target: "0" },
-		});
-		expect(unknown.status).toBe(400);
-		expect(unknown.value.error).toMatch(/unknown/);
+		const unknown = await failure(
+			direct(testCase, "action", {
+				session: testCase.agent.id,
+				action: "shout",
+				target: "0",
+			}),
+		);
+		expect(unknown.code).toBe("gateway/bad-request");
+		expect(unknown.message).toMatch(/unknown/);
+		const rejected = await failure(
+			call(testCase, "action", {
+				session: testCase.agent.id,
+				action: "shout",
+				target: "0",
+			}),
+		);
+		expect(rejected.message).toMatch(/action/);
 	});
 
 	it("inside one scope, changes the scope and the kind of one note", async () => {
@@ -569,16 +622,15 @@ describe("console actions", () => {
 		});
 		insert(testCase, "alpha beta", 1);
 		await registered(testCase);
-		const moved = await call(testCase, "POST", "/action", {
-			body: {
-				action: "amend",
-				target: "user:notes#0",
-				dest: "project:moved",
-				body: "alpha beta",
-				kind: "decision",
-			},
+		const moved = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "amend",
+			target: "user:notes#0",
+			dest: "project:moved",
+			body: "alpha beta",
+			kind: "decision",
 		});
-		expect(moved.value).toEqual({ ok: true });
+		expect(moved).toEqual({ ok: true });
 		const row = byAddress(testCase.memlens.store, "project:moved", 0);
 		expect(row?.kind).toBe("decision");
 		expect(row?.body).toBe("alpha beta");
@@ -596,28 +648,36 @@ describe("console actions", () => {
 			target: row.id,
 			payload: {},
 		});
-		const accept = await call(testCase, "POST", "/action", {
-			body: { action: "accept", target: accepted.id },
+		const accept = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "accept",
+			target: accepted.id,
 		});
-		expect(accept.value).toEqual({ ok: true });
+		expect(accept).toEqual({ ok: true });
 		expect(byAddress(testCase.memlens.store, "user:notes", 0)?.state).toBe(
 			"hidden",
 		);
-		const stale = await call(testCase, "POST", "/action", {
-			body: { action: "accept", target: accepted.id },
-		});
-		expect(stale.status).toBe(422);
-		expect(stale.value.error).toMatch(/no longer pending/);
+		const stale = await failure(
+			call(testCase, "action", {
+				session: testCase.agent.id,
+				action: "accept",
+				target: accepted.id,
+			}),
+		);
+		expect(stale.code).toBe("gateway/bad-request");
+		expect(stale.message).toMatch(/no longer pending/);
 		const dismissed = propose(testCase.memlens.store, {
 			scope: "user:notes",
 			op: "review",
 			target: row.id,
 			payload: { review_at: null },
 		});
-		const dismiss = await call(testCase, "POST", "/action", {
-			body: { action: "dismiss", target: dismissed.id },
+		const dismiss = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "dismiss",
+			target: dismissed.id,
 		});
-		expect(dismiss.value).toEqual({ ok: true });
+		expect(dismiss).toEqual({ ok: true });
 	});
 
 	it("forgets or deletes one scope with confirmation", async () => {
@@ -625,18 +685,28 @@ describe("console actions", () => {
 		insert(testCase, "alpha beta", 1);
 		insert(testCase, "gamma delta", 2);
 		await registered(testCase);
-		const refused = await call(testCase, "POST", "/action", {
-			body: { action: "scope-delete", scope: "user:notes" },
+		const refused = await failure(
+			call(testCase, "action", {
+				session: testCase.agent.id,
+				action: "scope-delete",
+				scope: "user:notes",
+			}),
+		);
+		expect(refused.code).toBe("gateway/bad-request");
+		const hidden = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "scope-forget",
+			scope: "user:notes",
+			confirm: true,
 		});
-		expect(refused.status).toBe(403);
-		const hidden = await call(testCase, "POST", "/action", {
-			body: { action: "scope-forget", scope: "user:notes", confirm: true },
+		expect(hidden).toEqual({ changed: 2 });
+		const deleted = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "scope-delete",
+			scope: "user:notes",
+			confirm: true,
 		});
-		expect(hidden.value).toEqual({ changed: 2 });
-		const deleted = await call(testCase, "POST", "/action", {
-			body: { action: "scope-delete", scope: "user:notes", confirm: true },
-		});
-		expect(deleted.value).toEqual({ changed: 2 });
+		expect(deleted).toEqual({ changed: 2 });
 	});
 
 	it("prepares a compaction job and applies its answer", async () => {
@@ -644,35 +714,36 @@ describe("console actions", () => {
 		insert(testCase, `${"long body ".repeat(40)}one`, 1);
 		insert(testCase, `${"long body ".repeat(40)}two`, 2);
 		await registered(testCase);
-		const job = await call(testCase, "POST", "/action", {
-			body: { action: "compact", scope: "user:notes" },
+		const job = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "compact",
+			scope: "user:notes",
 		});
-		expect(job.status).toBe(200);
-		expect(job.value.inputs).toHaveLength(1);
-		expect(job.value.job).toContain("#0-1");
-		expect(job.value.copies).toBeTypeOf("number");
-		expect(job.value.joins).toBeTypeOf("number");
-		const applied = await call(testCase, "POST", "/action", {
-			body: {
-				action: "compact-answer",
-				scope: "user:notes",
-				answers: "#0-1: merged line",
-				inputs: job.value.inputs,
-			},
+		if (!("job" in job)) throw new Error("The answer holds no job.");
+		expect(job.inputs).toHaveLength(1);
+		expect(job.job).toContain("#0-1");
+		expect(job.copies).toBeTypeOf("number");
+		expect(job.joins).toBeTypeOf("number");
+		const applied = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "compact-answer",
+			scope: "user:notes",
+			answers: "#0-1: merged line",
+			inputs: job.inputs,
 		});
-		expect(applied.status).toBe(200);
-		expect(applied.value.built).toBe(1);
-		expect(applied.value.rejected).toBe(0);
-		expect(applied.value.rejectedRanges).toEqual([]);
-		const missing = await call(testCase, "POST", "/action", {
-			body: {
+		if (!("built" in applied)) throw new Error("The answer holds no count.");
+		expect(applied.built).toBe(1);
+		expect(applied.rejected).toBe(0);
+		expect(applied.rejectedRanges).toEqual([]);
+		const missing = await failure(
+			call(testCase, "action", {
+				session: testCase.agent.id,
 				action: "compact-answer",
 				scope: "user:notes",
 				answers: "#0-1: x",
-			},
-		});
-		expect(missing.status).toBe(400);
-		expect(missing.value.error).toMatch(/copied inputs/);
+			}),
+		);
+		expect(missing.message).toMatch(/copied inputs/);
 	});
 });
 
@@ -699,19 +770,20 @@ describe("console status", () => {
 				},
 			} as never,
 		);
-		const answer = await call(testCase, "GET", "/status");
-		expect(answer.status).toBe(200);
-		expect(answer.value.session).toBe(testCase.agent.id);
-		expect(answer.value.scope).toBe("user:notes");
-		expect(answer.value.snapshot.saved).toBe(false);
-		expect(answer.value.snapshot.materializedAt).toBe(toIso(1_000));
-		expect(answer.value.snapshot.nextTrigger).toBe("idle");
+		const answer = await call(testCase, "status", {
+			session: testCase.agent.id,
+		});
+		expect(answer.session).toBe(testCase.agent.id);
+		expect(answer.scope).toBe("user:notes");
+		expect(answer.snapshot.saved).toBe(false);
+		expect(answer.snapshot.materializedAt).toBe(toIso(1_000));
+		expect(answer.snapshot.nextTrigger).toBe("idle");
 		const ttl = ttlSeconds(
 			testCase.memlens.forAgent(testCase.agent).config.cacheTtl,
 			"test/large",
 		);
-		expect(answer.value.snapshot.nextRefreshAt).toBe(toIso(1_000 + ttl * 1000));
-		expect(answer.value.compaction).toEqual({
+		expect(answer.snapshot.nextRefreshAt).toBe(toIso(1_000 + ttl * 1000));
+		expect(answer.compaction).toEqual({
 			attempts: 0,
 			active: 0,
 			backoff: 0,
@@ -737,11 +809,13 @@ describe("console status", () => {
 			],
 		});
 		await registered(testCase);
-		const answer = await call(testCase, "GET", "/status");
-		expect(answer.value.snapshot.saved).toBe(true);
-		expect(answer.value.snapshot.chars).toBe("memory slice".length);
-		expect(answer.value.snapshot.materializedAt).toBe(null);
-		expect(answer.value.snapshot.nextRefreshAt).toBe(null);
+		const answer = await call(testCase, "status", {
+			session: testCase.agent.id,
+		});
+		expect(answer.snapshot.saved).toBe(true);
+		expect(answer.snapshot.chars).toBe("memory slice".length);
+		expect(answer.snapshot.materializedAt).toBe(null);
+		expect(answer.snapshot.nextRefreshAt).toBe(null);
 	});
 
 	it("states the local compaction counts of the worker", async () => {

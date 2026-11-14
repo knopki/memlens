@@ -9,8 +9,8 @@
  *  - Amend: user => gives one target and a body => gets the changed note
  * @invariants The one-transaction proposal approval applies an ordinary operation and closes the
  *   proposal together.
- * @invariants The plugin host permits a delete, because the route checked the connection. A
- *   delete still needs confirmation.
+ * @invariants The plugin host permits a delete through the harness Remote service. A delete still
+ *   needs confirmation.
  * @dependencies USES API: @memlens/core, scope.ts, compact.ts, ../tools/shared.ts
  * @keywords console, action, note, proposal, amend, forget, delete, scope
  * #endregion moduleContract

@@ -1,8 +1,7 @@
 # DSH plugin plan
 
-Status: the plugin is implemented and merged. One rework remains: the console transport. The
-sections below give the current state, the reason for the rework, the target design, the risks, and
-the alternatives. Implemented stages are not repeated here. The history holds them.
+Status: implemented. The console uses the DSH Remote service. The isolated profile check passes for
+reads, writes, and the visual tab. The sections below record the design and the execution plan.
 
 ## Current state
 
@@ -16,14 +15,13 @@ The package `@memlens/dsh-plugin` does all of this today:
   no transport, and no address. Each shell supplies its own.
 - The picture [demo/plugin-tab.png](demo/plugin-tab.png) shows the tab in an isolated profile.
 
-The tab reads and writes through one HTTP route. The plugin registers the prefix
-`/plugins/memlens` on the harness Web server. It calls `ctx.connection.requestRejection` before each
-answer. It resolves the session profile and scope through the plugin service. The route serves the
-console reads, the note actions, and the host runtime state.
+The tab reads and writes through the harness Remote service. The service resolves the session
+profile and scope through the plugin service. The Remote serves console reads, note actions, and
+host runtime state.
 
-## Why the route is the wrong transport
+## Why the route was the wrong transport
 
-The route works. It is the wrong level, and it fails open.
+The previous route worked. It was the wrong level, and it failed open.
 
 1. The harness Web server owns no authentication. Its own documentation states that the carrier
    gives no authentication and no Origin policy. A plugin route must add both.
@@ -69,7 +67,8 @@ over the Remote. `memlens ui` keeps its own HTTP port. No component changes.
 
 | Path | Change |
 | --- | --- |
-| `packages/dsh-plugin/src/console/remote.ts` | new: method table, schemas, descriptors, service, registration |
+| `packages/dsh-plugin/src/console/remote-contract.ts` | new: method table, schemas, descriptors |
+| `packages/dsh-plugin/src/console/remote.ts` | new: service, registration |
 | `packages/dsh-plugin/src/console/http.ts` | remove: route, trust guard, body parse, status codes |
 | `packages/dsh-plugin/src/index.ts` | register the Remote instead of the route |
 | `packages/dsh-plugin/src/client/console.ts` | build the port over the Remote |

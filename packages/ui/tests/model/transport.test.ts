@@ -50,9 +50,9 @@ describe("console HTTP port", () => {
 		);
 	});
 
-	it("reads the search of the plugin base", async () => {
+	it("reads the search of the base", async () => {
 		const fetch = stubFetch(answer([]));
-		const port = createHttpPort("/plugins/memlens");
+		const port = createHttpPort("/api");
 		await port.search({
 			profile: "p",
 			scope: "",
@@ -62,7 +62,7 @@ describe("console HTTP port", () => {
 			limit: "10",
 		});
 		expect(fetch).toHaveBeenCalledWith(
-			"/plugins/memlens/search?profile=p&scope=&query=two+words&kind=&since=&limit=10",
+			"/api/search?profile=p&scope=&query=two+words&kind=&since=&limit=10",
 			{ cache: "no-store" },
 		);
 	});

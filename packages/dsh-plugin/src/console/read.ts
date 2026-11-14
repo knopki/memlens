@@ -5,8 +5,7 @@
  * @scope
  *  - The routes view, search, open, and catalog.
  *  - NOT: the action route, the transport, and the scope rules.
- * @invariants The answer fields and the defaults match the standalone console, so one client
- *   transport serves both hosts.
+ * @invariants The answer fields and the defaults match the standalone console.
  * @usecases
  *  - View: tab => asks for one scope => gets the console model
  * @dependencies USES API: @memlens/core, scope.ts, ../tools/shared.ts
@@ -37,7 +36,7 @@ const debug = debuglog("memlens:plugin:console");
 /**
  * @purpose Give the console model of one scope with its proposals and its policy.
  * @invariants The answer holds the pending proposals, the session profile, and the review policy.
- * @invariants The plugin host permits the delete action, because the route checked the connection.
+ * @invariants The plugin host permits the delete action through the harness Remote service.
  */
 export async function viewAnswer(request: ConsoleRequest): Promise<unknown> {
 	const { memory, scope, fields } = request;
