@@ -337,18 +337,18 @@ orders, so 220 places the memory after each built-in context and before no tool 
 
 These tools are a target. The plugin registers none of them yet.
 
-| Tool          | Who        | Effect                                                                  |
-| ------------- | ---------- | ----------------------------------------------------------------------- |
-| memory_note   | main agent | A new note, or the live note with the same four fields.                 |
-| memory_forget | main agent | The records leave the view, and dependent summary ranges become dirty. |
-| memory_find   | main agent | The records with the matching words, each with its `addr`.              |
-| memory_open   | main agent | A record with its `longform`, or the two children of a node.            |
-| memory_review | main agent | The due records, or the count of the reviewed records.                  |
-| memory_scopes | main agent | The visible scopes, each with its count and its last write.              |
+| Tool          | Who                   | Effect                                                                  |
+| ------------- | --------------------- | ----------------------------------------------------------------------- |
+| memory_note   | main agent, subagent  | A new note, or the live note with the same four fields.                 |
+| memory_forget | main agent            | The records leave the view, and dependent summary ranges become dirty.  |
+| memory_find   | main agent, subagent  | The records with the matching words, each with its `addr`.              |
+| memory_open   | main agent, subagent  | A record with its `longform`, or the two children of a node.            |
+| memory_review | main agent            | The due records, or the count of the reviewed records.                  |
+| memory_map    | main agent, subagent  | The visible scopes, or the tree slice of one scope.                     |
 
 The tool behavior and the errors are in the [tool types](tools.d.ts) and in
 [REQ-024](02-requirements.md) to [REQ-477](02-requirements.md). The subagent modes are in
-[REQ-353](02-requirements.md) to [REQ-361](02-requirements.md), and the log keeps the content of a
+[REQ-542](02-requirements.md) to [REQ-543](02-requirements.md), and the log keeps the content of a
 dismissed proposal in the [config contract](../../packages/core/src/domain/config.ts). The nudge is in
 [REQ-233](02-requirements.md) to [REQ-242](02-requirements.md). See
 [0009 Agent surface](../adr/0009-agent-surface.md).

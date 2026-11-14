@@ -64,7 +64,7 @@ A read costs no model call. A note costs one model call in its life, at the merg
 | `memory_note`   | Save one note.                                                            |
 | `memory_forget` | Hide a note.                                                              |
 | `memory_review` | Give the notes that are due for review.                                   |
-| `memory_scopes` | List the scopes.                                                          |
+| `memory_map`    | List the scopes, or give the tree slice of one scope.                     |
 
 A subagent writes proposals. A proposal is a local row with a payload and a thirty-day expiry. A human
 or the parent agent applies the real change.

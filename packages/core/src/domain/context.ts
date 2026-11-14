@@ -35,7 +35,8 @@ gives its two halves, a note gives its \`longform\`.
 
 Find a note before you write one. Open a line that only mentions what you need, before you act or ask.
 A note of another scope takes its address, as "project:dsh/optmem#2107". \`memory_find\` takes words, and
-\`due\` gives the notes to check today. \`memory_scopes\` lists the scopes.
+\`due\` gives the notes to check today. \`memory_map\` lists the scopes, and a key gives the tree slice
+of that scope.
 
 Save a note with \`memory_note\` when the user gives an order, a decision, a correction, or a preference,
 when a fact changes later work, and when a task fails and the cause matters. Do not save greetings,

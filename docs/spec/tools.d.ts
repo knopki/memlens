@@ -6,12 +6,12 @@
  * @purpose Give each tool one input type and one output type, so the agent schema and the parser
  * have one home.
  * @scope
- *  - The six tools of the main agent and their answers.
+ *  - The six tools of the agent surface and their answers.
  *  - NOT: the permissions, the errors, and the limits of a render. The requirements hold them.
  * @invariants
  *  - A tool takes the fields of its input type only.
  *  - An answer holds the fields of its output type only.
- * @keywords tools, memory_note, memory_find, memory_open, memory_forget, memory_review, memory_scopes
+ * @keywords tools, memory_note, memory_find, memory_open, memory_forget, memory_review, memory_map
  * #endregion moduleContract
  */
 
@@ -155,18 +155,23 @@ export type MemoryReviewOutput =
 	| { due: MemoryReviewDue[] }
 	| { reviewed: number; next: string };
 
-/** The tool takes no field. */
-export type MemoryScopeInput = Record<never, never>;
-
-export interface MemoryScopeLine {
-	key: ScopeKey;
-	notes: number;
-	lastSeen: string;
+export interface MemoryMapInput {
+	/** A key, or no value for the list of the visible scopes. */
+	scope?: ScopeKey;
 }
 
-export type MemoryScopeOutput =
-	| { scopes: MemoryScopeLine[] }
-	| { ok: true; key: ScopeKey };
+/** One line of the scope list: the keys of one range, their idle time, and the summary. */
+export interface MemoryDirectionLine {
+	keys: ScopeKey[];
+	ts_from: string;
+	ts_to: string;
+	/** The summary of the top node. A scope above the `directions` budget gives no text. */
+	text: string;
+}
+
+export type MemoryMapOutput =
+	| { kind: "scopes"; lines: MemoryDirectionLine[] }
+	| { kind: "scope"; scope: ScopeKey; lines: MemoryOpenLine[] };
 
 /** The review period of a kind when a write names no value. */
 export type ReviewDefaults = Record<NoteKind, Days>;

@@ -139,6 +139,8 @@ replaced it. The owner column in those sections names the live contract, or the 
 | REQ-284 | The runtime context has a fixed order of 220, after the built-in contexts. | FR | S-067 | [06-architecture.md](06-architecture.md) |
 | REQ-032 | A background writer makes the retellings in batches. | FR | S-013 | REQ-203 |
 | REQ-052 | A background compactor makes the retellings in parallel jobs. | FR | S-014 | REQ-203 |
+| REQ-353 | In the mode `propose`, a subagent gets `memory_find`, `memory_open`, `memory_note`, and the scope list in the slice. | FR | S-070 | REQ-542 |
+| REQ-356 | A subagent has no `memory_forget`, no `memory_review`, and no `memory_scopes`. | FR | S-070 | REQ-543 |
 
 ## Removed requirements
 
