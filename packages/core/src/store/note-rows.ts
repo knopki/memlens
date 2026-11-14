@@ -61,8 +61,7 @@ const COLUMNS =
 
 const SELECT_ROW = `SELECT ${COLUMNS} FROM notes WHERE id = ?`;
 
-const SELECT_DUPLICATE =
-	"SELECT id FROM notes WHERE scope = ? AND body = ? AND state = 'live' AND kind = ? AND longform IS ? AND review_at IS ? LIMIT 1";
+const SELECT_DUPLICATE = `SELECT ${COLUMNS} FROM notes WHERE scope = ? AND body = ? AND state = 'live' AND kind = ? AND longform IS ? AND review_at IS ? LIMIT 1`;
 
 export const INSERT_ROW = `INSERT INTO notes (id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts, created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content, v_review) VALUES (?, ?, ?, 'live', 0, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, NULL)`;
 
@@ -196,7 +195,7 @@ export function ftsRowOf(row: RawNote): FtsRow {
 	};
 }
 
-/** @purpose Report whether a live note with the same comparison fields exists. */
+/** @purpose Give the live note with the same comparison fields, so a caller can answer with it. */
 export function findDuplicate(
 	db: DatabaseSync,
 	scope: ScopeKey,
@@ -204,11 +203,10 @@ export function findDuplicate(
 	kind: NoteKind,
 	longform: string | null,
 	reviewAt: string | null,
-): boolean {
-	return (
-		db.prepare(SELECT_DUPLICATE).get(scope, body, kind, longform, reviewAt) !==
-		undefined
-	);
+): RawNote | undefined {
+	return db
+		.prepare(SELECT_DUPLICATE)
+		.get(scope, body, kind, longform, reviewAt) as RawNote | undefined;
 }
 
 /** @purpose Normalize one scope key, or refuse the write when the key is not valid. */

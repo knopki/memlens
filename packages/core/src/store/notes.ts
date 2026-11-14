@@ -99,7 +99,7 @@ export function note(store: Store, input: NoteInput): WriteResult<Note> {
 		);
 		if (duplicate) {
 			debug("Note duplicate", { event: "duplicate", scope, kind: input.kind });
-			return { ok: false, reason: "duplicate" };
+			return { ok: false, reason: "duplicate", value: toNote(duplicate) };
 		}
 	}
 	return { ok: true, value: store.publish((tx) => noteTx(tx, input)).value };
@@ -234,17 +234,16 @@ function hideSuperseded(
 export function noteCheckedTx(tx: Tx, input: NoteInput): WriteResult<Note> {
 	const scope = checkedScope(input.scope);
 	const split = splitForWrite(input.body, input.longform ?? null);
-	if (
-		findDuplicate(
-			tx.db,
-			scope,
-			split.body,
-			input.kind,
-			split.longform,
-			input.review_at ?? null,
-		)
-	)
-		return { ok: false, reason: "duplicate" };
+	const duplicate = findDuplicate(
+		tx.db,
+		scope,
+		split.body,
+		input.kind,
+		split.longform,
+		input.review_at ?? null,
+	);
+	if (duplicate)
+		return { ok: false, reason: "duplicate", value: toNote(duplicate) };
 	return { ok: true, value: noteTx(tx, input) };
 }
 // #endregion FUNC_noteCheckedTx

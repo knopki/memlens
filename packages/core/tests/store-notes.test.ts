@@ -99,14 +99,17 @@ function addNode(db: DatabaseSync, summary: string): void {
  * @purpose Prove that a repeated note returns the duplicate reason and changes no row.
  */
 describe("dedup", () => {
-	it("returns duplicate and writes nothing", () => {
+	it("returns duplicate with the live note and writes nothing", () => {
 		const { store } = fresh();
 		const first = note(store, { ...BASE, body: "A stable fact." });
 		if (!first.ok) assert.fail(first.reason);
 		const rev = store.rev();
 		const again = note(store, { ...BASE, body: "A stable fact." });
 		assert.equal(again.ok, false);
-		if (!again.ok) assert.equal(again.reason, "duplicate");
+		if (!again.ok) {
+			assert.equal(again.reason, "duplicate");
+			assert.equal(again.value?.id, first.value.id);
+		}
 		assert.equal(count(store, "SELECT count(*) AS c FROM notes"), 1);
 		assert.equal(store.rev(), rev);
 	});

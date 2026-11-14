@@ -92,4 +92,4 @@ export interface IndexHit {
 /** The answer of one publication: the count of changed rows, or the reason of a refusal. */
 export type WriteResult<T> =
 	| { readonly ok: true; readonly value: T }
-	| { readonly ok: false; readonly reason: string };
+	| { readonly ok: false; readonly reason: string; readonly value?: T };

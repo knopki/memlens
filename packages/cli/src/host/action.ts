@@ -59,6 +59,8 @@ interface ProposalPayload {
 	readonly scope?: ScopeKey;
 	readonly review_at?: string | null;
 	readonly longform?: string;
+	readonly supersedes?: readonly string[];
+	readonly session?: string;
 }
 
 // #region FUNC_actionRoute
@@ -195,6 +197,7 @@ function acceptedNote(proposal: Proposal, data: ProposalPayload): NoteInput {
 		turn: "ui",
 		preset: "ui",
 		...(data.longform ? { longform: data.longform } : {}),
+		...(data.supersedes?.length ? { supersedes: data.supersedes } : {}),
 	};
 }
 
