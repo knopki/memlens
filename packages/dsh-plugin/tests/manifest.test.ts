@@ -49,6 +49,7 @@ const DSH_PEERS: Record<string, string> = {
 	"@deepseek-ai/dsh-agent": ">=0.2.1-0 <0.3.0",
 	"@deepseek-ai/dsh-llm": ">=0.2.1-0 <0.3.0",
 	"@deepseek-ai/dsh-scope": ">=0.2.1-0 <0.3.0",
+	"@deepseek-ai/dsh-session": ">=0.2.1-0 <0.3.0",
 	"@deepseek-ai/dsh-system-prompt": ">=0.2.1-0 <0.3.0",
 	"@deepseek-ai/dsh-tools": ">=0.2.1-0 <0.3.0",
 };

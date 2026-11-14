@@ -62,6 +62,9 @@ export class Memlens extends Service {
 	readonly patch: PatchConfig;
 	readonly path: string;
 	readonly store: Store;
+
+	/** The host-level resolution, with no preset layer. */
+	readonly resolved: ResolvedConfig;
 	private readonly presets = new Map<RegistrationScope, PresetConfig>();
 	private memories = new WeakMap<Agent, AgentMemory>();
 	private closed = false;
@@ -70,7 +73,7 @@ export class Memlens extends Service {
 		super(ctx, "memlens");
 		this.patch = loadPatchConfig(patch);
 		this.base = loadPluginBase(process.env);
-		resolveConfig(this.base, this.patch, null);
+		this.resolved = resolveConfig(this.base, this.patch, null);
 		this.path = pluginStorePath(this.base, this.patch, process.env);
 		this.store = new Store(this.path, this.base.language);
 		ctx.effect(() => () => {

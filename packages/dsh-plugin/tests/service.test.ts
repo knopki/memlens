@@ -13,6 +13,8 @@ import { Context, Service } from "@deepseek-ai/cordis";
 import { type Agent, agentEvents } from "@deepseek-ai/dsh-agent";
 import { markAgentLoopRequest } from "@deepseek-ai/dsh-llm";
 import { createScope } from "@deepseek-ai/dsh-scope";
+import { SystemPrompt } from "@deepseek-ai/dsh-system-prompt";
+import { ToolsService } from "@deepseek-ai/dsh-tools";
 import { DEFAULT_CONFIG_TOML, Store } from "@memlens/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as host from "../src/index.js";
@@ -66,6 +68,8 @@ async function composition(baseText?: string) {
 	vi.stubEnv("MEMLENS_STORE", undefined);
 	const root = new Context();
 	roots.push(root);
+	new SystemPrompt(root, {});
+	root.plugin(ToolsService, {});
 	await root.plugin(MetadataLlm);
 	await root.plugin(host, {});
 	return { root, directory };
@@ -80,7 +84,10 @@ function subject(root: Context, parent?: object): Agent {
 	Object.assign(agent, {
 		id: `session-${nextSession++}`,
 		ctx: scope.ctx,
-		session: { header: { cwd: tmpdir() } },
+		session: {
+			header: { cwd: tmpdir() },
+			deriveMessages: () => [],
+		},
 		model: { current: () => ({ provider: "test", model: "large" }) },
 	});
 	return agent;
@@ -189,7 +196,10 @@ describe("Memlens host service", () => {
 		} as unknown as Context["workspaceRegistry"]);
 		const agent = subject(root);
 		Object.assign(agent, {
-			session: { header: { cwd: join(directory, "missing") } },
+			session: {
+				header: { cwd: join(directory, "missing") },
+				deriveMessages: () => [],
+			},
 		});
 		await agentEvents(root, agent).serial("agent/created", {
 			source: "resume",
@@ -200,7 +210,9 @@ describe("Memlens host service", () => {
 	it("uses the configured fallback when a session has no directory", async () => {
 		const { root } = await composition();
 		const agent = subject(root);
-		Object.assign(agent, { session: { header: {} } });
+		Object.assign(agent, {
+			session: { header: {}, deriveMessages: () => [] },
+		});
 		await agentEvents(root, agent).serial("agent/created", {
 			source: "startup",
 		});
@@ -223,7 +235,10 @@ describe("Memlens host service", () => {
 		(root.llm as unknown as MetadataLlm).capacity = undefined;
 		const agent = subject(root);
 		Object.assign(agent, {
-			session: { header: { cwd: tmpdir(), origin: "subagent" } },
+			session: {
+				header: { cwd: tmpdir(), origin: "subagent" },
+				deriveMessages: () => [],
+			},
 		});
 		await agentEvents(root, agent).serial("agent/created", {
 			source: "startup",

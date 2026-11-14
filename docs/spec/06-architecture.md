@@ -311,9 +311,11 @@ The [preset entry](../../packages/dsh-plugin/src/preset.ts) registers settings u
 The [service contract](../../packages/dsh-plugin/src/service.ts) owns profile resolution and store disposal.
 The [runtime contract](../../packages/dsh-plugin/src/runtime.ts) owns configuration file access and active scope inputs.
 The [schema contract](../../packages/dsh-plugin/src/config.ts) owns strict field validation and DSH field metadata.
+The [context contract](../../packages/dsh-plugin/src/memory-context.ts) owns the snapshot lifecycle and the restore from the session history.
+The [tools contract](../../packages/dsh-plugin/src/memory-tools.ts) owns the six tools and the child modes.
+The [nudge contract](../../packages/dsh-plugin/src/nudge.ts) owns the two counters and the injected line.
+The [worker contract](../../packages/dsh-plugin/src/worker.ts) owns the background compaction.
 See [0022 Plugin configuration](../adr/0022-plugin-configuration.md).
-
-The memory context below remains a target.
 
 The plugin registers the slice as `systemPrompt.context`. It does not use a system prompt section: a
 change of the section invalidates the whole cached prefix. See [0007 Slice and context](../adr/0007-slice-context.md).
@@ -342,7 +344,7 @@ orders, so 220 places the memory after each built-in context and before no tool 
 
 ## Agent surface
 
-These tools are a target. The plugin registers none of them yet.
+The plugin registers these tools in the context of each agent. The mode of the profile selects the set of a subagent.
 
 | Tool          | Who                   | Effect                                                                  |
 | ------------- | --------------------- | ----------------------------------------------------------------------- |
@@ -470,10 +472,8 @@ The following items are not in the code. The other slices of this document descr
 
 - The CLI owes the import from harness sessions. The CLI accepts no `--from` flag, and no reader of a
   session exists. See [REQ-413](02-requirements.md) and [Q-514](03-open-questions.md#q-514).
-- No host calls `compactionPass` or `sweep`. Only `memlens compact` and the console job start a build.
-  The store refuses an expired proposal, and no write closes the row. See
-  [REQ-204](02-requirements.md) and [REQ-024](02-requirements.md).
-- The plugin implements configuration and registration. Its tools, runtime context, and nudge remain pending. See
-  [REQ-028](02-requirements.md) and [08-ui.md](08-ui.md).
-- The standalone console gives a manual compaction job. It holds no background compaction state and
+- The plugin worker calls `compactionPass` and `sweep` at the accepted triggers. The CLI starts a
+  build only at `memlens compact` and at the console job.
+- The plugin console tab and its browser routes remain pending. The standalone console gives a
+  manual compaction job. It holds no background compaction state and
   no session snapshot state. See the [client contract](../../packages/ui/src/client.ts).

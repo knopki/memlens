@@ -1,6 +1,7 @@
 # DSH plugin plan
 
-Status: stage 1 implemented, 2026-11-14. Context, tools, and background work remain pending.
+Status: stages 1 to 4 implemented, 2026-11-14. Stage 5 checks of the packed artifact and the lower
+version boundary remain pending. The plugin console stays outside this plan.
 
 ## Goal and boundary
 

@@ -1,11 +1,11 @@
 /**
  * #region moduleContract
- * @purpose Start shared memory storage and validate memory settings before an agent starts.
- * @scope The host entry, patch schema, service registration, and minimum model context.
- * @invariants The host owns one store. The preset entry supplies only scoped configuration.
- * @invariants This stage registers no memory context, tool, timer, or background model call.
+ * @purpose Start shared memory storage and give each agent its context, tools, and nudge.
+ * @scope The host entry, patch schema, service registration, model check, context, nudge, and worker.
+ * @invariants The host owns one store and one worker. The preset entry supplies only scoped configuration.
+ * @invariants The memory context and each memory tool live on the agent context of their agent.
  * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-llm, @memlens/core.
- * @keywords dsh, plugin, memlens, configuration, model, registration
+ * @keywords dsh, plugin, memlens, configuration, model, registration, context, nudge, worker
  * #endregion moduleContract
  */
 
@@ -13,9 +13,13 @@ import type { Context } from "@deepseek-ai/cordis";
 import type { Agent, ModelSelection } from "@deepseek-ai/dsh-agent";
 import { isAgentLoopRequest } from "@deepseek-ai/dsh-llm";
 import type {} from "@deepseek-ai/dsh-workspace";
-import { MemlensError, type PatchConfig } from "@memlens/core";
+import { MemlensError, type PatchConfig, parseDuration } from "@memlens/core";
 import { PatchConfigSchema } from "./config.js";
+import { registerMemoryContext } from "./memory-context.js";
+import { registerMemoryTools } from "./memory-tools.js";
+import { registerMemoryNudge } from "./nudge.js";
 import { Memlens } from "./service.js";
+import { MemoryWorker } from "./worker.js";
 
 /** The settings schema of the host plugin. */
 export const Config = PatchConfigSchema;
@@ -68,12 +72,28 @@ async function checkAgentModel(
 
 // #region FUNC_apply
 /**
- * @purpose Register the shared store and resolve memory settings before agent creation completes.
+ * @purpose Register the shared store, the worker, and the memory surface of each agent.
  * @param ctx - The host plugin context.
  * @param config - The validated patch layer.
  */
 export function apply(ctx: Context, config: Config = {}): void {
 	const memlens = new Memlens(ctx, config);
+	const cacheTtl = Object.fromEntries(
+		Object.entries(memlens.resolved.cacheTtl).map(([glob, value]) => [
+			glob,
+			parseDuration(value),
+		]),
+	);
+	const worker = new MemoryWorker(
+		ctx,
+		memlens.store,
+		{
+			compaction: memlens.resolved.compaction,
+			store: { ...memlens.resolved.store, path: memlens.path },
+			cacheTtl,
+		},
+		ctx.llm,
+	);
 	const checked = new WeakMap<Agent, string>();
 	const disabled = (agent: Agent) =>
 		agent.session.header.origin === "subagent" &&
@@ -103,10 +123,17 @@ export function apply(ctx: Context, config: Config = {}): void {
 					?.resolveByPath(cwd)
 					.catch(() => undefined)
 			: undefined;
-		memlens.forAgent(agent, workspace?.id);
+		const memory = memlens.forAgent(agent, workspace?.id);
+		registerMemoryContext(agent, memory);
+		registerMemoryTools(agent, memory);
+		if (agent.session.header.origin !== "subagent")
+			registerMemoryNudge(agent, memory);
 		const selection = agent.model.current();
 		if (selection) await validate(agent, selection, signal);
 		return undefined;
+	});
+	ctx.on("tools/result", (exec) => {
+		worker.onMemoryTool(exec.name);
 	});
 	ctx.on("llm/stream", async function* (options, next) {
 		if (isAgentLoopRequest(options) && options.sessionId !== undefined) {
