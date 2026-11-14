@@ -11,8 +11,8 @@
  *  - NOT: command semantics, argument parsing, output formats, and the harness patch.
  * @invariants
  *  - The store path order is --store, then MEMLENS_STORE, then the base file.
- *  - A missing base file falls back to a built-in default configuration with 20 here lines, 10
- *    directions lines, and the sqlite backend, and the CLI writes no file.
+ *  - A missing base file falls back to the built-in default configuration, and the CLI writes no
+ *    file.
  *  - Each runtime owns one row store and the visible scopes of its selected profile.
  * @usecases
  *  - Open: command => gives --store and a profile name => gets one runtime and closes it
@@ -76,7 +76,6 @@ export interface Runtime {
 	readonly path: string;
 	readonly store: Store;
 	readonly scopes: readonly ScopeKey[];
-	readonly profiles: ReadonlyMap<string, readonly ScopeKey[]>;
 	close(): Promise<void>;
 }
 
@@ -95,7 +94,7 @@ export function loadCliBaseConfig(
 	return layer;
 }
 
-function readCliFile(path: string): string | null {
+export function readCliFile(path: string): string | null {
 	try {
 		return readFileSync(path, "utf8");
 	} catch {
@@ -104,7 +103,6 @@ function readCliFile(path: string): string | null {
 }
 
 // #region FUNC_openRuntime
-
 /**
  * Resolve the configuration and open the store of the CLI.
  *
@@ -131,27 +129,22 @@ export async function openRuntime(options: {
 		env,
 	);
 	const store = new Store(path, config.language);
-	const counts = liveCounts(store);
-	const known = [...counts.keys()];
-	const profiles = new Map(
-		Object.entries(base.profile).map(([name, item]) => [
-			name,
-			visibleScopes(item.scopes, known),
-		]),
-	);
-	const scopes = profiles.get(profile) ?? [];
-	debug("Runtime opened", { event: "open", path, profiles: profiles.size });
+	const known = [...liveCounts(store).keys()];
+	const scopes = visibleScopes(base.profile[profile]?.scopes ?? [], known);
+	debug("Runtime opened", {
+		event: "open",
+		path,
+		profiles: Object.keys(base.profile).length,
+	});
 	return {
 		base,
 		config,
 		path,
 		store,
 		scopes,
-		profiles,
 		close: async () => store.close(),
 	};
 }
-
 // #endregion FUNC_openRuntime
 
 /** Resolve the configuration for one profile name, without a patch and without a preset. */
@@ -160,11 +153,6 @@ export function resolveForProfile(
 	profile: string,
 ): ResolvedConfig {
 	return resolveConfig(base, {}, { profile });
-}
-
-/** The visible scope keys of the profile of the runtime. */
-export function runtimeVisibleScopes(runtime: Runtime): readonly ScopeKey[] {
-	return runtime.scopes;
 }
 
 /**

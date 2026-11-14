@@ -94,9 +94,10 @@ async function run(env: TestEnv, ...argv: string[]): Promise<Answer> {
 	}
 }
 
-/** One base configuration that sees the project scopes only. */
-const WORK_CONFIG = `
-defaultProfile = "work"
+/** One base configuration with one profile over one scope set. */
+function baseConfig(profile: string, scopes: string): string {
+	return `
+defaultProfile = "${profile}"
 
 [store]
 idle = 300
@@ -109,16 +110,20 @@ mode = "auto"
 batch = 6
 maxCallsPerHour = 120
 
-[profile.work]
-scopes = ["project:*"]
+[profile.${profile}]
+scopes = ${scopes}
 
-[profile.work.budget]
+[profile.${profile}.budget]
 here = 20
 directions = 10
 
 [scope_default]
 default = "user:notes"
 `;
+}
+
+/** One base configuration that sees the project scopes only. */
+const WORK_CONFIG = baseConfig("work", '["project:*"]');
 
 describe("@memlens/cli commands", () => {
 	it("writes, finds, and opens one note", async () => {
@@ -288,6 +293,7 @@ describe("@memlens/cli commands", () => {
 	it("exports one scope and imports it into another store", async () => {
 		const first = makeEnv();
 		await run(first, "note", "Move note", "--scope", "project:acme/x");
+		await run(first, "note", "Stay note", "--scope", "project:other/y");
 		const out = join(first.home, "out");
 		await run(
 			first,
@@ -302,6 +308,8 @@ describe("@memlens/cli commands", () => {
 		const copy = readFileSync(join(out, "project%3Aacme%2Fx.jsonl"), "utf8");
 		expect(copy).toContain('"format":1');
 		expect(copy).not.toContain('"pos"');
+		expect(copy).toContain("project:acme/x");
+		expect(copy).not.toContain("project:other/y");
 
 		const second = makeEnv();
 		const input = join(second.home, "in.jsonl");
@@ -424,30 +432,7 @@ describe("@memlens/cli commands", () => {
 	});
 
 	it("checks a healthy row store without changing its data", async () => {
-		const test = makeEnv(`
-defaultProfile = "default"
-
-[store]
-idle = 300
-
-[compaction]
-provider = "deepseek"
-model = "deepseek-chat"
-effort = "off"
-mode = "auto"
-batch = 6
-maxCallsPerHour = 120
-
-[profile.default]
-scopes = ["*"]
-
-[profile.default.budget]
-here = 20
-directions = 10
-
-[scope_default]
-default = "user:notes"
-`);
+		const test = makeEnv(baseConfig("default", '["*"]'));
 		await run(test, "note", "Check note", "--scope", "project:acme/x");
 		const clean = await run(test, "check");
 		expect(clean.code).toBe(0);

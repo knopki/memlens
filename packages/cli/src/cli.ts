@@ -4,22 +4,17 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Run one command line of the binary memlens and map the result to one exit code, so a
- * terminal session works with the memory without the harness.
+ *   terminal session works with the memory without the harness.
  * @scope
  *  - The dispatch of one command line, the usage text, and the exit code mapping.
  *  - NOT: the library logic, the command semantics, and the plugin surface.
  * @invariants
- *  - The binary has the name memlens and needs no harness.
- *  - The exit code marks the result: 0 a success, 1 an error of the data, 2 an error of the
- *    usage, 3 a refusal by a policy.
- *  - An unknown command or no command is an error of the usage.
- *  - A Data error and a CrossScopeSupersede error exit with 1. A Usage error exits with 2. A
- *    NotAllowed error exits with 3. Another error exits with 1.
- *  - A command that returns one CommandAnswer sets its own exit code, and the command check uses
- *    this for a store that fails its test.
+ *  - The binary must run without the harness.
+ *  - The exit code marks the result: 0 a success, 1 a data error, 2 a usage error, 3 a policy
+ *    refusal.
  * @usecases
  *  - Command: user => runs the binary => gets the usage text or a result
- * @dependencies USES API: @memlens/core, args.ts, commands.ts, compact.ts
+ * @dependencies USES API: @memlens/core, args.ts, commands.ts, command-*.ts, compact.ts, ui.ts
  * @keywords cli, terminal, memlens, dispatch, usage, exit code
  * #endregion moduleContract
  */
@@ -31,32 +26,31 @@ import { debuglog } from "node:util";
 import { MemlensError, NAME } from "@memlens/core";
 import type { ParsedArgs, UsageSpec } from "./args.js";
 import { parseArgs } from "./args.js";
-import type { CommandAnswer, CommandIo } from "./commands.js";
+import { checkCommand, repairCommand, statusCommand } from "./command-admin.js";
+import { configCommand } from "./command-config.js";
 import {
-	amendCommand,
-	checkCommand,
-	configCommand,
-	exportCommand,
 	findCommand,
-	forgetCommand,
-	importCommand,
-	noteCommand,
 	openCommand,
-	redactCommand,
-	repairCommand,
-	reviewCommand,
 	scopeCommand,
 	scopesCommand,
 	sliceCommand,
-	statusCommand,
-} from "./commands.js";
+} from "./command-read.js";
+import { exportCommand, importCommand } from "./command-transfer.js";
+import {
+	amendCommand,
+	forgetCommand,
+	noteCommand,
+	redactCommand,
+	reviewCommand,
+} from "./command-write.js";
+import type { CommandAnswer, CommandIo } from "./commands.js";
 import { compactCommand } from "./compact.js";
 import { uiCommand } from "./ui.js";
 
 const debug = debuglog("memlens:cli");
 
 /** The usage text of the binary. */
-export const USAGE = `Usage: ${NAME} <command> [flags]
+const USAGE = `Usage: ${NAME} <command> [flags]
 
   note <body> --scope key [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
   find <words> [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
@@ -175,13 +169,13 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 };
 
 // #region FUNC_main
-
 /**
  * Run one command line.
  *
  * @purpose Turn one command line into one exit code, so the binary has one testable entry.
  * @invariants The command runs with the environment of the process. A command error writes its
- * message to the error stream before the return.
+ *   message to the error stream before the return. An unknown command or no command is an error of
+ *   the usage. A command that returns one CommandAnswer sets its own exit code.
  */
 export async function main(
 	argv: readonly string[],
@@ -214,7 +208,6 @@ export async function main(
 		return code;
 	}
 }
-
 // #endregion FUNC_main
 
 function cliIo(io?: Partial<CommandIo>): CommandIo {

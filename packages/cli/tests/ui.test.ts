@@ -1,6 +1,6 @@
 /**
  * #region moduleContract
- * @purpose Verify console actions and the HTTP trust boundary against both persistent backends.
+ * @purpose Verify console actions and the HTTP trust boundary against the persistent backend.
  * @invariants Tests use temporary stores and ephemeral loopback ports.
  * #endregion moduleContract
  */
@@ -20,7 +20,7 @@ afterEach(async () => {
 
 // #region FUNC_fixture
 /** @purpose Open an isolated console with its own configuration and store. */
-async function fixture(backend: string, allowDelete = false, scopes = '["*"]') {
+async function fixture(allowDelete = false, scopes = '["*"]') {
 	const root = await mkdtemp(join(tmpdir(), "memlens-ui-"));
 	cleanups.push(() => rm(root, { recursive: true, force: true }));
 	const config = join(root, "config", "memlens");
@@ -56,9 +56,8 @@ async function fixture(backend: string, allowDelete = false, scopes = '["*"]') {
 // #endregion FUNC_fixture
 
 describe("console", () => {
-	const backend = "sqlite";
 	it("creates, amends, finds, reviews, supersedes, hides, and clears notes", async () => {
-		const { get, post } = await fixture(backend, true);
+		const { get, post } = await fixture(true);
 		expect(
 			(
 				await post({
@@ -106,7 +105,7 @@ describe("console", () => {
 	});
 
 	it("rejects foreign origins, invalid JSON, unlisted profiles, and disabled deletion", async () => {
-		const { host, post } = await fixture(backend);
+		const { host, post } = await fixture();
 		expect(
 			(
 				await fetch(`${host.url}/api/view`, {
@@ -134,7 +133,7 @@ describe("console", () => {
 	});
 
 	it("narrows the review lists of a view by the scope and the kind", async () => {
-		const { host, get, post } = await fixture(backend);
+		const { host, get, post } = await fixture();
 		await post({ action: "note", body: "task here", kind: "task" });
 		await post({ action: "note", body: "fact here", kind: "fact" });
 		await post({
@@ -155,7 +154,7 @@ describe("console", () => {
 	});
 
 	it("gives the two lines below one catalog range", async () => {
-		const { host, get, post } = await fixture(backend);
+		const { host, get, post } = await fixture();
 		await post({ action: "note", body: "alpha memory" });
 		await post({ action: "note", body: "beta memory", scope: "user:other" });
 		const lines = await get("/api/catalog?start=0&level=1");
@@ -171,7 +170,7 @@ describe("console", () => {
 	});
 
 	it("publishes proposal approval and dismissal together", async () => {
-		const { root, env, get, post } = await fixture(backend);
+		const { root, env, get, post } = await fixture();
 		const runtime = await openRuntime({
 			storeFlag: join(root, "store"),
 			env,
@@ -198,7 +197,7 @@ describe("console", () => {
 	});
 
 	it("approves a duplicate note through ordinary write rules", async () => {
-		const { root, env, get, post } = await fixture(backend);
+		const { root, env, get, post } = await fixture();
 		const runtime = await openRuntime({
 			storeFlag: join(root, "store"),
 			env,
@@ -236,11 +235,7 @@ describe("console", () => {
 	});
 
 	it("moves a note to another listed scope on amend", async () => {
-		const { get, post } = await fixture(
-			backend,
-			false,
-			'["user:*", "project:*"]',
-		);
+		const { get, post } = await fixture(false, '["user:*", "project:*"]');
 		await post({ action: "note", body: "movable", kind: "fact" });
 		const before = await get();
 		const target = `user:notes#${before.records[0].pos}`;
@@ -264,7 +259,7 @@ describe("console", () => {
 	});
 
 	it("changes the kind and the supersedes of a note from the console", async () => {
-		const { get, post } = await fixture(backend);
+		const { get, post } = await fixture();
 		await post({ action: "note", body: "first", kind: "note" });
 		await post({ action: "note", body: "second", kind: "note" });
 		const before = await get();
@@ -313,11 +308,7 @@ describe("console", () => {
 	});
 
 	it("shows a proposal of an unlisted scope and accepts it", async () => {
-		const { root, env, get, post } = await fixture(
-			backend,
-			false,
-			'["user:*"]',
-		);
+		const { root, env, get, post } = await fixture(false, '["user:*"]');
 		const runtime = await openRuntime({
 			storeFlag: join(root, "store"),
 			env,
@@ -351,7 +342,7 @@ describe("console", () => {
 	});
 
 	it("states a compaction job without a merge input", async () => {
-		const { post } = await fixture(backend);
+		const { post } = await fixture();
 		await post({ action: "note", body: "alone", kind: "fact" });
 		const job = await (await post({ action: "compact" })).json();
 		expect(job.inputs).toEqual([]);
@@ -359,7 +350,7 @@ describe("console", () => {
 	});
 
 	it("refuses catalog compaction because the catalog is derived", async () => {
-		const { post } = await fixture(backend);
+		const { post } = await fixture();
 		for (const scope of ["project:a", "project:b"]) {
 			await post({
 				action: "note",
@@ -374,7 +365,7 @@ describe("console", () => {
 	});
 
 	it("accepts large copied jobs and rejects bodies above the host limit", async () => {
-		const { root, env, post } = await fixture(backend);
+		const { root, env, post } = await fixture();
 		const runtime = await openRuntime({
 			storeFlag: join(root, "store"),
 			env,
@@ -415,7 +406,7 @@ describe("console", () => {
 	});
 
 	it("rejects stale compaction answers after an amendment", async () => {
-		const { get, post } = await fixture(backend);
+		const { get, post } = await fixture();
 		await post({ action: "note", body: `first ${"detail ".repeat(90)}` });
 		await post({ action: "note", body: `second ${"detail ".repeat(90)}` });
 		const job = await (await post({ action: "compact" })).json();

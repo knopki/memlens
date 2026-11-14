@@ -4,63 +4,39 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Give each exported scope one readable Markdown file with a safe filename, so a human
- * reads the memory outside the tool.
+ *   reads the memory outside the tool.
  * @scope
  *  - The scope filename encoding, the file header, and one section for each record.
- *  - NOT: an import of Markdown, node events, or the JSONL transfer format.
- * @invariants
- *  - The filename keeps ASCII lowercase letters, digits, underscore, and hyphen. Every other UTF-8
- *    byte becomes %HH with uppercase hexadecimal digits, and the name ends with .md. Distinct
- *    normalized scope keys give distinct filenames, and an encoded name holds no path separator.
- *  - The format is export-only. A rebuild gives the tree, so the export holds no node event.
- *  - Each file starts with the scope key and the format version. Each record is one section
- *    ## #<pos> with a YAML block and its body. A longform follows under ### longform.
- *  - The YAML block shows id, at, ts, kind, review_at, refs, and supersedes.
- *  - The export writes live records only. It writes no hidden, deleted, or cleared record, and it
- *    writes no placeholder text.
- *  - The same records give the same text. The exporter never truncates a name and never
- *    overwrites a different scope on a filename collision.
+ *  - NOT: an import of Markdown, node rows, or the JSONL transfer format.
+ * @invariants The format is export-only: a rebuild gives the tree, so the export holds no node row.
  * @usecases
  *  - Export: caller => gives one scope and its records => gets one Markdown text
- * @dependencies READS: MarkdownRecord
+ * @dependencies USES API: @memlens/core
  * @keywords export, markdown, md, filename, encoding, scope, record
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
-import type { ScopeKey } from "@memlens/core";
+import type { Note, ScopeKey } from "@memlens/core";
 
-interface MarkdownRecord {
-	readonly id: string;
-	readonly pos: number;
-	readonly state: "live" | "hidden" | "deleted";
-	readonly kind: string;
-	readonly review_at: string | null;
-	readonly ts: string;
-	readonly recorded_at?: string;
-	readonly created_at?: string;
-	readonly refs: readonly string[];
+/** One exported record: a note row and its supersede targets. */
+interface MarkdownRecord extends Note {
 	readonly supersedes?: readonly string[];
-	readonly longform: string | null;
-	readonly body: string;
-	readonly cleared?: boolean;
-	readonly content_cleared?: boolean;
 }
 
 const debug = debuglog("memlens:export-md");
 
 /** The format marker of the first block of each file. */
-export const MD_FORMAT = "memlens-md-1";
+const MD_FORMAT = "memlens-md-1";
 
 // #region FUNC_encodeScopeFilename
-
 /**
  * Encode one scope key into one safe filename stem.
  *
  * @purpose Map each normalized scope key to one distinct filename, so the export writes no path
- * outside the export directory.
+ *   outside the export directory.
  * @invariants The encoding keeps a-z, 0-9, underscore, and hyphen. Every other UTF-8 byte of the
- * key becomes %HH with uppercase digits.
+ *   key becomes %HH with uppercase digits, and the name ends with .md.
  */
 export function encodeScopeFilename(scope: ScopeKey): string {
 	const kept = /^[a-z0-9_-]+$/;
@@ -77,17 +53,17 @@ export function encodeScopeFilename(scope: ScopeKey): string {
 	debug("Scope name encoded", { event: "encode", scope, name });
 	return name;
 }
-
 // #endregion FUNC_encodeScopeFilename
 
 // #region FUNC_renderScopeMarkdown
-
 /**
  * Render one scope and its records as one Markdown text.
  *
  * @purpose Give the human view of one scope, so the export needs no store open.
  * @invariants The header holds the scope key and the format marker. The records appear in
- * position order.
+ *   position order. Each record is one section ## #<pos> with a YAML block and its body, and a
+ *   longform follows under ### longform. The render writes live records only, so it writes no
+ *   hidden, deleted, or cleared record. The same records give the same text.
  */
 export function renderScopeMarkdown(
 	scope: ScopeKey,
@@ -95,22 +71,18 @@ export function renderScopeMarkdown(
 ): string {
 	const head = `---\nscope: ${yamlScalar(scope)}\nformat: ${MD_FORMAT}\n---\n`;
 	const sections = records
-		.filter(
-			(record) =>
-				record.state === "live" && !record.cleared && !record.content_cleared,
-		)
+		.filter((record) => record.state === "live" && !record.cleared)
 		.map(renderRecord)
 		.join("\n");
 	debug("Scope rendered", { event: "render", scope, records: records.length });
 	return `${head}\n${sections}`;
 }
-
 // #endregion FUNC_renderScopeMarkdown
 
 function renderRecord(record: MarkdownRecord): string {
 	const block = [
 		`id: ${yamlScalar(record.id)}`,
-		`at: ${yamlScalar(record.recorded_at ?? record.created_at ?? record.ts)}`,
+		`at: ${yamlScalar(record.created_at)}`,
 		`ts: ${yamlScalar(record.ts)}`,
 		`kind: ${record.kind}`,
 		`review_at: ${record.review_at === null ? "null" : yamlScalar(record.review_at)}`,

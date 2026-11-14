@@ -1,3 +1,21 @@
+/**
+ * Compaction command.
+ *
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Start the tree build from the terminal and write one answer file, so the memory
+ *   compacts without the harness and without a model call.
+ * @scope
+ *  - The command compact, the copy and join publication, the answer parse, and the answer apply.
+ *  - NOT: the merge text rules of the library and the store transactions.
+ * @usecases
+ *  - Job: user => runs compact => gets the merge inputs of the dirty ranges
+ *  - Answer: user => gives one answer file => gets the built nodes
+ * @dependencies USES API: @memlens/core, commands.ts, runtime.ts; WRITES: the store directory
+ * @keywords compact, tree, merge, join, answer, node, cli
+ * #endregion moduleContract
+ */
+
 import { readFileSync } from "node:fs";
 import { debuglog } from "node:util";
 import type { BuildChild, BuildInput, ScopeKey } from "@memlens/core";
@@ -15,27 +33,28 @@ import {
 	readBuild,
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
-import { type CommandIo, countFlag, flagValue } from "./commands.js";
 import {
-	cliActiveScope,
-	loadCliBaseConfig,
-	openRuntime,
-	type Runtime,
-	runtimeVisibleScopes,
-} from "./runtime.js";
+	type CommandIo,
+	countFlag,
+	flagValue,
+	openCommandRuntime,
+} from "./commands.js";
+import { cliActiveScope, loadCliBaseConfig, type Runtime } from "./runtime.js";
 
 const debug = debuglog("memlens:compact");
 
 /** The result of one prepared compaction job. */
-export interface CompactJob {
+interface CompactJob {
 	/** The merge inputs of the job, in candidate order. */
 	readonly inputs: readonly BuildInput[];
+
 	/** The merge task text, with one block for each input. Empty when no input waits. */
 	readonly job: string;
+
 	/** The copy and join inputs that the projection held before the publication. */
 	readonly found: number;
-	/** The copies and joins that the store accepted. */
 	readonly published: number;
+
 	/** The joins that the store accepted. This count is part of the published count. */
 	readonly joined: number;
 }
@@ -99,26 +118,19 @@ async function compactRuntime(
 	io: CommandIo,
 	scope: ScopeKey,
 ): Promise<Runtime> {
-	const runtime = await openRuntime({
-		storeFlag: flagValue(args.flags, "store"),
-		profile: null,
-		env: io.env,
-	});
-	if (!runtimeVisibleScopes(runtime).includes(scope))
+	const runtime = await openCommandRuntime(args, io);
+	if (!runtime.scopes.includes(scope))
 		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
 	return runtime;
 }
 
 // #region FUNC_compactCommand
-
 /**
  * Give the next compaction job of one scope, or apply one answer file.
  *
- * @purpose Start the tree build from the terminal, so the memory compacts without the harness and
- * without a model call.
+ * @purpose Start the tree build from the terminal, so the memory compacts without a model call.
  * @invariants The flag --answer applies one answer file. With no --answer, the command publishes
- * each copy input and prints the job of the merge inputs. The flags --scope, --max, and --dry-run
- * apply to the job.
+ *   each copy input and prints the job of the merge inputs.
  */
 export async function compactCommand(
 	args: ParsedArgs,
@@ -134,19 +146,16 @@ export async function compactCommand(
 	debug("Compact done", { event: "end", scope });
 	return result;
 }
-
 // #endregion FUNC_compactCommand
 
 // #region FUNC_prepareCompact
-
 /**
  * Publish the copies and joins of one tree and give the merge inputs that remain.
  *
  * @purpose Let a terminal user and a console user start one job with one rule set.
  * @invariants Publish each copy input and each fitting join with no model call. A dry run writes
- * nothing. The publication rounds repeat until one round publishes nothing, so one run completes
- * each chain of joins. The merge inputs come from the projection after the last round, and the
- * limit applies after that read.
+ *   nothing. The merge inputs come from the projection after the last round. The rounds repeat
+ *   until a round publishes nothing, so one run completes each join chain.
  */
 export async function prepareCompact(
 	runtime: Runtime,
@@ -157,93 +166,102 @@ export async function prepareCompact(
 		readonly scopeKeys?: readonly ScopeKey[];
 	} = {},
 ): Promise<CompactJob> {
-	const dryRun = options.dryRun === true;
-	const max = options.max ?? 50;
-	const ready = () =>
-		candidates(runtime.store, scope).flatMap((range) => {
-			const result = buildInput(runtime.store, scope, range);
-			return result ? [{ range, result }] : [];
-		});
-	const first = ready();
-	let published = 0;
-	let joined = 0;
-	if (!dryRun) {
-		for (let round = 1; ; round += 1) {
-			let accepted = 0;
-			let roundJoins = 0;
-			for (const {
-				range,
-				result: { input, read },
-			} of ready()) {
-				const [left, right] = input.children;
-				const joinedLine = left && right ? joinBuild(input) : null;
-				if (joinedLine) {
-					const result = publishJoin(
-						runtime.store,
-						scope,
-						range.level,
-						range.start,
-						read,
-					);
-					if (result.ok) {
-						accepted += 1;
-						roundJoins += 1;
-					}
-				} else if (!left || !right) {
-					const line = copyBuild(input);
-					const result = publishNode(
-						runtime.store,
-						scope,
-						range.level,
-						range.start,
-						line.summary,
-						read,
-					);
-					if (result.ok) accepted += 1;
-				}
-			}
-			published += accepted;
-			joined += roundJoins;
-			debug("Mechanical round", {
-				event: "round",
-				round,
-				found: ready().length,
-				accepted,
-			});
-			if (!accepted) break;
-		}
-	}
+	const ready = () => readyInputs(runtime.store, scope);
+	const found = ready().length;
+	const { published, joined } =
+		options.dryRun === true
+			? { published: 0, joined: 0 }
+			: publishRounds(runtime.store, scope, ready);
 	const inputs = ready()
 		.filter(
 			({ result: { input } }) => input.children.filter(Boolean).length === 2,
 		)
 		.map(({ result: { input } }) => input)
-		.slice(0, max);
+		.slice(0, options.max ?? 50);
 	return {
 		inputs,
 		job: inputs.length
-			? batchTask(NODE_TARGET, inputs, options.scopeKeys).replace(
-					/<input id="(#[^"]+)">/g,
-					"$1",
-				)
+			? unwrapIds(batchTask(NODE_TARGET, inputs, options.scopeKeys))
 			: "",
-		found: first.length,
+		found,
 		published,
 		joined,
 	};
 }
-
 // #endregion FUNC_prepareCompact
 
-// #region FUNC_compactJob
+/** Each candidate range of one scope with its current build input. */
+function readyInputs(store: Runtime["store"], scope: ScopeKey) {
+	return candidates(store, scope).flatMap((range) => {
+		const result = buildInput(store, scope, range);
+		return result ? [{ range, result }] : [];
+	});
+}
 
+/** Publish each fitting join and copy in rounds until one round publishes nothing. */
+function publishRounds(
+	store: Runtime["store"],
+	scope: ScopeKey,
+	ready: () => ReturnType<typeof readyInputs>,
+): { readonly published: number; readonly joined: number } {
+	let published = 0;
+	let joined = 0;
+	for (let round = 1; ; round += 1) {
+		const pending = ready();
+		let accepted = 0;
+		let roundJoins = 0;
+		for (const {
+			range,
+			result: { input, read },
+		} of pending) {
+			const [left, right] = input.children;
+			const joinedLine = left && right ? joinBuild(input) : null;
+			if (joinedLine) {
+				if (publishJoin(store, scope, range.level, range.start, read).ok) {
+					accepted += 1;
+					roundJoins += 1;
+				}
+			} else if (!left || !right) {
+				const line = copyBuild(input);
+				if (
+					publishNode(
+						store,
+						scope,
+						range.level,
+						range.start,
+						line.summary,
+						read,
+					).ok
+				)
+					accepted += 1;
+			}
+		}
+		published += accepted;
+		joined += roundJoins;
+		debug("Mechanical round", {
+			event: "round",
+			round,
+			found: pending.length,
+			accepted,
+		});
+		if (!accepted) break;
+	}
+	return { published, joined };
+}
+
+/** Strip the input block tags from one batch task, so the job reads as plain text. */
+function unwrapIds(text: string): string {
+	return text.replace(/<input id="(#[^"]+)">/g, "$1");
+}
+
+// #region FUNC_compactJob
 /**
  * Print the job of the merge inputs.
  *
  * @purpose Give a human or an agent the exact merge tasks of the dirty ranges, so the answers
- * need no model.
+ *   need no model.
  * @invariants The command publishes no copy with --dry-run. The job lists at most --max merge
- * inputs from the projection after the copy publication.
+ *   inputs.
  */
 async function compactJob(
 	args: ParsedArgs,
@@ -267,7 +285,7 @@ async function compactJob(
 			? [
 					`Then run: memlens compact --answer <path> --scope ${scope}`,
 					"",
-					job.job.replace(/<input id="(#[^"]+)">/g, "$1"),
+					job.job,
 				].join("\n")
 			: "no merge inputs";
 		debug("Job listed", { event: "job", merges: job.inputs.length });
@@ -276,7 +294,6 @@ async function compactJob(
 		await runtime.close();
 	}
 }
-
 // #endregion FUNC_compactJob
 
 /** @purpose Render one build input with sorted keys, so an input check ignores the field order. */
@@ -293,18 +310,16 @@ function canonical(value: unknown): string {
 }
 
 // #region FUNC_applyAnswers
-
 /**
- * Write one answer for each range into the store as node events.
+ * Write one answer for each range into the store as node rows.
  *
  * @purpose Turn the answers of a job into built nodes through one rule set for both hosts.
  * @invariants An empty answer gives a Data error. The store checks the exact input under the write
- * lock, and a changed input counts as rejected with its address. The shrink check applies to no answer.
+ *   lock, and a changed input counts as rejected with its address.
  */
 export async function applyAnswers(
 	runtime: Runtime,
 	scope: ScopeKey,
-	_tree: unknown,
 	answers: readonly Answer[],
 	copied: readonly BuildInput[] | null = null,
 ): Promise<{ readonly built: number; readonly rejected: readonly string[] }> {
@@ -342,17 +357,15 @@ export async function applyAnswers(
 	});
 	return { built, rejected };
 }
-
 // #endregion FUNC_applyAnswers
 
 // #region FUNC_compactAnswer
-
 /**
- * Apply one answer file as node events.
+ * Apply one answer file as node rows.
  *
  * @purpose Write the answers of a job into the store, so the tree holds the built nodes.
  * @invariants Each answer names one aligned range with "#a-b: text". A rejected answer counts and
- * stays for the next job.
+ *   stays for the next job.
  */
 async function compactAnswer(
 	args: ParsedArgs,
@@ -363,12 +376,7 @@ async function compactAnswer(
 	const runtime = await compactRuntime(args, io, scope);
 	try {
 		const answers = parseAnswerFile(answerPath);
-		const { built, rejected } = await applyAnswers(
-			runtime,
-			scope,
-			null,
-			answers,
-		);
+		const { built, rejected } = await applyAnswers(runtime, scope, answers);
 		const hint =
 			rejected.length > 0
 				? `\nrun memlens compact again for the rejected ranges: ${rejected.join(", ")}`
@@ -378,7 +386,6 @@ async function compactAnswer(
 		await runtime.close();
 	}
 }
-
 // #endregion FUNC_compactAnswer
 
 /** One parsed answer line: the range, its address, and the answer text. */
@@ -389,11 +396,10 @@ export interface Answer {
 }
 
 // #region FUNC_parseAnswers
-
 /**
  * @purpose Turn answer lines into aligned ranges for both hosts.
  * @invariants Each line needs the form "#a-b: text", and the range must be aligned at its level.
- * A duplicate address gives an error.
+ *   A duplicate address gives an error.
  */
 export function parseAnswers(text: string): readonly Answer[] {
 	const answers: Answer[] = [];
@@ -429,7 +435,6 @@ export function parseAnswers(text: string): readonly Answer[] {
 		throw new MemlensError("Data", "The answer holds no line.");
 	return answers;
 }
-
 // #endregion FUNC_parseAnswers
 
 /** Read one answer file and check the form of each line. */
