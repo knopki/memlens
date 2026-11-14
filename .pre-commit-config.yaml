@@ -13,6 +13,13 @@ repos:
         language: system
         types_or: [ts, tsx, json]
 
+      - id: regions
+        name: region layout
+        entry: node scripts/check-regions.mjs
+        language: system
+        types_or: [ts]
+        pass_filenames: false
+
       - id: ste-lint
         name: ste lint
         entry: pnpm run lint:docs

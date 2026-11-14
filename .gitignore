@@ -31,3 +31,6 @@ __pycache__/
 # Logs / temp
 *.log
 tmp/
+
+# pnpm store inside the repository
+.pnpm-store/
