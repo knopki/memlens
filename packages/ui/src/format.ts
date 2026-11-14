@@ -1,19 +1,16 @@
 /**
  * #region moduleContract
- * @purpose Turn the store positions, ranges, and times into the short text of a console line.
- * Each screen names one target in the same way.
- * @scope The record address, the range id, the parsed range, the line text, the date span, and the
- * kind name. NOT: the markup and the store reads.
+ * @purpose Turn the store positions and ranges into the short text of a console line, so both
+ * console shells and the model name one target in the same way.
+ * @scope The record address, the range id, the parsed range, the line text, and the date span. NOT:
+ * the markup, the store reads, the state, and the localised kind name.
  * @invariants A range id holds the start and the end of the range.
- * @dependencies USES TYPE: the tree types and the note kinds.
- * @keywords address, range, line, text, date, kind
+ * @dependencies USES TYPE: the tree types.
+ * @keywords address, range, line, text
  * #endregion moduleContract
  */
 
-import type { NoteKind } from "../../core/src/types/primitives.js";
 import type { Range, SliceLine } from "../../core/src/types/tree.js";
-import { KIND_KEYS, type Table } from "./i18n.js";
-import { tr } from "./state.js";
 
 export const address = (record: { scope: string; pos: number }) =>
 	`${record.scope}#${record.pos}`;
@@ -52,6 +49,3 @@ export function lineText(line: SliceLine): string {
 			: line.text;
 }
 // #endregion FUNC_lineText
-
-export const kindName = (kind: NoteKind | "unavailable") =>
-	kind === "unavailable" ? tr("none") : tr(KIND_KEYS[kind] as keyof Table);

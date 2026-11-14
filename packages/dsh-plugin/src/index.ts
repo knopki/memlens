@@ -15,6 +15,7 @@ import { isAgentLoopRequest } from "@deepseek-ai/dsh-llm";
 import type {} from "@deepseek-ai/dsh-workspace";
 import { MemlensError, type PatchConfig, parseDuration } from "@memlens/core";
 import { PatchConfigSchema } from "./config.js";
+import { registerConsole } from "./console/http.js";
 import { registerMemoryContext } from "./memory-context.js";
 import { registerMemoryTools } from "./memory-tools.js";
 import { registerMemoryNudge } from "./nudge.js";
@@ -94,6 +95,7 @@ export function apply(ctx: Context, config: Config = {}): void {
 		},
 		ctx.llm,
 	);
+	const consoleRoute = registerConsole(ctx, memlens, worker);
 	const checked = new WeakMap<Agent, string>();
 	const disabled = (agent: Agent) =>
 		agent.session.header.origin === "subagent" &&
@@ -135,6 +137,12 @@ export function apply(ctx: Context, config: Config = {}): void {
 	ctx.on("tools/result", (exec) => {
 		worker.onMemoryTool(exec.name);
 	});
+	ctx.effect(
+		() => () => {
+			void consoleRoute();
+		},
+		"memlens: console route",
+	);
 	ctx.on("llm/stream", async function* (options, next) {
 		if (isAgentLoopRequest(options) && options.sessionId !== undefined) {
 			const agent = ctx.get("agents")?.get(options.sessionId);

@@ -117,6 +117,18 @@ export const ru: Table = {
 	waits: "ждёт второго ребёнка",
 	nodesByLevel: "Узлы по уровням",
 	compaction: "Уплотнение",
+	// The host runtime state.
+	runtime: "Среда хоста",
+	materializedAt: "Время сборки снимка",
+	nextTrigger: "Следующее обновление",
+	snapshotSaved: "Снимок сохранён",
+	savedState: "сохранён",
+	unsavedState: "не сохранён",
+	attempts: "Попытки уплотнения",
+	activeBuilds: "Активные сборки",
+	backoff: "Время ожидания",
+	seconds: "{count} с",
+	failures: "Ошибки уплотнения",
 	prepareScope: "Задание по области",
 	noInputs:
 		"Нет входов на слияние. Каждый грязный диапазон ждёт второго ребёнка.",

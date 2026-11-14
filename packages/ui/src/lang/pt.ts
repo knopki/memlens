@@ -119,6 +119,18 @@ export const pt: Table = {
 	waits: "aguarda o segundo filho",
 	nodesByLevel: "Nós por nível",
 	compaction: "Compactação",
+	// The host runtime state.
+	runtime: "Runtime do host",
+	materializedAt: "Hora de construção do resumo",
+	nextTrigger: "Próxima atualização",
+	snapshotSaved: "Resumo guardado",
+	savedState: "guardado",
+	unsavedState: "não guardado",
+	attempts: "Tentativas de compactação",
+	activeBuilds: "Execuções ativas",
+	backoff: "Tempo de espera",
+	seconds: "{count} s",
+	failures: "Falhas de compactação",
 	prepareScope: "Preparar tarefa de escopo",
 	noInputs:
 		"Sem dados para mesclar. Cada intervalo pendente aguarda o segundo filho.",
