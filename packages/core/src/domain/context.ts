@@ -1,24 +1,12 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Assemble the memory context text from the store rows, so a session reads one stable map.
  * @scope The template, the policy text, the direction and frontier lines, and the view epoch.
  * NOT: the nudge, the harness registration, snapshot persistence, and refresh triggers.
  * @invariants
  * - The text is a pure function of its inputs: the same rows and scopes give the same
  * text, and a process restart gives the same text.
- * - The template holds the how-to, directions, and here parts, and each part holds its guide line
- * before the content.
- * - A direction line is [<key>] <age> <summary>. The age is the idle time of the newest live write
- * of the scope in whole days, and less than one day gives 0d. Older scopes outside the budget join
- * into one comma list of keys, before the budgeted lines. A scope with no live note gives no line.
- * - A direction line takes the top line of its scope: the summary of a valid top node, or the
- * temporary text of the same range, or a head without text when the range holds no live note.
- * - A here leaf line is #<pos> <YYYY-MM-DD> <body>. A node line is #<a>-<b> <start>..<end>
- * <summary>. A temporary line holds the span and the text assembled from the children.
- * - The here budget limits the here lines, and the directions set already holds its budget.
- * - customPrompt replaces the whole template and keeps each placeholder. customPromptAppend fills
- * {{append}}. A missing append leaves an empty line.
- * - The epoch derives from the store clock only. A change of the clock changes the epoch.
  * - The text names no review date and no catalog key.
  * @dependencies
  * USES API: store/view.ts (sliceOf, topLineOf, textOfLine)
@@ -31,9 +19,9 @@ import { debuglog } from "node:util";
 import type { DirectionLine } from "../store/reads.js";
 import type { View } from "../store/view.js";
 import { sliceOf } from "../store/view.js";
-import type { IsoTime, ScopeKey } from "../types/events.js";
+import type { IsoTime, ScopeKey } from "../types/primitives.js";
 import type { Lines, SliceLine } from "../types/tree.js";
-import { dateSpan } from "./time.js";
+import { dateSpan } from "./date-span.js";
 
 const debug = debuglog("memlens:context");
 
@@ -77,21 +65,17 @@ The frontier of the active scope: one line for each range, from the oldest to th
 </here>
 </memory>`;
 
-/** One scope of the profile, as the directions block names it. */
-export interface DirectionScope {
-	readonly key: ScopeKey;
-	/** The latest write time of a live note of the scope. */
-	readonly lastWrite: string;
-}
-
 /** The inputs of one context render from the store rows. */
 export interface ContextInput {
 	readonly scope: ScopeKey;
+
 	/** The rows of the active scope. */
 	readonly here: View;
 	readonly hereBudget: Lines;
+
 	/** The budgeted scopes, from the oldest to the newest, with their top line text. */
 	readonly directions: readonly DirectionLine[];
+
 	/** The older scopes outside the budget, from the newest to the oldest. */
 	readonly older: readonly ScopeKey[];
 	readonly now: IsoTime;
@@ -102,7 +86,6 @@ export interface ContextInput {
 }
 
 // #region FUNC_hereLines
-
 /**
  * @purpose Render the frontier lines of the active scope from its rows.
  * @invariants A leaf gives #<pos> <YYYY-MM-DD> <body>. A node gives #<a>-<b> <start>..<end> <summary>,
@@ -114,7 +97,6 @@ export function hereLines(view: View, budget: Lines): string {
 	debug("Frontier rendered", { budget, chars: text.length });
 	return text;
 }
-
 // #endregion FUNC_hereLines
 
 /** @purpose Render one here line of a slice line. */
@@ -145,12 +127,13 @@ function ageSpan(days: readonly number[]): string {
 }
 
 // #region FUNC_directionLines
-
 /**
  * @purpose Render the directions block: the older scopes, then the budgeted scopes, oldest first.
  * @invariants Each budgeted scope gives one line [<key>] <age> <text>. A null text leaves the head.
  * The older scopes join into one comma list of keys before the budgeted lines.
  * An empty list gives an empty block.
+ * @invariants The age is the idle time of the newest live write of the scope in whole days, and
+ * less than one day gives 0d. A scope with no live note gives no line.
  */
 export function directionLines(
 	lines: readonly DirectionLine[],
@@ -175,31 +158,26 @@ export function directionLines(
 	});
 	return block;
 }
-
 // #endregion FUNC_directionLines
 
 // #region FUNC_renderContext
-
 /**
  * @purpose Fill the context template with the policy and the two rendered parts.
  * @invariants customPrompt replaces the template and keeps each placeholder. customPromptAppend
  * fills {{append}} before the append value. The render calls no model and waits for no compaction.
+ * @invariants The template holds the how-to, directions, and here parts, and each part holds its
+ * guide line before the content.
+ * @invariants The here budget limits the here lines, and the directions set already holds its budget.
  */
 export function renderContext(input: ContextInput): string {
-	const text = renderViewContext(input);
-	debug("Context rendered", { scope: input.scope, chars: text.length });
-	return text;
-}
-
-// #endregion FUNC_renderContext
-
-/** @purpose Fill the template from the rows of the active scope. */
-function renderViewContext(input: ContextInput): string {
-	return fillTemplate(input, {
+	const text = fillTemplate(input, {
 		directions: directionLines(input.directions, input.older, input.now),
 		here: hereLines(input.here, input.hereBudget),
 	});
+	debug("Context rendered", { scope: input.scope, chars: text.length });
+	return text;
 }
+// #endregion FUNC_renderContext
 
 /** @purpose Replace each template placeholder with one value of the render. */
 function fillTemplate(
@@ -215,7 +193,6 @@ function fillTemplate(
 }
 
 // #region FUNC_epoch
-
 /**
  * @purpose Derive the context epoch from the store clock into one view cache key.
  * @invariants The epoch changes when the clock changes. The hash keeps the key short.
@@ -228,5 +205,4 @@ export function epoch(storeRev: string): string {
 	}
 	return hash.toString(16);
 }
-
 // #endregion FUNC_epoch

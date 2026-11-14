@@ -39,7 +39,7 @@ describe("splitBody", () => {
 
 	it("moves overflow into longform, ending on a word boundary", () => {
 		const prefix = "a ".repeat(255); // 510 chars, all within limit if no word breaks
-		const body = prefix + "extra overflow words";
+		const body = `${prefix}extra overflow words`;
 		const result = splitBody(body, null);
 		expect(result.body.length).toBeLessThanOrEqual(BODY_HARD_LIMIT);
 		// The body must end on a whole word
@@ -68,7 +68,7 @@ describe("splitBody", () => {
 	});
 
 	it("rejects 513 characters by moving overflow", () => {
-		const body = "a ".repeat(256) + "x"; // 513 chars
+		const body = `${"a ".repeat(256)}x`; // 513 chars
 		const result = splitBody(body, null);
 		expect(result.body.length).toBeLessThanOrEqual(BODY_HARD_LIMIT);
 		expect(result.longform).toBeTruthy();

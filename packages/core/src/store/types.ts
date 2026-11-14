@@ -1,15 +1,15 @@
 /**
  * #region moduleContract
- * @purpose Define the row shapes and the store port for one SQLite-backed memory.
+ * @modulecontract
+ * @purpose Define the row shapes of one SQLite-backed memory, so each module names one shape.
  * @scope Notes, nodes, proposals, and their field groups. NOT: SQL, locks, and files.
- * @invariants A note has id, scope, slot, state, kind, body, ts, and three versions.
  * @invariants A node covers the slot range `[start, start + 2^level)` of one scope.
- * @dependencies types/events.ts for Ulid and NoteKind.
+ * @dependencies types/primitives.ts for Ulid and NoteKind.
  * @keywords note, node, proposal, scope, slot, state, version
  * #endregion moduleContract
  */
 
-import type { NoteKind, ScopeKey, Ulid } from "../types/events.js";
+import type { NoteKind, ScopeKey, Ulid } from "../types/primitives.js";
 
 /** The lifecycle state. It never moves backwards. */
 export type NoteState = "live" | "hidden" | "deleted";
@@ -21,6 +21,7 @@ export type ProposalStatus = "open" | "accepted" | "dismissed" | "expired";
 export interface Note {
 	readonly id: Ulid;
 	readonly scope: ScopeKey;
+
 	/** The slot: the rank of the note in the `(ts, id)` order of its scope. */
 	readonly pos: number;
 	readonly state: NoteState;
@@ -30,6 +31,7 @@ export interface Note {
 	readonly longform: string | null;
 	readonly refs: readonly string[];
 	readonly superseded_by: Ulid | null;
+
 	/** The content date. It never changes. */
 	readonly ts: string;
 	readonly created_at: string;
@@ -53,6 +55,7 @@ export interface Node {
 	readonly ts_from: string;
 	readonly ts_to: string;
 	readonly built_v: string;
+
 	/** The validity key of the left half. Null means that half holds no live note. */
 	readonly a_key: string | null;
 	readonly b_key: string | null;

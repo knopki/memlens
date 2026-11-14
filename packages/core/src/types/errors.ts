@@ -7,9 +7,6 @@
  * @scope
  *  - The error codes and the MemlensError class.
  *  - NOT: error handling of the store backends, OS errors, or model errors.
- * @invariants
- *  - An error carries code and message.
- *  - The code is one of the named values in ErrorCode.
  * @keywords errors, ErrorCode, NotAllowed, CrossScopeSupersede, Usage, Data
  * #endregion moduleContract
  */
@@ -30,7 +27,6 @@ const debug = debuglog("memlens:errors");
 export type ErrorCode = "NotAllowed" | "CrossScopeSupersede" | "Usage" | "Data";
 
 // #region CLASS_MemlensError
-
 /**
  * @purpose Carry a code and a message so the CLI can map errors to exit codes.
  * @invariants Preserve the supplied code and message. The error name is MemlensError.
@@ -45,5 +41,4 @@ export class MemlensError extends Error {
 		debug("Error created", { code, message });
 	}
 }
-
 // #endregion CLASS_MemlensError

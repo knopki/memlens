@@ -8,9 +8,6 @@
  *  - Body limit (512 chars), declared size (384 chars), longform limit (16 384 chars).
  *  - Whitespace normalization of the body.
  *  - Overflow: text above the body limit moves into the longform.
- * @invariants
- *  - The declared body size is 384 characters. The accepted body limit is 512 characters.
- *  - The longform has at most 16 384 characters. Excess content causes a Data error.
  * @keywords body, longform, limit, normalize, overflow
  * #endregion moduleContract
  */
@@ -21,11 +18,10 @@ import { MemlensError } from "../types/errors.js";
 const debug = debuglog("memlens:note-body");
 
 export const BODY_HARD_LIMIT = 512;
-export const BODY_DECLARED_SIZE = 384;
+
 export const LONGFORM_LIMIT = 16_384;
 
 // #region FUNC_normalizeBody
-
 /**
  * @purpose Trim the ends of the body and collapse runs of spaces to one space.
  * @invariants The result has no leading or trailing whitespace. Each run of spaces or tabs becomes one space.
@@ -39,11 +35,9 @@ export function normalizeBody(raw: string): string {
 	});
 	return result;
 }
-
 // #endregion FUNC_normalizeBody
 
 // #region FUNC_splitBody
-
 /**
  * @purpose Keep the body within its limit without losing excess content.
  * @invariants The body has at most 512 characters. Move excess text before the existing longform.
@@ -70,17 +64,15 @@ export function splitBody(
 		return { body, longform: existingLongform };
 	}
 
-	// Find the last word boundary at or before the limit
 	let cutAt = BODY_HARD_LIMIT;
 	while (cutAt > 0 && body[cutAt] !== " ") {
 		cutAt--;
 	}
-	// If no space found, cut hard at the limit
 	if (cutAt === 0) cutAt = BODY_HARD_LIMIT;
 
 	const keptBody = body.slice(0, cutAt).trimEnd();
 	const overflow = body.slice(cutAt).trimStart();
-	const combined = overflow + (existingLongform ? "\n" + existingLongform : "");
+	const combined = `${overflow}${existingLongform ? `\n${existingLongform}` : ""}`;
 	if (combined.length > LONGFORM_LIMIT) {
 		debug("Longform rejected", {
 			event: "too_long",
@@ -99,5 +91,4 @@ export function splitBody(
 	});
 	return { body: keptBody, longform };
 }
-
 // #endregion FUNC_splitBody

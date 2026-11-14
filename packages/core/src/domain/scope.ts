@@ -5,19 +5,19 @@
  * @modulecontract
  * @purpose Validate and normalize scope keys, so the store writes no invalid or inconsistent key.
  * @scope
- *  - Scope key validation, lowercase normalization, and catalog key helpers.
+ *  - Scope key validation, lowercase normalization, and the hidden key prefix.
  *  - NOT: configuration, profile filtering, or storage.
  * @invariants
- *  - A valid scope key has two segments separated by a colon.
- *  - Each segment starts with a lowercase letter or digit.
- *  - Each segment holds lowercase letters, digits, period, underscore, slash, and hyphen.
+ *  - A valid scope key has two segments separated by a colon, and each segment starts with a
+ *    lowercase letter or digit.
+ *  - The rest of a segment holds lowercase letters, digits, period, underscore, slash, and hyphen.
  *  - Validation checks the supplied key without normalization.
  * @keywords scope, key, validate, normalize, segment
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
-import type { ScopeKey } from "../types/events.js";
+import type { ScopeKey } from "../types/primitives.js";
 
 const debug = debuglog("memlens:scope");
 
@@ -28,7 +28,6 @@ export const CATALOG_PREFIX = "__catalog__:";
 const SEGMENT_RE = /^[a-z0-9][a-z0-9._/-]*$/;
 
 // #region FUNC_normalizeScopeKey
-
 /**
  * @purpose Normalize a scope key to lowercase before writing, so a wrong case does not create a new scope.
  * @param raw - The scope key as supplied by the caller.
@@ -39,11 +38,9 @@ export function normalizeScopeKey(raw: string): string {
 	debug("Scope key normalized", { event: "normalize", raw, result });
 	return result;
 }
-
 // #endregion FUNC_normalizeScopeKey
 
 // #region FUNC_validateScopeKey
-
 /**
  * @purpose Reject a key that does not match the scope grammar, so no invalid key enters the store.
  * @param key - The normalized scope key.
@@ -65,15 +62,15 @@ export function validateScopeKey(key: string): key is ScopeKey {
 	debug("Scope key validated", { event: "validate", key, result });
 	return result;
 }
-
 // #endregion FUNC_validateScopeKey
 
-/** Check whether a key is a hidden catalog key. */
+// #region FUNC_isCatalogKey
+/**
+ * @purpose Keep a hidden key out of the view, so the agent names the scopes of its profile only.
+ * @param key - The scope key to test.
+ * @returns True when the key carries the hidden prefix.
+ */
 export function isCatalogKey(key: ScopeKey): boolean {
 	return key.startsWith(CATALOG_PREFIX);
 }
-
-/** Build the catalog scope key for a profile. */
-export function catalogKey(profile: string): ScopeKey {
-	return `${CATALOG_PREFIX}${profile}`;
-}
+// #endregion FUNC_isCatalogKey

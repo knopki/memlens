@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Prove the proposal lifecycle and the repair checks under the real SQLite engine.
  * @scope The open row, the expiry, the sweep, the accept rollback, the dismiss, and each repair action.
  * @scope NOT: the note write path or the node build.
@@ -26,6 +27,7 @@ import { Store } from "../src/store/store.js";
 import { MemlensError } from "../src/types/errors.js";
 
 const dirs: string[] = [];
+
 const stores: Store[] = [];
 
 afterAll(() => {
@@ -349,6 +351,23 @@ describe("repair", () => {
 				"INSERT INTO nodes (scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key) VALUES ('p:x', 1, 0, 'old summary', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'build1', 'v1|hidden', NULL)",
 			)
 			.run();
+		assert.deepEqual(check(store), ["delete 1 empty node rows"]);
+		assert.equal(rows(store, "nodes"), 0);
+	});
+
+	it("reports the planned action and changes no row in a dry run", () => {
+		const store = open();
+		addNote(store, "01NOTEDRYRUN", "dry text", "hidden");
+		store
+			.handle()
+			.prepare(
+				"INSERT INTO nodes (scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key) VALUES ('p:x', 1, 0, 'old summary', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'build1', 'v1|hidden', NULL)",
+			)
+			.run();
+		assert.deepEqual(check(store, { dryRun: true }), [
+			"delete 1 empty node rows",
+		]);
+		assert.equal(rows(store, "nodes"), 1);
 		assert.deepEqual(check(store), ["delete 1 empty node rows"]);
 		assert.equal(rows(store, "nodes"), 0);
 	});

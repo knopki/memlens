@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Create and open the one database that holds the memory.
  * @scope Pragmas, the schema, the schema version, and the meta rows. NOT: reads and writes.
  * @invariants Every connection sets secure_delete, busy_timeout, and temp_store.
@@ -20,89 +21,13 @@ const debug = debuglog("memlens:schema");
 /** The schema version of this build. */
 export const SCHEMA_VERSION = 2;
 
-/** The table names of the schema. The check command compares this list with the database. */
-export const TABLES = [
-	"meta",
-	"notes",
-	"nodes",
-	"proposals",
-	"journal",
-	"fts",
-] as const;
-
 const TOKENIZERS: Record<string, string> = {
 	zh: "trigram",
 	ja: "trigram",
 };
 
-// #region FUNC_tokenizerOf
-
-/** @purpose Name the FTS5 tokenizer of a language. Only zh and ja use trigram. */
-export function tokenizerOf(language: string): string {
-	return TOKENIZERS[language] ?? "porter unicode61 remove_diacritics 1";
-}
-
-// #endregion FUNC_tokenizerOf
-
-// #region FUNC_openDatabase
-
-/**
- * @purpose Open one database file with the required settings and the schema.
- * @invariants The open refuses an old event-store database and names the action.
- * @invariants The schema and the meta rows are ready before the caller reads.
- */
-export function openDatabase(path: string, language: string): DatabaseSync {
-	const db = new DatabaseSync(path);
-	try {
-		db.exec(
-			"PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON; PRAGMA busy_timeout = 5000; PRAGMA temp_store = MEMORY;",
-		);
-		if (legacy(db))
-			throw new MemlensError(
-				"Data",
-				"This store holds an event log. Move the store directory away and start a new store.",
-			);
-		db.exec("BEGIN IMMEDIATE");
-		try {
-			create(db, language);
-			db.exec("COMMIT");
-		} catch (error) {
-			db.exec("ROLLBACK");
-			throw error;
-		}
-		debug("Store open", {
-			event: "open",
-			version: SCHEMA_VERSION,
-			language,
-		});
-		return db;
-	} catch (error) {
-		db.close();
-		throw error;
-	}
-}
-
-// #endregion FUNC_openDatabase
-
-/** @purpose Refuse a database that holds the event store of the earlier schema. */
-function legacy(db: DatabaseSync): boolean {
-	const row = db
-		.prepare(
-			"SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('events', 'state')",
-		)
-		.get();
-	return row !== undefined;
-}
-
-// #region FUNC_create
-
-/**
- * @purpose Create each table and seed the meta rows of a new or an open database.
- * @invariants The call is idempotent, so a later open keeps each stored value.
- */
-export function create(db: DatabaseSync, language: string): void {
-	const tokenizer = tokenizerOf(language);
-	db.exec(`
+/** The schema text. The tokenizer placeholder is replaced at open. */
+const SCHEMA_SQL = `
 		CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;
 		CREATE TABLE IF NOT EXISTS notes (
 			n             INTEGER PRIMARY KEY,
@@ -168,10 +93,81 @@ export function create(db: DatabaseSync, language: string): void {
 		CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(
 			body, longform,
 			content = 'notes', content_rowid = 'n',
-			tokenize = '${tokenizer}'
+			tokenize = '{tokenizer}'
 		);
 		INSERT INTO fts(fts, rank) VALUES ('secure-delete', 1);
-	`);
+	`;
+
+// #region FUNC_tokenizerOf
+/** @purpose Name the FTS5 tokenizer of a language. Only zh and ja use trigram. */
+function tokenizerOf(language: string): string {
+	return TOKENIZERS[language] ?? "porter unicode61 remove_diacritics 1";
+}
+// #endregion FUNC_tokenizerOf
+
+// #region FUNC_openDatabase
+/**
+ * @purpose Open one database file with the required settings and the schema.
+ * @invariants The open refuses an old event-store database and names the action.
+ * @invariants The schema and the meta rows are ready before the caller reads.
+ */
+export function openDatabase(path: string, language: string): DatabaseSync {
+	const db = new DatabaseSync(path);
+	try {
+		db.exec(
+			"PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON; PRAGMA busy_timeout = 5000; PRAGMA temp_store = MEMORY;",
+		);
+		if (legacy(db))
+			throw new MemlensError(
+				"Data",
+				"This store holds an event log. Move the store directory away and start a new store.",
+			);
+		db.exec("BEGIN IMMEDIATE");
+		try {
+			create(db, language);
+			db.exec("COMMIT");
+		} catch (error) {
+			db.exec("ROLLBACK");
+			throw error;
+		}
+		debug("Store open", {
+			event: "open",
+			version: SCHEMA_VERSION,
+			language,
+		});
+		return db;
+	} catch (error) {
+		db.close();
+		throw error;
+	}
+}
+// #endregion FUNC_openDatabase
+
+/** @purpose Refuse a database that holds the event store of the earlier schema. */
+function legacy(db: DatabaseSync): boolean {
+	const row = db
+		.prepare(
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('events', 'state')",
+		)
+		.get();
+	return row !== undefined;
+}
+
+// #region FUNC_create
+/**
+ * @purpose Create each table and seed the meta rows of a new or an open database.
+ * @invariants The call is idempotent, so a later open keeps each stored value.
+ */
+export function create(db: DatabaseSync, language: string): void {
+	const tokenizer = tokenizerOf(language);
+	db.exec(SCHEMA_SQL.replace("{tokenizer}", tokenizer));
+	seedMeta(db, tokenizer);
+	debug("Schema ready", { event: "create", tokenizer });
+}
+// #endregion FUNC_create
+
+/** @purpose Seed the rows that name the schema, the store, and the index. */
+function seedMeta(db: DatabaseSync, tokenizer: string): void {
 	const meta = db.prepare(
 		"INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)",
 	);
@@ -181,7 +177,4 @@ export function create(db: DatabaseSync, language: string): void {
 		.prepare("SELECT value FROM meta WHERE key = 'fts_tokenizer'")
 		.get();
 	if (row === undefined) meta.run("fts_tokenizer", tokenizer);
-	debug("Schema ready", { event: "create", tokenizer });
 }
-
-// #endregion FUNC_create

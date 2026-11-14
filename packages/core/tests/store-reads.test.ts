@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Prove the search and the read models against the real store engine.
  * @scope The prefix match, the scope filter, the hidden row, the tie order, the trigram fallback, the due list, and the directions block.
  * @invariants Each test reads rows that the test wrote by raw SQL.
@@ -23,12 +24,16 @@ import {
 } from "../src/store/reads.js";
 import { search } from "../src/store/search.js";
 import { Store } from "../src/store/store.js";
-import type { ScopeKey } from "../src/types/events.js";
+import type { ScopeKey } from "../src/types/primitives.js";
 
 const T0 = "2026-01-01T00:00:00.000Z";
+
 const T1 = "2026-02-01T00:00:00.000Z";
+
 const T2 = "2026-03-01T00:00:00.000Z";
+
 const T3 = "2026-04-01T00:00:00.000Z";
+
 const NOW = "2026-03-15T00:00:00.000Z";
 
 const dirs: string[] = [];

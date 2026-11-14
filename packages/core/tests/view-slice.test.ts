@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check the row view of one scope: the load, the validity keys, the join, and the slice lines.
  * @scope A real store built by raw SQL rows, the frontier, and the top line of a scope.
  * @invariants Each fixture writes the rows that the test reads, so no projection is involved.
@@ -21,9 +22,10 @@ import {
 	sliceOf,
 	topLineOf,
 } from "../src/store/view.js";
-import type { ScopeKey } from "../src/types/events.js";
+import type { ScopeKey } from "../src/types/primitives.js";
 
 const SCOPE = "p:x" as ScopeKey;
+
 const T0 = "2026-01-01T00:00:00.000Z";
 
 const dirs: string[] = [];

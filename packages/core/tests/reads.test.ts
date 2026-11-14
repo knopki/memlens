@@ -1,8 +1,8 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Verify the read answers of find filters, open, review, and the scope list.
  * @scope The pure filters over hit lists, and the store reads over rows written by raw SQL.
- * @invariants Filters, limits, document sizes, and line forms follow the read contracts.
  * @keywords test, read, find, open, review, scope, store
  * #endregion moduleContract
  */
@@ -26,7 +26,7 @@ import {
 import { byAddress } from "../src/store/reads.js";
 import { Store } from "../src/store/store.js";
 import { loadView } from "../src/store/view.js";
-import type { ScopeKey } from "../src/types/events.js";
+import type { ScopeKey } from "../src/types/primitives.js";
 import type { IndexHit } from "../src/types/store.js";
 
 const dirs: string[] = [];

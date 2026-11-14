@@ -2,6 +2,7 @@
  * Tests of the store clock and the schema.
  *
  * #region moduleContract
+ * @modulecontract
  * @purpose Prove the clock order and the schema invariants under the real SQLite engine.
  * @scope The clock rules, the open, the meta rows, the index flavor, and the redaction bytes.
  * @keywords test, clock, schema, redaction, bytes
@@ -13,12 +14,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, it } from "vitest";
-import {
-	formatVersion,
-	parseVersion,
-	receive,
-	tick,
-} from "../src/store/clock.js";
+import { formatVersion, parseVersion, tick } from "../src/store/clock.js";
 import { openDatabase, SCHEMA_VERSION } from "../src/store/schema.js";
 
 const dirs: string[] = [mkdtempSync(join(tmpdir(), "memlens-"))];
@@ -28,20 +24,18 @@ afterAll(() => {
 
 // #region FUNC_test_clock
 /**
- * @purpose Prove that a local write after a receive outranks every received version.
+ * @purpose Prove that a local write outranks each version that the store has seen.
  * @invariants A backward clock jump changes no order. Equal physical time still gives a greater version.
  */
 describe("clock", () => {
 	it("orders a local write above a received version with a later wall clock", () => {
 		const store = { physical: 0, counter: 0, store: "aaa" };
-		const first = tick(store, 1_000);
 		const remote = formatVersion({
 			physical: 9_999_999_999_999,
 			counter: 0,
 			store: "zzz",
 		});
-		const afterReceive = receive(first.state, [remote]);
-		const local = tick(afterReceive, 1_500);
+		const local = tick(parseVersion(remote) ?? store, 1_500);
 		assert.ok(local.version > remote, `${local.version} > ${remote}`);
 	});
 

@@ -3,7 +3,8 @@
  *
  * #region moduleContract
  * @modulecontract
- * @purpose Define the range and slice types shared by the row-store view. @keywords tree, node, pos, address, revision, slice, frontier
+ * @purpose Define the range, slice, and build types shared by the row-store view.
+ * @keywords tree, node, pos, address, revision, slice, frontier
  * #endregion moduleContract
  */
 
@@ -12,12 +13,6 @@ export type Pos = number;
 
 /** The size of a range as a power of two. Level 0 is one record. */
 export type Level = number;
-
-/** The immutable note order key: the timestamp and id, compared as text. */
-export type Order = `${string}|${string}`;
-
-/** The identity of a stored note or node. */
-export type Id = string;
 
 /** A count of lines of the slice. */
 export type Lines = number;
@@ -60,6 +55,7 @@ export type SliceLine =
 			readonly range: Range;
 			readonly from: string;
 			readonly to: string;
+
 			/** The text of the range, assembled from its children for this render only. */
 			readonly text: string;
 	  };
@@ -68,7 +64,7 @@ export type SliceLine =
 export type BuildChild =
 	| {
 			readonly kind: "record";
-			readonly id: Id;
+			readonly id: string;
 			readonly pos: Pos;
 			readonly body: string;
 			readonly preview: string;
@@ -76,11 +72,12 @@ export type BuildChild =
 	  }
 	| {
 			readonly kind: "node";
-			readonly id: Id;
+			readonly id: string;
 			readonly range: Range;
 			readonly summary: string;
 			readonly ts_from: string;
 			readonly ts_to: string;
+
 			/**
 			 * The catalog position of a scope root. The range of that node belongs to the scope
 			 * tree, and the catalog line names the position.
@@ -91,6 +88,7 @@ export type BuildChild =
 /** A background build copies these values. It does not keep mutable references to the projection. */
 export interface BuildInput {
 	readonly range: Range;
+
 	/** Null means an empty half. At least one half must be non-empty. */
 	readonly children: readonly [BuildChild | null, BuildChild | null];
 }

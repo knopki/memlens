@@ -1,5 +1,8 @@
 /**
- * Tests for address parsing and rendering.
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Check the address grammar and the rendered address form.
+ * #endregion moduleContract
  */
 import { describe, expect, it } from "vitest";
 import { parseAddress, renderAddress } from "../src/domain/address.js";

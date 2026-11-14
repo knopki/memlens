@@ -1,9 +1,11 @@
 /**
- * Tests for the configuration layers.
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Check the configuration layers, the defaults, and the environment paths.
+ * #endregion moduleContract
  */
 import { describe, expect, it } from "vitest";
 import {
-	DEFAULT_CACHE_TTL,
 	expandTilde,
 	globMatches,
 	loadBaseConfig,
@@ -15,6 +17,7 @@ import {
 	ttlSeconds,
 	xdgDirs,
 } from "../src/domain/config.js";
+import { DEFAULT_CACHE_TTL } from "../src/domain/config-types.js";
 
 const BASE_TOML = `
 defaultProfile = "default"

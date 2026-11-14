@@ -2,6 +2,7 @@
  * Tests of the slot order and the node validity seam.
  *
  * #region moduleContract
+ * @modulecontract
  * @purpose Prove the rank order, the tail shift, and the three validity rules.
  * @keywords test, slot, rank, node, validity
  * #endregion moduleContract

@@ -1,5 +1,8 @@
 /**
- * Tests for the rules of the active scope.
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Check the ordered rules of the active scope and the visible scope list.
+ * #endregion moduleContract
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -8,7 +11,7 @@ import {
 	type ScopeSubject,
 	visibleScopes,
 } from "../src/domain/active-scope.js";
-import type { Rule, ScopeDefault } from "../src/domain/config.js";
+import type { Rule, ScopeDefault } from "../src/domain/config-types.js";
 
 const RULES: Rule[] = [
 	{ match: "git_remote", glob: "github.com/knopki/*", key: "project:{repo}" },

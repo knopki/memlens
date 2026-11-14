@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check the pure range, fold, and text helpers.
  * #endregion moduleContract
  */

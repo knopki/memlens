@@ -1,16 +1,16 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Build summary cache rows from consistent child snapshots.
  * @scope Candidate ranges, build reads, joins, and conditional publication.
  * @invariants A model call runs outside the store transaction.
- * @invariants Publication rejects a change to either child key.
  * @dependencies store/view.ts, store/store.ts, domain/tree.ts.
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
 import { due } from "../domain/tree.js";
-import type { ScopeKey } from "../types/events.js";
+import type { ScopeKey } from "../types/primitives.js";
 import type { Range } from "../types/tree.js";
 import type { Store } from "./store.js";
 import { joinText, loadView, nodeAt, nodeValid, type View } from "./view.js";
@@ -24,6 +24,7 @@ export type BuildRead = {
 	readonly bKey: string | null;
 	readonly aText: string | null;
 	readonly bText: string | null;
+
 	/** The longform preview of a leaf half: the first 1024 characters. */
 	readonly aPreview: string | null;
 	readonly bPreview: string | null;
@@ -86,7 +87,6 @@ function snapshot(view: View, level: number, start: number): BuildRead | null {
 }
 
 // #region FUNC_readBuild
-
 /** @purpose Capture the ready children of one covered range in one read transaction. */
 export function readBuild(
 	store: Store,
@@ -100,11 +100,9 @@ export function readBuild(
 	debug("Build read", { scope, level, start, ready: result !== null });
 	return result ?? { ok: false, reason: "empty" };
 }
-
 // #endregion FUNC_readBuild
 
 // #region FUNC_publishNode
-
 /** @purpose Publish a summary only when both captured child keys still match. */
 export function publishNode(
 	store: Store,
@@ -144,11 +142,9 @@ export function publishNode(
 	debug("Node published", { scope, level, start, version: result.version });
 	return { ok: true, version: result.version };
 }
-
 // #endregion FUNC_publishNode
 
 // #region FUNC_publishJoin
-
 /** @purpose Publish a whole child join without a model call. */
 export function publishJoin(
 	store: Store,
@@ -169,11 +165,9 @@ export function publishJoin(
 		read,
 	);
 }
-
 // #endregion FUNC_publishJoin
 
 // #region FUNC_candidates
-
 /** @purpose List covered ranges without valid cache rows, with older coverage first. */
 export function candidates(store: Store, scope: ScopeKey): readonly Range[] {
 	return store.read((db) => {
@@ -204,5 +198,4 @@ export function candidates(store: Store, scope: ScopeKey): readonly Range[] {
 		return result;
 	});
 }
-
 // #endregion FUNC_candidates

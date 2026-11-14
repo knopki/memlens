@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Prove the transfer text, the five merge channels, and the convergence of two stores.
  * @scope Export and import into real SQLite stores, raw SQL fixtures, and the redaction bytes.
  * @invariants Each test builds its own store directory and removes it at the end.
@@ -21,7 +22,9 @@ import { exportLines, importLines } from "../src/store/transfer.js";
 import { MemlensError } from "../src/types/errors.js";
 
 const dirs: string[] = [];
+
 const stores: Store[] = [];
+
 const storePaths = new Map<Store, string>();
 
 afterAll(() => {

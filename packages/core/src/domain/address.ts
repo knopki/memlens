@@ -9,7 +9,6 @@
  *  - Rendering of addresses with a leading #.
  *  - NOT: pos allocation, scope resolution, or record lookup.
  * @invariants
- *  - An address is pos, pos-pos, scope#pos, or scope#pos-pos.
  *  - Positions are non-negative integers. A range end is not before its start.
  * @dependencies scope.ts for scope key validation
  * @keywords address, pos, range, scope, addr, parse, render
@@ -17,7 +16,7 @@
  */
 
 import { debuglog } from "node:util";
-import type { ScopeKey } from "../types/events.js";
+import type { ScopeKey } from "../types/primitives.js";
 import type { Pos } from "../types/tree.js";
 import { validateScopeKey } from "./scope.js";
 
@@ -41,7 +40,6 @@ export type ParsedAddress =
 	  };
 
 // #region FUNC_parseAddress
-
 /**
  * @purpose Parse a string address into its parts, so a tool call or CLI argument maps to a record.
  * @invariants Strip one leading # before the parse. Invalid address text gives null.
@@ -49,11 +47,9 @@ export type ParsedAddress =
  * @returns The parsed address, or null when the input does not match the grammar.
  */
 export function parseAddress(raw: string): ParsedAddress | null {
-	// Strip one leading #
 	const s = raw.startsWith("#") ? raw.slice(1) : raw;
 	debug("Address parse start", { event: "parse", raw, stripped: s });
 
-	// Try scope#rest
 	const hashIdx = s.indexOf("#");
 	if (hashIdx > 0) {
 		const scopePart = s.slice(0, hashIdx);
@@ -80,7 +76,6 @@ export function parseAddress(raw: string): ParsedAddress | null {
 		return result;
 	}
 
-	// Try pos or pos-pos
 	const range = parseRange(s);
 	if (range === null) {
 		debug("Address parse: not a pos or range", { s });
@@ -93,7 +88,6 @@ export function parseAddress(raw: string): ParsedAddress | null {
 	debug("Address parse done", { result });
 	return result;
 }
-
 // #endregion FUNC_parseAddress
 
 /** Parse a string of the form N or N-M. Returns null on failure. */
@@ -120,7 +114,6 @@ function parseNonNegInt(s: string): number | null {
 }
 
 // #region FUNC_renderAddress
-
 /**
  * @purpose Render a pos or range in the address form of a slice line.
  * @invariants A local address starts with #. A scoped address starts with scope#.
@@ -139,5 +132,4 @@ export function renderAddress(
 	debug("Address rendered", { scope, start, end, result });
 	return result;
 }
-
 // #endregion FUNC_renderAddress

@@ -1,9 +1,11 @@
 /**
- * Tests for scope key validation and normalization.
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Check the scope key grammar, the normalization, and the hidden key test.
+ * #endregion moduleContract
  */
 import { describe, expect, it } from "vitest";
 import {
-	catalogKey,
 	isCatalogKey,
 	normalizeScopeKey,
 	validateScopeKey,
@@ -55,16 +57,10 @@ describe("validateScopeKey", () => {
 
 describe("isCatalogKey", () => {
 	it("detects a catalog key", () => {
-		expect(isCatalogKey(catalogKey("myprofile"))).toBe(true);
+		expect(isCatalogKey("__catalog__:myprofile")).toBe(true);
 	});
 
 	it("rejects a normal scope key", () => {
 		expect(isCatalogKey("project:dsh")).toBe(false);
-	});
-});
-
-describe("catalogKey", () => {
-	it("returns the catalog scope key for a profile", () => {
-		expect(catalogKey("work")).toBe("__catalog__:work");
 	});
 });

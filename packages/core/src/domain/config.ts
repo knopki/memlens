@@ -1,34 +1,20 @@
 /**
- * Configuration layers: load, validate, and merge.
- *
  * #region moduleContract
  * @modulecontract
  * @purpose Give the three configuration layers one load and merge surface, so the CLI, the plugin,
  * and one preset see the same resolved values.
  * @scope
- *  - Layer types, strict shape checks, the deep merge with defaults, the store path order, and the
- *    cache TTL lookup.
+ *  - The public load of the base, patch, and preset layers, the deep merge, the store path order,
+ *    the XDG directories, the duration, the glob match, and the cache TTL lookup.
  *  - NOT: reading files or the environment, and the rules of the active scope.
  * @invariants
- *  - A key outside the layer type is an error at load.
- *  - A scope key outside the two-segment shape is an error at load. The placeholder `{repo}` is the
- *    one exception, and only in a rule key of `git_remote`.
- *  - The base file is TOML. The patch and the preset arrive as parsed objects.
- *  - The merge is deep: a table merges with a table, and a scalar or a list replaces.
- *  - A later layer wins over an earlier layer. The order is base, patch, preset.
- *  - A preset without `profile` is an error at load.
- *  - A profile name that the base file does not list is an error at resolve.
- *  - Defaults at load: language `en`, store idle 300 seconds, store path from the caller, subagents
- *    `propose`, compaction mode `auto`, compaction effort `off`, compaction batch 6, 120 calls an hour, nudge
- *    counters 10 and 10, nudge texts with `{n}`, review 365 days for `decision`, `preference`, and
- *    `note`, 180 days for `fact`, and 7 days for `task`.
- *  - The store path order is `--store`, then `MEMLENS_STORE`, then the base file.
+ *  - A later layer wins over an earlier layer: the base, then the patch, then the preset.
+ *    A table merges with a table, and a scalar or a list replaces.
  *  - The configuration lives in `$XDG_CONFIG_HOME/memlens`. The data lives in `$XDG_DATA_HOME/memlens`.
- *  - The cache TTL lookup takes the most specific matching glob. The glob `*` matches any text.
  * @usecases
  *  - Load: caller => gives TOML text and a default store path => gets the base layer
  *  - Resolve: caller => gives three layers => gets one resolved configuration
- * @dependencies USES API: smol-toml, node:path
+ * @dependencies USES API: smol-toml, node:path, domain/config-read.ts, domain/config-types.ts
  * @rationale
  *  - Q: Why do the readers fill the defaults?
  *    A: Each layer leaves the reader complete, so the merge works on plain spreads.
@@ -40,185 +26,41 @@ import { join } from "node:path";
 import { debuglog } from "node:util";
 import { parse as parseToml } from "smol-toml";
 import { MemlensError } from "../types/errors.js";
-import type { NoteKind, ScopeKey } from "../types/events.js";
-import { validateScopeKey } from "./scope.js";
+import {
+	DURATION_RE,
+	expectKeys,
+	expectRecord,
+	expectString,
+	readBudget,
+	readCacheTtl,
+	readCompaction,
+	readNudge,
+	readPartialCompaction,
+	readPartialNudge,
+	readPatchStore,
+	readProfiles,
+	readReview,
+	readScopeDefault,
+	readStore,
+} from "./config-read.js";
+import {
+	type BaseConfig,
+	type Budget,
+	type CacheTtl,
+	DEFAULT_CACHE_TTL,
+	DEFAULT_TTL,
+	type Glob,
+	type PatchConfig,
+	type Path,
+	type PresetConfig,
+	type ProfileConfig,
+	type ResolvedConfig,
+	type StoreConfig,
+} from "./config-types.js";
 
 const debug = debuglog("memlens:config");
 
-/** A count of lines of the slice. */
-export type Lines = number;
-
-/** A count of days. */
-export type Days = number;
-
-/** A path on the machine. A leading tilde is the home directory. */
-export type Path = string;
-
-/** A duration with a unit, for example `120s`, `5m`, or `2h`. */
-export type Duration = `${number}${"s" | "m" | "h"}`;
-
-/** A glob over the whole key. The part `*` matches any text. */
-export type Glob = string;
-
-/** The memory that a subagent gets. */
-export type SubagentMode = "propose" | "read" | "off";
-
-/** The shape of a run of the compaction. */
-export type CompactionMode = "parallel" | "batch" | "auto";
-
-export interface StoreConfig {
-	path: Path;
-	/** The time without an event that starts the background compaction, in seconds. */
-	idle: number;
-}
-
-export interface Budget {
-	/** The maximum count of lines of the tree of the active scope. */
-	here: Lines;
-	/** The maximum count of lines of the tree of the catalog. */
-	directions: Lines;
-}
-
-export interface ProfileConfig {
-	/** The scopes that the profile sees. A key is a glob. */
-	scopes: Glob[];
-	budget: Budget;
-	subagents?: SubagentMode;
-}
-
-export interface RuleGitRemote {
-	match: "git_remote";
-	glob: Glob;
-	/** The key of the active scope. `{repo}` takes the repository name of the remote. */
-	key: ScopeKey;
-}
-
-export interface RulePath {
-	match: "path";
-	glob: Glob;
-	key: ScopeKey;
-}
-
-export interface RuleWorkspace {
-	match: "workspace";
-	id: string;
-	key: ScopeKey;
-}
-
-/** One rule of the active scope. */
-export type Rule = RuleGitRemote | RulePath | RuleWorkspace;
-
-export interface ScopeDefault {
-	rules: Rule[];
-	/** The key when no rule matches. */
-	default: ScopeKey;
-}
-
-export interface NudgeConfig {
-	/** The counters run at the same time. */
-	tool_calls: number;
-	turns: number;
-	/** The line of each counter. `{n}` takes the count of that counter. */
-	text: Record<"tool_calls" | "turns", string>;
-}
-
-export interface CompactionConfig {
-	provider: string;
-	model: string;
-	effort: string;
-	mode: CompactionMode;
-	batch: number;
-	maxCallsPerHour: number;
-}
-
-/** The review period of each kind of a note, in days. */
-export type ReviewConfig = Record<NoteKind, Days>;
-
-/** The idle time of one model glob. The most specific glob wins. */
-export type CacheTtl = Record<Glob, Duration>;
-
-/** The base file, `$XDG_CONFIG_HOME/memlens/config.toml`. */
-export interface BaseConfig {
-	/** One value for the store. It selects the tokenizer of the index. */
-	language: string;
-	defaultProfile: string;
-	store: StoreConfig;
-	profile: Record<string, ProfileConfig>;
-	scope_default: ScopeDefault;
-	nudge: NudgeConfig;
-	compaction: CompactionConfig;
-	review: ReviewConfig;
-}
-
-/** The row `memlens` of `cordis.patch.yml`. */
-export interface PatchConfig {
-	store?: Partial<StoreConfig>;
-	defaultProfile?: string;
-	budget?: Partial<Budget>;
-	compaction?: Partial<CompactionConfig>;
-	nudge?: Partial<NudgeConfig>;
-	cacheTtl?: CacheTtl;
-	customPrompt?: string;
-	customPromptAppend?: string;
-}
-
-/** The agent preset. `profile` is the only required key. */
-export interface PresetConfig {
-	profile: string;
-	budget?: Partial<Budget>;
-	compaction?: Partial<CompactionConfig>;
-	nudge?: Partial<NudgeConfig>;
-	customPrompt?: string;
-	customPromptAppend?: string;
-}
-
-/** The configuration that the code uses, after the merge and the defaults. */
-export interface ResolvedConfig extends Omit<BaseConfig, "profile"> {
-	profile: ProfileConfig;
-	budget: Budget;
-	cacheTtl: CacheTtl;
-	customPrompt: string | null;
-	customPromptAppend: string | null;
-}
-
-/** The default texts of the nudge counters. */
-export const NUDGE_TEXTS: Record<"tool_calls" | "turns", string> = {
-	tool_calls:
-		"[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?",
-	turns:
-		"[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?",
-};
-
-/** The default review period of each kind, in days. */
-export const DEFAULT_REVIEW_DAYS: ReviewConfig = {
-	decision: 365,
-	preference: 365,
-	fact: 180,
-	task: 7,
-	note: 365,
-};
-
-/** The default cache TTL of any model. */
-const DEFAULT_TTL: Duration = "1h";
-
-/** The default cache TTL map. */
-export const DEFAULT_CACHE_TTL: CacheTtl = {
-	"deepseek/*": "2h",
-	"anthropic/*": "5m",
-	"*": DEFAULT_TTL,
-};
-
-const DURATION_RE = /^\d+[smh]$/;
-const SCOPE_KINDS: readonly NoteKind[] = [
-	"decision",
-	"preference",
-	"fact",
-	"task",
-	"note",
-];
-
 // #region FUNC_loadBaseConfig
-
 /**
  * @purpose Read the base TOML file into a complete layer, so the rest of the code sees one shape.
  * @param text - The content of `config.toml`.
@@ -246,27 +88,8 @@ export function loadBaseConfig(
 		"config",
 	);
 
-	const storeRec = expectRecord(root.store, "store");
-	expectKeys(storeRec, ["path", "idle"], "store");
-	const store: StoreConfig = {
-		path:
-			storeRec.path === undefined
-				? defaultStorePath
-				: expectString(storeRec.path, "store.path"),
-		idle:
-			storeRec.idle === undefined
-				? 300
-				: expectCount(storeRec.idle, "store.idle"),
-	};
-
-	const profiles = expectRecord(root.profile, "profile");
-	if (Object.keys(profiles).length === 0) {
-		throw new MemlensError("Data", "config.profile holds no profile");
-	}
-	const profile: Record<string, ProfileConfig> = {};
-	for (const [name, value] of Object.entries(profiles)) {
-		profile[name] = readProfile(value, `profile.${name}`);
-	}
+	const store = readStore(root.store, defaultStorePath);
+	const profile = readProfiles(root.profile);
 
 	const result: BaseConfig = {
 		language:
@@ -288,11 +111,9 @@ export function loadBaseConfig(
 	});
 	return result;
 }
-
 // #endregion FUNC_loadBaseConfig
 
 // #region FUNC_loadPatchConfig
-
 /**
  * @purpose Read the patch row of the harness into a layer, so the harness profile can override values.
  * @param value - The parsed row `memlens` of `cordis.patch.yml`.
@@ -315,16 +136,7 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 		"patch",
 	);
 	const patch: PatchConfig = {};
-	if (row.store !== undefined) {
-		const storeRec = expectRecord(row.store, "patch.store");
-		expectKeys(storeRec, ["path", "idle"], "patch.store");
-		const store: Partial<StoreConfig> = {};
-		if (storeRec.path !== undefined)
-			store.path = expectString(storeRec.path, "patch.store.path");
-		if (storeRec.idle !== undefined)
-			store.idle = expectCount(storeRec.idle, "patch.store.idle");
-		patch.store = store;
-	}
+	if (row.store !== undefined) patch.store = readPatchStore(row.store);
 	if (row.defaultProfile !== undefined)
 		patch.defaultProfile = expectString(
 			row.defaultProfile,
@@ -351,13 +163,12 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 	debug("Patch config loaded", { event: "patch", keys: Object.keys(patch) });
 	return patch;
 }
-
 // #endregion FUNC_loadPatchConfig
 
 // #region FUNC_loadPresetConfig
-
 /**
  * @purpose Read an agent preset into a layer, so one agent can override values of its profile.
+ * @invariants A preset without `profile` is an error at load.
  * @param value - The parsed preset object.
  * @returns The validated preset layer.
  */
@@ -401,13 +212,12 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 	debug("Preset config loaded", { event: "preset", profile: preset.profile });
 	return preset;
 }
-
 // #endregion FUNC_loadPresetConfig
 
 // #region FUNC_resolveConfig
-
 /**
  * @purpose Merge the three layers into one resolved configuration, so each caller reads one object.
+ * @ensures A profile name that the base file does not list is an error.
  * @param base - The base layer.
  * @param patch - The patch layer. Give an empty object when no patch exists.
  * @param preset - The preset layer, or null.
@@ -460,11 +270,9 @@ export function resolveConfig(
 	});
 	return result;
 }
-
 // #endregion FUNC_resolveConfig
 
 // #region FUNC_storePath
-
 /**
  * @purpose Pick the store path by the fixed order, so each frontend opens the same directory.
  * @param flag - The value of `--store`, or null.
@@ -485,7 +293,6 @@ export function storePath(
 	});
 	return picked;
 }
-
 // #endregion FUNC_storePath
 
 /** Expand a leading tilde to the home directory of the environment. */
@@ -528,7 +335,6 @@ export function parseDuration(value: string): number {
 }
 
 // #region FUNC_globMatches
-
 /**
  * @purpose Match one glob, so scope lists, rules, and model globs share one rule.
  * @param glob - The pattern. The part `*` matches any text, and the rest matches itself.
@@ -539,11 +345,9 @@ export function globMatches(glob: Glob, value: string): boolean {
 	const re = new RegExp(`^${glob.split("*").map(escapeRegExp).join(".*")}$`);
 	return re.test(value);
 }
-
 // #endregion FUNC_globMatches
 
 // #region FUNC_ttlSeconds
-
 /**
  * @purpose Give the cache TTL of one model in seconds, so the plugin knows when a new text is due.
  * @param cacheTtl - The glob to duration map.
@@ -573,7 +377,6 @@ export function ttlSeconds(cacheTtl: CacheTtl, model: string): number {
 	});
 	return parseDuration(raw);
 }
-
 // #endregion FUNC_ttlSeconds
 
 function countStars(glob: string): number {
@@ -584,293 +387,4 @@ function countStars(glob: string): number {
 
 function escapeRegExp(text: string): string {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function expectRecord(value: unknown, where: string): Record<string, unknown> {
-	if (typeof value !== "object" || value === null || Array.isArray(value)) {
-		throw new MemlensError("Data", `${where} is not a table`);
-	}
-	return value as Record<string, unknown>;
-}
-
-function expectKeys(
-	record: Record<string, unknown>,
-	allowed: readonly string[],
-	where: string,
-): void {
-	for (const key of Object.keys(record)) {
-		if (!allowed.includes(key)) {
-			throw new MemlensError("Data", `${where} holds the unknown key ${key}`);
-		}
-	}
-}
-
-function expectString(value: unknown, where: string): string {
-	if (typeof value !== "string") {
-		throw new MemlensError("Data", `${where} is not a string`);
-	}
-	return value;
-}
-
-function expectCount(value: unknown, where: string): number {
-	if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
-		throw new MemlensError("Data", `${where} is not a whole number above 0`);
-	}
-	return value;
-}
-
-function expectOneOf<T extends string>(
-	value: unknown,
-	allowed: readonly T[],
-	where: string,
-): T {
-	const text = expectString(value, where);
-	if (!(allowed as readonly string[]).includes(text)) {
-		throw new MemlensError(
-			"Data",
-			`${where} is not one of ${allowed.join(", ")}`,
-		);
-	}
-	return text as T;
-}
-
-function expectScopeKey(
-	value: unknown,
-	where: string,
-	allowRepo: boolean,
-): ScopeKey {
-	const key = expectString(value, where);
-	const probe = allowRepo ? key.replaceAll("{repo}", "x") : key;
-	if (!validateScopeKey(probe)) {
-		throw new MemlensError("Data", `${where} is not a scope key: ${key}`);
-	}
-	return key as ScopeKey;
-}
-
-function readProfile(value: unknown, where: string): ProfileConfig {
-	const record = expectRecord(value, where);
-	expectKeys(record, ["scopes", "budget", "subagents"], where);
-	if (record.scopes === undefined) {
-		throw new MemlensError("Data", `${where}.scopes is absent`);
-	}
-	if (
-		!Array.isArray(record.scopes) ||
-		record.scopes.some((glob) => typeof glob !== "string")
-	) {
-		throw new MemlensError("Data", `${where}.scopes is not a list of globs`);
-	}
-	const profile: ProfileConfig = {
-		scopes: record.scopes as Glob[],
-		budget: readFullBudget(record.budget, `${where}.budget`),
-	};
-	if (record.subagents !== undefined) {
-		profile.subagents = expectOneOf(
-			record.subagents,
-			["propose", "read", "off"],
-			`${where}.subagents`,
-		);
-	}
-	return profile;
-}
-
-function readFullBudget(value: unknown, where: string): Budget {
-	const partial = readBudget(value, where);
-	if (partial.here === undefined || partial.directions === undefined) {
-		throw new MemlensError("Data", `${where} needs here and directions`);
-	}
-	return { here: partial.here, directions: partial.directions };
-}
-
-function readBudget(value: unknown, where: string): Partial<Budget> {
-	const record = expectRecord(value, where);
-	expectKeys(record, ["here", "directions"], where);
-	const budget: Partial<Budget> = {};
-	if (record.here !== undefined)
-		budget.here = expectCount(record.here, `${where}.here`);
-	if (record.directions !== undefined)
-		budget.directions = expectCount(record.directions, `${where}.directions`);
-	return budget;
-}
-
-function readScopeDefault(value: unknown): ScopeDefault {
-	const where = "scope_default";
-	const record = expectRecord(value, where);
-	expectKeys(record, ["rules", "default"], where);
-	if (record.rules !== undefined && !Array.isArray(record.rules)) {
-		throw new MemlensError("Data", `${where}.rules is not a list`);
-	}
-	const rules = (record.rules ?? []).map((rule: unknown, index: number) =>
-		readRule(rule, index),
-	);
-	return {
-		rules,
-		default: expectScopeKey(record.default, `${where}.default`, false),
-	};
-}
-
-function readRule(value: unknown, index: number): Rule {
-	const where = `scope_default.rules[${index}]`;
-	const record = expectRecord(value, where);
-	if (record.match === undefined) {
-		throw new MemlensError("Data", `${where}.match is absent`);
-	}
-	const match = expectOneOf(
-		record.match,
-		["git_remote", "path", "workspace"],
-		`${where}.match`,
-	);
-	if (match === "workspace") {
-		expectKeys(record, ["match", "id", "key"], where);
-		return {
-			match,
-			id: expectString(record.id, `${where}.id`),
-			key: expectScopeKey(record.key, `${where}.key`, false),
-		};
-	}
-	expectKeys(record, ["match", "glob", "key"], where);
-	return {
-		match,
-		glob: expectString(record.glob, `${where}.glob`),
-		key: expectScopeKey(record.key, `${where}.key`, match === "git_remote"),
-	};
-}
-
-function readNudge(value: unknown): NudgeConfig {
-	const partial = value === undefined ? {} : readPartialNudge(value, "nudge");
-	return {
-		tool_calls: partial.tool_calls ?? 10,
-		turns: partial.turns ?? 10,
-		text: partial.text ?? { ...NUDGE_TEXTS },
-	};
-}
-
-function readPartialNudge(value: unknown, where: string): Partial<NudgeConfig> {
-	const record = expectRecord(value, where);
-	expectKeys(record, ["tool_calls", "turns", "text"], where);
-	const partial: Partial<NudgeConfig> = {};
-	if (record.tool_calls !== undefined)
-		partial.tool_calls = expectCount(record.tool_calls, `${where}.tool_calls`);
-	if (record.turns !== undefined)
-		partial.turns = expectCount(record.turns, `${where}.turns`);
-	if (record.text !== undefined) partial.text = readNudgeText(record.text);
-	return partial;
-}
-
-function readNudgeText(value: unknown): Record<"tool_calls" | "turns", string> {
-	const record = expectRecord(value, "nudge.text");
-	expectKeys(record, ["tool_calls", "turns"], "nudge.text");
-	const result = {} as Record<"tool_calls" | "turns", string>;
-	for (const counter of ["tool_calls", "turns"] as const) {
-		const text =
-			record[counter] === undefined
-				? NUDGE_TEXTS[counter]
-				: expectString(record[counter], `nudge.text.${counter}`);
-		if (!text.includes("{n}")) {
-			throw new MemlensError("Data", `nudge.text.${counter} holds no {n}`);
-		}
-		result[counter] = text;
-	}
-	return result;
-}
-
-function readCompaction(value: unknown): CompactionConfig {
-	const record = expectRecord(value, "compaction");
-	expectKeys(
-		record,
-		["provider", "model", "effort", "mode", "batch", "maxCallsPerHour"],
-		"compaction",
-	);
-	return {
-		provider: requireString(record.provider, "compaction.provider"),
-		model: requireString(record.model, "compaction.model"),
-		effort:
-			record.effort === undefined
-				? "off"
-				: expectString(record.effort, "compaction.effort"),
-		mode:
-			record.mode === undefined
-				? "auto"
-				: expectOneOf(
-						record.mode,
-						["parallel", "batch", "auto"],
-						"compaction.mode",
-					),
-		batch:
-			record.batch === undefined
-				? 6
-				: expectCount(record.batch, "compaction.batch"),
-		maxCallsPerHour:
-			record.maxCallsPerHour === undefined
-				? 120
-				: expectCount(record.maxCallsPerHour, "compaction.maxCallsPerHour"),
-	};
-}
-
-function readPartialCompaction(
-	value: unknown,
-	where: string,
-): Partial<CompactionConfig> {
-	const record = expectRecord(value, where);
-	expectKeys(
-		record,
-		["provider", "model", "effort", "mode", "batch", "maxCallsPerHour"],
-		where,
-	);
-	const partial: Partial<CompactionConfig> = {};
-	if (record.provider !== undefined)
-		partial.provider = expectString(record.provider, `${where}.provider`);
-	if (record.model !== undefined)
-		partial.model = expectString(record.model, `${where}.model`);
-	if (record.effort !== undefined)
-		partial.effort = expectString(record.effort, `${where}.effort`);
-	if (record.mode !== undefined)
-		partial.mode = expectOneOf(
-			record.mode,
-			["parallel", "batch", "auto"],
-			`${where}.mode`,
-		);
-	if (record.batch !== undefined)
-		partial.batch = expectCount(record.batch, `${where}.batch`);
-	if (record.maxCallsPerHour !== undefined) {
-		partial.maxCallsPerHour = expectCount(
-			record.maxCallsPerHour,
-			`${where}.maxCallsPerHour`,
-		);
-	}
-	return partial;
-}
-
-function requireString(value: unknown, where: string): string {
-	if (value === undefined) {
-		throw new MemlensError("Data", `${where} is absent`);
-	}
-	return expectString(value, where);
-}
-
-function readReview(value: unknown): ReviewConfig {
-	if (value === undefined) {
-		return { ...DEFAULT_REVIEW_DAYS };
-	}
-	const record = expectRecord(value, "review");
-	expectKeys(record, SCOPE_KINDS, "review");
-	const result = { ...DEFAULT_REVIEW_DAYS };
-	for (const kind of SCOPE_KINDS) {
-		if (record[kind] !== undefined) {
-			result[kind] = expectCount(record[kind], `review.${kind}`);
-		}
-	}
-	return result;
-}
-
-function readCacheTtl(value: unknown): CacheTtl {
-	const record = expectRecord(value, "cacheTtl");
-	const result: CacheTtl = {};
-	for (const [glob, duration] of Object.entries(record)) {
-		const text = expectString(duration, `cacheTtl.${glob}`);
-		if (!DURATION_RE.test(text)) {
-			throw new MemlensError("Data", `cacheTtl.${glob} is not a duration`);
-		}
-		result[glob] = text as Duration;
-	}
-	return result;
 }

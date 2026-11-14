@@ -1,9 +1,9 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Keep one database open and publish each change as one transaction.
- * @scope The transaction gate, the clock, the meta access, the journal writer, and the checkpoints.
+ * @scope The transaction gate, the clock tick, the meta access, the journal writer, and the checkpoints.
  * @invariants One function opens a write transaction, so the store has one lock owner.
- * @invariants A committed change ticks the clock. A write that changes no row does not tick.
  * @invariants The truncating checkpoint runs after a redact, at open, and at close.
  * @dependencies node:sqlite, store/schema.ts, store/clock.ts.
  * @keywords store, transaction, publish, clock, journal, checkpoint, close
@@ -15,19 +15,12 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { debuglog } from "node:util";
 import { MemlensError } from "../types/errors.js";
-import {
-	type ClockState,
-	formatVersion,
-	parseVersion,
-	receive,
-	type Version,
-} from "./clock.js";
-import { openDatabase, SCHEMA_VERSION } from "./schema.js";
+import { type ClockState, parseVersion, tick, type Version } from "./clock.js";
+import { openDatabase } from "./schema.js";
 
 const debug = debuglog("memlens:store");
 
 // #region CLASS_Store
-
 /**
  * @purpose Hold one database handle and own every write transaction of the store.
  * @invariants Reads use the same handle with one statement or a short deferred transaction.
@@ -42,10 +35,7 @@ export class Store {
 		this.db = openDatabase(join(directory, "memlens.db"), language);
 	}
 
-	// #endregion CLASS_Store
-
 	// #region METHOD_publish
-
 	/**
 	 * @purpose Run one change under the write lock and tick the clock when the change writes.
 	 * @invariants A failed change rolls back and leaves the clock at its earlier value.
@@ -57,7 +47,7 @@ export class Store {
 		this.db.exec("BEGIN IMMEDIATE");
 		try {
 			const clock = this.clock();
-			const next = tickClock(clock);
+			const next = tick(clock);
 			const tx = new Tx(this.db, clock.store, next.version);
 			const before = totalChanges(this.db);
 			const value = work(tx);
@@ -85,20 +75,7 @@ export class Store {
 			throw error;
 		}
 	}
-
 	// #endregion METHOD_publish
-
-	// #region METHOD_receive
-
-	/**
-	 * @purpose Raise the clock above each imported version.
-	 * @invariants The call runs in a write transaction and changes no note row.
-	 */
-	acceptVersions(versions: readonly string[]): void {
-		this.publish(() => receive(this.clock(), versions));
-	}
-
-	// #endregion METHOD_receive
 
 	/** @purpose Read one value from the meta table. */
 	meta(key: string): string | null {
@@ -114,13 +91,11 @@ export class Store {
 		return this.meta("clock") ?? "";
 	}
 
-	/** @purpose Read the identity of this store. */
-	storeId(): string {
+	private storeId(): string {
 		return this.meta("store_id") ?? "";
 	}
 
 	// #region METHOD_truncate
-
 	/**
 	 * @purpose Move each committed frame into the database file and empty the write-ahead log.
 	 * @invariants The call runs outside a transaction. A busy result is a state, not an error.
@@ -132,11 +107,9 @@ export class Store {
 		debug("Checkpoint", { event: "checkpoint", busy });
 		return !busy;
 	}
-
 	// #endregion METHOD_truncate
 
-	// #region METHOD_transaction
-
+	// #region METHOD_read
 	/** @purpose Run one read in a deferred transaction, so each statement sees one state. */
 	read<T>(work: (db: DatabaseSync) => T): T {
 		this.requireOpen();
@@ -147,8 +120,7 @@ export class Store {
 			this.db.exec("COMMIT");
 		}
 	}
-
-	// #endregion METHOD_transaction
+	// #endregion METHOD_read
 
 	/** @purpose Give the caller the open handle for a read model. */
 	handle(): DatabaseSync {
@@ -157,7 +129,6 @@ export class Store {
 	}
 
 	// #region METHOD_close
-
 	/** @purpose Truncate the log and release the handle once. */
 	close(): void {
 		if (this.closed) return;
@@ -166,7 +137,6 @@ export class Store {
 		this.closed = true;
 		debug("Store close", { event: "close" });
 	}
-
 	// #endregion METHOD_close
 
 	/** @purpose Read the clock, or create it on the first call of a new store. */
@@ -194,9 +164,9 @@ export class Store {
 		if (this.closed) throw new MemlensError("Data", "The store is closed.");
 	}
 }
+// #endregion CLASS_Store
 
 // #region CLASS_Tx
-
 /**
  * @purpose Give one publish call its transaction, its store identity, and its journal writer.
  * @invariants The transaction owns every statement of the change. The caller writes no BEGIN.
@@ -229,21 +199,9 @@ export class Tx {
 			);
 	}
 }
-
 // #endregion CLASS_Tx
 
-/** @purpose Give one clock state its next version. */
-function tickClock(clock: ClockState): { state: ClockState; version: Version } {
-	const physical = Math.max(Date.now(), clock.physical);
-	const counter = physical === clock.physical ? clock.counter + 1 : 0;
-	const state = { physical, counter, store: clock.store };
-	return { state, version: formatVersion(state) };
-}
-
-/** @purpose Name the schema version of this build for a check. */
-export const BUILD_SCHEMA = SCHEMA_VERSION;
-
 /** @purpose Read the cumulative write count of the connection, so one publish sees its own writes. */
-function totalChanges(db: import("node:sqlite").DatabaseSync): number {
+function totalChanges(db: DatabaseSync): number {
 	return Number(db.prepare("SELECT total_changes() AS c").get()?.c ?? 0);
 }

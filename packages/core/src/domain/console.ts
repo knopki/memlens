@@ -1,14 +1,10 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Supply shared console models from the store rows for each host.
- * @scope Scope panels, context, trees, catalog, build candidates, and review lists.
+ * @scope Scope panels, context, nodes, the derived catalog, build candidates, and review lists.
  * @invariants Read the store rows only. Open no file. Import no DOM, transport, or style.
- * @invariants Exclude scopes outside the profile. Return JSON values from one store clock value.
- * @invariants The review list holds the due notes of the selected scope. The reviewNext list holds
- * the nearest notes of the selected scope with a later review time, at most ten, and reviewNextTotal
- * counts them before the cap. A kind selects one kind and null takes each kind.
- * @invariants A direction summary and a catalog line take the top line of the scope. The top line
- * gives the summary of a valid top node, or the assembled text of the same range.
+ * @invariants The model holds the scopes of the profile only, and each value is plain JSON.
  * @invariants The frontier holds the slice lines of the selected scope, in the same order and with
  * the same fold as the text of the slice. A range line hides the notes inside that range.
  * @dependencies store/reads.ts, store/view.ts, domain/context.ts, domain/reads.ts, domain/tree.ts
@@ -17,7 +13,12 @@
  */
 
 import { debuglog } from "node:util";
-import { directionsData, liveCounts, nodesOf } from "../store/reads.js";
+import {
+	type DirectionLine,
+	directionsData,
+	liveCounts,
+	nodesOf,
+} from "../store/reads.js";
 import type { Store } from "../store/store.js";
 import type { Node, Note } from "../store/types.js";
 import {
@@ -29,11 +30,16 @@ import {
 	type View,
 } from "../store/view.js";
 import { MemlensError } from "../types/errors.js";
-import type { NoteKind, ScopeKey } from "../types/events.js";
+import type { NoteKind, ScopeKey } from "../types/primitives.js";
 import type { Range, SliceLine } from "../types/tree.js";
 import { visibleScopes } from "./active-scope.js";
-import type { ResolvedConfig } from "./config.js";
-import { directionLines, hereLines, renderContext } from "./context.js";
+import type { ResolvedConfig } from "./config-types.js";
+import {
+	type ContextInput,
+	directionLines,
+	hereLines,
+	renderContext,
+} from "./context.js";
 import { type DueRecord, dueRecords, upcomingRecords } from "./reads.js";
 import { validateScopeKey } from "./scope.js";
 import { nowIso } from "./time.js";
@@ -43,8 +49,7 @@ const debug = debuglog("memlens:console");
 /** The number of the nearest records that the review screen shows at most. */
 const NEXT_LIMIT = 10;
 
-// #region CLASS_ConsoleModel
-
+// #region INTERFACE_ConsoleModel
 /** @purpose Give console hosts one serializable view of the visible memory. */
 export interface ConsoleModel {
 	readonly profile: string;
@@ -76,6 +81,7 @@ export interface ConsoleModel {
 		readonly ready: boolean;
 	}[];
 	readonly catalog: readonly SliceLine[];
+
 	/** The scope of each catalog position, in the order of the catalog tree. */
 	readonly catalogScopes: readonly ScopeKey[];
 	readonly frontier: readonly SliceLine[];
@@ -84,8 +90,7 @@ export interface ConsoleModel {
 	readonly reviewNextTotal: number;
 	readonly revision: string;
 }
-
-// #endregion CLASS_ConsoleModel
+// #endregion INTERFACE_ConsoleModel
 
 /** The visible scope keys of one console read. */
 interface ScopeSet {
@@ -94,16 +99,16 @@ interface ScopeSet {
 }
 
 // #region FUNC_readConsole
-
 /**
  * @purpose Read one console snapshot for the selected visible scope.
  * @invariants Keep explicit empty scopes. Accept an absent selected scope when the profile matches it.
  * @invariants The review lists hold the notes of the selected scope only, so a scope choice narrows
  * the review screen. A null kind keeps each kind.
- * @invariants Use the resolved profile name and independent line budgets. Read no event export and
- * call no compaction. The revision is the store clock of one read.
+ * @invariants The reviewNext list holds the nearest notes of the selected scope with a later review
+ * time, at most ten, and reviewNextTotal counts them before the cap.
+ * @invariants Use the resolved profile name and independent line budgets. Read no export and call no compaction. The revision is the store clock of one read.
  * @invariants The catalog scopes hold the scope of each catalog position, in the order of the
- * catalog tree, so a host maps a line position to its scope.
+ * catalog line, so a host maps a line position to its scope.
  */
 export async function readConsole(
 	store: Store,
@@ -117,11 +122,9 @@ export async function readConsole(
 		readStoreConsole(store, config, scope, now ?? nowIso(), kind),
 	);
 }
-
 // #endregion FUNC_readConsole
 
 // #region FUNC_readStoreConsole
-
 /**
  * @purpose Read one console snapshot from the rows of one store.
  * @invariants The revision is the store clock of one read, so the model and the epoch agree.
@@ -137,90 +140,50 @@ function readStoreConsole(
 	time: string,
 	kind: NoteKind | null,
 ): ConsoleModel {
-	const profile = config.defaultProfile;
 	const known = [...liveCounts(store).keys()];
 	const set = scopeSet(config, known, scope);
-	const views = new Map<ScopeKey, View>(
-		set.keys.map((key) => [key, loadView(store.handle(), key)]),
-	);
+	const views = loadViews(store, set.keys);
 	const hereView = requireView(views, set.selected);
-	const links = supersedesOf(store, set.keys);
 	const data = directionsData(store, set.keys, config.budget.directions);
-	const tops = new Map<ScopeKey, SliceLine | null>(
-		set.keys.map((key) => [key, topLineOf(requireView(views, key))]),
-	);
-	const lines = data.lines.map((line) => {
-		const top = tops.get(line.scope) ?? null;
-		return { ...line, summary: top === null ? null : textOfLine(top) };
-	});
+	const tops = topLines(set.keys, views);
+	const lines = directionModel(data.lines, tops);
 	const next = upcomingRecords(store, [set.selected], time, NEXT_LIMIT, kind);
+	const frontier = sliceOf(hereView, config.budget.here);
 	const model: ConsoleModel = {
-		profile,
+		profile: config.defaultProfile,
 		scope: set.selected,
-		scopes: set.keys.map((key) => scopePanel(key, views, config)),
+		scopes: scopePanels(set.keys, views, config),
 		here: hereLines(hereView, config.budget.here),
 		directions: directionLines(lines, data.rest, time),
-		text: renderContext({
-			scope: set.selected,
-			here: hereView,
-			hereBudget: config.budget.here,
-			directions: lines,
-			older: data.rest,
-			now: time,
-			...(config.customPrompt === null
-				? {}
-				: { customPrompt: config.customPrompt }),
-			...(config.customPromptAppend === null
-				? {}
-				: { customPromptAppend: config.customPromptAppend }),
-		}),
-		budgets: {
-			here: {
-				used: sliceOf(hereView, config.budget.here).length,
-				limit: config.budget.here,
-			},
-			directions: { used: lines.length, limit: config.budget.directions },
-		},
-		records: set.keys.flatMap((key) =>
-			requireView(views, key).notes.map((row) => recordOf(row, links)),
+		text: renderContext(
+			contextOf(set.selected, hereView, config, lines, data.rest, time),
 		),
-		nodes: set.keys.flatMap((key) =>
-			nodesOf(store, key).map((node) => ({
-				scope: key,
-				node,
-				clean: nodeValid(requireView(views, key), node),
-			})),
-		),
-		candidates: set.keys.flatMap((key) =>
-			candidatesOf(requireView(views, key)).map((range) => ({
-				scope: key,
-				range,
-				ready: true,
-			})),
-		),
-		catalog: lines.map((line, pos) => {
-			const top = tops.get(line.scope) ?? null;
-			const range = { start: pos, level: 0 };
-			return top === null
-				? {
-						kind: "temporary",
-						range,
-						from: line.lastWrite,
-						to: line.lastWrite,
-						text: "",
-					}
-				: { ...top, range };
-		}),
+		budgets: budgetsOf(config, lines, frontier),
+		records: recordRows(set.keys, views, supersedesOf(store, set.keys)),
+		nodes: nodeRows(store, set.keys, views),
+		candidates: candidateRows(set.keys, views),
+		catalog: catalogLines(lines, tops),
 		catalogScopes: lines.map((line) => line.scope),
-		frontier: sliceOf(hereView, config.budget.here),
+		frontier,
 		review: dueRecords(store, [set.selected], time, kind),
 		reviewNext: next.records,
 		reviewNextTotal: next.total,
 		revision: store.rev(),
 	};
+	debugModel(config.defaultProfile, set.selected, model, kind);
+	return model;
+}
+
+/** @purpose Write one debug line with the counts of the console model. */
+function debugModel(
+	profile: string,
+	scope: ScopeKey,
+	model: ConsoleModel,
+	kind: NoteKind | null,
+): void {
 	debug("Console read", {
 		profile,
-		scope: set.selected,
+		scope,
 		scopes: model.scopes.length,
 		records: model.records.length,
 		nodes: model.nodes.length,
@@ -229,9 +192,140 @@ function readStoreConsole(
 		due: model.review.length,
 		next: `${model.reviewNext.length}/${model.reviewNextTotal}`,
 	});
-	return model;
 }
 
+/** @purpose Load one view for each scope of the read. */
+function loadViews(
+	store: Store,
+	keys: readonly ScopeKey[],
+): ReadonlyMap<ScopeKey, View> {
+	return new Map(keys.map((key) => [key, loadView(store.handle(), key)]));
+}
+
+/** @purpose Give the top line of each scope, or null when the scope holds no live note. */
+function topLines(
+	keys: readonly ScopeKey[],
+	views: ReadonlyMap<ScopeKey, View>,
+): ReadonlyMap<ScopeKey, SliceLine | null> {
+	return new Map(keys.map((key) => [key, topLineOf(requireView(views, key))]));
+}
+
+/** @purpose Join the top line text of each scope into its direction line. */
+function directionModel(
+	lines: readonly DirectionLine[],
+	tops: ReadonlyMap<ScopeKey, SliceLine | null>,
+): readonly DirectionLine[] {
+	return lines.map((line) => {
+		const top = tops.get(line.scope) ?? null;
+		return { ...line, summary: top === null ? null : textOfLine(top) };
+	});
+}
+
+/** @purpose Give the used and the allowed line count of the two console budgets. */
+function budgetsOf(
+	config: ResolvedConfig,
+	lines: readonly DirectionLine[],
+	frontier: readonly SliceLine[],
+): ConsoleModel["budgets"] {
+	return {
+		here: { used: frontier.length, limit: config.budget.here },
+		directions: { used: lines.length, limit: config.budget.directions },
+	};
+}
+
+/** @purpose Give each scope panel of the console. */
+function scopePanels(
+	keys: readonly ScopeKey[],
+	views: ReadonlyMap<ScopeKey, View>,
+	config: ResolvedConfig,
+): ConsoleModel["scopes"] {
+	return keys.map((key) => scopePanel(key, views, config));
+}
+
+/** @purpose Give each record line of the visible scopes. */
+function recordRows(
+	keys: readonly ScopeKey[],
+	views: ReadonlyMap<ScopeKey, View>,
+	links: ReadonlyMap<string, string[]>,
+): ConsoleModel["records"] {
+	return keys.flatMap((key) =>
+		requireView(views, key).notes.map((row) => recordOf(row, links)),
+	);
+}
+
+/** @purpose Give each node row of the visible scopes with its validity. */
+function nodeRows(
+	store: Store,
+	keys: readonly ScopeKey[],
+	views: ReadonlyMap<ScopeKey, View>,
+): ConsoleModel["nodes"] {
+	return keys.flatMap((key) =>
+		nodesOf(store, key).map((node) => ({
+			scope: key,
+			node,
+			clean: nodeValid(requireView(views, key), node),
+		})),
+	);
+}
+
+/** @purpose Give each build candidate of the visible scopes. */
+function candidateRows(
+	keys: readonly ScopeKey[],
+	views: ReadonlyMap<ScopeKey, View>,
+): ConsoleModel["candidates"] {
+	return keys.flatMap((key) =>
+		candidatesOf(requireView(views, key)).map((range) => ({
+			scope: key,
+			range,
+			ready: true,
+		})),
+	);
+}
+
+/** @purpose Give one catalog leaf for each direction line. */
+function catalogLines(
+	lines: readonly DirectionLine[],
+	tops: ReadonlyMap<ScopeKey, SliceLine | null>,
+): readonly SliceLine[] {
+	return lines.map((line, pos) => {
+		const top = tops.get(line.scope) ?? null;
+		const range = { start: pos, level: 0 };
+		return top === null
+			? {
+					kind: "temporary",
+					range,
+					from: line.lastWrite,
+					to: line.lastWrite,
+					text: "",
+				}
+			: { ...top, range };
+	});
+}
+
+/** @purpose Name each input of one context render. */
+function contextOf(
+	scope: ScopeKey,
+	hereView: View,
+	config: ResolvedConfig,
+	lines: readonly DirectionLine[],
+	older: readonly ScopeKey[],
+	time: string,
+): ContextInput {
+	return {
+		scope,
+		here: hereView,
+		hereBudget: config.budget.here,
+		directions: lines,
+		older,
+		now: time,
+		...(config.customPrompt === null
+			? {}
+			: { customPrompt: config.customPrompt }),
+		...(config.customPromptAppend === null
+			? {}
+			: { customPromptAppend: config.customPromptAppend }),
+	};
+}
 // #endregion FUNC_readStoreConsole
 
 /** @purpose Give one scope panel of the console from the rows of one store. */
@@ -254,7 +348,6 @@ function scopePanel(
 }
 
 // #region FUNC_candidatesOf
-
 /**
  * @purpose List the ranges of one view that lack a valid node, so a compaction has work.
  * @invariants Each level from one to the top of the extent gives one range for each live slot.
@@ -285,7 +378,6 @@ export function candidatesOf(view: View): readonly Range[] {
 	debug("Candidates listed", { slots: slots.length, count: result.length });
 	return result;
 }
-
 // #endregion FUNC_candidatesOf
 
 /** @purpose Give the visible scope keys of one console read, and the selected key. */
@@ -315,10 +407,9 @@ function requireView(views: ReadonlyMap<ScopeKey, View>, key: ScopeKey): View {
 	return view;
 }
 
-/** @purpose Give the record shape of the console from one note row. */
 /** @purpose Build the reverse supersede map of the visible scopes: each source names its targets. */
 function supersedesOf(
-	store: import("../store/store.js").Store,
+	store: Store,
 	keys: readonly ScopeKey[],
 ): ReadonlyMap<string, string[]> {
 	const links = new Map<string, string[]>();

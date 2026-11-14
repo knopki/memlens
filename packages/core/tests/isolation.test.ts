@@ -1,3 +1,9 @@
+/**
+ * #region moduleContract
+ * @modulecontract
+ * @purpose Prove that the library imports no frontend, plugin, or harness package.
+ * #endregion moduleContract
+ */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

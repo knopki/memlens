@@ -1,12 +1,12 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Let an agent propose a memory change and a human decide it with one journaled write.
  * @scope The open proposal row, the thirty-day expiry, the lazy sweep, the accepted payload, and the close.
  *        NOT: the note write of an accepted payload, rendering, or transport.
  * @invariants One publish call writes each change. A closed row keeps no payload.
- * @invariants An accept applies the payload and closes the row in one transaction.
  * @invariants A closed or stale id changes no row.
- * @dependencies node:sqlite, store/store.ts, store/types.ts, types/errors.ts, types/events.ts.
+ * @dependencies node:sqlite, store/store.ts, store/types.ts, types/errors.ts, types/primitives.ts.
  * @keywords proposal, propose, pending, accept, dismiss, expire, sweep, scope
  * #endregion moduleContract
  */
@@ -15,7 +15,7 @@ import type { SQLOutputValue } from "node:sqlite";
 import { debuglog } from "node:util";
 import { ulid } from "../domain/ulid.js";
 import { MemlensError } from "../types/errors.js";
-import type { ScopeKey } from "../types/events.js";
+import type { ScopeKey } from "../types/primitives.js";
 import type { Store, Tx } from "./store.js";
 import type { Proposal, ProposalStatus } from "./types.js";
 
@@ -39,7 +39,6 @@ const STATUS: Record<number, ProposalStatus> = {
 };
 
 // #region TYPE_ProposalInput
-
 /**
  * @purpose Name the fields of one proposed change, so a caller builds it without a schema.
  * @invariants A caller gives a scope, an operation, and a payload. The id and the target are optional.
@@ -52,11 +51,9 @@ export interface ProposalInput {
 	readonly target?: string;
 	readonly payload: unknown;
 }
-
 // #endregion TYPE_ProposalInput
 
 // #region FUNC_propose
-
 /**
  * @purpose Store one pending change, so a human decides it later inside its scope.
  * @requires The scope is a scope key. The op is a proposal operation name.
@@ -105,11 +102,9 @@ export function propose(store: Store, input: ProposalInput): Proposal {
 	});
 	return proposal;
 }
-
 // #endregion FUNC_propose
 
 // #region FUNC_pending
-
 /**
  * @purpose List each open proposal, so a screen or a command shows the pending work in age order.
  * @ensures The list holds open rows only, oldest first.
@@ -127,11 +122,9 @@ export function pending(store: Store): readonly Proposal[] {
 	debug("Pending proposals", { event: "pending", count: proposals.length });
 	return proposals;
 }
-
 // #endregion FUNC_pending
 
 // #region FUNC_sweep
-
 /**
  * @purpose Close each proposal past its expiry, so no timer is necessary.
  * @invariants The sweep clears the payload and keeps the row as a fact.
@@ -158,11 +151,9 @@ export function sweep(store: Store): number {
 	}).value;
 	return closed;
 }
-
 // #endregion FUNC_sweep
 
 // #region FUNC_accept
-
 /**
  * @purpose Apply one accepted proposal and close it in one transaction, so the change commits or nothing does.
  * @requires The row is open, it is not past its expiry, and its scope is visible.
@@ -210,11 +201,9 @@ export function accept(
 		});
 	});
 }
-
 // #endregion FUNC_accept
 
 // #region FUNC_dismiss
-
 /**
  * @purpose Close one proposal without a change, so the pending list stays honest.
  * @requires The row is open.
@@ -250,7 +239,6 @@ export function dismiss(store: Store, id: string, reason?: string): void {
 		});
 	});
 }
-
 // #endregion FUNC_dismiss
 
 /**

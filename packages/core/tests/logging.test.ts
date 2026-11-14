@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check that store logs expose results without note content.
  * #endregion moduleContract
  */

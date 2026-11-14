@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check build snapshots and conditional publication against store rows.
  * #endregion moduleContract
  */
@@ -17,11 +18,13 @@ import { amend, hide, note } from "../src/store/notes.js";
 import { Store } from "../src/store/store.js";
 
 const dirs: string[] = [];
+
 const stores: Store[] = [];
 afterAll(() => {
 	for (const store of stores) store.close();
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
+
 function open(): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-build-"));
 	dirs.push(dir);
@@ -29,6 +32,7 @@ function open(): Store {
 	stores.push(store);
 	return store;
 }
+
 function add(store: Store, body: string, day: number) {
 	const result = note(store, {
 		scope: "p:x",

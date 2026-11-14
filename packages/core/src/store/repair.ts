@@ -1,19 +1,21 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Find the damaged cache rows of a store and bound the audit journal, so a read never sees a stale summary.
  * @scope The quick check, the index drift, the invalid and the empty node rows, and the journal retention.
  *        NOT: the note rows, the schema, or the clock.
  * @invariants The scan runs in one read transaction. The fixes run in one publish call.
  * @invariants A clean store returns no action. The check changes no row of a clean store.
- * @dependencies node:sqlite, store/store.ts, store/nodes.ts, store/types.ts.
+ * @dependencies node:sqlite, store/store.ts, store/nodes.ts, store/rows.ts, store/types.ts.
  * @keywords repair, check, node, validity, fts, drift, journal, prune, retention
  * #endregion moduleContract
  */
 
-import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { debuglog } from "node:util";
-import type { ScopeKey } from "../types/events.js";
+import type { ScopeKey } from "../types/primitives.js";
 import { validNode, widthOf } from "./nodes.js";
+import { nodeFromRow } from "./rows.js";
 import type { Store } from "./store.js";
 import type { Node } from "./types.js";
 
@@ -29,7 +31,6 @@ const JOURNAL_DAYS = 365;
 const JOURNAL_MAX = 50_000;
 
 // #region TYPE_RepairOptions
-
 /**
  * @purpose Name the retention limits of one check, so the caller keeps the journal in bounds.
  * @invariants A missing limit takes the default of the store.
@@ -37,12 +38,13 @@ const JOURNAL_MAX = 50_000;
 export interface RepairOptions {
 	/** The journal age limit in days. The default is 365. */
 	readonly journalDays?: number;
+
 	/** The journal row limit. The default is 50000. */
 	readonly journalMax?: number;
+
 	/** Report actions without writing changes. */
 	readonly dryRun?: boolean;
 }
-
 // #endregion TYPE_RepairOptions
 
 /** The primary key of one node row. */
@@ -63,7 +65,6 @@ interface Plan {
 }
 
 // #region FUNC_check
-
 /**
  * @purpose Find each damaged row, repair what a cache may lose, and prune the journal, so a store stays consistent.
  * @invariants The node rows that fail the validity rules go. The node rows over no live note go.
@@ -127,7 +128,6 @@ export function check(
 	debug("Check done", { event: "check", actions: actions.length });
 	return [...findings, ...actions];
 }
-
 // #endregion FUNC_check
 
 /**
@@ -214,24 +214,6 @@ function journalPlan(db: DatabaseSync, cutoff: string, max: number): number {
 	const old = Number(stale?.c ?? 0);
 	const kept = Number(stored?.c ?? 0);
 	return old + Math.max(0, kept - max);
-}
-
-/**
- * @purpose Read one stored node row into its public shape.
- * @invariants A null half key stays null. A number stays a number.
- */
-function nodeFromRow(row: Record<string, SQLOutputValue>): Node {
-	return {
-		scope: String(row.scope) as ScopeKey,
-		level: Number(row.level),
-		start: Number(row.start),
-		summary: String(row.summary),
-		ts_from: String(row.ts_from),
-		ts_to: String(row.ts_to),
-		built_v: String(row.built_v),
-		a_key: row.a_key === null ? null : String(row.a_key),
-		b_key: row.b_key === null ? null : String(row.b_key),
-	};
 }
 
 /** @purpose Give the primary key of one node row. */

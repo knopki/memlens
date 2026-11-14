@@ -1,17 +1,19 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Provide pure range and text helpers for store views.
- * @scope Fold positions, calculate ranges, and limit text.
+ * @scope Search the sorted positions, fold positions, calculate ranges, and limit text.
  * #endregion moduleContract
  */
 import type { Lines, Pos, Range } from "../types/tree.js";
 
 /** The greatest character count of one line of the view. */
 export const LINE_LIMIT = 640;
+
 const contains = (range: Range, pos: Pos) =>
 	pos >= range.start && pos < range.start + 2 ** range.level;
-// #region FUNC_cutAtWord
 
+// #region FUNC_cutAtWord
 /**
  * @purpose Keep one text within a character limit and end it at a word boundary.
  * @invariants A text at or below the limit stays unchanged. A longer text cuts at its last space
@@ -23,11 +25,9 @@ export function cutAtWord(text: string, limit: number): string {
 	const space = cut.lastIndexOf(" ");
 	return space > 0 ? cut.slice(0, space) : cut;
 }
-
 // #endregion FUNC_cutAtWord
 
 // #region FUNC_topRangeOf
-
 /**
  * @purpose Keep the root extent tied to all assigned positions, without a tree.
  * @invariants Positive total gives start 0 and level max(1, ceil(log2(total))). Zero total gives null.
@@ -38,7 +38,6 @@ export function topRangeOf(total: Pos): Range | null {
 		? { start: 0, level: Math.max(1, Math.ceil(Math.log2(total))) }
 		: null;
 }
-
 // #endregion FUNC_topRangeOf
 
 function priority(total: Pos, a: Range, b: Range): number {
@@ -57,8 +56,8 @@ type MergePick = {
 	reduction: number;
 };
 
-/** The index of the first live position at or above one slot. */
-function lowerBound(positions: readonly Pos[], pos: Pos): number {
+/** @purpose Give the index of the first live position at or above one slot, so a caller finds a range edge. */
+export function lowerBound(positions: readonly Pos[], pos: Pos): number {
 	let start = 0;
 	let end = positions.length;
 	while (start < end) {
@@ -82,7 +81,6 @@ function upperBound(positions: readonly Pos[], pos: Pos): number {
 }
 
 // #region FUNC_liveCount
-
 /**
  * @purpose Count the live leaves of one range from the sorted positions.
  * @invariants The count is the slice of the positions inside the range.
@@ -93,11 +91,9 @@ function liveCount(positions: readonly Pos[], range: Range): number {
 		lowerBound(positions, range.start)
 	);
 }
-
 // #endregion FUNC_liveCount
 
 // #region FUNC_sparseBlocks
-
 /**
  * @purpose Tile empty gaps without allocating every assigned position.
  * @invariants Blocks tile [0, total) in position order with no gap or overlap.
@@ -122,11 +118,9 @@ function sparseBlocks(positions: readonly Pos[], total: Pos): Range[] {
 	empty(total);
 	return blocks;
 }
-
 // #endregion FUNC_sparseBlocks
 
 // #region FUNC_selectMerge
-
 /**
  * @purpose Select the best sibling pair while preserving the greatest live leaf.
  * @invariants A pair has adjacent blocks of equal level and a start divisible by the parent width.
@@ -171,11 +165,9 @@ function selectMerge(
 	}
 	return best;
 }
-
 // #endregion FUNC_selectMerge
 
 // #region FUNC_foldPositions
-
 /**
  * @purpose Fold selected pairs until the rendered count fits, then evict excess oldest lines.
  * @scope A pure frontier over one sorted list of live positions and the assigned extent.
@@ -203,11 +195,9 @@ export function foldPositions(
 	const visible = blocks.filter((range) => liveCount(positions, range) > 0);
 	return visible.slice(Math.max(0, visible.length - Math.max(1, budget)));
 }
-
 // #endregion FUNC_foldPositions
 
 // #region FUNC_joinBody
-
 /**
  * @purpose Join the two half texts of one range within the limit of a line.
  * @invariants A short pair joins whole. Above the limit, each half keeps a share of the room in
@@ -230,11 +220,9 @@ export function joinBody(first: string, rest: string, limit: number): string {
 	);
 	return `${cutAtWord(first, share)}; ${cutAtWord(rest, room - share)}`;
 }
-
 // #endregion FUNC_joinBody
 
 // #region FUNC_due
-
 /**
  * @purpose Rank a pair by its age relative to the assigned extent.
  * @invariants Due is (total - (start + 2^(level+1) - 1)) / 2^level, where level is the child level.
@@ -245,5 +233,4 @@ export function due(total: Pos, range: Range): number {
 		(total - (range.start + 2 ** (range.level + 1) - 1)) / 2 ** range.level
 	);
 }
-
 // #endregion FUNC_due

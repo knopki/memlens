@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check the public core entry point.
  * #endregion moduleContract
  */

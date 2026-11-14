@@ -10,27 +10,19 @@
  *  - NOT: reading the git configuration, the file system, or the harness state. The caller collects
  *    the subject.
  * @invariants
- *  - The rules go in order, and the first matching rule gives the active scope.
- *  - A rule matches `git_remote` with a glob, `path` with a glob, or `workspace` with an id.
- *  - A rule with no input in the subject gives no match.
- *  - The key part `{repo}` takes the repository name of the remote, in lowercase.
- *  - A substituted key outside the scope grammar gives no match, and the next rule applies.
- *  - No matching rule gives the key of `default`.
- *  - Several rules can give one key.
- *  - The visible scope list holds the scopes that at least one glob of the profile matches, in the
- *    order of the given scopes, and no hidden catalog key.
- *  - The glob `*` matches any text, so the key `*` alone matches each scope.
+ *  - Each match gives a valid scope key, or falls through to the next rule or the default.
+ *  - The visible list holds only scope keys that a profile glob matches, in the given order.
  * @usecases
  *  - Active scope: caller => gives the rules and the subject => gets the key and the rule index
- * @dependencies USES API: config.ts globMatches, scope.ts
+ * @dependencies USES API: config.ts globMatches, config-types.ts, scope.ts
  * @keywords active, scope, rule, git_remote, path, workspace, repo, visible
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
-import type { ScopeKey } from "../types/events.js";
-import type { Glob, Rule, ScopeDefault } from "./config.js";
+import type { ScopeKey } from "../types/primitives.js";
 import { globMatches } from "./config.js";
+import type { Glob, Rule, ScopeDefault } from "./config-types.js";
 import { isCatalogKey, validateScopeKey } from "./scope.js";
 
 const debug = debuglog("memlens:active-scope");
@@ -45,12 +37,12 @@ export interface ScopeSubject {
 /** The active scope key with the rule that gave it. */
 export interface ActiveScope {
 	key: ScopeKey;
+
 	/** The index of the rule in the list, or null when the default key applies. */
 	rule: number | null;
 }
 
 // #region FUNC_repoName
-
 /**
  * @purpose Take the repository name from one remote, so `{repo}` names the project.
  * @param remote - The remote URL, for example `git@github.com:knopki/optmem.git`.
@@ -60,13 +52,17 @@ export function repoName(remote: string): string {
 	const last = remote.trim().split(/[/:]/).filter(Boolean).at(-1) ?? "";
 	return last.replace(/\.git$/, "").toLowerCase();
 }
-
 // #endregion FUNC_repoName
 
 // #region FUNC_activeScope
-
 /**
  * @purpose Apply the ordered rules to one subject, so one context maps to one scope key.
+ * @invariants A rule matches `git_remote` with a glob, `path` with a glob, or `workspace` with an id.
+ * @invariants The rules go in order, and the first match gives the key and its rule index.
+ * @invariants A rule with no subject input gives no match, and the key part `{repo}` takes the
+ * remote repository name in lowercase.
+ * @invariants A substituted key outside the scope grammar gives no match, and the next rule applies.
+ * @ensures No matching rule gives the key of `default` and a null rule index.
  * @param scopeDefault - The rules and the default key from the configuration.
  * @param subject - The collected inputs of the context.
  * @returns The key and the index of the first matching rule, or the default key.
@@ -93,13 +89,13 @@ export function activeScope(
 	});
 	return { key: scopeDefault.default, rule: null };
 }
-
 // #endregion FUNC_activeScope
 
 // #region FUNC_visibleScopes
-
 /**
  * @purpose Filter the known scopes through the globs of one profile, so the profile sees its scopes only.
+ * @invariants The result keeps the given order and holds each scope that at least one glob matches.
+ * @invariants A hidden catalog key never enters the result. The glob `*` matches any text.
  * @param globs - The scope globs of the profile.
  * @param scopes - Each known scope key, in store order.
  * @returns The matched scope keys, with no hidden catalog key.
@@ -118,7 +114,6 @@ export function visibleScopes(
 	});
 	return visible;
 }
-
 // #endregion FUNC_visibleScopes
 
 function ruleKey(rule: Rule, subject: ScopeSubject): ScopeKey | null {

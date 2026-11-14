@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check merge attempts, batch answers, job answers, form choice, pacing, and one compaction pass.
  * #endregion moduleContract
  */
@@ -8,19 +9,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
-	answerLine,
 	autoForm,
+	compactionPass,
+	RateWindow,
+	retryDelay,
+} from "../src/domain/compaction.js";
+import {
+	answerLine,
 	batchTask,
 	childLine,
-	compactionPass,
 	copyBuild,
 	joinBuild,
 	mergeLine,
 	mergeTask,
 	parseBatchAnswer,
-	RateWindow,
-	retryDelay,
-} from "../src/domain/compaction.js";
+} from "../src/domain/merge-line.js";
 import { amend, note } from "../src/store/notes.js";
 import { Store } from "../src/store/store.js";
 import { loadView, sliceOf } from "../src/store/view.js";
@@ -34,10 +37,12 @@ const record = (pos: number, body: string): BuildChild => ({
 	preview: "",
 	ts: `2026-11-0${(pos % 9) + 1}`,
 });
+
 const input = (a: BuildChild, b: BuildChild | null): BuildInput => ({
 	range: { start: 0, level: 1 },
 	children: [a, b],
 });
+
 const model = (answers: string[]) => {
 	const calls: string[] = [];
 	return {

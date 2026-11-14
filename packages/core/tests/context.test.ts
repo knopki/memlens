@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check the context template, the line forms, the ages, the budgets, and the epoch.
  * @scope The store branch over row views, the directions order, and the projection branch.
  * @invariants The fixtures write rows by raw SQL. The directions follow the store order of the scopes.
@@ -22,7 +23,7 @@ import {
 import { Store } from "../src/store/store.js";
 import type { Node } from "../src/store/types.js";
 import { loadView, sliceOf, type View } from "../src/store/view.js";
-import type { ScopeKey } from "../src/types/events.js";
+import type { ScopeKey } from "../src/types/primitives.js";
 
 const dirs: string[] = [];
 afterAll(() => {

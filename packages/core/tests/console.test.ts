@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Check the serializable console models, the scope boundary, and the store state.
  * @scope The store branch over rows written by raw SQL, and the projection branch of the frontends.
  * @invariants The frontier and the text of one read use the same slice lines.
@@ -14,9 +15,10 @@ import { afterAll, describe, expect, it } from "vitest";
 import { loadBaseConfig, resolveConfig } from "../src/domain/config.js";
 import { readConsole } from "../src/domain/console.js";
 import { Store } from "../src/store/store.js";
-import type { ScopeKey } from "../src/types/events.js";
+import type { ScopeKey } from "../src/types/primitives.js";
 
 const now = "2026-11-10T12:00:00.000Z";
+
 const dirs: string[] = [];
 afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });

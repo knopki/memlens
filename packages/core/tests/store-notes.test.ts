@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Prove that each note write keeps the row, the index, the nodes, the journal, and the clock in step.
  * @scope The duplicate check, the slot order, the scope move, the index removal, the redaction bytes, and the review fields.
  * @keywords test, note, amend, hide, redact, review, fts, slot
@@ -16,9 +17,10 @@ import { ulid } from "../src/domain/ulid.js";
 import { amend, hide, note, redact, review } from "../src/store/notes.js";
 import { Store } from "../src/store/store.js";
 import type { Note, WriteResult } from "../src/store/types.js";
-import type { ScopeKey } from "../src/types/events.js";
+import type { ScopeKey } from "../src/types/primitives.js";
 
 const stores: Store[] = [];
+
 const dirs: string[] = [];
 
 afterAll(() => {
