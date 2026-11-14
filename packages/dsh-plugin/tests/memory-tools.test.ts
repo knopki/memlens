@@ -440,8 +440,8 @@ describe("memory tools of one agent", () => {
 	});
 
 	it("opens a range as its children", async () => {
-		seed("user:notes", "The first record.");
-		seed("user:notes", "The second record.");
+		seed("user:notes", "The first record.", null, "2026-01-01T00:00:00.000Z");
+		seed("user:notes", "The second record.", null, "2026-01-02T00:00:00.000Z");
 		const main = subject("main", "all");
 
 		const answer = (await call(main, "memory_open", {
