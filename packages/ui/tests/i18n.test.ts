@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { LANGS, MESSAGES } from "../src/i18n.js";
 
 const english = MESSAGES.en;
+
 const placeholders = (text: string): string[] =>
 	[...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? "").sort();
 

@@ -1,16 +1,11 @@
 /* #region moduleContract
  * @purpose Keep the console readable on a desktop screen in a light and a dark theme.
  * @scope The page shell, the panels, the tables, the forms, and the two palettes.
- * @invariants Each card, panel, and row keeps a gap to its neighbour and to both edges.
- * A scroll container reserves the scrollbar gutter on both edges, so a shown scrollbar moves no
- * content and the two insets stay equal. A card row fills the width of its container.
- * The text of a slice renders in full. The page scrolls, and the slice holds no inner scroll.
- * Two fields in one form row hold one width, and their single-line controls hold one height.
- * The status line floats above the page, so a message and a load state move no screen.
+ * @invariants The page scrolls, and no screen scrolls inside itself, so the slice text renders in
+ * full.
  * A line kind of the frontier keeps one palette color, and the legend shows the same color.
- * A search hit takes the frontier line row, so the two lists keep one frame.
- * Below 860 pixels the rail lies horizontal, the page scrolls, and no screen scrolls inside itself.
- * The stylesheet holds no layout decision of a screen. The attribute data-theme selects the palette.
+ * The stylesheet holds no layout decision of a screen, and the attribute data-theme selects the
+ * palette.
  * #endregion moduleContract
  */
 :root {

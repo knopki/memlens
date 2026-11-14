@@ -1,3 +1,10 @@
+/**
+ * #region moduleContract
+ * @purpose Check the plugin source contract: the identifier and the apply function.
+ * @invariants The source exports the name dsh-memlens and an apply function.
+ * #endregion moduleContract
+ */
+
 import { describe, expect, it } from "vitest";
 import { apply, name } from "../src/index.js";
 

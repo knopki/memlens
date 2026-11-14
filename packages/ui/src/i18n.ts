@@ -4,15 +4,25 @@
  * in a language of the DSH set.
  * @scope Message text, the language list, and the placeholder fill. NOT: the screens, the state, or
  * the store.
- * @invariants Every language holds every key of the English table. A missing language gives English.
+ * @invariants Every language holds every key of the English table, and a missing language gives
+ * English.
  * No message holds markup: the client puts each text into a text node.
  * @dependencies No import. The client owns the screens that read these messages.
  * @keywords console, language, locale, translation, message, text
  * #endregion moduleContract
  */
 
+import { de } from "./lang/de.js";
+import { es } from "./lang/es.js";
+import { fr } from "./lang/fr.js";
+import { ja } from "./lang/ja.js";
+import { pt } from "./lang/pt.js";
+import { ru } from "./lang/ru.js";
+import { zh } from "./lang/zh.js";
+
 /** The language codes of the DSH set, in the order of the language list. */
 export const LANGS = ["de", "en", "es", "fr", "ja", "pt", "ru", "zh"] as const;
+
 /** One language code. */
 export type Lang = (typeof LANGS)[number];
 
@@ -28,8 +38,7 @@ export const LANG_NAMES: Readonly<Record<Lang, string>> = {
 	zh: "中文",
 };
 
-// #region BLOCK_english
-
+// #region CONST_en
 /** The English messages. This table is the key set of every other language. */
 const en = {
 	// The chrome.
@@ -185,22 +194,12 @@ const en = {
 	kindTask: "task",
 	kindNote: "note",
 };
-
-// #endregion BLOCK_english
-
-import { de } from "./lang/de.js";
-import { es } from "./lang/es.js";
-import { fr } from "./lang/fr.js";
-import { ja } from "./lang/ja.js";
-import { pt } from "./lang/pt.js";
-import { ru } from "./lang/ru.js";
-import { zh } from "./lang/zh.js";
+// #endregion CONST_en
 
 /** One message table: every key of the English table. */
 export type Table = Readonly<Record<keyof typeof en, string>>;
 
-// #region BLOCK_tables
-
+// #region CONST_MESSAGES
 /** The messages of each language. */
 export const MESSAGES: Readonly<Record<Lang, Table>> = {
 	en,
@@ -212,26 +211,22 @@ export const MESSAGES: Readonly<Record<Lang, Table>> = {
 	ru,
 	zh,
 };
-
-// #endregion BLOCK_tables
+// #endregion CONST_MESSAGES
 
 // #region FUNC_messages
-
 /**
  * @purpose Give the table of one language with the English fallback.
  * @invariants An unknown code gives English. A missing key gives the English text.
  */
 export function messages(code: string): Table {
-	const lang = (code.slice(0, 2) as Lang) ?? "en";
+	const lang = code.slice(0, 2) as Lang;
 	const table = MESSAGES[lang];
 	if (!table) return en;
 	return table;
 }
-
 // #endregion FUNC_messages
 
 // #region FUNC_fill
-
 /**
  * @purpose Replace each {name} placeholder in one message.
  * @invariants An absent value keeps the placeholder out of the text and writes nothing.
@@ -244,10 +239,12 @@ export function fill(
 		name in values ? String(values[name]) : "",
 	);
 }
-
 // #endregion FUNC_fill
 
-/** The kind labels of the note kinds. */
+// #region CONST_KIND_KEYS
+/**
+ * @purpose Map each note kind to its message key.
+ */
 export const KIND_KEYS = {
 	decision: "kindDecision",
 	preference: "kindPreference",
@@ -255,3 +252,4 @@ export const KIND_KEYS = {
 	task: "kindTask",
 	note: "kindNote",
 } as const satisfies Record<string, keyof typeof en>;
+// #endregion CONST_KIND_KEYS

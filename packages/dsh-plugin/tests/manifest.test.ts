@@ -1,3 +1,10 @@
+/**
+ * #region moduleContract
+ * @purpose Check the manifest, the patch file, the locales, and the icon that the harness loads.
+ * @invariants Each harness dependency mirrors a peer. The entry file exists after the build.
+ * #endregion moduleContract
+ */
+
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +31,7 @@ interface PatchRow {
 }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
 const manifest = JSON.parse(
 	readFileSync(join(root, "package.json"), "utf8"),
 ) as Manifest;

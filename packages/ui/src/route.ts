@@ -4,13 +4,6 @@
  * browser buttons return to the same screen, scope, and note.
  * @scope The seven screen names, the five note kinds, and the read and write of the ten address
  * fields. NOT: the history calls, the screen controls, and the store reads.
- * @invariants
- *  - Read the closed sets of the console. A value outside the set of its field falls back to the
- *    default of that field, so a hand-edited address cannot break a screen.
- *  - Write a field only when its value differs from the default, so a default screen keeps a short
- *    address.
- *  - The field `s` holds `*` for every visible scope, a scope key for one scope, and no field for
- *    the selected scope.
  * @rationale
  *  - Q: Why does this module write no log message? A: The client logs the read and the write of the
  *    address. A pure mapping holds no event of its own.
@@ -18,7 +11,7 @@
  * #endregion moduleContract
  */
 
-import type { NoteKind } from "../../core/src/types/events.js";
+import type { NoteKind } from "../../core/src/types/primitives.js";
 
 /** The seven screens of the console. The order matches the number keys and the rail. */
 export const SCREENS = [
@@ -44,12 +37,13 @@ export const KINDS = [
 ] as const satisfies readonly NoteKind[];
 
 // #region TYPE_route
-
 /**
  * @purpose Hold one place of the console as plain text, so the address and the screen state share
  * one shape.
  * @invariants `searchScope` is null when the search follows the selected scope, and empty when it
- * reads every visible scope. An empty text means that the field holds its default.
+ * reads every visible scope. An empty text means that the field holds its default. The field `s`
+ * holds `*` for every visible scope, a scope key for one scope, and no field for the selected
+ * scope.
  */
 export type Route = {
 	screen: Screen;
@@ -63,7 +57,6 @@ export type Route = {
 	limit: string;
 	reviewKind: NoteKind | "";
 };
-
 // #endregion TYPE_route
 
 /** The place of a first visit: the overview of the default profile with no filter. */
@@ -81,7 +74,6 @@ export const DEFAULT_ROUTE: Route = {
 };
 
 // #region FUNC_routeOf
-
 /**
  * @purpose Turn a place of the console into the query text of the page address.
  * @invariants Write the keys `screen`, `profile`, `scope`, `target`, `q`, `s`, `kind`, `since`,
@@ -104,16 +96,15 @@ export function routeOf(route: Route): string {
 	put("rkind", route.reviewKind, "");
 	return params.toString();
 }
-
 // #endregion FUNC_routeOf
 
 // The text of a date field, as the date control writes it.
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 const kindOf = (raw: string): NoteKind | "" =>
 	(KINDS as readonly string[]).includes(raw) ? (raw as NoteKind) : "";
 
 // #region FUNC_readRoute
-
 /**
  * @purpose Turn the query text of the page address into a place of the console.
  * @invariants Keep each value inside the closed set of its field. A missing or rejected value gives
@@ -142,5 +133,4 @@ export function readRoute(search: string): Route {
 		reviewKind: kindOf(params.get("rkind") ?? ""),
 	};
 }
-
 // #endregion FUNC_readRoute

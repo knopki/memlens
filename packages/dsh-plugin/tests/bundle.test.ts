@@ -1,3 +1,10 @@
+/**
+ * #region moduleContract
+ * @purpose Check that the built bundle keeps the plugin contract that the harness loads.
+ * @invariants The bundle exports the plugin name and an apply function.
+ * #endregion moduleContract
+ */
+
 import { describe, expect, it } from "vitest";
 
 // The harness loads the built bundle, not the source. These tests fail when the

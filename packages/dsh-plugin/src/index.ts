@@ -7,9 +7,7 @@
  * @scope
  *  - The plugin contract: the name and the registration of contributions.
  *  - NOT: the library logic and the CLI.
- * @invariants
- *  - The module exports name and apply.
- *  - Each registration is an effect of the plugin context.
+ * @invariants Each registration is an effect of the plugin context.
  * @dependencies USES API: @deepseek-ai/cordis
  * @keywords dsh, plugin, harness, memlens
  * #endregion moduleContract
