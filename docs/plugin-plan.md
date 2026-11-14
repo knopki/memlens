@@ -1,198 +1,148 @@
 # DSH plugin plan
 
-Status: stages 1 to 6 implemented, 2026-11-14. The packed artifact installs by path and loads in an
-isolated profile. Stage 6 lives in an isolated profile with a session, the tab, the seven screens,
-the five note actions, and the host runtime state. [S-162](statements.md#s-162) gives the component
-and backend rule of the two hosts.
+Status: the plugin is implemented and merged. One rework remains: the console transport. The
+sections below give the current state, the reason for the rework, the target design, the risks, and
+the alternatives. Implemented stages are not repeated here. The history holds them.
 
-## Goal and boundary
+## Current state
 
-Make the existing plugin expose Memlens through DSH. Start with registration and configuration, then add context and tools.
-Leave the plugin console for a later change. Keep the standalone console as it is.
+The package `@memlens/dsh-plugin` does all of this today:
 
-The [requirements](spec/02-requirements.md), [configuration types](spec/config.d.ts), and [tool types](spec/tools.d.ts) define the product surface.
-The [architecture](spec/06-architecture.md) identifies the current implementation and the pending behavior.
+- The host entry and the `./preset` entry resolve the configuration per agent.
+- The plugin gives each agent one memory context, the six memory tools, the nudge, and the
+  background compaction worker.
+- The Web page gets the tab `Memory` from the slot `conversation.view`. The entry id is `memlens`.
+- `memlens ui` and the tab share one component layer in `packages/ui`. A component holds no style,
+  no transport, and no address. Each shell supplies its own.
+- The picture [demo/plugin-tab.png](demo/plugin-tab.png) shows the tab in an isolated profile.
 
-Keep the package `@memlens/dsh-plugin`. Import memory operations from `@memlens/core`.
-Keep DSH dependencies outside the core library. Do not import CLI command handlers into the plugin.
-Use the existing package structure, build tools, and tests. Add no service framework or persistent job queue.
+The tab reads and writes through one HTTP route. The plugin registers the prefix
+`/plugins/memlens` on the harness Web server. It calls `ctx.connection.requestRejection` before each
+answer. It resolves the session profile and scope through the plugin service. The route serves the
+console reads, the note actions, and the host runtime state.
 
-## Starting state
+## Why the route is the wrong transport
 
-At plan start, the plugin exported its name and an empty `apply` function. Its bundle patch inserted one row.
-The package had no core dependency, configuration schema, preset export, runtime context, or memory tool.
-The tests checked the package shape and exports only.
+The route works. It is the wrong level, and it fails open.
 
-The core exports configuration loaders, scope selection, context rendering, store reads and writes, proposals, and a compaction pass.
-The host still must supply DSH registration, session state, timers, and model calls.
+1. The harness Web server owns no authentication. Its own documentation states that the carrier
+   gives no authentication and no Origin policy. A plugin route must add both.
+2. The guard is plugin code. The call is `connection?.requestRejection(request)`. A composition
+   without the Connection service skips the check, and the route answers any caller. A store of
+   personal memory then has no protection.
+3. The route misses the owner check. The exact Fetch routes of Connection admit only a Peer with an
+   owner principal. A prefix route admits any authenticated Peer.
+4. DSH documents the normal plugin path for operations: a Remote method on a generated service. The
+   plugin cannot run the generator. The loader still accepts a hand-written contribution, and it
+   names that case: "Manual `ctx.typert.register()` remains available for contributions that do not
+   use a `./typert` artifact".
+5. This repository already did the same rework on another project. `~/prj/dsh/dsh-prompt-profiles`
+   serves `promptProfiles` as a hand-written Typert Remote. The host registers a
+   `TypertRemoteService`. The client mounts a mirrored contribution with `ctx.remote.$mount` and
+   injects `remote.promptProfiles`. That code is the reference shape.
+6. The route duplicates transport that the harness already has: the peer, the request codec, the
+   cancellation, and the error envelope.
+
+## Target design
+
+The host side:
+
+- One method table for the console operations: `view`, `search`, `open`, `catalog`, `status`, and
+  `action`.
+- One strict schema for each input and each result. The schema rejects an unknown field.
+- Descriptors for both faces come from that one table, so they cannot drift.
+- One class extends `TypertRemoteService`. It delegates each method to the existing console
+  operation. The operations in `console/read.ts`, `console/action.ts`, and `console/status.ts`
+  stay.
+- `ctx.typert.register(contribution)` runs inside one Cordis effect, so plugin disposal removes the
+  namespace.
+
+The client side:
+
+- The client mounts the mirrored contribution with `ctx.remote.$mount`.
+- The console port calls `remote.memlens.<method>` instead of `fetch`.
+- The slot inject still gives the session id. It travels in the input of each method.
+- The base path `/plugins/memlens` disappears from the client.
+
+The transport seam stays `StorePort` in `packages/ui/src/model/console.ts`. The tab builds one port
+over the Remote. `memlens ui` keeps its own HTTP port. No component changes.
+
+| Path | Change |
+| --- | --- |
+| `packages/dsh-plugin/src/console/remote.ts` | new: method table, schemas, descriptors, service, registration |
+| `packages/dsh-plugin/src/console/http.ts` | remove: route, trust guard, body parse, status codes |
+| `packages/dsh-plugin/src/index.ts` | register the Remote instead of the route |
+| `packages/dsh-plugin/src/client/console.ts` | build the port over the Remote |
+| `packages/dsh-plugin/src/client/context.ts` | add the structural type of the remote facade |
+| `packages/dsh-plugin/package.json` | add the peer and dev entries for the typert packages and zod |
+| `packages/dsh-plugin/tests/*` | replace the Web server stub with a remote facade stub |
 
 ## Execution order
 
-### 1. Registration and configuration
+1. Read the contribution types of the installed version. Write the method table and the schemas.
+2. Implement the host service and the registration. Prove it with one unit call per method.
+3. Mount the client contribution. Replace the port. Prove one read and one action from the client
+   test.
+4. Remove the route, its trust guard, and its tests. Check that `ctx.webServer` holds no route from
+   the plugin.
+5. Run the focused tests, `pnpm run format`, and `pnpm run verify`.
+6. Pack the plugin. Load it in an isolated profile. Open the tab in a session. Read one screen and
+   apply one note action.
+7. Remove the isolated profile and the temporary home.
 
-Implemented: host and preset entries, strict schemas, shared configuration defaults, scope resolution, model checks, and store disposal.
-The tests use Cordis Loader and DSH scopes at version `0.2.2-rc.3`, the lowest accepted version.
-See [0022 Plugin configuration](adr/0022-plugin-configuration.md).
+## Difficulties and risks
 
-Read the exact DSH contracts before each registration. The installed reference version is `0.2.2-rc.3`.
-The accepted compatibility requirement names `0.2.2-rc.3` as the lowest version. A check on the installed version alone proves no compatibility below it.
+- The reference project targets `0.2.1-alpha.2`. The contribution shape of the installed version is
+  `{ schemas, model, invocations }`, and each invocation is a typed descriptor. The descriptor
+  builder must follow the installed types. Copying the old builder is not enough.
+- The two faces need the same descriptor ids and the same wire names. A mismatch gives a missing
+  namespace at run time, and no error at registration.
+- The client facade must expose `$mount`. Verify this against the installed client packages before
+  the implementation, not after.
+- The console results are structural types, not schemas: the console model, the index hits, and the
+  open answers. Writing strict schemas for them is the largest part of the work.
+- The session id must stay in each input, because the transport no longer carries a query string.
+  The host must still resolve the agent from it.
+- The HTTP status codes disappear. Each failure becomes a `RemoteError` with a code. The client
+  shows only the message, so keep the cause text.
+- The navigation failure mode changes. A missing namespace fails at run time, not at build time.
+- The live check still needs one session in a harness profile. The check stays outside the automatic
+  tests.
 
-Implement the host entry and the `./preset` entry. Resolve the bundle row ids against REQ-028.
-Keep the package name separate from the bundle row id and the exported plugin name.
+## Alternatives
 
-Expose the patch configuration and the preset configuration through DSH schemas.
-Use the core loaders and merge rules for the base file, profile patch, and preset.
-Resolve the profile, store path, budgets, and active scope for each agent.
-Reject unknown keys, missing profiles, and invalid values before the agent uses memory.
-Check the model context limit through the DSH model metadata.
+1. Keep the route. Rejected: fail-open guard, no owner check, transport duplication.
+2. `ctx.connection.fetch.register`. The exact Fetch routes of Connection apply the authentication
+   and admit only the owner. Five shipped packages use them. This is the smallest change, and it
+   stays the fallback if the Remote cannot be mounted in the installed version.
+3. A session command through `ctx.remote.commands.execute`. Each console read would enter the
+   session transcript as a human command. Rejected.
+4. A `wire.view` projection. The console reads the store, not the session events. Rejected.
+5. Two transports behind `StorePort`. The interface already hides the transport, so the plugin can
+   keep the route as a fallback during the change. Remove it before the handoff.
 
-Keep one resource owner for each open store. Close the store when that owner ends.
-Keep registrations and resource cleanup under Cordis effects.
-For each agent registration, retain its disposer under both the plugin context and the agent context.
+## Acceptance
 
-Acceptance: a real DSH composition loads the built entries, resolves two distinct presets, and disposes its resources.
-Tests cover configuration precedence, invalid configuration, and the built package contents.
-This stage requires no browser page and no model call.
-
-### 2. Memory context
-
-Register one runtime context for each agent. Use `required: true`, `interpolate: false`, and order `220`.
-The harness combines named sections in one runtime context message. Restore only the Memlens section from the current session surface.
-Render the slice through the core. Read the previous snapshot from the harness session history.
-Keep the snapshot text stable across turns, writes, summary builds, and process restarts.
-Refresh it at the accepted triggers: a fresh session, successful harness compaction, and idle time above the model TTL.
-Measure the idle interval from session activity. A snapshot timestamp does not measure session inactivity.
-A refresh with identical text needs no new message. The harness owns snapshot publication and replacement.
-Keep the snapshot in the harness history. Add no snapshot table to Memlens.
-Apply the subagent mode before the context registration. The `off` mode receives no memory context.
-
-Acceptance: two sessions keep separate snapshots. A restart preserves the exact text.
-A write leaves the current snapshot unchanged. Each refresh trigger produces the expected snapshot.
-The memory context remains present when the harness disables optional runtime context.
-A render calls no model and waits for no summary build.
-
-### 3. Agent tools
-
-Implement the six accepted tools with their existing input and output types.
-Start with `memory_find`, `memory_open`, and `memory_map`. Then add `memory_note`, `memory_forget`, and `memory_review`.
-Share the resolved profile and active scope with the context provider.
-Use core operations for address parsing, reads, writes, review dates, and proposals.
-Keep profile visibility checks at every tool boundary.
-
-Register the tool set in the context of its agent.
-The main agent receives all six tools.
-A child in `propose` receives find, open, map, and note. Its note creates a proposal.
-A child in `read` receives find, open, and map. A child in `off` receives no memory tool.
-No child receives forget or review.
-
-Store the child session id beside the proposed note fields in the existing JSON payload.
-Use that id to collect the proposals of one child for its parent.
-Keep the operation fields at the top of the payload, because console approval reads them there.
-Use proposal ids and bodies for the parent report. A new-note proposal has no record address.
-Deliver the proposal lines through separate injected context when the child ends. Keep the child result intact.
-Use the tool output renderer for the child message, `Proposed to your parent: ...`.
-Keep the canonical value equal to the declared output type.
-The parent applies a suggestion through an ordinary note write.
-Expose no amend, redact, accept, or dismiss tool.
-
-Acceptance: test each tool result against its declared shape.
-Test the main agent and all three child modes through actual tool registration.
-Test foreign scopes, qualified addresses, numeric review targets, proposal reports, and two agents with different profiles.
-
-### 4. Nudge and background work
-
-Add the two nudge counters through the accepted injected context surface.
-Reset both counters after a note write or a nudge. Keep nudge text outside the memory snapshot.
-
-Connect the existing compaction pass to the configured DSH LLM service.
-Start work at the dirty threshold and idle timeout. Keep call limits, retry state, and in-flight work local.
-Use one worker owner for each store. Dispose timers and prevent late writes after disposal.
-Call the existing proposal sweep at the write boundary.
-
-Acceptance: fake time proves the counter, idle, and retry behavior.
-A controlled LLM proves provider and model selection without a paid request.
-A failed build leaves the range dirty. A changed input rejects a late answer.
-A read still returns immediately. Plugin disposal leaves no active timer or worker.
-
-### 5. Package and compatibility checks
-
-Complete backend configuration text and package instructions in the eight required languages.
-Keep public names stable. Declare runtime dependencies and include every built entry in the package.
-Run focused tests for each stage. Run `pnpm run format` and `pnpm run verify` before each implementation handoff.
-Inspect the packed artifact and load it in an isolated DSH profile.
-Check both the installed DSH version and the accepted lower version boundary.
-Report unsupported or untested version boundaries explicitly.
-
-Acceptance: the built package completes agent start, memory context, tool call, result, session reload, and plugin disposal.
-Keep credentials and paid model calls outside the automatic checks.
-
-### 6. Plugin console tab
-
-The tab is one entry of the slot `conversation.view`. No slot takes a kind for a tab, and the header
-slot holds buttons only. See [08-ui.md](spec/08-ui.md) and [S-162](statements.md#s-162).
-
-The two hosts share one component layer in `packages/ui`. A component holds no style, no transport,
-and no address. The shell of each host supplies its own styles, transport, and address.
-`memlens ui` keeps its own backend. The plugin uses the harness HTTP server.
-
-The client artifact is a classic script. It calls `window.__ModuleLoader__.load({ id, factory })`,
-and the factory returns `{ apply, inject }`. React and the JSX runtime stay external and come from
-the harness module table. The host package declares `dsh.client` with `platform: "web"` and the
-`./client` export.
-
-The plugin data route takes the prefix `/plugins/memlens/`. It applies
-`ctx.connection.requestRejection` before it answers, and it resolves the session profile and scope
-through the plugin service. It serves the console reads, the note actions, and the runtime state.
-
-Acceptance: the tab appears in a live session, shows each of the seven screens, and applies the five
-note actions. The tests cover each route answer and each component contract. The packed artifact
-carries the client bundle.
-
-Implemented: one component layer in `packages/ui`, the React shell of `memlens ui`, the client
-artifact, the slot entry `memlens`, the seven screens, the record dialog, the data route, and the
-host runtime state. The page shows the tab of [08-ui.md](spec/08-ui.md) in the picture
-[demo/plugin-tab.png](demo/plugin-tab.png).
-
-Verified in an isolated profile: the boot graph carries the plugin row, the route serves the
-artifact, the tab opens in a live session, the overview reads the store, the maintenance screen
-reads the host runtime state, a note action updates the record, and the store keeps its records
-across a process restart.
+- The tab shows the seven screens and the five note actions. No HTTP route from the plugin exists.
+- The plugin registers no path on the Web server.
+- The type check, the tests, and `pnpm run verify` pass.
+- The packed artifact loads in an isolated profile. A read and an action reach the store.
+- The plugin leaves no surface that answers without authentication.
 
 ## Delegation and integration
 
 | Owner | Owned work | Boundary |
 | --- | --- | --- |
-| Entry agent | Manifest, bundle patch, build, host entry, preset entry, configuration | No context provider or tool handlers. |
-| Context agent | Snapshot lifecycle, session history, runtime context | No manifest, configuration parser, or tool writes. |
-| Tools agent | Tool schemas, handlers, child modes, proposal reports | No context snapshot lifecycle or build changes. |
-| UI foundation agent | The model layer, the transport port, the controller, the message hook, and the primitives of `packages/ui` | No screen file and no shell. |
-| Screen agents | One screen file each under `packages/ui/src/components/` | No model file, no primitive, and no shell. |
-| Data route agent | The plugin console route, the runtime state, and the store access | No client source and no `packages/ui` file. |
-| Client agent | The client artifact, the slot registration, the plugin styles, and the transport call | No host route and no `packages/ui` component. |
-| Lead | Shared contracts, entry wiring, build, manifest, the standalone shell, integration, and final checks | Resolve shared edits before agents write. |
+| Contract agent | The method table, the schemas, and the descriptor builder | No service class and no client source. |
+| Host agent | The service class, the registration, and the host tests | No client source and no component. |
+| Client agent | The client mount, the Remote port, and the client tests | No host service and no component. |
+| Lead | The removal of the route, the entry wiring, the manifest, the build, the isolated-profile check, and the final checks | Resolve shared edits before agents write. |
 
-Each implementation agent must load `grace-lite`, `ponytail`, `dsh-doc`, and `plugin-write`.
-Each agent must read the relevant module contracts before a change.
-The entry agent alone edits existing package files during stage 1.
-After stage 1, the lead owns entry wiring and shared configuration changes.
-The context agent and tools agent own separate source modules and their respective tests.
-The lead defines shared inputs after stage 1. Later agents consume those inputs without editing their owner modules.
-If a shared contract must change, the lead makes that change before parallel work continues.
-
-## Decisions and checks before implementation
-
-The customer removed `hidden`, `rebuildsQueued`, and `topNodesQueued` from the `memory_forget` result on 2026-11-14.
-A successful call returns `{}`. The tool renderer gives a short confirmation, and errors retain their specific cause.
-The [tool types](spec/tools.d.ts) and REQ-371 define this result.
-Keep an out-of-profile hide as a proposal. Do not expose a hidden count through another field.
-
-Keep the bundle row id `memlens`, the plugin name `dsh-memlens`, and the package name `@memlens/dsh-plugin` distinct.
-The preset module specifier is `@memlens/dsh-plugin/preset`. It uses the package export `./preset`.
-The host and preset entries need one shared configuration source. Prove that connection in the stage 1 composition test.
-Use one small Cordis service if the preset needs access to the host configuration. Do not build a separate service package.
+Each agent must load `grace-lite`, `ponytail`, and `dsh-doc`. Each agent must read the module
+contracts of the files it touches. The lead owns `index.ts`, the manifest, and the build.
 
 ## Deferred work
 
-The plugin console, browser routes, and visual checks remain outside these stages.
-The pending import from harness sessions also remains outside this plan.
-The existing open questions about import, store identity, tokenizer changes, and incremental export do not block stage 1.
+The import from harness sessions stays outside this plan.
+The existing open questions about the import, the store identity, the tokenizer, and the incremental
+export do not block this rework.
