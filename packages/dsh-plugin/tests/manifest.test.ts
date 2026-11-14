@@ -46,12 +46,12 @@ const manifest = JSON.parse(
 
 /** The service packages that the host entry imports at run time. */
 const DSH_PEERS: Record<string, string> = {
-	"@deepseek-ai/dsh-agent": ">=0.2.1-0 <0.3.0",
-	"@deepseek-ai/dsh-llm": ">=0.2.1-0 <0.3.0",
-	"@deepseek-ai/dsh-scope": ">=0.2.1-0 <0.3.0",
-	"@deepseek-ai/dsh-session": ">=0.2.1-0 <0.3.0",
-	"@deepseek-ai/dsh-system-prompt": ">=0.2.1-0 <0.3.0",
-	"@deepseek-ai/dsh-tools": ">=0.2.1-0 <0.3.0",
+	"@deepseek-ai/dsh-agent": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-llm": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-scope": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-session": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-system-prompt": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-tools": ">=0.2.2-rc.3 <0.3.0",
 };
 
 /** Read one export target as an object with the type and the default paths. */
@@ -168,8 +168,8 @@ describe("plugin manifest", () => {
 		).toBe(undefined);
 	});
 
-	it("supports DeepSeek Harness 0.2.1 and later", () => {
-		expect(manifest.engines?.dsh).toBe(">=0.2.1-0");
+	it("supports DeepSeek Harness 0.2.2-rc.3 and later", () => {
+		expect(manifest.engines?.dsh).toBe(">=0.2.2-rc.3");
 		expect(manifest.engines?.node).toBeTruthy();
 	});
 });

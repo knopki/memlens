@@ -188,7 +188,7 @@ See [S-135](../statements.md#s-135) and [0015 Node invalidation](../adr/0015-nod
 | Q-106 | Which screens does the tab `Memory` hold? | The tab holds each screen. It has no catalog of profiles, because the profile of the session is current. See S-078. | 2026-11-05 |
 | Q-107 | Does the tab write, or does it read only? | The tab is a piece of the UI. A human does each action there, as in the full console. See S-078. | 2026-11-05 |
 | Q-004 | What does "localization" include: the product interface, the documents, or both? | The product interface, the READMEs, and the installation and usage instructions. See S-081. | 2026-11-05 |
-| Q-005 | Which DSH version does the plugin support? | DeepSeek Harness 0.2.1 and later. See S-081. | 2026-11-05 |
+| Q-005 | Which DSH version does the plugin support? | DeepSeek Harness 0.2.2-rc.3 and later. See S-081 and REQ-427. | 2026-11-05 |
 | Q-006 | Does the plugin use the library? | The plugin uses the functions of the core library. See S-081. | 2026-11-05 |
 | Q-007 | Which license does the project use? | MIT. See S-081. | 2026-11-05 |
 | Q-008 | Which languages does the plugin package README take?                          | The README of the plugin package takes the eight languages of the DSH set. See Q-108 and S-082.                                                    | 2026-11-05 |

@@ -87,6 +87,4 @@ pnpm run test
 
 ## Version
 
-La version testée est DeepSeek Harness `0.2.2-rc.3`. Le manifeste accepte `>=0.2.1-0`. Un contrôle de
-chargement de `0.2.1-rc.5` passe : le plugin enregistre son service et le libère proprement. La
-surface de mémoire complète n'a des tests que sur `0.2.2-rc.3`.
+La version minimale acceptée est DeepSeek Harness `0.2.2-rc.3`. Le manifeste accepte `>=0.2.2-rc.3`.

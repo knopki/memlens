@@ -1,8 +1,7 @@
 # DSH plugin plan
 
-Status: stages 1 to 5 implemented, 2026-11-14. The packed artifact installs by path, loads in an
-isolated profile, and passes a load check at `0.2.1-rc.5`. The full memory surface has tests on
-`0.2.2-rc.3` only, and a live agent run needs credentials. The plugin console stays outside this
+Status: stages 1 to 5 implemented, 2026-11-14. The packed artifact installs by path and loads in
+an isolated profile. A live agent run needs credentials. The plugin console stays outside this
 plan.
 
 ## Goal and boundary
@@ -31,12 +30,11 @@ The host still must supply DSH registration, session state, timers, and model ca
 ### 1. Registration and configuration
 
 Implemented: host and preset entries, strict schemas, shared configuration defaults, scope resolution, model checks, and store disposal.
-The tests use Cordis Loader and DSH scopes at version `0.2.2-rc.3`. A load check at `0.2.1-rc.5`
-passes, and the full suite has no run on an older version.
+The tests use Cordis Loader and DSH scopes at version `0.2.2-rc.3`, the lowest accepted version.
 See [0022 Plugin configuration](adr/0022-plugin-configuration.md).
 
 Read the exact DSH contracts before each registration. The installed reference version is `0.2.2-rc.3`.
-The accepted compatibility requirement also includes `0.2.1` prereleases. A check on the installed version alone proves no older compatibility.
+The accepted compatibility requirement names `0.2.2-rc.3` as the lowest version. A check on the installed version alone proves no compatibility below it.
 
 Implement the host entry and the `./preset` entry. Resolve the bundle row ids against REQ-028.
 Keep the package name separate from the bundle row id and the exported plugin name.
