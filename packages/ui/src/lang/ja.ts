@@ -118,9 +118,6 @@ export const ja: Table = {
 	nodesByLevel: "レベル別のノード",
 	compaction: "集約",
 	prepareScope: "スコープのジョブを準備",
-	prepareCatalog: "カタログのジョブを準備",
-	noInputsCatalog:
-		"統合の入力がありません。スコープに最上位のノードがまだありません。",
 	noInputs:
 		"統合する入力がありません。未処理の範囲はどれも 2 つ目の子を待っています。",
 	mergeTasks: "統合タスク",

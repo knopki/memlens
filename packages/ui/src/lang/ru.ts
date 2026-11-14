@@ -118,8 +118,6 @@ export const ru: Table = {
 	nodesByLevel: "Узлы по уровням",
 	compaction: "Уплотнение",
 	prepareScope: "Задание по области",
-	prepareCatalog: "Задание по каталогу",
-	noInputsCatalog: "Нет входов на слияние. У области ещё нет верхнего узла.",
 	noInputs:
 		"Нет входов на слияние. Каждый грязный диапазон ждёт второго ребёнка.",
 	mergeTasks: "Задачи слияния",

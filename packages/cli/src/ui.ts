@@ -529,11 +529,6 @@ async function compact(
 	scope: ScopeKey,
 	fields: Fields,
 ): Promise<unknown> {
-	if (fields.catalog === true)
-		throw new MemlensError(
-			"Usage",
-			"The catalog is derived and holds no nodes. Compact one scope.",
-		);
 	const target = scope;
 	if (fields.action === "compact") {
 		const job = await prepareCompact(runtime, target, {

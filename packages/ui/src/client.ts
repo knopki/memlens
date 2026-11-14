@@ -71,7 +71,6 @@ type View = ConsoleModel & {
 type Job = {
 	inputs: BuildInput[];
 	job: string;
-	catalog: boolean;
 	profile: string;
 	scope: string;
 };
@@ -1371,7 +1370,7 @@ function maintenance(main: HTMLElement, model: View): void {
 			]),
 		),
 	);
-	main.append(tiles, budgets, candidates, perLevel, compactionPanel(model));
+	main.append(tiles, budgets, candidates, perLevel, compactionPanel());
 }
 
 // #endregion FUNC_maintenance
@@ -1390,44 +1389,36 @@ function bar(name: string, value: { used: number; limit: number }) {
 	return node;
 }
 
-function compactionPanel(model: View) {
-	const node = panel(
-		state.job?.catalog
-			? `${tr("compaction")} · ${tr("nav2")}`
-			: tr("compaction"),
-	);
+function compactionPanel() {
+	const node = panel(tr("compaction"));
 	const buttons = el("div", "", "actions");
-	for (const catalog of [false, true])
-		buttons.append(
-			btn(
-				catalog ? tr("prepareCatalog") : tr("prepareScope"),
-				async () => {
-					const result = (await action("compact", { catalog })) as {
-						inputs: BuildInput[];
-						job: string;
-					};
-					if (!result || !Array.isArray(result.inputs))
-						throw new Error(tr("badJob"));
-					state.job = {
-						inputs: result.inputs,
-						job: result.job,
-						catalog,
-						profile: state.profile,
-						scope: state.scope,
-					};
-					state.jobError = "";
-					render();
-				},
-				"pri",
-			),
-		);
+	buttons.append(
+		btn(
+			tr("prepareScope"),
+			async () => {
+				const result = (await action("compact", {})) as {
+					inputs: BuildInput[];
+					job: string;
+				};
+				if (!result || !Array.isArray(result.inputs))
+					throw new Error(tr("badJob"));
+				state.job = {
+					inputs: result.inputs,
+					job: result.job,
+					profile: state.profile,
+					scope: state.scope,
+				};
+				state.jobError = "";
+				render();
+			},
+			"pri",
+		),
+	);
 	node.append(buttons);
 	const job = state.job;
 	if (!job) return node;
 	if (!job.inputs.length) {
-		node.append(
-			el("p", tr(job.catalog ? "noInputsCatalog" : "noInputs"), "muted"),
-		);
+		node.append(el("p", tr("noInputs"), "muted"));
 		return node;
 	}
 	const tasks = el("pre", job.job, "slice");
@@ -1459,7 +1450,6 @@ function compactionPanel(model: View) {
 				if (unknown.length)
 					throw new Error(tr("unknownInput", { inputs: wanted.join(", ") }));
 				const result = (await action("compact-answer", {
-					catalog: job.catalog,
 					inputs: job.inputs,
 					answers: answers.value,
 				})) as { built: number; rejected: number; rejectedRanges: string[] };

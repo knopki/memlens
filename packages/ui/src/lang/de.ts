@@ -120,9 +120,6 @@ export const de: Table = {
 	nodesByLevel: "Knoten je Ebene",
 	compaction: "Verdichtung",
 	prepareScope: "Bereichsjob vorbereiten",
-	prepareCatalog: "Katalogjob vorbereiten",
-	noInputsCatalog:
-		"Kein Eingang für das Zusammenführen. Ein Bereich hat noch keinen obersten Knoten.",
 	noInputs:
 		"Keine Eingabe zum Zusammenführen. Jedes offene Intervall wartet auf sein zweites Kind.",
 	mergeTasks: "Aufgaben zum Zusammenführen",
