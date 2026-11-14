@@ -1,9 +1,10 @@
 import { build } from "esbuild";
 
-// Bundle the plugin. The packages stay external: the harness gives them at run time.
+// Build the host entry and the preset entry. The packages stay external: the
+// harness gives them at run time.
 await build({
-	entryPoints: ["src/index.ts"],
-	outfile: "lib/index.js",
+	entryPoints: ["src/index.ts", "src/preset.ts"],
+	outdir: "lib",
 	bundle: true,
 	packages: "external",
 	platform: "node",

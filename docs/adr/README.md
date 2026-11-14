@@ -56,6 +56,7 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0019 | Review time | accepted |
 | 0020 | Storage pivot | accepted |
 | 0021 | Scope tool modes | accepted |
+| 0022 | Plugin configuration | accepted |
 
 The decision texts of 2026-11-10 call the compaction the writer. The product renamed the term on 2026-11-11, and the texts stay as decided.
 

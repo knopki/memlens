@@ -1,0 +1,6 @@
+{
+	"meta": {
+		"title": "memlens",
+		"description": "memlens のヘッドレスライブラリ、その CLI フロントエンド、および DeepSeek Harness プラグイン。"
+	}
+}

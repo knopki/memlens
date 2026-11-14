@@ -1,0 +1,40 @@
+# 0022. Plugin configuration
+
+Status: accepted
+
+## Context
+
+The plugin has one host entry and one preset entry. DSH activates each preset revision once and shares it across selecting agents.
+An agent scope inherits the scope of that preset revision. A separate service for each preset needs explicit Cordis isolation.
+
+## Decision
+
+The host entry supplies one `memlens` service and one store. The bundle patch inserts only the host row, with id `memlens`.
+An agent preset mounts `@memlens/dsh-plugin/preset` with row id `memlens/preset` and its required `profile` key.
+The exported plugin names remain `dsh-memlens` and `memlens/preset`.
+
+The preset entry registers its settings in the shared service under the DSH scope key of its caller.
+An agent selects the nearest registration in its scope chain. Without a registration, the host uses the default profile.
+The preset owns its registration. The host owns the store, and each agent owns its cached memory inputs.
+
+The core owns the fallback TOML text. The CLI and plugin use that same text when the base file is absent.
+The plugin rejects other file errors. The patch store path wins over the environment and the base file.
+
+The schemas check raw input through the core before DSH reads the declared fields.
+This order rejects unknown keys and preserves field metadata without adding defaults to omitted fields.
+
+The host checks the model context when an agent already has a selected model.
+An agent without a selected model receives the check at the start of its first model stream.
+The `llm/stream` hook checks only requests that carry the agent loop marker. Auxiliary model calls keep their own context limits.
+This boundary retains the user message before a failed check. A route change receives a new check. A model below 65 536 tokens, or without context metadata, fails the check.
+
+## Alternatives
+
+A service for each preset needs extra realms and cannot serve host consumers through ordinary agent lookup.
+A disabled preset row in the host bundle cannot work at host scope and gives the user an unusable entry.
+A copy of the CLI fallback text gives two sources for the same defaults.
+
+## Consequences
+
+Different presets share one store and keep separate memory settings. The host needs no new service package or persistent configuration table.
+The plugin registers no memory context or tool in this stage.

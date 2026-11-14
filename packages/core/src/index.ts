@@ -58,6 +58,7 @@ export {
 	type CompactionMode,
 	type Days,
 	DEFAULT_CACHE_TTL,
+	DEFAULT_CONFIG_TOML,
 	DEFAULT_REVIEW_DAYS,
 	type Duration,
 	type Glob,

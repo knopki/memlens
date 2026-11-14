@@ -1,6 +1,6 @@
 # Architecture
 
-Status: the storage pivot uses one SQLite row store. The core and CLI have implementations. The standalone console uses the store. The plugin has a scaffold.
+Status: the storage pivot uses one SQLite row store. The core and CLI have implementations. The standalone console uses the store. The plugin implements host and preset configuration with one shared store.
 The global requirements define cross-module behavior. Code contracts define implemented local behavior.
 
 ## Shape
@@ -306,7 +306,14 @@ cache over the note rows. The store rebuilds it after a loss. See
 
 ## Harness surface
 
-This surface is a target. The plugin is a scaffold, and it registers nothing yet.
+The [host entry](../../packages/dsh-plugin/src/index.ts) registers one shared Memlens service and validates each selected model before use.
+The [preset entry](../../packages/dsh-plugin/src/preset.ts) registers settings under its DSH scope.
+The [service contract](../../packages/dsh-plugin/src/service.ts) owns profile resolution and store disposal.
+The [runtime contract](../../packages/dsh-plugin/src/runtime.ts) owns configuration file access and active scope inputs.
+The [schema contract](../../packages/dsh-plugin/src/config.ts) owns strict field validation and DSH field metadata.
+See [0022 Plugin configuration](../adr/0022-plugin-configuration.md).
+
+The memory context below remains a target.
 
 The plugin registers the slice as `systemPrompt.context`. It does not use a system prompt section: a
 change of the section invalidates the whole cached prefix. See [0007 Slice and context](../adr/0007-slice-context.md).
@@ -319,7 +326,7 @@ The plugin registers one context for each agent at `agent/created`. The event gi
 and the context is bound to it: another agent does not receive the context.
 The context has `required: true` and the order 220. A line for one step comes through injected context
 instead, and the nudge uses that surface. The registration reads `agent.session.id`,
-`agent.session.meta.agentPreset`, and `agent.session.meta.cwd`. The preset selects the profile, and
+`agent.session.header.agentPreset`, and `agent.session.header.cwd`. The preset selects the profile, and
 the cwd selects the active scope.
 
 The harness writes the context as a user-role message after the saved history. The message survives a
@@ -327,7 +334,7 @@ restart. The harness writes a new message only when the text changes. A compacti
 message, and the plugin renders a new snapshot after the compaction succeeds. See
 [REQ-280](02-requirements.md) to [REQ-285](02-requirements.md).
 
-The harness gives a name to each built-in runtime context, and no name to a plugin. The built-in
+Each runtime context has a unique name, including a plugin context. The harness combines named sections in one snapshot. The built-in
 values are `WORKING_DIRECTORY` 100, `SANDBOX_POLICY` 110, `APPROVAL_POLICY` 115,
 `SUBAGENT_DELEGATION` 120, `TEAM_IDENTITY` 125, `HARNESS_SOURCE` 200, and `WEB_SURFACE` 210. The
 plugin uses 220, after the last built-in context. Tool declarations and prompt sections have their own
@@ -466,7 +473,7 @@ The following items are not in the code. The other slices of this document descr
 - No host calls `compactionPass` or `sweep`. Only `memlens compact` and the console job start a build.
   The store refuses an expired proposal, and no write closes the row. See
   [REQ-204](02-requirements.md) and [REQ-024](02-requirements.md).
-- The plugin is a scaffold. It registers no tool, no runtime context, and no nudge. See
+- The plugin implements configuration and registration. Its tools, runtime context, and nudge remain pending. See
   [REQ-028](02-requirements.md) and [08-ui.md](08-ui.md).
 - The standalone console gives a manual compaction job. It holds no background compaction state and
   no session snapshot state. See the [client contract](../../packages/ui/src/client.ts).

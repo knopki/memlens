@@ -1,0 +1,6 @@
+{
+	"meta": {
+		"title": "memlens",
+		"description": "Die Headless-Bibliothek von memlens, ihre CLI-Oberfläche und ihr DeepSeek-Harness-Plugin."
+	}
+}

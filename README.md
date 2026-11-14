@@ -3,7 +3,7 @@
 memlens is the long-term memory of an agent. It keeps curated notes across sessions and folds them
 into a tree of summaries. The agent gets a small map at the start of each session.
 
-**Status:** the core library and the CLI are in the code. The standalone console uses the store. The plugin is a scaffold, and the session import is pending.
+**Status:** the core library and the CLI are in the code. The standalone console uses the store. The plugin implements configuration and registration. Its memory context and tools, and the session import, are pending.
 
 ## The problem
 

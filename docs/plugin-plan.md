@@ -1,6 +1,6 @@
 # DSH plugin plan
 
-Status: proposed execution plan, 2026-11-14. This document changes no product requirement.
+Status: stage 1 implemented, 2026-11-14. Context, tools, and background work remain pending.
 
 ## Goal and boundary
 
@@ -14,11 +14,11 @@ Keep the package `@memlens/dsh-plugin`. Import memory operations from `@memlens/
 Keep DSH dependencies outside the core library. Do not import CLI command handlers into the plugin.
 Use the existing package structure, build tools, and tests. Add no service framework or persistent job queue.
 
-## Current state
+## Starting state
 
-The plugin exports its name and an empty `apply` function. Its bundle patch inserts one row.
-The package has no core dependency, configuration schema, preset export, runtime context, or memory tool.
-Existing tests check the package shape and exports. They do not start an agent with memory.
+At plan start, the plugin exported its name and an empty `apply` function. Its bundle patch inserted one row.
+The package had no core dependency, configuration schema, preset export, runtime context, or memory tool.
+The tests checked the package shape and exports only.
 
 The core exports configuration loaders, scope selection, context rendering, store reads and writes, proposals, and a compaction pass.
 The host still must supply DSH registration, session state, timers, and model calls.
@@ -26,6 +26,10 @@ The host still must supply DSH registration, session state, timers, and model ca
 ## Execution order
 
 ### 1. Registration and configuration
+
+Implemented: host and preset entries, strict schemas, shared configuration defaults, scope resolution, model checks, and store disposal.
+The tests use Cordis Loader and DSH scopes at version `0.2.2-rc.3`. The older version boundary remains unverified.
+See [0022 Plugin configuration](adr/0022-plugin-configuration.md).
 
 Read the exact DSH contracts before each registration. The installed reference version is `0.2.2-rc.3`.
 The accepted compatibility requirement also includes `0.2.1` prereleases. A check on the installed version alone proves no older compatibility.

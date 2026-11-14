@@ -29,6 +29,7 @@ import { debuglog } from "node:util";
 import type { BaseConfig, ResolvedConfig, ScopeKey } from "@memlens/core";
 import {
 	activeScope,
+	DEFAULT_CONFIG_TOML,
 	expandTilde,
 	globMatches,
 	isCatalogKey,
@@ -45,32 +46,8 @@ import {
 
 const debug = debuglog("memlens:runtime");
 
-/** The fallback configuration for a machine with no base file. */
-export const DEFAULT_CONFIG_TOML = `language = "en"
-defaultProfile = "default"
-
-[store]
-idle = 300
-
-[compaction]
-provider = "deepseek"
-model = "deepseek-chat"
-effort = "off"
-mode = "auto"
-batch = 6
-maxCallsPerHour = 120
-
-[profile.default]
-scopes = ["*"]
-
-[profile.default.budget]
-here = 20
-directions = 10
-
-[scope_default]
-rules = []
-default = "user:notes"
-`;
+/** Preserve the CLI export of the shared fallback configuration. */
+export { DEFAULT_CONFIG_TOML } from "@memlens/core";
 
 /** One opened CLI runtime: configuration, a row store, and visible profile scopes. */
 export interface Runtime {

@@ -7,6 +7,9 @@
 # `id` is the row identifier. A later layer uses the id to override this row.
 # `name` is the module specifier that the loader imports. It must resolve to
 # this package entry.
+#
+# The host row loads for each session. An agent preset mounts the second entry
+# point, `@memlens/dsh-plugin/preset`, with the mandatory `profile` key.
 - insert:
-    - id: dsh-memlens
+    - id: memlens
       name: "@memlens/dsh-plugin"

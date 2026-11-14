@@ -1,0 +1,6 @@
+{
+	"meta": {
+		"title": "memlens",
+		"description": "A biblioteca sem interface do memlens, a sua interface de linha de comandos e o seu plugin do DeepSeek Harness."
+	}
+}

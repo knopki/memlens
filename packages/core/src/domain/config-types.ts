@@ -172,6 +172,33 @@ export const DEFAULT_REVIEW_DAYS: ReviewConfig = {
 /** The default cache TTL of any model. */
 export const DEFAULT_TTL: Duration = "1h";
 
+/** The fallback base file for a machine without a configuration file. */
+export const DEFAULT_CONFIG_TOML = `language = "en"
+defaultProfile = "default"
+
+[store]
+idle = 300
+
+[compaction]
+provider = "deepseek"
+model = "deepseek-chat"
+effort = "off"
+mode = "auto"
+batch = 6
+maxCallsPerHour = 120
+
+[profile.default]
+scopes = ["*"]
+
+[profile.default.budget]
+here = 20
+directions = 10
+
+[scope_default]
+rules = []
+default = "user:notes"
+`;
+
 /** The default cache TTL map. */
 export const DEFAULT_CACHE_TTL: CacheTtl = {
 	"deepseek/*": "2h",
