@@ -9,8 +9,8 @@
  *  - The commands note, amend, forget, redact, and review.
  *  - NOT: the store rules, the argument parse, and the exit code mapping.
  * @invariants
- *  - The command note takes its scope in --scope; a target command takes the scope in the address
- *    or in --scope.
+ *  - The command note takes --scope, or the active scope of the directory with no flag. A target
+ *    command takes the scope in the address or in --scope.
  *  - Each target scope must be visible in the profile, or the command gives NotAllowed.
  *  - Each supersedes address must resolve to a record id before the write.
  * @dependencies USES API: @memlens/core, commands.ts, runtime.ts; WRITES: the store directory
@@ -47,7 +47,7 @@ import {
 	print,
 	scopeList,
 } from "./commands.js";
-import { profileLists, type Runtime } from "./runtime.js";
+import { cliActiveScope, profileLists, type Runtime } from "./runtime.js";
 
 const debug = debuglog("memlens:commands");
 
@@ -63,13 +63,15 @@ export async function noteCommand(
 	args: ParsedArgs,
 	io: CommandIo,
 ): Promise<string> {
-	const scope = requiredScope(args.flags);
 	const kindRaw = flagValue(args.flags, "kind") ?? "note";
 	if (!(KINDS as readonly string[]).includes(kindRaw))
 		throw new MemlensError("Usage", `The kind ${kindRaw} is unknown.`);
 	const kind = kindRaw as (typeof KINDS)[number];
 	const runtime = await openCommandRuntime(args, io);
 	try {
+		const scope = normalizeScopeKey(
+			flagValue(args.flags, "scope") ?? cliActiveScope(runtime.base, io.cwd),
+		) as ScopeKey;
 		const supersedes = supersedeIds(runtime, args.flags, scope);
 		const longformFile = flagValue(args.flags, "longform");
 		const longform = longformFile === null ? null : readBodyFile(longformFile);
@@ -101,14 +103,6 @@ export async function noteCommand(
 	}
 }
 // #endregion FUNC_noteCommand
-
-/** One scope from --scope, or the Usage error. */
-function requiredScope(flags: ParsedArgs["flags"]): ScopeKey {
-	const raw = flagValue(flags, "scope");
-	if (raw === null)
-		throw new MemlensError("Usage", "The command needs --scope.");
-	return normalizeScopeKey(raw) as ScopeKey;
-}
 
 /** Resolve an address to one visible note row. */
 function resolveRowTarget(

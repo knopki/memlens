@@ -14,6 +14,7 @@
  *  - A missing base file falls back to the built-in default configuration, and the CLI writes no
  *    file.
  *  - Each runtime owns one row store and the visible scopes of its selected profile.
+ *  - Scope rules take precedence over the Git repository name and the configured fallback.
  * @usecases
  *  - Open: command => gives --store and a profile name => gets one runtime and closes it
  * @dependencies USES API: @memlens/core; READS: config.toml, the store directory
@@ -21,8 +22,9 @@
  * #endregion moduleContract
  */
 
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { debuglog } from "node:util";
 import type { BaseConfig, ResolvedConfig, ScopeKey } from "@memlens/core";
 import {
@@ -36,6 +38,7 @@ import {
 	resolveConfig,
 	Store,
 	storePath,
+	validateScopeKey,
 	visibleScopes,
 	xdgDirs,
 } from "@memlens/core";
@@ -166,7 +169,46 @@ export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
 	);
 }
 
-/** The active scope key of one directory from the rules of the base layer. */
+/**
+ * @purpose Resolve the scope of a directory from rules, Git, and the configured fallback.
+ * @invariants A matching rule takes precedence. A Git worktree uses the main repository name.
+ */
+export function cliScopeResult(
+	base: BaseConfig,
+	cwd: string,
+): { key: ScopeKey; rule: number | null; source: string } {
+	const git = (...args: string[]): string | null => {
+		try {
+			return (
+				execFileSync("git", args, {
+					cwd,
+					encoding: "utf8",
+					stdio: ["ignore", "pipe", "ignore"],
+				}).trim() || null
+			);
+		} catch {
+			return null;
+		}
+	};
+	const remote = git("remote", "get-url", "origin");
+	const gitRemote =
+		remote
+			?.replace(/^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?/i, "")
+			.replace(/^[^@/]+@([^:]+):/, "$1/") ?? null;
+	const result = activeScope(base.scope_default, { path: cwd, gitRemote });
+	if (result.rule !== null) return { ...result, source: "rule" };
+	const common = git("rev-parse", "--path-format=absolute", "--git-common-dir");
+	const root = common === null ? null : git("rev-parse", "--show-toplevel");
+	if (common !== null && root !== null) {
+		const repo =
+			basename(common) === ".git" ? basename(dirname(common)) : basename(root);
+		const key = `project:${repo.toLowerCase()}`;
+		if (validateScopeKey(key)) return { key, rule: null, source: "git" };
+	}
+	return { ...result, source: "default" };
+}
+
+/** The active scope key of one directory. */
 export function cliActiveScope(base: BaseConfig, cwd: string): ScopeKey {
-	return activeScope(base.scope_default, { path: cwd }).key;
+	return cliScopeResult(base, cwd).key;
 }

@@ -16,7 +16,6 @@
 import { debuglog } from "node:util";
 import type { IndexHit, ScopeKey } from "@memlens/core";
 import {
-	activeScope,
 	byAddress,
 	filterHits,
 	loadRangeView,
@@ -42,6 +41,7 @@ import {
 } from "./commands.js";
 import {
 	cliActiveScope,
+	cliScopeResult,
 	loadCliBaseConfig,
 	type Runtime,
 	resolveForProfile,
@@ -218,14 +218,15 @@ export async function scopesCommand(
  *
  * @purpose Apply the rules of scope_default to the working directory, so a user sees where a
  *   session writes.
- * @invariants The answer holds the key and the rule that gave it. The command opens no store.
+ * @invariants The answer holds the key and the rule that gave it, or the source of the key. The
+ * command opens no store.
  */
 export function scopeCommand(io: CommandIo): string {
 	const base = loadCliBaseConfig(io.env);
-	const result = activeScope(base.scope_default, { path: io.cwd });
+	const result = cliScopeResult(base, io.cwd);
 	const rule =
 		result.rule === null
-			? "default"
+			? result.source
 			: describeRule(base.scope_default.rules[result.rule] ?? null);
 	debug("Scope resolved", {
 		event: "scope",

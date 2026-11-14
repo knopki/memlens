@@ -13,6 +13,7 @@
  * #endregion moduleContract
  */
 
+import { execFileSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -126,6 +127,98 @@ default = "user:notes"
 const WORK_CONFIG = baseConfig("work", '["project:*"]');
 
 describe("@memlens/cli commands", () => {
+	it("uses the repository scope for scope, note, and slice", async () => {
+		const test = makeEnv();
+		const repo = join(test.home, "My-Repo");
+		mkdirSync(repo);
+		execFileSync("git", ["init", "-q", repo]);
+		const nested = join(repo, "nested");
+		mkdirSync(nested);
+		test.io = { ...test.io, cwd: nested };
+		expect((await run(test, "scope")).out).toContain(
+			"project:my-repo\nrule: git",
+		);
+		expect((await run(test, "note", "Automatic scope")).out).toContain(
+			"saved project:my-repo#0",
+		);
+		expect((await run(test, "slice")).out).toContain("Automatic scope");
+		expect(
+			(await run(test, "note", "Explicit scope", "--scope", "user:other")).out,
+		).toContain("saved user:other#0");
+	});
+
+	it("uses the main repository name in a Git worktree", async () => {
+		const test = makeEnv();
+		const repo = join(test.home, "main-repo");
+		const worktree = join(test.home, "random-worktree");
+		execFileSync("git", ["init", "-q", repo]);
+		execFileSync("git", [
+			"-C",
+			repo,
+			"-c",
+			"user.name=Test",
+			"-c",
+			"user.email=test@example.com",
+			"-c",
+			"commit.gpgsign=false",
+			"commit",
+			"--allow-empty",
+			"-qm",
+			"initial",
+		]);
+		execFileSync("git", [
+			"-C",
+			repo,
+			"worktree",
+			"add",
+			"-q",
+			"--detach",
+			worktree,
+		]);
+		test.io = { ...test.io, cwd: worktree };
+		expect((await run(test, "scope")).out).toContain(
+			"project:main-repo\nrule: git",
+		);
+	});
+
+	it("matches Git remote rules before the repository scope", async () => {
+		const config = WORK_CONFIG.replace(
+			"[scope_default]",
+			'[scope_default]\nrules = [{ match = "git_remote", glob = "github.com/knopki/*", key = "project:{repo}" }]',
+		);
+		const test = makeEnv(config);
+		execFileSync("git", ["init", "-q", test.home]);
+		execFileSync("git", [
+			"-C",
+			test.home,
+			"remote",
+			"add",
+			"origin",
+			"git@github.com:knopki/Remote-Name.git",
+		]);
+		expect((await run(test, "scope")).out).toContain(
+			"project:remote-name\nrule: git_remote",
+		);
+		expect((await run(test, "note", "Remote rule")).out).toContain(
+			"saved project:remote-name#0",
+		);
+	});
+
+	it("uses a configured path rule before the repository scope", async () => {
+		const test = makeEnv(
+			WORK_CONFIG.replace(
+				"[scope_default]",
+				'[scope_default]\nrules = [{ match = "path", glob = "*", key = "project:chosen" }]',
+			),
+		);
+		execFileSync("git", ["init", "-q", test.home]);
+		expect((await run(test, "scope")).out).toContain(
+			"project:chosen\nrule: path *",
+		);
+		expect((await run(test, "note", "Rule scope")).out).toContain(
+			"saved project:chosen#0",
+		);
+	});
 	it("writes, finds, and opens one note", async () => {
 		const test = makeEnv();
 		const saved = await run(
