@@ -120,9 +120,6 @@ export const fr: Table = {
 	nodesByLevel: "Nœuds par niveau",
 	compaction: "Compactage",
 	prepareScope: "Préparer une tâche de domaine",
-	prepareCatalog: "Préparer une tâche de catalogue",
-	noInputsCatalog:
-		"Aucune entrée à fusionner. Un domaine n'a pas encore de nœud supérieur.",
 	noInputs:
 		"Aucune entrée de fusion. Chaque intervalle sans résumé attend son second enfant.",
 	mergeTasks: "Tâches de fusion",

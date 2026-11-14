@@ -120,9 +120,6 @@ export const es: Table = {
 	nodesByLevel: "Nodos por nivel",
 	compaction: "Compactación",
 	prepareScope: "Preparar tarea de ámbito",
-	prepareCatalog: "Preparar tarea de catálogo",
-	noInputsCatalog:
-		"Sin entrada de fusión. Un ámbito aún no tiene nodo superior.",
 	noInputs:
 		"No hay datos para fusionar. Cada rango pendiente espera a su segundo hijo.",
 	mergeTasks: "Tareas de fusión",

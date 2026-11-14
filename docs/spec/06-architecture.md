@@ -403,7 +403,7 @@ command `check` tests store health, and the command `repair` rebuilds damaged ca
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui` and its local HTTP boundary.
 The store validates proposal acceptance and applies it in one transaction.
-The console gives a compaction job for one scope tree. The console refuses a catalog job, because the store derives the catalog.
+The console gives a compaction job for one scope tree. The store derives the catalog.
 The [console models](../../packages/core/src/domain/console.ts) supply the shared view through the store.
 The [browser client](../../packages/ui/src/client.ts) supplies seven screens in a separate bundle.
 The command `import` reads one JSONL file. The import from harness sessions is pending.

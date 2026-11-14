@@ -29,7 +29,6 @@ export type View = ConsoleModel & {
 export type Job = {
 	inputs: BuildInput[];
 	job: string;
-	catalog: boolean;
 	profile: string;
 	scope: string;
 };

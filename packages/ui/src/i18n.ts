@@ -153,8 +153,6 @@ const en = {
 	nodesByLevel: "Nodes by level",
 	compaction: "Compaction",
 	prepareScope: "Prepare a scope job",
-	prepareCatalog: "Prepare a catalog job",
-	noInputsCatalog: "No merge input. A scope has no top node yet.",
 	noInputs: "No merge input. Every dirty range waits for its second child.",
 	mergeTasks: "Merge tasks",
 	unknownInput:

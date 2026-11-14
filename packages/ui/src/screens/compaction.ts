@@ -19,23 +19,16 @@ import type { Job } from "../types.js";
 
 // #region FUNC_compactionPanel
 /**
- * @purpose Show the compaction job of this page, or the buttons that prepare one.
- * @invariants The panel states the catalog title when the job covers the catalog. A job without a
- *   merge input states that fact and shows no answer form.
+ * @purpose Show the compaction job of this page, or the button that prepares one.
+ * @invariants A job without a merge input states that fact and shows no answer form.
  */
 export function compactionPanel(): HTMLElement {
-	const node = panel(
-		state.job?.catalog
-			? `${tr("compaction")} · ${tr("nav2")}`
-			: tr("compaction"),
-	);
+	const node = panel(tr("compaction"));
 	node.append(compactionButtons());
 	const job = state.job;
 	if (!job) return node;
 	if (!job.inputs.length) {
-		node.append(
-			el("p", tr(job.catalog ? "noInputsCatalog" : "noInputs"), "muted"),
-		);
+		node.append(el("p", tr("noInputs"), "muted"));
 		return node;
 	}
 	node.append(...jobFields(job));
@@ -45,18 +38,11 @@ export function compactionPanel(): HTMLElement {
 
 // #region FUNC_compactionButtons
 /**
- * @purpose Build the two prepare buttons of the compaction panel.
+ * @purpose Build the prepare button of the compaction panel.
  */
 function compactionButtons(): HTMLElement {
 	const row = el("div", "", "actions");
-	for (const catalog of [false, true])
-		row.append(
-			btn(
-				catalog ? tr("prepareCatalog") : tr("prepareScope"),
-				() => prepare(catalog),
-				"pri",
-			),
-		);
+	row.append(btn(tr("prepareScope"), () => prepare(), "pri"));
 	return row;
 }
 // #endregion FUNC_compactionButtons
@@ -65,8 +51,8 @@ function compactionButtons(): HTMLElement {
 /**
  * @purpose Prepare one compaction job and keep it for the answer form.
  */
-async function prepare(catalog: boolean): Promise<void> {
-	const result = (await action("compact", { catalog })) as {
+async function prepare(): Promise<void> {
+	const result = (await action("compact", {})) as {
 		inputs: BuildInput[];
 		job: string;
 	};
@@ -74,7 +60,6 @@ async function prepare(catalog: boolean): Promise<void> {
 	state.job = {
 		inputs: result.inputs,
 		job: result.job,
-		catalog,
 		profile: state.profile,
 		scope: state.scope,
 	};
@@ -131,7 +116,6 @@ async function applyAnswers(
 		if (unknown.length)
 			throw new Error(tr("unknownInput", { inputs: wanted.join(", ") }));
 		const result = (await action("compact-answer", {
-			catalog: job.catalog,
 			inputs: job.inputs,
 			answers: answers.value,
 		})) as { built: number; rejected: number; rejectedRanges: string[] };

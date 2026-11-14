@@ -349,21 +349,6 @@ describe("console", () => {
 		expect(job.job).toBe("");
 	});
 
-	it("refuses catalog compaction because the catalog is derived", async () => {
-		const { post } = await fixture();
-		for (const scope of ["project:a", "project:b"]) {
-			await post({
-				action: "note",
-				scope,
-				body: `${scope} ${"detail ".repeat(80)}`,
-			});
-			await post({ action: "compact", scope });
-		}
-		const answer = await post({ action: "compact", catalog: true });
-		expect(answer.status).toBe(400);
-		expect((await answer.json()).error).toContain("catalog is derived");
-	});
-
 	it("accepts large copied jobs and rejects bodies above the host limit", async () => {
 		const { root, env, post } = await fixture();
 		const runtime = await openRuntime({

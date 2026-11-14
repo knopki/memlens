@@ -8,7 +8,6 @@
  * @scope
  *  - The actions compact and compact-answer.
  *  - NOT: the merge rules of the library and the read routes.
- * @invariants The catalog holds no node, so a catalog compaction gives a Usage error.
  * @usecases
  *  - Job: user => presses compact => gets the merge inputs of one scope
  * @dependencies USES API: @memlens/core, compact.ts, host/http.ts
@@ -35,11 +34,6 @@ export async function compactAction(
 	scope: ScopeKey,
 	fields: Fields,
 ): Promise<unknown> {
-	if (fields.catalog === true)
-		throw new MemlensError(
-			"Usage",
-			"The catalog is derived and holds no nodes. Compact one scope.",
-		);
 	if (fields.action === "compact") {
 		const job = await prepareCompact(runtime, scope, {
 			scopeKeys: runtime.scopes,

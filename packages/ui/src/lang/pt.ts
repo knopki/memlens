@@ -120,9 +120,6 @@ export const pt: Table = {
 	nodesByLevel: "Nós por nível",
 	compaction: "Compactação",
 	prepareScope: "Preparar tarefa de escopo",
-	prepareCatalog: "Preparar tarefa de catálogo",
-	noInputsCatalog:
-		"Sem entrada de mesclagem. Um escopo ainda não tem nó superior.",
 	noInputs:
 		"Sem dados para mesclar. Cada intervalo pendente aguarda o segundo filho.",
 	mergeTasks: "Tarefas de mesclagem",
