@@ -57,6 +57,7 @@ the same rows, and the command has no such filter. See the
 The answers below keep the words of their date. The storage pivot replaced the event log, the
 projection, the replay cursor, and the two backends. A closed answer that names one of them describes
 the earlier design. See [0020 Storage pivot](../adr/0020-storage-pivot.md).
+The customer removed the `memory_forget` counters on 2026-11-14. The revised [REQ-371](02-requirements.md) replaces the field in Q-097.
 
 ### Q-463
 

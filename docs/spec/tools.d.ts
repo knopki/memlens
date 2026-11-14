@@ -128,11 +128,8 @@ export interface MemoryForgetInput {
 	reason: string;
 }
 
-export interface MemoryForgetOutput {
-	hidden: number;
-	rebuildsQueued: number;
-	topNodesQueued: number;
-}
+/** A successful call returns an empty object. The tool renderer gives a short confirmation. */
+export type MemoryForgetOutput = Record<string, never>;
 
 export interface MemoryReviewInput {
 	scope?: ScopeKey;
