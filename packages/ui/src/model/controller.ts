@@ -85,6 +85,9 @@ export interface ControllerOptions {
 	readonly t: Translate;
 	readonly readRoute: () => Route;
 	readonly writeRoute: (route: Route, step: Step) => void;
+
+	/** The clipboard writer of the shell. The default reads the page clipboard. */
+	readonly clipboard?: (text: string) => Promise<void>;
 }
 // #endregion INTERFACE_ControllerOptions
 
@@ -104,6 +107,23 @@ function unknownInputs(text: string, wanted: readonly string[]): string[] {
 		.filter((id) => !wanted.includes(id));
 }
 // #endregion FUNC_unknownInputs
+
+// #region FUNC_pageClipboard
+/**
+ * @purpose Read the clipboard of the page, so a shell without its own writer copies the text.
+ * @invariants A page without the clipboard API gives an error, and the status line states it.
+ */
+function pageClipboard(): (text: string) => Promise<void> {
+	return async (text: string) => {
+		const clipboard =
+			typeof navigator === "undefined" ? undefined : navigator.clipboard;
+		if (clipboard === undefined) {
+			throw new Error("The clipboard is unavailable.");
+		}
+		await clipboard.writeText(text);
+	};
+}
+// #endregion FUNC_pageClipboard
 
 // #region FUNC_createConsoleController
 /**
@@ -686,6 +706,16 @@ export function createConsoleController(
 		},
 		clearStatus() {
 			message("");
+		},
+		copy(text: string) {
+			void (async () => {
+				try {
+					await (options.clipboard ?? pageClipboard())(text);
+					message(t("copied"));
+				} catch (error) {
+					report(error);
+				}
+			})();
 		},
 	};
 }

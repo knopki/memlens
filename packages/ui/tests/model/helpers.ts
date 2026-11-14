@@ -268,6 +268,9 @@ export interface Harness {
 	readonly storage: FakeStorage;
 	readonly calls: PortCall[];
 	readonly writes: { route: Route; step: Step }[];
+
+	/** The texts that the controller put into the clipboard of the test. */
+	readonly clipboard: string[];
 	state(): ConsoleState;
 	setRoute(route: Route): void;
 }
@@ -282,12 +285,14 @@ export interface Harness {
 export function harness(
 	overrides: Partial<StorePort> = {},
 	patch: Partial<ConsoleState> = {},
+	clipboardFails = false,
 ): Harness {
 	const { port, calls } = fakePort(overrides);
 	const storage = fakeStorage();
 	const initial = stateOf(patch);
 	const store = createConsoleStore(initial);
 	const writes: { route: Route; step: Step }[] = [];
+	const clipboard: string[] = [];
 	let route = routeOfState(initial);
 	const call = createConsoleController({
 		port,
@@ -299,6 +304,10 @@ export function harness(
 			writes.push({ route: next, step });
 			route = next;
 		},
+		clipboard: async (text: string) => {
+			if (clipboardFails) throw new Error("denied");
+			clipboard.push(text);
+		},
 	});
 	return {
 		store,
@@ -306,6 +315,7 @@ export function harness(
 		storage,
 		calls,
 		writes,
+		clipboard,
 		state: () => store.getSnapshot(),
 		setRoute: (next) => {
 			route = next;

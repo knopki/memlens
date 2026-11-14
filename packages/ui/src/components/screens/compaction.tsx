@@ -50,6 +50,12 @@ export function CompactionPanel({ api }: ScreenProps): JSX.Element {
 				<>
 					<div className="actions" />
 					<span className="lbl">{t("mergeTasks")}</span>
+					<Button
+						text={t("copy")}
+						onClick={() => {
+							api.call.copy(job.job);
+						}}
+					/>
 					<pre className="slice">{job.job}</pre>
 					<Field
 						label={`${t("answers")} · ${job.inputs

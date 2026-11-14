@@ -277,6 +277,9 @@ export interface ConsoleActions {
 	setLanguage(code: string): void;
 	setTheme(choice: string): void;
 	clearStatus(): void;
+
+	/** Put one short text into the clipboard of the page and state the result. */
+	copy(text: string): void;
 }
 // #endregion INTERFACE_ConsoleActions
 

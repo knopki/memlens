@@ -50,7 +50,7 @@ export function Inspector({ api }: { api: ConsoleApi }): JSX.Element | null {
 				target={result.addr}
 				disabled={!api.state.model?.allowDelete || row?.state === "deleted"}
 			/>
-			{extraActions(api, result.addr)}
+			{extraActions(api, result.addr, result.id)}
 		</Panel>
 	);
 }
@@ -151,9 +151,19 @@ export function RecordActions({
 }
 // #endregion COMPONENT_RecordActions
 
-function extraActions(api: ConsoleApi, target: string): JSX.Element {
+function extraActions(
+	api: ConsoleApi,
+	target: string,
+	id: string,
+): JSX.Element {
 	return (
 		<div className="actions">
+			<Button
+				text={api.t("copyId")}
+				onClick={() => {
+					api.call.copy(id);
+				}}
+			/>
 			{api.state.screen === "tree" ? null : (
 				<Button
 					text={api.t("openInTree")}

@@ -478,3 +478,23 @@ describe("console controller compaction", () => {
 		expect(h.state().status).toEqual({ text: "built", error: false });
 	});
 });
+
+describe("console controller clipboard", () => {
+	it("puts one text into the clipboard and states the result", async () => {
+		const h = harness();
+		h.call.copy("project:alpha#3");
+		await vi.advanceTimersByTimeAsync(0);
+		expect(h.clipboard).toEqual(["project:alpha#3"]);
+		expect(h.state().status).toEqual({ text: "copied", error: false });
+		vi.advanceTimersByTime(2500);
+		expect(h.state().status).toEqual({ text: "", error: false });
+	});
+
+	it("states a refused clipboard in the status line", async () => {
+		const h = harness({}, {}, true);
+		h.call.copy("project:alpha#3");
+		await vi.advanceTimersByTimeAsync(0);
+		expect(h.clipboard).toEqual([]);
+		expect(h.state().status).toEqual({ text: "denied", error: true });
+	});
+});

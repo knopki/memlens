@@ -93,6 +93,12 @@ function SearchScreen({ api }: ScreenProps): JSX.Element {
 					onChange={setQuery}
 					spellCheck={false}
 					placeholder={t("searchText")}
+					onKeyDown={(event) => {
+						if (event.key === "Enter") {
+							event.preventDefault();
+							submit();
+						}
+					}}
 				/>
 				<Button text={t("find")} className="pri" onClick={submit} />
 			</div>

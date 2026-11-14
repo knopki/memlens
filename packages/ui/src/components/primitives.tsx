@@ -16,7 +16,7 @@
  * #endregion moduleContract
  */
 
-import type { JSX } from "react";
+import type { JSX, KeyboardEvent } from "react";
 import { Fragment, type ReactNode, useEffect, useRef } from "react";
 
 // #region COMPONENT_Icon
@@ -133,6 +133,8 @@ export interface TextInputProps {
 	readonly spellCheck?: boolean;
 	readonly id?: string;
 	readonly className?: string;
+	/** The key handler of the field. A shell uses it for the Enter key. */
+	readonly onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export function TextInput({
@@ -147,6 +149,7 @@ export function TextInput({
 	spellCheck,
 	id,
 	className,
+	onKeyDown,
 }: TextInputProps): JSX.Element {
 	return (
 		<input
@@ -155,6 +158,7 @@ export function TextInput({
 			id={id}
 			value={value}
 			onChange={(event) => onChange(event.target.value)}
+			onKeyDown={onKeyDown}
 			placeholder={placeholder}
 			required={required}
 			pattern={pattern}
