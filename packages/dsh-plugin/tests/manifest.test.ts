@@ -141,12 +141,12 @@ describe("plugin manifest", () => {
 		expect(rows[0]?.name).toBe(manifest.name);
 	});
 
-	it("depends on the workspace library and the schema package", () => {
-		expect(manifest.dependencies?.["@memlens/core"]).toBe("workspace:*");
-		expect(manifest.dependencies?.["@deepseek-ai/schemastery"]).toBe("^3.18.2");
-		for (const name of Object.keys(manifest.dependencies ?? {})) {
-			expect(name.startsWith("@deepseek-ai/dsh-")).toBe(false);
-		}
+	it("bundles the workspace library and the schema package", () => {
+		expect(manifest.dependencies ?? {}).toEqual({});
+		expect(manifest.devDependencies?.["@memlens/core"]).toBe("workspace:*");
+		expect(manifest.devDependencies?.["@deepseek-ai/schemastery"]).toBe(
+			"^3.18.2",
+		);
 	});
 
 	it("mirrors each host peer in the development dependencies", () => {

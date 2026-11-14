@@ -30,10 +30,6 @@
 		"test": "node build.mjs && vitest run",
 		"prepare": "node build.mjs && tsc -p tsconfig.build.json"
 	},
-	"dependencies": {
-		"@deepseek-ai/schemastery": "^3.18.2",
-		"@memlens/core": "workspace:*"
-	},
 	"devDependencies": {
 		"@deepseek-ai/cordis": "4.1.0",
 		"@deepseek-ai/cordis-plugin-loader": "^1.1.0",
@@ -44,6 +40,8 @@
 		"@deepseek-ai/dsh-system-prompt": "0.2.2-rc.3",
 		"@deepseek-ai/dsh-tools": "0.2.2-rc.3",
 		"@deepseek-ai/dsh-workspace": "0.2.2-rc.3",
+		"@deepseek-ai/schemastery": "^3.18.2",
+		"@memlens/core": "workspace:*",
 		"@types/node": "^22.20.1",
 		"esbuild": "^0.28.2",
 		"typescript": "^7.0.2",
