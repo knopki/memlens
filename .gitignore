@@ -34,3 +34,6 @@ tmp/
 
 # pnpm store inside the repository
 .pnpm-store/
+
+# Isolated harness home for a live plugin check
+.dshcheck/

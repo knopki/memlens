@@ -16,12 +16,13 @@ await build({
 // Keep browser code in its own bundle.
 await mkdir("dist/ui", { recursive: true });
 await build({
-	entryPoints: ["../ui/src/client.ts"],
+	entryPoints: ["../ui/src/standalone/main.tsx"],
 	outfile: "dist/ui/client.js",
 	bundle: true,
 	platform: "browser",
 	format: "esm",
 	target: "es2022",
+	jsx: "automatic",
 	minify: true,
 });
 await Promise.all(

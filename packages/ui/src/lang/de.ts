@@ -119,6 +119,18 @@ export const de: Table = {
 	waits: "wartet auf das zweite Kind",
 	nodesByLevel: "Knoten je Ebene",
 	compaction: "Verdichtung",
+	// The host runtime state.
+	runtime: "Host-Laufzeit",
+	materializedAt: "Bauzeit des Schnappschusses",
+	nextTrigger: "Nächste Aktualisierung",
+	snapshotSaved: "Schnappschuss gespeichert",
+	savedState: "gespeichert",
+	unsavedState: "nicht gespeichert",
+	attempts: "Verdichtungsversuche",
+	activeBuilds: "Aktive Läufe",
+	backoff: "Wartezeit",
+	seconds: "{count} s",
+	failures: "Verdichtungsfehler",
 	prepareScope: "Bereichsjob vorbereiten",
 	noInputs:
 		"Keine Eingabe zum Zusammenführen. Jedes offene Intervall wartet auf sein zweites Kind.",

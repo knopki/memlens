@@ -1,8 +1,9 @@
 # DSH plugin plan
 
-Status: stages 1 to 5 implemented, 2026-11-14. The packed artifact installs by path and loads in
-an isolated profile. A live agent run needs credentials. Stage 6, the plugin console tab, is in
-progress. [S-162](statements.md#s-162) gives the component and backend rule of the two hosts.
+Status: stages 1 to 6 implemented, 2026-11-14. The packed artifact installs by path and loads in an
+isolated profile. Stage 6 lives in an isolated profile with a session, the tab, the seven screens,
+the five note actions, and the host runtime state. [S-162](statements.md#s-162) gives the component
+and backend rule of the two hosts.
 
 ## Goal and boundary
 
@@ -146,6 +147,16 @@ through the plugin service. It serves the console reads, the note actions, and t
 Acceptance: the tab appears in a live session, shows each of the seven screens, and applies the five
 note actions. The tests cover each route answer and each component contract. The packed artifact
 carries the client bundle.
+
+Implemented: one component layer in `packages/ui`, the React shell of `memlens ui`, the client
+artifact, the slot entry `memlens`, the seven screens, the record dialog, the data route, and the
+host runtime state. The page shows the tab of [08-ui.md](spec/08-ui.md) in the picture
+[demo/plugin-tab.png](demo/plugin-tab.png).
+
+Verified in an isolated profile: the boot graph carries the plugin row, the route serves the
+artifact, the tab opens in a live session, the overview reads the store, the maintenance screen
+reads the host runtime state, a note action updates the record, and the store keeps its records
+across a process restart.
 
 ## Delegation and integration
 

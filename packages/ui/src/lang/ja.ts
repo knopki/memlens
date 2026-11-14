@@ -117,6 +117,18 @@ export const ja: Table = {
 	waits: "2 つ目の子を待機中",
 	nodesByLevel: "レベル別のノード",
 	compaction: "集約",
+	// The host runtime state.
+	runtime: "ホスト実行時",
+	materializedAt: "スナップショット作成時刻",
+	nextTrigger: "次回更新",
+	snapshotSaved: "スナップショット保存済み",
+	savedState: "保存済み",
+	unsavedState: "未保存",
+	attempts: "圧縮の試行",
+	activeBuilds: "実行中のビルド",
+	backoff: "待機時間",
+	seconds: "{count} 秒",
+	failures: "圧縮の失敗",
 	prepareScope: "スコープのジョブを準備",
 	noInputs:
 		"統合する入力がありません。未処理の範囲はどれも 2 つ目の子を待っています。",

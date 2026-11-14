@@ -1,7 +1,8 @@
 /**
  * #region moduleContract
  * @purpose Run the compaction pass of the core in the background, at the dirty threshold or the idle limit.
- * @scope The worker owner, the trigger checks, the model call through the DSH LLM service, and the retry pacing.
+ * @scope The worker owner, the trigger checks, the model call through the DSH LLM service, the
+ *  retry pacing, and the local state read.
  * @scope NOT: the compaction rules, the candidate choice, and the validity check. The core owns them.
  * @invariants One worker owns one store. Plugin disposal stops the timer and ends the in-flight pass.
  * @invariants All trigger state, retry counts, and rate counts stay local. A restart clears them.
@@ -40,6 +41,29 @@ export interface WorkerLlm {
 	stream(options: GenerateOptions): AsyncIterable<StreamChunk>;
 }
 
+// #region INTERFACE_WorkerStatus
+/**
+ * @purpose State the local compaction facts that the console shows.
+ * @invariants The counts stay local. A restart resets each one.
+ */
+export interface WorkerStatus {
+	/** The count of compaction passes that started since activation. */
+	readonly attempts: number;
+
+	/** The count of merge calls that run now. */
+	readonly active: number;
+
+	/** The wait of the next retry, in seconds. Zero when no retry waits. */
+	readonly backoff: number;
+
+	/** The count of failed passes in a row. */
+	readonly failures: number;
+
+	/** The count of dirty merge ranges over each live scope. */
+	readonly dirty: number;
+}
+// #endregion INTERFACE_WorkerStatus
+
 /** The resolved inputs of one worker. */
 export interface WorkerInputs {
 	readonly compaction: CompactionConfig;
@@ -60,9 +84,12 @@ export class MemoryWorker {
 	private failures = 0;
 	private running = false;
 	private disposed = false;
+	private attempts = 0;
+	private inFlight = 0;
+	private retryAt = 0;
 
 	constructor(
-		private readonly ctx: Context,
+		ctx: Context,
 		private readonly store: Store,
 		private readonly inputs: WorkerInputs,
 		private readonly llm: WorkerLlm,
@@ -87,6 +114,28 @@ export class MemoryWorker {
 		this.sweepAndCheck();
 	}
 
+	// #region METHOD_status
+	/**
+	 * @purpose Give the local compaction state to the console, so the tab states what the worker
+	 *   does now.
+	 * @invariants The read writes no field and starts no pass.
+	 * @returns The local counts and the count of dirty merge ranges.
+	 */
+	status(): WorkerStatus {
+		const backoff =
+			this.retryAt === 0
+				? 0
+				: Math.max(0, Math.ceil((this.retryAt - Date.now()) / 1000));
+		return {
+			attempts: this.attempts,
+			active: this.inFlight,
+			backoff,
+			failures: this.failures,
+			dirty: this.dirtyCount(),
+		};
+	}
+	// #endregion METHOD_status
+
 	/** Close each expired proposal, then start a pass at the dirty threshold. */
 	private sweepAndCheck(): void {
 		sweep(this.store);
@@ -98,6 +147,7 @@ export class MemoryWorker {
 	private scheduleIdle(): void {
 		if (this.disposed) return;
 		this.clearTimer();
+		this.retryAt = 0;
 		const waitMs =
 			this.lastActivity + this.inputs.store.idle * 1000 - Date.now();
 		this.timer = setTimeout(
@@ -127,6 +177,7 @@ export class MemoryWorker {
 	private async run(): Promise<void> {
 		if (this.running || this.disposed) return;
 		this.running = true;
+		this.attempts += 1;
 		try {
 			const run = this.runSettings();
 			let built = 0;
@@ -166,8 +217,10 @@ export class MemoryWorker {
 		if (failed > 0) {
 			this.clearTimer();
 			const wait = retryDelay(this.failures) * 1000;
+			this.retryAt = Date.now() + wait;
 			this.timer = setTimeout(() => {
 				this.timer = null;
+				this.retryAt = 0;
 				void this.run();
 			}, wait);
 			debug("Retry scheduled", { event: "retry", failures: this.failures });
@@ -180,24 +233,31 @@ export class MemoryWorker {
 	private readonly model: MergeModel = async (system, task) => {
 		if (!this.rate.tryAcquire(Date.now()))
 			throw new Error("The compaction call limit of one hour is reached.");
-		let text = "";
-		const effort = this.inputs.compaction.effort;
-		const stream = this.llm.stream({
-			provider: this.inputs.compaction.provider,
-			model: this.inputs.compaction.model,
-			...(effort === "" ? {} : { reasoningEffort: ReasoningEffortId(effort) }),
-			system,
-			messages: [
-				{
-					role: "user",
-					content: [{ type: "text", text: task }],
-				},
-			],
-		});
-		for await (const chunk of stream) {
-			if (chunk.type === "text-delta") text += chunk.text;
+		this.inFlight += 1;
+		try {
+			let text = "";
+			const effort = this.inputs.compaction.effort;
+			const stream = this.llm.stream({
+				provider: this.inputs.compaction.provider,
+				model: this.inputs.compaction.model,
+				...(effort === ""
+					? {}
+					: { reasoningEffort: ReasoningEffortId(effort) }),
+				system,
+				messages: [
+					{
+						role: "user",
+						content: [{ type: "text", text: task }],
+					},
+				],
+			});
+			for await (const chunk of stream) {
+				if (chunk.type === "text-delta") text += chunk.text;
+			}
+			return text;
+		} finally {
+			this.inFlight -= 1;
 		}
-		return text;
 	};
 
 	private clearTimer(): void {
@@ -208,6 +268,7 @@ export class MemoryWorker {
 	/** Stop the timer and reject each later start. Cordis disposal calls this. */
 	private dispose(): void {
 		this.disposed = true;
+		this.retryAt = 0;
 		this.clearTimer();
 		debug("Worker disposed", { event: "dispose" });
 	}

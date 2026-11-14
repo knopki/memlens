@@ -1,0 +1,692 @@
+/**
+ * #region moduleContract
+ * @purpose Move the console through its host calls and its state, so a shell binds a control to one
+ * callback and not to the transport or the address.
+ * @scope The busy guard, the generation guard, the status line, the dialog, the address write, the
+ * language and theme persistence, and the reset rules. NOT: the DOM, the address read, and the
+ * transport.
+ * @invariants The controller reads no address. The shell gives the current route and takes the next
+ * route.
+ * @invariants A stale answer writes no state. A second action waits for the first action.
+ * @invariants A callback reports its error in the status line and does not reject.
+ * @dependencies USES: the store, the port, the storage, the route format, and the message table.
+ * @keywords controller, action, busy, generation, status, dialog, reset
+ * #endregion moduleContract
+ */
+
+import type { OpenEntry } from "../../../core/src/domain/reads.js";
+import type { NoteKind } from "../../../core/src/types/primitives.js";
+import type { BuildInput, Range } from "../../../core/src/types/tree.js";
+import { address, rangeId, rangeOf } from "../format.js";
+import { LANGS, type Lang } from "../i18n.js";
+import {
+	DEFAULT_ROUTE,
+	KINDS,
+	type Route,
+	routeOf,
+	type Screen,
+} from "../route.js";
+import type { Choice, RecordModel, Step } from "../types.js";
+import type {
+	ActionFields,
+	ConsoleActions,
+	ConsoleState,
+	ConsoleStorage,
+	DialogPayload,
+	DialogState,
+	SearchFilters,
+	StorePort,
+	Translate,
+} from "./console.js";
+import type { ConsoleStore } from "./store.js";
+
+/** The storage key of the language choice. */
+const LANG_KEY = "memlens.lang";
+
+/** The storage key of the theme choice. */
+const THEME_KEY = "memlens.theme";
+
+/** The time that a success message stays on the page, in milliseconds. */
+const SUCCESS_MS = 2500;
+
+/** The time that an error message stays on the page, in milliseconds. */
+const ERROR_MS = 8000;
+
+/** The note kind of a text, or an empty text. */
+function kindOf(value: string): NoteKind | "" {
+	return (KINDS as readonly string[]).includes(value)
+		? (value as NoteKind)
+		: "";
+}
+
+/** The language code of a text, with English as the fallback. */
+function languageOf(code: string): Lang {
+	const short = code.slice(0, 2) as Lang;
+	return LANGS.includes(short) ? short : "en";
+}
+
+/** The theme choice of a text, with the system setting as the fallback. */
+function themeOf(code: string): Choice {
+	return code === "light" || code === "dark" ? code : "system";
+}
+
+// #region INTERFACE_ControllerOptions
+/**
+ * @purpose Hold the parts that a shell gives to one console controller.
+ * @invariants The shell supplies the port, the storage, the store, the text, and the address pair.
+ * @invariants The address pair reads the current route and writes the next route. The shell decides
+ * whether that is the page address or an in-memory value.
+ * @keywords controller, options, port, storage, route
+ */
+export interface ControllerOptions {
+	readonly port: StorePort;
+	readonly storage: ConsoleStorage;
+	readonly store: ConsoleStore;
+	readonly t: Translate;
+	readonly readRoute: () => Route;
+	readonly writeRoute: (route: Route, step: Step) => void;
+}
+// #endregion INTERFACE_ControllerOptions
+
+// #region FUNC_unknownInputs
+/**
+ * @purpose List the answers that name a range outside one job.
+ * @invariants An answer line starts with a range id and a colon.
+ * @param text - The answer text of the form.
+ * @param wanted - The range ids of the job.
+ */
+function unknownInputs(text: string, wanted: readonly string[]): string[] {
+	return text
+		.split("\n")
+		.map((line) => /^#(\d+)-(\d+):/.exec(line.trim()))
+		.filter((match) => match !== null)
+		.map((match) => `#${match[1]}-${match[2]}`)
+		.filter((id) => !wanted.includes(id));
+}
+// #endregion FUNC_unknownInputs
+
+// #region FUNC_createConsoleController
+/**
+ * @purpose Build the actions of one console from its port, its storage, its store, and its address.
+ * @invariants The controller keeps one status timer. A new message cancels the old timer.
+ * @invariants A view answer of an older generation writes no state.
+ * @param options - The parts that the shell supplies.
+ */
+export function createConsoleController(
+	options: ControllerOptions,
+): ConsoleActions {
+	const { port, storage, store, t, readRoute, writeRoute } = options;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+
+	const get = (): ConsoleState => store.getSnapshot();
+	const set = (patch: Partial<ConsoleState>): void => store.set(patch);
+
+	// #region FUNC_message
+	/**
+	 * @purpose Show one status message and clear it after its time.
+	 * @invariants A success clears after 2.5 seconds and an error after 8 seconds.
+	 * @invariants An empty text cancels the timer and clears the status.
+	 */
+	function message(text: string, error = false): void {
+		clearTimeout(timer);
+		set({ status: { text, error } });
+		if (text)
+			timer = setTimeout(
+				() => {
+					set({ status: { text: "", error: false } });
+				},
+				error ? ERROR_MS : SUCCESS_MS,
+			);
+	}
+	// #endregion FUNC_message
+
+	// #region FUNC_report
+	/**
+	 * @purpose Write one failed action to the debug log and to the status line.
+	 */
+	function report(error: unknown): void {
+		console.debug("Console action failed", {
+			event: "error",
+			message: String(error),
+		});
+		message(error instanceof Error ? error.message : String(error), true);
+	}
+	// #endregion FUNC_report
+
+	// #region FUNC_guard
+	/**
+	 * @purpose Run one action and report its error, so a callback does not reject.
+	 */
+	async function guard(fn: () => unknown): Promise<void> {
+		try {
+			await fn();
+		} catch (error) {
+			report(error);
+		}
+	}
+	// #endregion FUNC_guard
+
+	// #region FUNC_current
+	/**
+	 * @purpose Read the state of the console as one route.
+	 */
+	function current(): Route {
+		const state = get();
+		return {
+			screen: state.screen,
+			profile: state.profile,
+			scope: state.scope,
+			target: state.selection?.target ?? "",
+			query: state.query,
+			searchScope: state.searchScope,
+			kind: state.kind,
+			since: state.since,
+			limit: state.limit,
+			reviewKind: state.reviewKind,
+		};
+	}
+	// #endregion FUNC_current
+
+	// #region FUNC_enter
+	/**
+	 * @purpose Put the state of the console into the address of the shell at the chosen step.
+	 * @invariants A repeated route writes nothing, so a second click on the live scope adds no entry.
+	 */
+	function enter(step: Step): void {
+		if (step === "none") return;
+		const next = current();
+		if (routeOf(next) === routeOf(readRoute())) return;
+		writeRoute(next, step);
+		console.debug("Console address", {
+			event: "address",
+			step,
+			route: routeOf(next),
+		});
+	}
+	// #endregion FUNC_enter
+
+	// #region FUNC_loadView
+	/**
+	 * @purpose Refresh the console after a profile, scope, or store change.
+	 * @invariants The host resolves the profile and the scope, so the state takes the resolved values.
+	 * @invariants The call keeps a generation token. An older answer returns before it writes state.
+	 */
+	async function loadView(step: Step = "replace"): Promise<void> {
+		const token = get().generation + 1;
+		set({ generation: token });
+		message(t("loading"));
+		const view = await port.view({
+			profile: get().profile,
+			scope: get().scope,
+			kind: get().reviewKind,
+		});
+		const runtime = port.runtime
+			? await port.runtime().catch(() => undefined)
+			: undefined;
+		if (token !== get().generation) return;
+		if (!view || !Array.isArray(view.scopes) || !Array.isArray(view.records))
+			throw new Error(t("badView"));
+		set({ model: view, profile: view.profile, scope: view.scope });
+		if (runtime !== undefined) set({ runtime });
+		console.debug("Console loaded", {
+			event: "view",
+			profile: view.profile,
+			scope: view.scope,
+			records: view.records.length,
+			frontier: view.frontier.length,
+			revision: view.revision,
+		});
+		enter(step);
+		message("");
+	}
+	// #endregion FUNC_loadView
+
+	// #region FUNC_find
+	/**
+	 * @purpose Run the current search filters and keep the hits.
+	 * @invariants An answer of an older generation writes no hit.
+	 */
+	async function find(step: Step): Promise<void> {
+		const token = get().generation;
+		const found = await port.search({
+			profile: get().profile,
+			scope: get().searchScope ?? "",
+			query: get().query,
+			kind: get().kind,
+			since: get().since,
+			limit: get().limit,
+		});
+		if (token !== get().generation) return;
+		set({ hits: found });
+		console.debug("Console search", {
+			event: "search",
+			hits: found.length,
+			scope: get().searchScope ?? "",
+			query: get().query,
+		});
+		enter(step);
+	}
+	// #endregion FUNC_find
+
+	// #region FUNC_openTarget
+	/**
+	 * @purpose Expand a range or inspect a note, and keep the selection for the inspector.
+	 * @invariants Write the address only after the host answers. An older answer writes no selection.
+	 */
+	async function openTarget(
+		target: string,
+		step: Step = "push",
+	): Promise<void> {
+		const token = get().generation;
+		const result = await port.open({
+			profile: get().profile,
+			scope: get().scope,
+			target,
+		});
+		if (token !== get().generation) return;
+		console.debug("Console target opened", {
+			event: "open",
+			target,
+			kind: result.kind,
+			step,
+		});
+		set({ selection: { target, result } });
+		enter(step);
+	}
+	// #endregion FUNC_openTarget
+
+	// #region FUNC_openCatalog
+	/**
+	 * @purpose Expand one catalog range into the two lines below it, and keep the selection.
+	 * @invariants Write the address only after the host answers. An older answer writes no selection.
+	 */
+	async function openCatalog(range: Range, step: Step = "push"): Promise<void> {
+		const token = get().generation;
+		const children = await port.catalog({
+			profile: get().profile,
+			scope: get().scope,
+			start: range.start,
+			level: range.level,
+		});
+		if (token !== get().generation) return;
+		console.debug("Console catalog opened", {
+			event: "catalog",
+			start: range.start,
+			level: range.level,
+			lines: children.length,
+		});
+		set({
+			selection: {
+				target: rangeId(range),
+				result: { kind: "catalog", children },
+			},
+		});
+		enter(step);
+	}
+	// #endregion FUNC_openCatalog
+
+	// #region FUNC_reset
+	/**
+	 * @purpose Move the console to one scope with no selection and no job.
+	 */
+	async function reset(nextScope: string, step: Step = "push"): Promise<void> {
+		set({
+			scope: nextScope,
+			selection: undefined,
+			hits: [],
+			searchScope: null,
+			job: undefined,
+			jobError: "",
+		});
+		await loadView(step);
+	}
+	// #endregion FUNC_reset
+
+	// #region FUNC_restore
+	/**
+	 * @purpose Move the console to the place of one route.
+	 * @invariants Load the view first. Then run the search and the open of the route. Then write the
+	 * resolved place as one replacement.
+	 * @invariants A place that the host rejects falls back to the first place once, so a removed
+	 * profile cannot leave a blank page.
+	 */
+	async function restore(route: Route, retry = true): Promise<void> {
+		const { target, ...fields } = route;
+		set({
+			...fields,
+			selection: undefined,
+			hits: [],
+			job: undefined,
+			jobError: "",
+		});
+		console.debug("Console restore", {
+			event: "restore",
+			screen: route.screen,
+			profile: route.profile,
+			scope: route.scope,
+			target,
+			query: route.query,
+		});
+		try {
+			await loadView("none");
+		} catch (error) {
+			if (!retry) throw error;
+			console.debug("Console place rejected", {
+				event: "fallback",
+				error: String(error),
+			});
+			await restore(DEFAULT_ROUTE, false);
+			return;
+		}
+		if (get().query) await find("none");
+		if (target)
+			await (route.screen === "catalog"
+				? openCatalog(rangeOf(target), "none")
+				: openTarget(target, "none"));
+		enter("replace");
+	}
+	// #endregion FUNC_restore
+
+	// #region FUNC_runAction
+	/**
+	 * @purpose Apply one user action once and refresh its visible result.
+	 * @invariants A second action waits until the first one finishes.
+	 * @invariants A save closes the dialog, clears the selection, and reloads the view.
+	 */
+	async function runAction(
+		name: string,
+		extra: ActionFields = {},
+	): Promise<unknown> {
+		if (get().busy) throw new Error(t("busyAction"));
+		set({ busy: true });
+		message(t("saving"));
+		try {
+			console.debug("Console action", {
+				event: "action",
+				action: name,
+				profile: get().profile,
+				scope: get().scope,
+			});
+			const result = await port.action(name, {
+				profile: get().profile,
+				scope: get().scope,
+				...extra,
+			});
+			set({ dialog: null, selection: undefined });
+			await loadView();
+			message(t("saved"));
+			return result;
+		} finally {
+			set({ busy: false });
+		}
+	}
+	// #endregion FUNC_runAction
+
+	// #region FUNC_dialogOf
+	/**
+	 * @purpose Build the record dialog of one record, or of a new note.
+	 * @invariants An amendment keeps the record. A supersede writes a new record with a link.
+	 * @invariants The kind is empty for an open entry, because an open entry holds no note kind.
+	 */
+	function dialogOf(
+		record: RecordModel | OpenEntry | undefined,
+		supersedes: string,
+	): DialogState {
+		const amend = record !== undefined && supersedes === "";
+		return {
+			mode: amend ? "amend" : supersedes ? "supersede" : "create",
+			target: record === undefined ? "" : `${record.scope}#${record.pos}`,
+			body: record?.body ?? "",
+			longform: record?.longform ?? "",
+			scope: record?.scope ?? get().scope,
+			kind: record === undefined ? "note" : kindOf(record.kind),
+			supersedes,
+		};
+	}
+	// #endregion FUNC_dialogOf
+
+	// #region FUNC_saveDialog
+	/**
+	 * @purpose Send one note or amendment to the host.
+	 * @invariants An amendment names the record and the destination scope. A new note names the scope
+	 * of the form.
+	 */
+	async function saveDialog(payload: DialogPayload): Promise<void> {
+		const dialog = get().dialog;
+		if (!dialog) return;
+		const fields: Record<string, unknown> = {
+			body: payload.body,
+			longform: payload.longform,
+			kind: payload.kind,
+			supersedes: payload.supersedes,
+		};
+		if (dialog.mode === "amend") {
+			fields.target = dialog.target;
+			fields.dest = payload.scope;
+			await runAction("amend", fields);
+			return;
+		}
+		fields.scope = payload.scope;
+		await runAction("note", fields);
+	}
+	// #endregion FUNC_saveDialog
+
+	// #region FUNC_prepareCompaction
+	/**
+	 * @purpose Prepare one compaction job and keep it for the answer form.
+	 * @invariants A job without a merge input stays in the state with no error.
+	 */
+	async function prepareCompaction(): Promise<void> {
+		const result = (await runAction("compact", {})) as {
+			inputs: BuildInput[];
+			job: string;
+		} | null;
+		if (!result || !Array.isArray(result.inputs)) throw new Error(t("badJob"));
+		set({
+			job: {
+				inputs: result.inputs,
+				job: result.job,
+				profile: get().profile,
+				scope: get().scope,
+			},
+			jobError: "",
+		});
+	}
+	// #endregion FUNC_prepareCompaction
+
+	// #region FUNC_applyCompaction
+	/**
+	 * @purpose Apply the answers of one job and state the result of each range.
+	 * @invariants An answer that names no range of the job fails before the host call.
+	 * @invariants A rejected answer keeps the job and states each rejected range.
+	 */
+	async function applyCompaction(answers: string): Promise<void> {
+		const job = get().job;
+		if (!job) return;
+		const wanted = job.inputs.map((input) => rangeId(input.range));
+		try {
+			if (!answers.trim()) throw new Error(t("enterAnswers"));
+			const unknown = unknownInputs(answers, wanted);
+			if (unknown.length)
+				throw new Error(t("unknownInput", { inputs: wanted.join(", ") }));
+			const result = (await runAction("compact-answer", {
+				inputs: job.inputs,
+				answers,
+			})) as {
+				built: number;
+				rejected: number;
+				rejectedRanges?: string[];
+			};
+			const failed = result.rejected > 0;
+			const text = failed
+				? t("rejectedRanges", {
+						ranges: (result.rejectedRanges ?? []).join(", "),
+					})
+				: "";
+			set({ job: failed ? job : undefined, jobError: text });
+			message(
+				failed
+					? text
+					: t("built", { built: result.built, rejected: result.rejected }),
+				failed,
+			);
+		} catch (error) {
+			const text = error instanceof Error ? error.message : String(error);
+			set({ jobError: text });
+			message(text, true);
+		}
+	}
+	// #endregion FUNC_applyCompaction
+
+	// #region FUNC_editNote
+	/**
+	 * @purpose Open the record dialog for one record, and read the record first when the view lacks
+	 * it.
+	 * @invariants The read record must be a note. A range gives the select message.
+	 */
+	async function editNote(target: string, supersede: boolean): Promise<void> {
+		const record = get().model?.records.find(
+			(item) => address(item) === target,
+		);
+		if (record) {
+			set({ dialog: dialogOf(record, supersede ? target : "") });
+			return;
+		}
+		const result = await port.open({
+			profile: get().profile,
+			scope: get().scope,
+			target,
+		});
+		if (result.kind !== "entry") throw new Error(t("selectLine"));
+		set({ dialog: dialogOf(result, supersede ? target : "") });
+	}
+	// #endregion FUNC_editNote
+
+	// #region FUNC_chooseLanguage
+	/**
+	 * @purpose Put one language on the page and keep the choice for the next visit.
+	 * @invariants An unknown code gives English.
+	 */
+	function chooseLanguage(code: string): void {
+		const lang = languageOf(code);
+		set({ lang });
+		storage.write(LANG_KEY, lang);
+	}
+	// #endregion FUNC_chooseLanguage
+
+	// #region FUNC_chooseTheme
+	/**
+	 * @purpose Put one theme choice on the page and keep the choice for the next visit.
+	 * @invariants An unknown code gives the system setting. The shell applies the theme to the page.
+	 */
+	function chooseTheme(code: string): void {
+		const theme = themeOf(code);
+		set({ theme });
+		storage.write(THEME_KEY, theme);
+	}
+	// #endregion FUNC_chooseTheme
+
+	return {
+		navigate(screen: Screen) {
+			set({ screen });
+			enter("push");
+		},
+		restore(route: Route) {
+			return guard(() => restore(route, true));
+		},
+		openTarget(target: string) {
+			return guard(() => openTarget(target, "push"));
+		},
+		openInTree(target: string) {
+			return guard(async () => {
+				await openTarget(target, "none");
+				set({ screen: "tree" });
+				enter("push");
+			});
+		},
+		openCatalog(range: Range) {
+			return guard(() => openCatalog(range, "push"));
+		},
+		openScopeTree(key: string) {
+			return guard(async () => {
+				set({ screen: "tree" });
+				await reset(key);
+			});
+		},
+		search(filters: SearchFilters) {
+			return guard(async () => {
+				set({
+					query: filters.query.trim(),
+					kind: filters.kind,
+					since: filters.since,
+					limit: filters.limit,
+					searchScope: filters.searchScope,
+				});
+				if (!get().query) {
+					message(t("searchHint"));
+					return;
+				}
+				await find("push");
+			});
+		},
+		reload(reviewKind?: NoteKind | "") {
+			return guard(async () => {
+				if (reviewKind !== undefined) set({ reviewKind });
+				await loadView("push");
+			});
+		},
+		reset(scope: string) {
+			return guard(() => reset(scope, "push"));
+		},
+		setProfile(profile: string) {
+			return guard(async () => {
+				set({ profile });
+				await reset("", "push");
+			});
+		},
+		async action(name: string, extra: ActionFields = {}) {
+			try {
+				return await runAction(name, extra);
+			} catch (error) {
+				report(error);
+				return undefined;
+			}
+		},
+		newNote() {
+			set({ dialog: dialogOf(undefined, "") });
+		},
+		editNote(target: string, supersede: boolean) {
+			return guard(() => editNote(target, supersede));
+		},
+		closeDialog() {
+			set({ dialog: null });
+		},
+		saveDialog(payload: DialogPayload) {
+			return guard(() => saveDialog(payload));
+		},
+		prepareCompaction() {
+			return guard(() => prepareCompaction());
+		},
+		applyCompaction(answers: string) {
+			return guard(() => applyCompaction(answers));
+		},
+		setLanguage(code: string) {
+			try {
+				chooseLanguage(code);
+			} catch (error) {
+				report(error);
+			}
+		},
+		setTheme(choice: string) {
+			try {
+				chooseTheme(choice);
+			} catch (error) {
+				report(error);
+			}
+		},
+		clearStatus() {
+			message("");
+		},
+	};
+}
+// #endregion FUNC_createConsoleController
