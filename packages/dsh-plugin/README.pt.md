@@ -50,7 +50,8 @@ armazenamento. O trabalhador chama a rota LLM configurada e mantém os seus limi
 
 ### Linha da predefinição
 
-Adicione esta linha à lista `plugins` de uma predefinição de agente. A chave `profile` é obrigatória.
+Adicione esta linha à lista `plugins` de uma predefinição de agente. A chave `profile` é opcional.
+Sem a chave, aplica-se o perfil `default`.
 
 ```yaml
 - id: memlens/preset

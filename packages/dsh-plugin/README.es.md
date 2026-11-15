@@ -51,7 +51,8 @@ llamadas.
 
 ### Fila del preajuste
 
-Añade esta fila a la lista `plugins` de un preajuste de agente. La clave `profile` es obligatoria.
+Añade esta fila a la lista `plugins` de un preajuste de agente. La clave `profile` es opcional. Sin
+la clave se aplica el perfil `default`.
 
 ```yaml
 - id: memlens/preset

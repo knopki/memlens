@@ -1,6 +1,6 @@
 # 0022. Plugin configuration
 
-Status: accepted
+Status: accepted. The preset key `profile` is optional, and its default is `default`. See [S-166](../statements.md#s-166).
 
 ## Context
 
@@ -10,7 +10,7 @@ An agent scope inherits the scope of that preset revision. A separate service fo
 ## Decision
 
 The host entry supplies one `memlens` service and one store. The bundle patch inserts only the host row, with id `memlens`.
-An agent preset mounts `@memlens/dsh-plugin/preset` with row id `memlens/preset` and its required `profile` key.
+An agent preset mounts `@memlens/dsh-plugin/preset` with row id `memlens/preset` and its `profile` key, which defaults to `default`.
 The exported plugin names remain `dsh-memlens` and `memlens/preset`.
 
 The preset entry registers its settings in the shared service under the DSH scope key of its caller.
@@ -20,8 +20,9 @@ The preset owns its registration. The host owns the store, and each agent owns i
 The core owns the fallback TOML text. The CLI and plugin use that same text when the base file is absent.
 The plugin rejects other file errors. The patch store path wins over the environment and the base file.
 
-The schemas check raw input through the core before DSH reads the declared fields.
-This order rejects unknown keys and preserves field metadata without adding defaults to omitted fields.
+The transform branch of each schema checks the raw value with the core rule and drops a rejected layer.
+The declared fields stay permissive, so no row value blocks a session. The service re-reads the merged
+row with the same rule.
 
 The host checks the model context when an agent already has a selected model.
 An agent without a selected model receives the check at the start of its first model stream.

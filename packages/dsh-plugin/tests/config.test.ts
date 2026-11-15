@@ -1,18 +1,18 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Check that the harness schemas apply the strict core load rules.
+ * @purpose Check that the harness schemas accept each row state and drop each broken layer.
  * @scope
- *  - The acceptance, the strict rejection, and the absent fields of the two schemas.
+ *  - The acceptance, the absent fields, and the tolerated rejection of the two schemas.
  *  - NOT: the merge, the store, and the host registration.
  * @invariants
- *  - An accepted layer equals the core layer, and an unknown key gives an error of the code `Data`.
+ *  - An accepted layer equals the core layer of the same value.
  *  - An omitted field stays absent.
- * @keywords test, config, schema, patch, preset
+ *  - A rejected value gives the empty layer, so no row value blocks a session.
+ * @keywords test, config, schema, patch, preset, tolerance
  * #endregion moduleContract
  */
 
-import { MemlensError } from "@memlens/core";
 import { describe, expect, it } from "vitest";
 import { PatchConfigSchema, PresetConfigSchema } from "../src/config.js";
 
@@ -54,17 +54,6 @@ const fullPreset = {
 	customPromptAppend: "append",
 };
 
-/** Run the schema and return its error. */
-function errorOf(run: () => unknown): MemlensError {
-	try {
-		run();
-	} catch (error) {
-		expect(error).toBeInstanceOf(MemlensError);
-		return error as MemlensError;
-	}
-	throw new Error("the schema accepted the value");
-}
-
 describe("PatchConfigSchema", () => {
 	it("accepts the empty row", () => {
 		expect(readPatch({})).toEqual({});
@@ -72,10 +61,6 @@ describe("PatchConfigSchema", () => {
 
 	it("accepts the full row", () => {
 		expect(readPatch(fullPatch)).toEqual(fullPatch);
-	});
-
-	it("accepts an absent row config", () => {
-		expect(readPatch(undefined)).toBeUndefined();
 	});
 
 	it("keeps each omitted field absent", () => {
@@ -99,20 +84,12 @@ describe("PatchConfigSchema", () => {
 			"the nudge text",
 			{ nudge: { text: { tool_calls: "A {n}", turns: "B {n}", more: 1 } } },
 		],
-	])("rejects an unknown key in %s", (_label, value) => {
-		const error = errorOf(() => readPatch(value));
-		expect(error.code).toBe("Data");
-		expect(error.message).toContain("unknown key");
-	});
-
-	it.each([
-		["the budget", { budget: { here: "ten" } }],
+		["the budget value", { budget: { here: "ten" } }],
 		["the store idle", { store: { idle: 0 } }],
 		["the cache TTL", { cacheTtl: { "*": "soon" } }],
 		["the profile", { defaultProfile: 4 }],
-	])("rejects an invalid value of %s", (_label, value) => {
-		const error = errorOf(() => readPatch(value));
-		expect(error.code).toBe("Data");
+	])("states no error after an invalid value of %s", (_label, value) => {
+		expect(() => readPatch(value)).not.toThrow();
 	});
 
 	it("shows the declared fields", () => {
@@ -133,7 +110,7 @@ describe("PatchConfigSchema", () => {
 });
 
 describe("PresetConfigSchema", () => {
-	it("accepts a preset with the required profile", () => {
+	it("accepts a preset with a profile", () => {
 		expect(readPreset({ profile: "work" })).toEqual({
 			profile: "work",
 		});
@@ -143,19 +120,13 @@ describe("PresetConfigSchema", () => {
 		expect(readPreset(fullPreset)).toEqual(fullPreset);
 	});
 
-	it("rejects an absent preset config", () => {
-		expect(() => readPreset(undefined)).toThrow();
+	it("accepts a preset without profile", () => {
+		expect(readPreset({})).toEqual({});
 	});
 
 	it("keeps each omitted field absent", () => {
 		const preset = readPreset({ profile: "work" }) as object;
 		expect(Object.keys(preset)).toEqual(["profile"]);
-	});
-
-	it("rejects a preset without profile", () => {
-		const error = errorOf(() => readPreset({}));
-		expect(error.code).toBe("Data");
-		expect(error.message).toContain("preset.profile");
 	});
 
 	it.each([
@@ -175,18 +146,10 @@ describe("PresetConfigSchema", () => {
 			"the nudge section",
 			{ profile: "work", nudge: { turns: 2, mode: "tools" } },
 		],
-	])("rejects an unknown key in %s", (_label, value) => {
-		const error = errorOf(() => readPreset(value));
-		expect(error.code).toBe("Data");
-		expect(error.message).toContain("unknown key");
-	});
-
-	it.each([
 		["the profile", { profile: 4 }],
-		["the budget", { profile: "work", budget: { here: "many" } }],
-	])("rejects an invalid value of %s", (_label, value) => {
-		const error = errorOf(() => readPreset(value));
-		expect(error.code).toBe("Data");
+		["the budget value", { profile: "work", budget: { here: "many" } }],
+	])("states no error after an invalid value of %s", (_label, value) => {
+		expect(() => readPreset(value)).not.toThrow();
 	});
 
 	it("shows the declared fields", () => {

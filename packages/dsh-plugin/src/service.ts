@@ -38,6 +38,47 @@ import {
 
 const debug = debuglog("memlens:plugin");
 
+// #region FUNC_safePatch
+/**
+ * @purpose Re-read the merged harness row with the strict core rule.
+ * @invariants A rejected row gives the empty layer, so one broken row blocks no session.
+ * @param patch - The merged row value of the harness.
+ * @returns The validated patch layer.
+ */
+function safePatch(patch: PatchConfig): PatchConfig {
+	try {
+		return loadPatchConfig(patch);
+	} catch (error) {
+		debug("Patch layer rejected; the empty layer applies", {
+			event: "patch-reject",
+			error: String(error),
+		});
+		return {};
+	}
+}
+// #endregion FUNC_safePatch
+
+// #region FUNC_safeStorePath
+/**
+ * @purpose Select the store directory, and fall back to the base directory when the patch gives
+ * no usable path.
+ * @param base - The validated base layer.
+ * @param patch - The validated patch layer.
+ * @returns The absolute store directory.
+ */
+function safeStorePath(base: BaseConfig, patch: PatchConfig): string {
+	try {
+		return pluginStorePath(base, patch, process.env);
+	} catch (error) {
+		debug("Store path rejected; the base path applies", {
+			event: "store-path-reject",
+			error: String(error),
+		});
+		return pluginStorePath(base, {}, process.env);
+	}
+}
+// #endregion FUNC_safeStorePath
+
 /** The memory inputs shared by the context provider and tools of one agent. */
 export interface AgentMemory {
 	readonly store: Store;
@@ -71,10 +112,10 @@ export class Memlens extends Service {
 
 	constructor(ctx: Context, patch: PatchConfig) {
 		super(ctx, "memlens");
-		this.patch = loadPatchConfig(patch);
+		this.patch = safePatch(patch);
 		this.base = loadPluginBase(process.env);
 		this.resolved = resolveConfig(this.base, this.patch, null);
-		this.path = pluginStorePath(this.base, this.patch, process.env);
+		this.path = safeStorePath(this.base, this.patch);
 		this.store = new Store(this.path, this.base.language);
 		ctx.effect(() => () => {
 			this.closed = true;
@@ -100,7 +141,16 @@ export class Memlens extends Service {
 				"Load memlens/preset inside an agent preset.",
 			);
 		}
-		const preset = loadPresetConfig(config);
+		let preset: PresetConfig;
+		try {
+			preset = loadPresetConfig(config);
+		} catch (error) {
+			debug("Preset layer rejected; the empty layer applies", {
+				event: "preset-reject",
+				error: String(error),
+			});
+			preset = {};
+		}
 		resolveConfig(this.base, this.patch, preset);
 		return this.ctx.effect(() => {
 			if (this.presets.has(scope)) {

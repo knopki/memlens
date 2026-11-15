@@ -82,6 +82,17 @@ ${parts.nudge ?? ""}
 }
 
 describe("loadBaseConfig", () => {
+	it("loads an empty file with each default", () => {
+		const config = loadBaseConfig("", "/default/store");
+		expect(config.language).toBe("en");
+		expect(config.defaultProfile).toBe("default");
+		expect(config.store).toEqual({ path: "/default/store", idle: 300 });
+		expect(config.profile).toEqual({});
+		expect(config.scope_default).toEqual({ rules: [], default: "user:notes" });
+		expect(config.compaction.provider).toBe("deepseek");
+		expect(config.compaction.model).toBe("deepseek-chat");
+	});
+
 	it("fills the defaults of an incomplete file", () => {
 		const config = base();
 		expect(config.store.path).toBe("/default/store");
@@ -126,7 +137,7 @@ describe("loadBaseConfig", () => {
 		).toThrow(/unknown key/);
 	});
 
-	it("rejects a profile without a budget", () => {
+	it("fills the default budget of a profile without a budget", () => {
 		const text = `
 [store]
 path = "x"
@@ -134,7 +145,8 @@ path = "x"
 [profile.default]
 scopes = ["*"]
 `;
-		expect(() => loadBaseConfig(text, "/s")).toThrow(/budget/);
+		const config = loadBaseConfig(text, "/s");
+		expect(config.profile.default.budget).toEqual({ here: 20, directions: 10 });
 	});
 
 	it("rejects a rule key with an uppercase name", () => {
@@ -151,10 +163,13 @@ scopes = ["*"]
 		expect(() => loadBaseConfig(text, "/s")).toThrow(/scope key/);
 	});
 
-	it("rejects a missing compaction provider", () => {
-		expect(() =>
-			loadBaseConfig(configToml({ compaction: 'model = "m"' }), "/s"),
-		).toThrow(/compaction.provider/);
+	it("fills the default compaction route when the section omits the provider", () => {
+		const config = loadBaseConfig(
+			configToml({ compaction: 'model = "m"' }),
+			"/s",
+		);
+		expect(config.compaction.provider).toBe("deepseek");
+		expect(config.compaction.model).toBe("m");
 	});
 
 	it("rejects a nudge text without {n}", () => {
@@ -179,8 +194,10 @@ describe("loadPatchConfig and loadPresetConfig", () => {
 		expect(() => loadPatchConfig({ scopes: ["*"] })).toThrow(/unknown key/);
 	});
 
-	it("rejects a preset without a profile", () => {
-		expect(() => loadPresetConfig({ budget: { here: 3 } })).toThrow(/profile/);
+	it("reads a preset without a profile", () => {
+		const preset = loadPresetConfig({ budget: { here: 3 } });
+		expect(preset.profile).toBeUndefined();
+		expect(preset.budget).toEqual({ here: 3 });
 	});
 
 	it("reads a preset", () => {
@@ -237,10 +254,15 @@ describe("resolveConfig", () => {
 		expect(resolved.cacheTtl["anthropic/*"]).toBe("5m");
 	});
 
-	it("rejects an unknown profile name", () => {
-		expect(() =>
-			resolveConfig(base(), {}, loadPresetConfig({ profile: "nope" })),
-		).toThrow(/nope/);
+	it("resolves an unknown profile name to the default profile values", () => {
+		const resolved = resolveConfig(
+			base(),
+			{},
+			loadPresetConfig({ profile: "nope" }),
+		);
+		expect(resolved.defaultProfile).toBe("nope");
+		expect(resolved.profile.scopes).toEqual(["*"]);
+		expect(resolved.profile.budget).toEqual({ here: 20, directions: 10 });
 	});
 });
 

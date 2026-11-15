@@ -9,6 +9,7 @@
  * #endregion moduleContract
  */
 
+import { debuglog } from "node:util";
 import type { Context } from "@deepseek-ai/cordis";
 import type { Agent, ModelSelection } from "@deepseek-ai/dsh-agent";
 import { isAgentLoopRequest } from "@deepseek-ai/dsh-llm";
@@ -21,6 +22,8 @@ import { registerMemoryTools } from "./memory-tools.js";
 import { registerMemoryNudge } from "./nudge.js";
 import { Memlens } from "./service.js";
 import { MemoryWorker } from "./worker.js";
+
+const debug = debuglog("memlens:plugin");
 
 /** The settings schema of the host plugin. */
 export const Config = PatchConfigSchema;
@@ -74,6 +77,7 @@ async function checkAgentModel(
 // #region FUNC_apply
 /**
  * @purpose Register the shared store, the worker, and the memory surface of each agent.
+ * @invariants A memory error skips the memory surface of that agent and blocks no session.
  * @param ctx - The host plugin context.
  * @param config - The validated patch layer.
  */
@@ -125,11 +129,19 @@ export function apply(ctx: Context, config: Config = {}): void {
 					?.resolveByPath(cwd)
 					.catch(() => undefined)
 			: undefined;
-		const memory = memlens.forAgent(agent, workspace?.id);
-		registerMemoryContext(agent, memory);
-		registerMemoryTools(agent, memory);
-		if (agent.session.header.origin !== "subagent")
-			registerMemoryNudge(agent, memory);
+		try {
+			const memory = memlens.forAgent(agent, workspace?.id);
+			registerMemoryContext(agent, memory);
+			registerMemoryTools(agent, memory);
+			if (agent.session.header.origin !== "subagent")
+				registerMemoryNudge(agent, memory);
+		} catch (error) {
+			debug(
+				"Memory surface skipped after an error; the session continues without memory",
+				{ event: "agent-skip", session: agent.id, error: String(error) },
+			);
+			return undefined;
+		}
 		const selection = agent.model.current();
 		if (selection) await validate(agent, selection, signal);
 		return undefined;

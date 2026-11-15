@@ -40,7 +40,7 @@ memlens 的 DeepSeek Harness 插件。
 
 ### 预设行
 
-把这个行加入智能体预设的 `plugins` 列表。键 `profile` 是必需的。
+把这个行加入智能体预设的 `plugins` 列表。键 `profile` 是可选的。省略时使用配置文件 `default`。
 
 ```yaml
 - id: memlens/preset

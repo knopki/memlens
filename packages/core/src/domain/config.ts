@@ -47,6 +47,7 @@ import {
 	type BaseConfig,
 	type Budget,
 	type CacheTtl,
+	DEFAULT_BUDGET,
 	DEFAULT_CACHE_TTL,
 	DEFAULT_TTL,
 	type Glob,
@@ -96,7 +97,10 @@ export function loadBaseConfig(
 			root.language === undefined
 				? "en"
 				: expectString(root.language, "language"),
-		defaultProfile: expectString(root.defaultProfile, "defaultProfile"),
+		defaultProfile:
+			root.defaultProfile === undefined
+				? "default"
+				: expectString(root.defaultProfile, "defaultProfile"),
 		store,
 		profile,
 		scope_default: readScopeDefault(root.scope_default),
@@ -120,6 +124,7 @@ export function loadBaseConfig(
  * @returns The validated patch layer. Each key is optional.
  */
 export function loadPatchConfig(value: unknown): PatchConfig {
+	if (value === undefined) return {};
 	const row = expectRecord(value, "patch");
 	expectKeys(
 		row,
@@ -168,11 +173,12 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 // #region FUNC_loadPresetConfig
 /**
  * @purpose Read an agent preset into a layer, so one agent can override values of its profile.
- * @invariants A preset without `profile` is an error at load.
- * @param value - The parsed preset object.
+ * @invariants An absent `profile` gives no key, so the merge selects the default profile.
+ * @param value - The parsed preset object. An absent value gives the empty layer.
  * @returns The validated preset layer.
  */
 export function loadPresetConfig(value: unknown): PresetConfig {
+	if (value === undefined) return {};
 	const row = expectRecord(value, "preset");
 	expectKeys(
 		row,
@@ -186,12 +192,10 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 		],
 		"preset",
 	);
-	if (row.profile === undefined) {
-		throw new MemlensError("Data", "preset.profile is absent");
+	const preset: PresetConfig = {};
+	if (row.profile !== undefined) {
+		preset.profile = expectString(row.profile, "preset.profile");
 	}
-	const preset: PresetConfig = {
-		profile: expectString(row.profile, "preset.profile"),
-	};
 	if (row.budget !== undefined)
 		preset.budget = readBudget(row.budget, "preset.budget");
 	if (row.compaction !== undefined)
@@ -217,7 +221,7 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 // #region FUNC_resolveConfig
 /**
  * @purpose Merge the three layers into one resolved configuration, so each caller reads one object.
- * @ensures A profile name that the base file does not list is an error.
+ * @ensures A profile name that the base file does not list resolves to the default profile values.
  * @param base - The base layer.
  * @param patch - The patch layer. Give an empty object when no patch exists.
  * @param preset - The preset layer, or null.
@@ -228,20 +232,29 @@ export function resolveConfig(
 	patch: PatchConfig,
 	preset: PresetConfig | null,
 ): ResolvedConfig {
-	const name = preset?.profile ?? patch.defaultProfile ?? base.defaultProfile;
+	const name =
+		preset?.profile || patch.defaultProfile || base.defaultProfile || "default";
 	const named = base.profile[name];
 	if (named === undefined) {
-		throw new MemlensError("Data", `config.profile holds no profile ${name}`);
+		debug("Profile absent; the default profile values apply", {
+			event: "resolve-profile-default",
+			profile: name,
+		});
 	}
+	const values = named ?? {
+		scopes: ["*"] as Glob[],
+		budget: { ...DEFAULT_BUDGET },
+		subagents: "propose" as const,
+	};
 	const budget: Budget = {
-		...named.budget,
+		...values.budget,
 		...(patch.budget ?? {}),
 		...(preset?.budget ?? {}),
 	};
 	const profile: ProfileConfig = {
-		scopes: named.scopes,
+		scopes: values.scopes,
 		budget,
-		subagents: named.subagents ?? "propose",
+		subagents: values.subagents ?? "propose",
 	};
 	const result: ResolvedConfig = {
 		language: base.language,

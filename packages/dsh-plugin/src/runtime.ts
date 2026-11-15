@@ -2,7 +2,7 @@
  * #region moduleContract
  * @purpose Give the plugin one base configuration and resolve the active scope from its working directory.
  * @scope Configuration file access, store path precedence, and Git inputs for core scope rules.
- * @invariants Only an absent base file selects the shared fallback. Other file errors propagate.
+ * @invariants An absent or rejected base file selects the shared fallback. Other file errors propagate.
  * @invariants The patch store path wins over the environment and the base file. An empty selected path is an error.
  * @dependencies node:fs, node:child_process, node:path, @memlens/core.
  * @keywords plugin, configuration, scope, git, store, paths
@@ -31,9 +31,10 @@ const debug = debuglog("memlens:plugin:runtime");
 
 // #region FUNC_loadPluginBase
 /**
- * @purpose Load the shared base file without writing a configuration on the user's machine.
+ * @purpose Load the shared base file. A rejected file gives the default base, so no user file
+ * blocks a session.
  * @param env - The environment that supplies the XDG roots.
- * @returns The validated base layer.
+ * @returns The base layer: the file layer, or the default layer after a rejection.
  */
 export function loadPluginBase(
 	env: Record<string, string | undefined>,
@@ -47,7 +48,17 @@ export function loadPluginBase(
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 		text = DEFAULT_CONFIG_TOML;
 	}
-	const base = loadBaseConfig(text, dataDir);
+	let base: BaseConfig;
+	try {
+		base = loadBaseConfig(text, dataDir);
+	} catch (error) {
+		debug("Base rejected; the default base applies", {
+			event: "base-reject",
+			path,
+			error: String(error),
+		});
+		base = loadBaseConfig(DEFAULT_CONFIG_TOML, dataDir);
+	}
 	debug("Base loaded", { event: "base", path });
 	return base;
 }

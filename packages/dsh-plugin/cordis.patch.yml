@@ -9,7 +9,8 @@
 # this package entry.
 #
 # The host row loads for each session. An agent preset mounts the second entry
-# point, `@memlens/dsh-plugin/preset`, with the mandatory `profile` key.
+# point, `@memlens/dsh-plugin/preset`. The key `profile` is optional: an absent
+# key selects the default profile of the base file.
 - insert:
     - id: memlens
       name: "@memlens/dsh-plugin"

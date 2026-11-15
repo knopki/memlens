@@ -49,7 +49,7 @@ DeepSeek Harness のコンパクションの成功、モデル TTL を超えた�
 
 ### プリセット行
 
-この行をエージェントプリセットの `plugins` リストに追加します。キー `profile` は必須です。
+この行をエージェントプリセットの `plugins` リストに追加します。キー `profile` は任意です。省略時はプロファイル `default` を使います。
 
 ```yaml
 - id: memlens/preset

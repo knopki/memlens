@@ -51,7 +51,8 @@ d'appels.
 
 ### Ligne de préréglage
 
-Ajoutez cette ligne à la liste `plugins` d'un préréglage d'agent. La clé `profile` est obligatoire.
+Ajoutez cette ligne à la liste `plugins` d'un préréglage d'agent. La clé `profile` est facultative.
+Sans la clé, le profil `default` s'applique.
 
 ```yaml
 - id: memlens/preset

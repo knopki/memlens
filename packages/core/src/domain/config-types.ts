@@ -133,9 +133,9 @@ export interface PatchConfig {
 	customPromptAppend?: string;
 }
 
-/** The agent preset. `profile` is the only required key. */
+/** The agent preset. An absent `profile` selects the default profile of the base layer. */
 export interface PresetConfig {
-	profile: string;
+	profile?: string;
 	budget?: Partial<Budget>;
 	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
@@ -167,6 +167,25 @@ export const DEFAULT_REVIEW_DAYS: ReviewConfig = {
 	fact: 180,
 	task: 7,
 	note: 365,
+};
+
+/** The default budget of a profile that states no complete budget. */
+export const DEFAULT_BUDGET: Budget = { here: 20, directions: 10 };
+
+/** The default compaction route and limits of a base file that states none. */
+export const DEFAULT_COMPACTION: CompactionConfig = {
+	provider: "deepseek",
+	model: "deepseek-chat",
+	effort: "off",
+	mode: "auto",
+	batch: 6,
+	maxCallsPerHour: 120,
+};
+
+/** The default scope rules of a base file that states no `[scope_default]` section. */
+export const DEFAULT_SCOPE_DEFAULT: ScopeDefault = {
+	rules: [],
+	default: "user:notes",
 };
 
 /** The default cache TTL of any model. */

@@ -49,7 +49,8 @@ worker calls the configured LLM route and keeps its call limits.
 
 ### Preset row
 
-Add this row to the `plugins` list of an agent preset. The key `profile` is mandatory.
+Add this row to the `plugins` list of an agent preset. The key `profile` is optional. An absent key
+selects the profile `default`.
 
 ```yaml
 - id: memlens/preset

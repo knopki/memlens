@@ -51,7 +51,7 @@ Speichers. Der Worker ruft die konfigurierte LLM-Route auf und hält seine Aufru
 ### Preset-Zeile
 
 Füge diese Zeile in die Liste `plugins` eines Agent-Presets ein. Der Schlüssel `profile` ist
-erforderlich.
+optional. Ohne den Schlüssel gilt das Profil `default`.
 
 ```yaml
 - id: memlens/preset

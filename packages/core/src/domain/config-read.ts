@@ -4,6 +4,7 @@
  * @purpose Read each configuration layer into a complete shape, so the merge works on plain values.
  * @scope The strict shape checks and the readers of the base, patch, and preset layers.
  *  NOT: the public load and merge surface and the defaults of the layer types.
+ * @invariants An absent section or field gives its default value. A present value of a wrong type is an error at load.
  * @invariants A key outside the layer type is an error at load.
  * @invariants A scope key outside the two-segment shape is an error at load, except the `{repo}` placeholder of a `git_remote` rule.
  * @dependencies types/errors.ts, domain/scope.ts, domain/config-types.ts.
@@ -17,7 +18,10 @@ import {
 	type Budget,
 	type CacheTtl,
 	type CompactionConfig,
+	DEFAULT_BUDGET,
+	DEFAULT_COMPACTION,
 	DEFAULT_REVIEW_DAYS,
+	DEFAULT_SCOPE_DEFAULT,
 	type Duration,
 	type Glob,
 	NUDGE_TEXTS,
@@ -97,8 +101,9 @@ function expectScopeKey(
 	return key as ScopeKey;
 }
 
-/** @purpose Read the store section of the base layer, with its defaults. */
+/** @purpose Read the store section of the base layer. An absent section gives the defaults. */
 export function readStore(value: unknown, defaultPath: Path): StoreConfig {
+	if (value === undefined) return { path: defaultPath, idle: 300 };
 	const record = expectRecord(value, "store");
 	expectKeys(record, ["path", "idle"], "store");
 	return {
@@ -111,12 +116,9 @@ export function readStore(value: unknown, defaultPath: Path): StoreConfig {
 	};
 }
 
-/** @purpose Read each named profile of the base layer. */
+/** @purpose Read each named profile of the base layer. An absent or empty table gives no profile. */
 export function readProfiles(value: unknown): Record<string, ProfileConfig> {
-	const records = expectRecord(value, "profile");
-	if (Object.keys(records).length === 0) {
-		throw new MemlensError("Data", "config.profile holds no profile");
-	}
+	const records = value === undefined ? {} : expectRecord(value, "profile");
 	const profile: Record<string, ProfileConfig> = {};
 	for (const [name, entry] of Object.entries(records)) {
 		profile[name] = readProfile(entry, `profile.${name}`);
@@ -127,17 +129,15 @@ export function readProfiles(value: unknown): Record<string, ProfileConfig> {
 function readProfile(value: unknown, where: string): ProfileConfig {
 	const record = expectRecord(value, where);
 	expectKeys(record, ["scopes", "budget", "subagents"], where);
-	if (record.scopes === undefined) {
-		throw new MemlensError("Data", `${where}.scopes is absent`);
-	}
 	if (
-		!Array.isArray(record.scopes) ||
-		record.scopes.some((glob) => typeof glob !== "string")
+		record.scopes !== undefined &&
+		(!Array.isArray(record.scopes) ||
+			record.scopes.some((glob) => typeof glob !== "string"))
 	) {
 		throw new MemlensError("Data", `${where}.scopes is not a list of globs`);
 	}
 	const profile: ProfileConfig = {
-		scopes: record.scopes as Glob[],
+		scopes: (record.scopes as Glob[] | undefined) ?? ["*"],
 		budget: readFullBudget(record.budget, `${where}.budget`),
 	};
 	if (record.subagents !== undefined) {
@@ -164,13 +164,14 @@ export function readPatchStore(value: unknown): Partial<StoreConfig> {
 
 function readFullBudget(value: unknown, where: string): Budget {
 	const partial = readBudget(value, where);
-	if (partial.here === undefined || partial.directions === undefined) {
-		throw new MemlensError("Data", `${where} needs here and directions`);
-	}
-	return { here: partial.here, directions: partial.directions };
+	return {
+		here: partial.here ?? DEFAULT_BUDGET.here,
+		directions: partial.directions ?? DEFAULT_BUDGET.directions,
+	};
 }
 
 export function readBudget(value: unknown, where: string): Partial<Budget> {
+	if (value === undefined) return {};
 	const record = expectRecord(value, where);
 	expectKeys(record, ["here", "directions"], where);
 	const budget: Partial<Budget> = {};
@@ -182,6 +183,7 @@ export function readBudget(value: unknown, where: string): Partial<Budget> {
 }
 
 export function readScopeDefault(value: unknown): ScopeDefault {
+	if (value === undefined) return { ...DEFAULT_SCOPE_DEFAULT, rules: [] };
 	const where = "scope_default";
 	const record = expectRecord(value, where);
 	expectKeys(record, ["rules", "default"], where);
@@ -193,7 +195,10 @@ export function readScopeDefault(value: unknown): ScopeDefault {
 	);
 	return {
 		rules,
-		default: expectScopeKey(record.default, `${where}.default`, false),
+		default:
+			record.default === undefined
+				? DEFAULT_SCOPE_DEFAULT.default
+				: expectScopeKey(record.default, `${where}.default`, false),
 	};
 }
 
@@ -266,6 +271,7 @@ function readNudgeText(value: unknown): Record<"tool_calls" | "turns", string> {
 }
 
 export function readCompaction(value: unknown): CompactionConfig {
+	if (value === undefined) return { ...DEFAULT_COMPACTION };
 	const record = expectRecord(value, "compaction");
 	expectKeys(
 		record,
@@ -273,8 +279,14 @@ export function readCompaction(value: unknown): CompactionConfig {
 		"compaction",
 	);
 	return {
-		provider: requireString(record.provider, "compaction.provider"),
-		model: requireString(record.model, "compaction.model"),
+		provider:
+			record.provider === undefined
+				? DEFAULT_COMPACTION.provider
+				: expectString(record.provider, "compaction.provider"),
+		model:
+			record.model === undefined
+				? DEFAULT_COMPACTION.model
+				: expectString(record.model, "compaction.model"),
 		effort:
 			record.effort === undefined
 				? "off"
@@ -330,13 +342,6 @@ export function readPartialCompaction(
 		);
 	}
 	return partial;
-}
-
-function requireString(value: unknown, where: string): string {
-	if (value === undefined) {
-		throw new MemlensError("Data", `${where} is absent`);
-	}
-	return expectString(value, where);
 }
 
 export function readReview(value: unknown): ReviewConfig {
