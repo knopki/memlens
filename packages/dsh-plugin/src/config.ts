@@ -144,14 +144,13 @@ function readPresetLayer(value: unknown): PresetConfig {
  * The schema of the preset entry.
  *
  * The branches follow the rule of the bundle row. The `profile` field is optional: an absent
- * profile selects the default profile of the base layer.
+ * profile selects the default profile of the base layer. The preset declares no compaction field.
  */
 export const PresetConfigSchema: z<PresetConfig> = z.intersect([
 	z.transform(z.any(), readPresetLayer),
 	z.object({
 		profile: z.any(),
 		budget: budgetFields,
-		compaction: compactionFields,
 		nudge: nudgeFields,
 		customPrompt: z.any(),
 		customPromptAppend: z.any(),

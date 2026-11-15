@@ -145,6 +145,16 @@ describe("registerMemoryNudge", () => {
 		]);
 	});
 
+	it("uses updated limits without resetting the count", () => {
+		const { agent, injected } = subject();
+		const settings = nudgeConfig({ tool_calls: 5 });
+		registerMemoryNudge(agent, memory(settings));
+		emitTool(agent, "memory_find", false);
+		settings.tool_calls = 2;
+		emitTool(agent, "memory_open", false);
+		expect(injected).toHaveLength(1);
+	});
+
 	it("resets after a note write and nudges again after new calls", () => {
 		const { agent, injected } = subject();
 		registerMemoryNudge(agent, memory(nudgeConfig()));

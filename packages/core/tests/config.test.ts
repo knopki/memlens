@@ -194,6 +194,11 @@ describe("loadPatchConfig and loadPresetConfig", () => {
 		expect(() => loadPatchConfig({ scopes: ["*"] })).toThrow(/unknown key/);
 	});
 
+	it("reads the compaction section of a patch", () => {
+		const patch = loadPatchConfig({ compaction: { model: "m", batch: 2 } });
+		expect(patch.compaction).toEqual({ model: "m", batch: 2 });
+	});
+
 	it("reads a preset without a profile", () => {
 		const preset = loadPresetConfig({ budget: { here: 3 } });
 		expect(preset.profile).toBeUndefined();
@@ -207,6 +212,15 @@ describe("loadPatchConfig and loadPresetConfig", () => {
 		});
 		expect(preset.profile).toBe("work");
 		expect(preset.budget).toEqual({ directions: 2 });
+	});
+
+	it("rejects the compaction key of a preset", () => {
+		expect(() =>
+			loadPresetConfig({
+				profile: "work",
+				compaction: { model: "m" },
+			}),
+		).toThrow(/unknown key compaction/);
 	});
 });
 
@@ -233,6 +247,22 @@ describe("resolveConfig", () => {
 	it("lets the patch override the budget in part", () => {
 		const resolved = resolveConfig(base(), { budget: { here: 12 } }, null);
 		expect(resolved.budget).toEqual({ here: 12, directions: 8 });
+	});
+
+	it("takes the compaction route from the base and the patch only", () => {
+		const resolved = resolveConfig(
+			base(),
+			{ compaction: { model: "patch-model", batch: 2 } },
+			loadPresetConfig({ profile: "work", nudge: { turns: 3 } }),
+		);
+		expect(resolved.compaction).toEqual({
+			provider: "dsh",
+			model: "patch-model",
+			effort: "off",
+			mode: "auto",
+			batch: 2,
+			maxCallsPerHour: 120,
+		});
 	});
 
 	it("lets the preset win over the patch", () => {

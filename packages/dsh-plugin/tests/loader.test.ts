@@ -69,6 +69,13 @@ it("loads both built entries and unloads the shared store", async () => {
 	expect(memories.map((memory) => memory.config.budget.here)).toEqual([7, 13]);
 	expect(memories.every((memory) => memory.store === store)).toBe(true);
 	const hostFiber = root.loader.resolve(hostId).fiber;
+	if (!hostFiber) throw new Error("The host fiber is absent.");
+	await hostFiber.update({ budget: { directions: 3 } }, true);
+	expect(root.memlens.store === store).toBe(true);
+	expect(memories.map((memory) => memory.config.budget)).toEqual([
+		{ here: 7, directions: 3 },
+		{ here: 13, directions: 3 },
+	]);
 	root.loader.remove(hostId);
 	await hostFiber?.dispose();
 	while (hostFiber?.inertia) await hostFiber.inertia;

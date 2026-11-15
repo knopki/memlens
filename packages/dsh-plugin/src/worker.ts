@@ -2,12 +2,14 @@
  * #region moduleContract
  * @purpose Run the compaction pass of the core in the background, at the dirty threshold or the idle limit.
  * @scope The worker owner, the trigger checks, the model call through the DSH LLM service, the
- *  retry pacing, and the local state read.
+ *  retry pacing, the runtime inputs update, and the local state read.
  * @scope NOT: the compaction rules, the candidate choice, and the validity check. The core owns them.
  * @invariants One worker owns one store. Plugin disposal stops the timer and ends the in-flight pass.
  * @invariants All trigger state, retry counts, and rate counts stay local. A restart clears them.
  * @invariants A denied rate slot fails the call, so the affected ranges stay dirty for the next pass.
  * @invariants A read of the store never waits for this work. The pass writes only through the core.
+ * @invariants The host replaces the inputs at run time. A pass uses the inputs of its start, and an
+ *  update keeps the call times of the hour and the armed retry wait.
  * @dependencies node:util, @deepseek-ai/cordis, @deepseek-ai/dsh-llm, @memlens/core, @memlens/core (store helpers).
  * @keywords worker, compaction, background, timer, idle, dirty, retry, rate, llm
  * #endregion moduleContract
@@ -71,14 +73,32 @@ export interface WorkerInputs {
 	readonly cacheTtl: Readonly<Record<string, number>>;
 }
 
+/** The call form of one pass: the mode, or the cache knowledge of the model under auto. */
+function runSettings(inputs: WorkerInputs): {
+	form: "parallel" | "batch";
+	batch: number;
+} {
+	const mode = inputs.compaction.mode;
+	if (mode === "auto") {
+		return {
+			form: autoForm(inputs.compaction.model, inputs.cacheTtl),
+			batch: inputs.compaction.batch,
+		};
+	}
+	return { form: mode, batch: inputs.compaction.batch };
+}
+
 // #region CLASS_MemoryWorker
 /**
  * @purpose Own the background compaction of one store, from the triggers to the model calls.
  * @invariants The timer lives under a Cordis effect and ends with the owner context.
  * @invariants A disposed worker starts no pass, answers no late model reply, and starts no timer.
+ * @invariants An inputs update applies to the next pass. The rate window, the running pass, and the
+ *  retry wait keep their state.
  */
 export class MemoryWorker {
 	private readonly rate: RateWindow;
+	private inputs: WorkerInputs;
 	private timer: ReturnType<typeof setTimeout> | null = null;
 	private lastActivity = Date.now();
 	private failures = 0;
@@ -91,9 +111,10 @@ export class MemoryWorker {
 	constructor(
 		ctx: Context,
 		private readonly store: Store,
-		private readonly inputs: WorkerInputs,
+		inputs: WorkerInputs,
 		private readonly llm: WorkerLlm,
 	) {
+		this.inputs = inputs;
 		this.rate = new RateWindow(inputs.compaction.maxCallsPerHour);
 		ctx.effect(() => () => this.dispose());
 		this.scheduleIdle();
@@ -135,6 +156,28 @@ export class MemoryWorker {
 		};
 	}
 	// #endregion METHOD_status
+
+	// #region METHOD_updateInputs
+	/**
+	 * @purpose Apply the resolved inputs of a new configuration layer to the next pass.
+	 * @invariants A running pass keeps the inputs and the call limit of its start. An armed retry
+	 *  keeps its wait.
+	 * @invariants A changed idle time re-arms the idle timer, unless a pass runs or a retry waits.
+	 * @param inputs - The resolved inputs of the new layer.
+	 */
+	updateInputs(inputs: WorkerInputs): void {
+		const idleChanged = inputs.store.idle !== this.inputs.store.idle;
+		this.inputs = inputs;
+		debug("Worker inputs updated", {
+			event: "inputs",
+			idle: inputs.store.idle,
+			batch: inputs.compaction.batch,
+			maxCallsPerHour: inputs.compaction.maxCallsPerHour,
+		});
+		if (this.disposed || this.running || this.retryAt !== 0) return;
+		if (idleChanged) this.scheduleIdle();
+	}
+	// #endregion METHOD_updateInputs
 
 	/** Close each expired proposal, then start a pass at the dirty threshold. */
 	private sweepAndCheck(): void {
@@ -178,13 +221,17 @@ export class MemoryWorker {
 		if (this.running || this.disposed) return;
 		this.running = true;
 		this.attempts += 1;
+		const inputs = this.inputs;
+		// The pass uses the call limit of its start. The window keeps the calls of the hour.
+		this.rate.setLimit(inputs.compaction.maxCallsPerHour);
 		try {
-			const run = this.runSettings();
+			const run = runSettings(inputs);
+			const model = this.modelFor(inputs);
 			let built = 0;
 			let failed = 0;
 			for (const scope of liveCounts(this.store).keys()) {
 				if (candidates(this.store, scope).length === 0) continue;
-				const result = await compactionPass(this.store, scope, this.model, run);
+				const result = await compactionPass(this.store, scope, model, run);
 				built += result.built;
 				failed += result.failed;
 			}
@@ -198,18 +245,6 @@ export class MemoryWorker {
 		} finally {
 			this.running = false;
 		}
-	}
-
-	/** The call form of the pass: the mode, or the cache knowledge of the model under auto. */
-	private runSettings(): { form: "parallel" | "batch"; batch: number } {
-		const mode = this.inputs.compaction.mode;
-		if (mode === "auto") {
-			return {
-				form: autoForm(this.inputs.compaction.model, this.inputs.cacheTtl),
-				batch: this.inputs.compaction.batch,
-			};
-		}
-		return { form: mode, batch: this.inputs.compaction.batch };
 	}
 
 	/** Start the retry wait after a failure, or the idle wait after a clean pass. */
@@ -229,36 +264,38 @@ export class MemoryWorker {
 		this.scheduleIdle();
 	}
 
-	/** The model call of one merge task, with one rate slot and the configured route. */
-	private readonly model: MergeModel = async (system, task) => {
-		if (!this.rate.tryAcquire(Date.now()))
-			throw new Error("The compaction call limit of one hour is reached.");
-		this.inFlight += 1;
-		try {
-			let text = "";
-			const effort = this.inputs.compaction.effort;
-			const stream = this.llm.stream({
-				provider: this.inputs.compaction.provider,
-				model: this.inputs.compaction.model,
-				...(effort === ""
-					? {}
-					: { reasoningEffort: ReasoningEffortId(effort) }),
-				system,
-				messages: [
-					{
-						role: "user",
-						content: [{ type: "text", text: task }],
-					},
-				],
-			});
-			for await (const chunk of stream) {
-				if (chunk.type === "text-delta") text += chunk.text;
+	/** The model call of one merge task, with one rate slot and the route of the given inputs. */
+	private modelFor(inputs: WorkerInputs): MergeModel {
+		return async (system, task) => {
+			if (!this.rate.tryAcquire(Date.now()))
+				throw new Error("The compaction call limit of one hour is reached.");
+			this.inFlight += 1;
+			try {
+				let text = "";
+				const effort = inputs.compaction.effort;
+				const stream = this.llm.stream({
+					provider: inputs.compaction.provider,
+					model: inputs.compaction.model,
+					...(effort === ""
+						? {}
+						: { reasoningEffort: ReasoningEffortId(effort) }),
+					system,
+					messages: [
+						{
+							role: "user",
+							content: [{ type: "text", text: task }],
+						},
+					],
+				});
+				for await (const chunk of stream) {
+					if (chunk.type === "text-delta") text += chunk.text;
+				}
+				return text;
+			} finally {
+				this.inFlight -= 1;
 			}
-			return text;
-		} finally {
-			this.inFlight -= 1;
-		}
-	};
+		};
+	}
 
 	private clearTimer(): void {
 		if (this.timer !== null) clearTimeout(this.timer);

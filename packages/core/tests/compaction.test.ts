@@ -336,6 +336,20 @@ describe("form choice and pacing", () => {
 		expect(window.tryAcquire(3000)).toBe(false);
 		expect(window.tryAcquire(3_700_000)).toBe(true);
 	});
+
+	it("keeps the calls of the hour when the limit changes", () => {
+		const window = new RateWindow(3);
+		expect(window.tryAcquire(1000)).toBe(true);
+		expect(window.tryAcquire(2000)).toBe(true);
+		window.setLimit(2);
+		expect(window.max).toBe(2);
+		expect(window.tryAcquire(3000)).toBe(false);
+		window.setLimit(4);
+		expect(window.tryAcquire(3000)).toBe(true);
+		expect(window.tryAcquire(4000)).toBe(true);
+		expect(window.tryAcquire(5000)).toBe(false);
+		expect(window.tryAcquire(3_700_000)).toBe(true);
+	});
 });
 
 describe("compactionPass", () => {

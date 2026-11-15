@@ -21,7 +21,7 @@ import {
 	scopeChainOf,
 	scopeOf,
 } from "@deepseek-ai/dsh-scope";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pluginActiveScope } from "../src/runtime.js";
 import { Memlens } from "../src/service.js";
 
@@ -160,6 +160,48 @@ describe("Memlens preset scoping", () => {
 		const agent = fakeAgent(scope.scope.ctx, "session-a");
 
 		expect(host.forAgent(agent)).toBe(host.forAgent(agent));
+	});
+
+	it("reloads the base for existing agents and keeps the last valid file", () => {
+		const preset = presetScope(root, "preset-a");
+		preset.scope.ctx.memlens.registerPreset({
+			profile: "a",
+			budget: { directions: 7 },
+		});
+		const scope = agentScope(root, "agent-a", preset);
+		const memory = host.forAgent(fakeAgent(scope.scope.ctx, "session-a"));
+		const initialScope = memory.scope;
+		const initialPath = host.path;
+		const path = join(rootDir, "config", "memlens", "config.toml");
+		writeFileSync(
+			path,
+			BASE_CONFIG.replace("here = 20", "here = 3").replace(
+				'default = "user:notes"',
+				'default = "user:other"',
+			),
+		);
+		host.reloadBase();
+		expect(memory.config.budget).toEqual({ here: 3, directions: 7 });
+		expect(memory.scope).toBe(initialScope);
+		expect(host.path).toBe(initialPath);
+		writeFileSync(path, "not toml = [");
+		host.reloadBase();
+		expect(memory.config.budget.here).toBe(3);
+	});
+
+	it("detects a base file change without a host restart", async () => {
+		const preset = presetScope(root, "preset-a");
+		preset.scope.ctx.memlens.registerPreset({ profile: "a" });
+		const scope = agentScope(root, "agent-a", preset);
+		const memory = host.forAgent(fakeAgent(scope.scope.ctx, "session-a"));
+		writeFileSync(
+			join(rootDir, "config", "memlens", "config.toml"),
+			BASE_CONFIG.replace("here = 20", "here = 4"),
+		);
+		await vi.waitFor(() => expect(memory.config.budget.here).toBe(4), {
+			timeout: 4000,
+			interval: 100,
+		});
 	});
 
 	it("rejects a second registration in one preset scope", () => {

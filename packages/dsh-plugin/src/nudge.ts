@@ -43,7 +43,7 @@ export class NudgeCounters {
 	private toolCalls = 0;
 	private turns = 0;
 
-	constructor(readonly config: NudgeSettings) {}
+	constructor(public config: NudgeSettings) {}
 
 	/** @returns The counts of both counters, for a check or a test. */
 	current(): { readonly toolCalls: number; readonly turns: number } {
@@ -121,10 +121,14 @@ export function registerMemoryNudge(agent: Agent, memory: AgentMemory): void {
 		}
 	};
 	agent.ctx.on("tools/result", (exec, result) => {
+		counters.config = memory.config.nudge;
 		deliver(counters.onToolResult(exec.name, result.isError));
 	});
 	agent.ctx.on("session/event", (_session, event) => {
-		if (event.type === "turn/end") deliver(counters.onTurnEnd());
+		if (event.type === "turn/end") {
+			counters.config = memory.config.nudge;
+			deliver(counters.onTurnEnd());
+		}
 	});
 }
 // #endregion FUNC_registerMemoryNudge

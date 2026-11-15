@@ -10,6 +10,7 @@
  * @invariants
  *  - A later layer wins over an earlier layer: the base, then the patch, then the preset.
  *    A table merges with a table, and a scalar or a list replaces.
+ *  - The preset holds no compaction key. The base and the patch select the compaction route.
  *  - The configuration lives in `$XDG_CONFIG_HOME/memlens`. The data lives in `$XDG_DATA_HOME/memlens`.
  * @usecases
  *  - Load: caller => gives TOML text and a default store path => gets the base layer
@@ -174,6 +175,7 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 /**
  * @purpose Read an agent preset into a layer, so one agent can override values of its profile.
  * @invariants An absent `profile` gives no key, so the merge selects the default profile.
+ * @invariants A preset cannot override the compaction route.
  * @param value - The parsed preset object. An absent value gives the empty layer.
  * @returns The validated preset layer.
  */
@@ -182,14 +184,7 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 	const row = expectRecord(value, "preset");
 	expectKeys(
 		row,
-		[
-			"profile",
-			"budget",
-			"compaction",
-			"nudge",
-			"customPrompt",
-			"customPromptAppend",
-		],
+		["profile", "budget", "nudge", "customPrompt", "customPromptAppend"],
 		"preset",
 	);
 	const preset: PresetConfig = {};
@@ -198,11 +193,6 @@ export function loadPresetConfig(value: unknown): PresetConfig {
 	}
 	if (row.budget !== undefined)
 		preset.budget = readBudget(row.budget, "preset.budget");
-	if (row.compaction !== undefined)
-		preset.compaction = readPartialCompaction(
-			row.compaction,
-			"preset.compaction",
-		);
 	if (row.nudge !== undefined)
 		preset.nudge = readPartialNudge(row.nudge, "preset.nudge");
 	if (row.customPrompt !== undefined)
@@ -264,11 +254,7 @@ export function resolveConfig(
 		budget,
 		scope_default: base.scope_default,
 		nudge: { ...base.nudge, ...(patch.nudge ?? {}), ...(preset?.nudge ?? {}) },
-		compaction: {
-			...base.compaction,
-			...(patch.compaction ?? {}),
-			...(preset?.compaction ?? {}),
-		},
+		compaction: { ...base.compaction, ...(patch.compaction ?? {}) },
 		review: base.review,
 		cacheTtl: { ...DEFAULT_CACHE_TTL, ...(patch.cacheTtl ?? {}) },
 		customPrompt: preset?.customPrompt ?? patch.customPrompt ?? null,

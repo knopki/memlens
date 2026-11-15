@@ -297,6 +297,29 @@ describe("memory context", () => {
 		await harness.root.fiber.dispose();
 	});
 
+	it("keeps the snapshot on config reload and uses the new config after session compaction", async () => {
+		const harness = newHarness();
+		const mounted = mount(harness, { name: "reload" });
+		write(harness.host.store, "project:alpha", "alpha fact");
+		write(harness.host.store, "project:alpha", "second fact");
+		register(harness, mounted);
+		const before = await sectionOf(harness, mounted.key);
+		writeFileSync(
+			join(rootDir, "config", "memlens", "config.toml"),
+			BASE_CONFIG.replace("here = 20", "here = 1"),
+		);
+		harness.host.reloadBase();
+		harness.host.updatePatch({ customPromptAppend: "new prompt" });
+
+		expect(harness.host.forAgent(mounted.agent).config.budget.here).toBe(1);
+		expect(await sectionOf(harness, mounted.key)).toBe(before);
+		fire(harness, mounted.agent, "compaction/end", { compactionId: "c1" });
+		const after = await sectionOf(harness, mounted.key);
+		expect(after).not.toBe(before);
+		expect(after).toContain("new prompt");
+		await harness.root.fiber.dispose();
+	});
+
 	it("refreshes the text after a successful compaction only", async () => {
 		const harness = newHarness();
 		const mounted = mount(harness, { name: "compact" });

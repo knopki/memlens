@@ -4,11 +4,15 @@
  * @scope The host store, scoped preset settings, per-agent configuration, and resource disposal.
  * @invariants The host owns the store. A preset owns only its configuration registration.
  * @invariants A preset cannot change the store path or expose its settings to another preset.
+ * @invariants A valid base or host change affects the next configuration read of a live agent.
+ * @invariants A base change keeps the open store, its language, and each agent scope.
  * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @memlens/core, runtime.ts.
  * @keywords memlens, service, preset, configuration, agent, lifecycle
  * #endregion moduleContract
  */
 
+import { unwatchFile, watchFile } from "node:fs";
+import { join } from "node:path";
 import { debuglog } from "node:util";
 import { type Context, Service } from "@deepseek-ai/cordis";
 import type { Agent } from "@deepseek-ai/dsh-agent";
@@ -29,6 +33,7 @@ import {
 	resolveConfig,
 	type ScopeKey,
 	Store,
+	xdgDirs,
 } from "@memlens/core";
 import {
 	loadPluginBase,
@@ -99,13 +104,16 @@ declare module "@deepseek-ai/cordis" {
  * @invariants Either host disposal or agent disposal removes the cached agent inputs.
  */
 export class Memlens extends Service {
-	readonly base: BaseConfig;
-	readonly patch: PatchConfig;
+	base: BaseConfig;
+	patch: PatchConfig;
 	readonly path: string;
 	readonly store: Store;
 
 	/** The host-level resolution, with no preset layer. */
-	readonly resolved: ResolvedConfig;
+	get resolved(): ResolvedConfig {
+		return resolveConfig(this.base, this.patch, null);
+	}
+	private readonly listeners = new Set<() => void>();
 	private readonly presets = new Map<RegistrationScope, PresetConfig>();
 	private memories = new WeakMap<Agent, AgentMemory>();
 	private closed = false;
@@ -114,10 +122,14 @@ export class Memlens extends Service {
 		super(ctx, "memlens");
 		this.patch = safePatch(patch);
 		this.base = loadPluginBase(process.env);
-		this.resolved = resolveConfig(this.base, this.patch, null);
 		this.path = safeStorePath(this.base, this.patch);
 		this.store = new Store(this.path, this.base.language);
+		const configPath = join(xdgDirs(process.env).configDir, "config.toml");
+		const reload = () => this.reloadBase();
+		watchFile(configPath, { interval: 1000, persistent: false }, reload);
 		ctx.effect(() => () => {
+			unwatchFile(configPath, reload);
+			this.listeners.clear();
 			this.closed = true;
 			this.memories = new WeakMap();
 			this.presets.clear();
@@ -125,6 +137,54 @@ export class Memlens extends Service {
 			debug("Host disposed", { event: "dispose", path: this.path });
 		});
 		debug("Host opened", { event: "start", path: this.path });
+	}
+
+	// #region METHOD_reloadBase
+	/**
+	 * @purpose Apply a valid base file without replacing the open store.
+	 * @invariants A rejected file leaves the last valid configuration in use.
+	 */
+	reloadBase(): void {
+		try {
+			const base = loadPluginBase(process.env, true);
+			this.base = { ...base, language: this.base.language };
+			debug("Base reloaded", { event: "reload" });
+			this.notify();
+		} catch (error) {
+			debug("Base reload rejected", {
+				event: "reload-reject",
+				error: String(error),
+			});
+		}
+	}
+	// #endregion METHOD_reloadBase
+
+	// #region METHOD_updatePatch
+	/**
+	 * @purpose Apply the harness layer without replacing the open store.
+	 * @param patch - The new host layer.
+	 */
+	updatePatch(patch: PatchConfig): void {
+		this.patch = safePatch(patch);
+		this.notify();
+		debug("Host layer reloaded", { event: "patch-reload" });
+	}
+	// #endregion METHOD_updatePatch
+
+	// #region METHOD_onConfigChange
+	/**
+	 * @purpose Notify a consumer when a configuration layer changes.
+	 * @param listener - The callback that refreshes the consumer state.
+	 * @returns A function that removes the callback.
+	 */
+	onConfigChange(listener: () => void): () => void {
+		this.listeners.add(listener);
+		return () => this.listeners.delete(listener);
+	}
+	// #endregion METHOD_onConfigChange
+
+	private notify(): void {
+		for (const listener of this.listeners) listener();
 	}
 
 	// #region METHOD_registerPreset
@@ -202,11 +262,13 @@ export class Memlens extends Service {
 			throw new MemlensError("Data", "The Memlens host is disposed.");
 		const cached = this.memories.get(agent);
 		if (cached) return cached;
-		const config = this.configFor(agent);
 		const cwd = agent.session.header.cwd;
+		const host = this;
 		const memory: AgentMemory = {
 			store: this.store,
-			config,
+			get config() {
+				return host.configFor(agent);
+			},
 			scope: cwd
 				? pluginActiveScope(this.base, cwd, workspace)
 				: activeScope(this.base.scope_default, { workspace: workspace ?? null })

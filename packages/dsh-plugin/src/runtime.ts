@@ -34,10 +34,12 @@ const debug = debuglog("memlens:plugin:runtime");
  * @purpose Load the shared base file. A rejected file gives the default base, so no user file
  * blocks a session.
  * @param env - The environment that supplies the XDG roots.
+ * @param strict - Reject an invalid file instead of selecting the default layer.
  * @returns The base layer: the file layer, or the default layer after a rejection.
  */
 export function loadPluginBase(
 	env: Record<string, string | undefined>,
+	strict = false,
 ): BaseConfig {
 	const { configDir, dataDir } = xdgDirs(env);
 	const path = join(configDir, "config.toml");
@@ -52,6 +54,7 @@ export function loadPluginBase(
 	try {
 		base = loadBaseConfig(text, dataDir);
 	} catch (error) {
+		if (strict) throw error;
 		debug("Base rejected; the default base applies", {
 			event: "base-reject",
 			path,

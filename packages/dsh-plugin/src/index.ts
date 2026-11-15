@@ -46,21 +46,25 @@ export const inject = ["llm"];
  */
 export function apply(ctx: Context, config: Config = {}): void {
 	const memlens = new Memlens(ctx, config);
-	const cacheTtl = Object.fromEntries(
-		Object.entries(memlens.resolved.cacheTtl).map(([glob, value]) => [
-			glob,
-			parseDuration(value),
-		]),
-	);
-	const worker = new MemoryWorker(
-		ctx,
-		memlens.store,
-		{
-			compaction: memlens.resolved.compaction,
-			store: { ...memlens.resolved.store, path: memlens.path },
-			cacheTtl,
-		},
-		ctx.llm,
+	ctx.on("internal/update", (next: Config) => {
+		memlens.updatePatch(next);
+	});
+	const workerInputs = () => {
+		const config = memlens.resolved;
+		return {
+			compaction: config.compaction,
+			store: { ...config.store, path: memlens.path },
+			cacheTtl: Object.fromEntries(
+				Object.entries(config.cacheTtl).map(([glob, value]) => [
+					glob,
+					parseDuration(value),
+				]),
+			),
+		};
+	};
+	const worker = new MemoryWorker(ctx, memlens.store, workerInputs(), ctx.llm);
+	ctx.effect(() =>
+		memlens.onConfigChange(() => worker.updateInputs(workerInputs())),
 	);
 	const consoleRemote = registerConsoleRemote(ctx, memlens, worker);
 	const disabled = (agent: Agent) =>

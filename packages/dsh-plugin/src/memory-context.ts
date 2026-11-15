@@ -69,6 +69,7 @@ export function registerMemoryContext(agent: Agent, memory: AgentMemory): void {
 		let text = snapshotText(agent.session) ?? renderSlice(memory);
 		let live = true;
 		let timer: ReturnType<typeof setTimeout> | undefined;
+		let lastActivity = Date.now();
 
 		/** @purpose Install a new text, or keep the old text when the render gives the same text. */
 		const refresh = (trigger: string): void => {
@@ -87,11 +88,19 @@ export function registerMemoryContext(agent: Agent, memory: AgentMemory): void {
 			setTimeout(
 				() => {
 					refresh("idle");
+					lastActivity = Date.now();
 					timer = arm();
 				},
-				idleDelay(agent, memory.config.cacheTtl),
+				Math.max(
+					0,
+					lastActivity + idleDelay(agent, memory.config.cacheTtl) - Date.now(),
+				),
 			);
 		timer = arm();
+		const unsubscribe = agent.ctx.get("memlens")?.onConfigChange(() => {
+			clearTimeout(timer);
+			timer = arm();
+		});
 		agent.ctx.systemPrompt.context({
 			name: CONTEXT_NAME,
 			order: CONTEXT_ORDER,
@@ -105,6 +114,7 @@ export function registerMemoryContext(agent: Agent, memory: AgentMemory): void {
 				refresh("compaction");
 				return;
 			}
+			lastActivity = Date.now();
 			clearTimeout(timer);
 			timer = arm();
 		});
@@ -116,6 +126,7 @@ export function registerMemoryContext(agent: Agent, memory: AgentMemory): void {
 		});
 		return () => {
 			live = false;
+			unsubscribe?.();
 			clearTimeout(timer);
 		};
 	}, "memlens.context");

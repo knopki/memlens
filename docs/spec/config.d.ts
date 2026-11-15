@@ -144,11 +144,10 @@ export interface PatchConfig {
 	customPromptAppend?: string;
 }
 
-/** The agent preset. `profile` is the only required key. */
+/** The agent preset. `profile` is the only required key. The layer holds no compaction key. */
 export interface PresetConfig {
 	profile: string;
 	budget?: Partial<Budget>;
-	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
 	customPrompt?: string;
 	customPromptAppend?: string;

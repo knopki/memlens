@@ -13,6 +13,7 @@
  * #endregion moduleContract
  */
 
+import { loadPresetConfig } from "@memlens/core";
 import { describe, expect, it } from "vitest";
 import { PatchConfigSchema, PresetConfigSchema } from "../src/config.js";
 
@@ -48,7 +49,6 @@ const fullPatch = {
 const fullPreset = {
 	profile: "work",
 	budget: { directions: 20 },
-	compaction: { model: "deepseek-flash" },
 	nudge: { tool_calls: 5 },
 	customPrompt: "text",
 	customPromptAppend: "append",
@@ -129,6 +129,20 @@ describe("PresetConfigSchema", () => {
 		expect(Object.keys(preset)).toEqual(["profile"]);
 	});
 
+	it("tolerates a preset that still holds the removed compaction key", () => {
+		expect(() =>
+			readPreset({ profile: "work", compaction: { model: "deepseek-flash" } }),
+		).not.toThrow();
+	});
+
+	it("leaves the removed compaction key to the strict preset rule", () => {
+		const layer = readPreset({
+			profile: "work",
+			compaction: { model: "deepseek-flash" },
+		});
+		expect(() => loadPresetConfig(layer)).toThrow(/unknown key compaction/);
+	});
+
 	it.each([
 		["the preset", { profile: "work", writer: { provider: "deepseek" } }],
 		[
@@ -136,7 +150,7 @@ describe("PresetConfigSchema", () => {
 			{ profile: "work", budget: { here: 10, slice: 20 } },
 		],
 		[
-			"the compaction section",
+			"the removed compaction key",
 			{
 				profile: "work",
 				compaction: { model: "m", provider: "p", retries: 1 },
@@ -157,12 +171,12 @@ describe("PresetConfigSchema", () => {
 		for (const field of [
 			"profile",
 			"budget",
-			"compaction",
 			"nudge",
 			"customPrompt",
 			"customPromptAppend",
 		]) {
 			expect(text).toContain(field);
 		}
+		expect(text).not.toContain("compaction");
 	});
 });

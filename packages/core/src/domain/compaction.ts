@@ -118,16 +118,37 @@ export function retryDelay(failures: number): number {
  * returns false at the limit. The window holds no durable state.
  * @invariants A pass calls the model at most max times in one hour. A pass at the limit defers
  * its calls, while the affected ranges stay dirty.
+ * @invariants setLimit keeps the recorded calls of the hour and applies the new limit to them.
  */
 export class RateWindow {
 	private calls: number[] = [];
+	private limit: number;
 
-	constructor(readonly max: number) {}
+	constructor(max: number) {
+		this.limit = max;
+	}
+
+	/** The call limit of one hour. */
+	get max(): number {
+		return this.limit;
+	}
+
+	// #region METHOD_setLimit
+	/**
+	 * @purpose Apply a new call limit without a lost count of the calls of this hour.
+	 * @invariants The recorded calls stay. A lower limit can deny the next call at once.
+	 * @param max - The call limit of one hour.
+	 */
+	setLimit(max: number): void {
+		this.limit = max;
+		debug("Rate limit set", { max, used: this.calls.length });
+	}
+	// #endregion METHOD_setLimit
 
 	tryAcquire(now: number): boolean {
 		this.calls = this.calls.filter((time) => now - time < 3_600_000);
-		if (this.calls.length >= this.max) {
-			debug("Rate limit reached", { used: this.calls.length, max: this.max });
+		if (this.calls.length >= this.limit) {
+			debug("Rate limit reached", { used: this.calls.length, max: this.limit });
 			return false;
 		}
 		this.calls.push(now);

@@ -133,11 +133,13 @@ export interface PatchConfig {
 	customPromptAppend?: string;
 }
 
-/** The agent preset. An absent `profile` selects the default profile of the base layer. */
+/**
+ * The agent preset. An absent `profile` selects the default profile of the base layer.
+ * The preset holds no compaction section.
+ */
 export interface PresetConfig {
 	profile?: string;
 	budget?: Partial<Budget>;
-	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
 	customPrompt?: string;
 	customPromptAppend?: string;
