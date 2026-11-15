@@ -85,7 +85,11 @@ function safeStorePath(base: BaseConfig, patch: PatchConfig): string {
 }
 // #endregion FUNC_safeStorePath
 
-/** The memory inputs shared by the context provider and tools of one agent. */
+/**
+ * The memory inputs shared by the context provider, the tools, and the console of one surface.
+ * An agent surface takes its configuration from the preset of that agent, and a profile surface
+ * takes it from the name of a profile.
+ */
 export interface AgentMemory {
 	readonly store: Store;
 	readonly config: ResolvedConfig;
@@ -292,6 +296,45 @@ export class Memlens extends Service {
 		return { ...config, store: { ...config.store, path: this.path } };
 	}
 	// #endregion METHOD_configFor
+
+	// #region METHOD_profiles
+	/**
+	 * @purpose List the profile names of the base file, so the console offers each profile.
+	 * @invariants The list follows the base file order.
+	 */
+	profiles(): string[] {
+		return Object.keys(this.base.profile);
+	}
+	// #endregion METHOD_profiles
+
+	// #region METHOD_forProfile
+	/**
+	 * @purpose Resolve the shared memory inputs of one named profile, so the console reads and
+	 *   writes that profile with no agent.
+	 * @invariants An unknown profile gives a Data error, as the CLI gives.
+	 * @invariants The fallback scope is the default scope key of the base file, and the profile
+	 *   lists that key.
+	 * @param name - The profile name of the base file.
+	 * @returns The store, the resolved configuration, and the fallback scope of the profile.
+	 */
+	forProfile(name: string): AgentMemory {
+		if (this.closed)
+			throw new MemlensError("Data", "The Memlens host is disposed.");
+		if (!Object.hasOwn(this.base.profile, name))
+			throw new MemlensError("Data", `config.profile holds no profile ${name}`);
+		const scope = activeScope(this.base.scope_default, {
+			workspace: null,
+		}).key;
+		return {
+			store: this.store,
+			config: withSessionScope(
+				resolveConfig(this.base, this.patch, { profile: name }),
+				scope,
+			),
+			scope,
+		};
+	}
+	// #endregion METHOD_forProfile
 
 	// #region METHOD_forAgent
 	/**

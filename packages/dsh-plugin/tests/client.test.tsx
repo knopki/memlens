@@ -1,9 +1,11 @@
 /**
  * #region moduleContract
- * @purpose Guard the memory tab against a lost session, a lost locale fallback, a broken screen
- *   registry, and a lost Remote, so the tab draws each screen inside the harness page.
- * @scope The tab registration, the locale dictionaries and their fallback, the tab console port,
- *   the Remote mount, the tab body, the screen registry, and the stylesheet rules.
+ * @purpose Guard the two memory surfaces against a lost surface identity, a lost locale fallback, a
+ *   broken screen registry, and a lost Remote, so the page and the tab draw inside the harness
+ *   page.
+ * @scope The panel row, the page registration, the tab registration, the locale dictionaries and
+ *   their fallback, the two console ports, the Remote mount, the bodies, the screen registry, and
+ *   the stylesheet rules.
  * NOT: the host service and the built artifact.
  * @invariants Each test renders from a fake namespace or a fake console API. No host call leaves the
  * test.
@@ -26,7 +28,11 @@ import type {
 } from "../../ui/src/model/console.js";
 import { DEFAULT_ROUTE, SCREENS } from "../../ui/src/route.js";
 import type { View } from "../../ui/src/types.js";
-import { createTabConsole, mountConsole } from "../src/client/console.js";
+import {
+	createProfileConsole,
+	createSessionConsole,
+	mountConsole,
+} from "../src/client/console.js";
 import type {
 	ClientContext,
 	LocaleService,
@@ -34,8 +40,9 @@ import type {
 	SlotRegistration,
 } from "../src/client/context.js";
 import { apply, inject } from "../src/client/index.js";
-import { NS, TAB_KEY } from "../src/client/locales.js";
-import { TAB_CSS } from "../src/client/styles.js";
+import { NS, PANEL_KEY, TAB_KEY } from "../src/client/locales.js";
+import { MemoryPage } from "../src/client/page.js";
+import { CONSOLE_CSS } from "../src/client/styles.js";
 import { MemoryView } from "../src/client/view.js";
 
 /** The renderer of the console package. The plugin holds no react-dom of its own. */
@@ -328,36 +335,58 @@ function fakeContext(
 }
 // #endregion FUNC_fakeContext
 
-describe("tab registration", () => {
-	it("registers one entry of the conversation view slot", () => {
+describe("surface registration", () => {
+	it("registers a row of the left side panel for the memory page", () => {
 		const { ctx, options } = fakeContext();
 		apply(ctx);
-		expect(options.length).toBe(1);
-		const entry = options[0];
-		expect(entry?.name).toBe("conversation.view");
-		expect(entry?.id).toBe("memlens");
-		expect(entry?.order).toBe(20);
-		expect(entry?.locale).toBe(NS);
-		expect(typeof entry?.label).toBe("function");
+		const row = options.find((entry) => entry.name === "sidebar.panellist");
+		expect(row?.id).toBe("memlens");
+		expect(row?.order).toBe(15);
+		expect(row?.locale).toBe(NS);
+		expect(typeof row?.label).toBe("function");
+		expect(row?.inject).toBeUndefined();
+	});
+
+	it("registers the page in the main slot under the panel id", () => {
+		const { ctx, options } = fakeContext();
+		apply(ctx);
+		const page = options.find((entry) => entry.name === "main");
+		expect(page?.key).toBe("memlens");
+		expect(page?.id).toBeUndefined();
+	});
+
+	it("gives the page the translate function and the panel name", () => {
+		const { ctx, options } = fakeContext();
+		apply(ctx);
+		const page = options.find((entry) => entry.name === "main");
+		const props = page?.inject?.("") as { t: Translate; title: string };
+		expect(props.title).toBe("Memory");
+		expect(props.t("nav0")).toBe("Overview");
+		expect(props.t("lines", { used: 1, limit: 10 })).toBe("1 / 10 lines");
+	});
+
+	it("registers the state tab in the conversation view slot", () => {
+		const { ctx, options } = fakeContext();
+		apply(ctx);
+		const tab = options.find((entry) => entry.name === "conversation.view");
+		expect(tab?.id).toBe("memlens");
+		expect(tab?.order).toBe(20);
+		expect(typeof tab?.label).toBe("function");
+		const props = tab?.inject?.("session-1") as {
+			sessionId: string;
+			t: Translate;
+			title: string;
+		};
+		expect(props.sessionId).toBe("session-1");
+		expect(props.title).toBe("Memory");
+		expect(props.t("nav0")).toBe("Overview");
 	});
 
 	it("declares the slot service, the locale service, and the Remote service", () => {
 		expect(inject).toEqual(["slots", "locale", "remote"]);
 	});
 
-	it("gives the session id and the translate function to the tab", () => {
-		const { ctx, options } = fakeContext();
-		apply(ctx);
-		const props = options[0]?.inject("session-1") as {
-			sessionId: string;
-			t: Translate;
-		};
-		expect(props.sessionId).toBe("session-1");
-		expect(props.t("nav0")).toBe("Overview");
-		expect(props.t("lines", { used: 1, limit: 10 })).toBe("1 / 10 lines");
-	});
-
-	it("registers the eight dictionaries under one namespace", () => {
+	it("registers the eight dictionaries with the panel name and the tab name", () => {
 		const { ctx, dictionaries } = fakeContext();
 		apply(ctx);
 		const all = dictionaries.get(NS);
@@ -371,24 +400,21 @@ describe("tab registration", () => {
 			"ru",
 			"zh",
 		]);
+		expect(all?.en?.[PANEL_KEY]).toBe("Memory");
+		expect(all?.ru?.[PANEL_KEY]).toBe("Память");
 		expect(all?.en?.[TAB_KEY]).toBe("Memory");
 		expect(all?.ru?.[TAB_KEY]).toBe("Память");
 		expect(all?.zh?.nav0).toBeTruthy();
 	});
 
-	it("gives the tab name of the active language", () => {
-		const { ctx, options } = fakeContext();
-		apply(ctx);
-		const label = options[0]?.label as () => string;
-		expect(label()).toBe("Memory");
-	});
-
 	it("keeps the English text when the locale service refuses the registration", () => {
 		const { ctx, options } = fakeContext(fakeRemote(), true);
 		apply(ctx);
-		const label = options[0]?.label as () => string;
+		const row = options.find((entry) => entry.name === "sidebar.panellist");
+		const label = row?.label as () => string;
 		expect(label()).toBe("Memory");
-		const props = options[0]?.inject("session-1") as { t: Translate };
+		const tab = options.find((entry) => entry.name === "conversation.view");
+		const props = tab?.inject?.("session-1") as { t: Translate };
 		expect(props.t("nav0")).toBe("Overview");
 		expect(props.t("lines", { used: 2, limit: 5 })).toBe("2 / 5 lines");
 	});
@@ -428,7 +454,7 @@ describe("Remote mount", () => {
 		const { ctx, dispose } = fakeContext(remote);
 		ctx.remote.$mount = () => new Promise(() => {});
 		apply(ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		const pending = api.call.restore(DEFAULT_ROUTE);
 		dispose();
 		await pending;
@@ -446,7 +472,7 @@ describe("Remote mount", () => {
 		await Promise.resolve();
 		await Promise.resolve();
 		one.dispose();
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(api.state.status.error).toBe(false);
 		expect(second.calls.length).toBeGreaterThan(0);
@@ -460,7 +486,7 @@ describe("Remote mount", () => {
 		const two = fakeContext(second);
 		one.ctx.remote.$mount = () => new Promise(() => {});
 		apply(one.ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		const pending = api.call.action("review", { target: "project:alpha#1" });
 		apply(two.ctx);
 		await pending;
@@ -478,7 +504,7 @@ describe("Remote mount", () => {
 		await Promise.resolve();
 		await Promise.resolve();
 		one.dispose();
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(api.state.status.error).toBe(false);
 		expect(shared.calls.length).toBeGreaterThan(0);
@@ -492,7 +518,7 @@ describe("Remote mount", () => {
 		apply(one.ctx);
 		await Promise.resolve();
 		await Promise.resolve();
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		const pending = api.call.action("review", { target: "project:alpha#1" });
 		apply(two.ctx);
 		await pending;
@@ -520,7 +546,7 @@ describe("Remote mount", () => {
 		await Promise.resolve();
 		install?.({ remote: { memlens: second.namespace } });
 		undo[0]?.();
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(second.calls.length).toBeGreaterThan(0);
 		expect(first.calls.length).toBe(0);
@@ -530,27 +556,27 @@ describe("Remote mount", () => {
 		const { ctx } = fakeContext();
 		ctx.remote.$mount = () => Promise.reject(new Error("no Remote"));
 		mountConsole(ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(api.state.status.error).toBe(true);
 		expect(api.state.status.text).toBe("The memory transport is not ready.");
 	});
 });
 
-describe("tab console", () => {
+describe("session console", () => {
 	it("sends the session id in each input of the Remote", async () => {
 		const remote = fakeRemote();
 		const { ctx } = fakeContext(remote);
 		apply(ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(remote.calls.length).toBeGreaterThan(0);
 		expect(remote.calls[0]?.method).toBe("view");
 		for (const call of remote.calls) {
 			expect(call.input.session).toBe("session-1");
 		}
-		expect(remote.calls[0]?.input).toMatchObject({
-			profile: "",
+		expect(remote.calls[0]?.input).toEqual({
+			session: "session-1",
 			scope: "",
 			kind: "",
 		});
@@ -561,7 +587,7 @@ describe("tab console", () => {
 		const remote = fakeRemote();
 		const { ctx } = fakeContext(remote);
 		apply(ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(api.state.runtime?.session).toBe("session-1");
 		expect(api.state.runtime?.snapshotSaved).toBe(true);
@@ -572,7 +598,7 @@ describe("tab console", () => {
 		const remote = fakeRemote();
 		const { ctx } = fakeContext(remote);
 		apply(ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.action("review", { target: "project:alpha#1" });
 		const action = remote.calls.find((call) => call.method === "action");
 		expect(action?.input).toEqual({
@@ -588,7 +614,7 @@ describe("tab console", () => {
 		const remote = fakeRemote({ view: "The store is locked." });
 		const { ctx } = fakeContext(remote);
 		apply(ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(api.state.status.error).toBe(true);
 		expect(api.state.status.text).toBe("The store is locked.");
@@ -598,7 +624,7 @@ describe("tab console", () => {
 		const remote = fakeRemote();
 		const { ctx } = fakeContext(remote);
 		apply(ctx);
-		const api = createTabConsole("session-1", english);
+		const api = createSessionConsole("session-1", english);
 		await api.call.restore(DEFAULT_ROUTE);
 		expect(api.state.model?.scope).toBe("project:alpha");
 		expect(api.state.screen).toBe("overview");
@@ -606,26 +632,119 @@ describe("tab console", () => {
 	});
 });
 
+describe("profile console", () => {
+	it("sends the profile of the request and no session", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createProfileConsole(english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(remote.calls[0]?.method).toBe("view");
+		expect(remote.calls[0]?.input).toEqual({
+			profile: "",
+			scope: "",
+			kind: "",
+		});
+		for (const call of remote.calls)
+			expect(call.input).not.toHaveProperty("session");
+		expect(remote.calls.some((call) => call.method === "status")).toBe(true);
+	});
+
+	it("asks for each profile that the page selects", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createProfileConsole(english);
+		await api.call.restore(DEFAULT_ROUTE);
+		await api.call.setProfile("work");
+		const views = remote.calls.filter((call) => call.method === "view");
+		expect(views.at(-1)?.input.profile).toBe("work");
+	});
+
+	it("reads the compaction state of the host", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createProfileConsole(english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.runtime?.compaction?.backoffMs).toBe(5000);
+	});
+
+	it("keeps the runtime fields absent when the host gives no snapshot", async () => {
+		const base = fakeRemote();
+		const remote: FakeRemote = {
+			...base,
+			namespace: {
+				...base.namespace,
+				status: async () => ({
+					ok: true,
+					value: {
+						scope: "project:alpha",
+						compaction: {
+							attempts: 0,
+							active: 0,
+							backoff: 5,
+							failures: 0,
+							dirty: 1,
+						},
+					},
+				}),
+			},
+		};
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createProfileConsole(english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.runtime?.session).toBeUndefined();
+		expect(api.state.runtime?.snapshotSaved).toBeUndefined();
+		expect(api.state.runtime?.compaction?.attempts).toBe(0);
+		expect(api.state.status.error).toBe(false);
+	});
+});
+
 describe("tab body", () => {
-	it("draws the bar, the seven screen names, and the stylesheet", () => {
+	it("draws the state head, the stylesheet, and no screen control", () => {
 		const markup = renderToStaticMarkup(
-			<MemoryView sessionId="session-1" t={english} />,
+			<MemoryView sessionId="session-1" t={english} title="Memory" />,
 		);
-		expect(markup).toContain('class="ml-tab"');
-		expect(markup).toContain('<span class="ml-bar-title">Screens</span>');
+		expect(markup).toContain('class="ml-console ml-session"');
+		expect(markup).toContain('<span class="ml-title">Memory</span>');
+		expect(markup).toContain('role="status"');
+		expect(markup).toContain("--dsw-alias-bg-base");
+		expect(markup).not.toContain('<button class="ml-screen');
+		expect(markup).not.toContain('<div class="ml-body">');
+	});
+
+	it("holds no scope list before the view arrives", () => {
+		const markup = renderToStaticMarkup(
+			<MemoryView sessionId="session-1" t={english} title="Memory" />,
+		);
+		expect(markup).not.toContain('class="ml-scopelist"');
+	});
+});
+
+describe("page body", () => {
+	it("draws the profile control, the seven screen names, and the stylesheet", () => {
+		const markup = renderToStaticMarkup(
+			<MemoryPage t={english} title="Memory" />,
+		);
+		expect(markup).toContain('class="ml-console ml-page"');
+		expect(markup).toContain('<span class="ml-title">Memory</span>');
+		expect(markup).toContain('class="ml-field"');
+		expect(markup).toContain("<select");
 		expect(markup).toContain('class="ml-screen on"');
 		for (const key of ["Overview", "Tree", "Catalog", "Search", "Review"])
 			expect(markup).toContain(`>${key}</button>`);
 		expect(markup).toContain(">Proposals</button>");
 		expect(markup).toContain(">Maintenance</button>");
-		expect(markup).toContain('role="status"');
-		expect(markup).toContain('<div class="ml-body">');
+		expect(markup).toContain('class="ml-new"');
 		expect(markup).toContain("--dsw-alias-bg-base");
+		expect(markup).toContain('role="status"');
 	});
 
 	it("holds no scope list before the view arrives", () => {
 		const markup = renderToStaticMarkup(
-			<MemoryView sessionId="session-1" t={english} />,
+			<MemoryPage t={english} title="Memory" />,
 		);
 		expect(markup).not.toContain('class="ml-scopes"');
 	});
@@ -651,23 +770,23 @@ describe("screen registry", () => {
 	}
 });
 
-describe("tab stylesheet", () => {
-	it("keeps every selector under the tab root", () => {
-		const selectors = TAB_CSS.split("\n")
+describe("console stylesheet", () => {
+	it("keeps every selector under the surface root", () => {
+		const selectors = CONSOLE_CSS.split("\n")
 			.map((line) => line.trim())
 			.filter((line) => line.endsWith("{") || line.endsWith(","))
 			.filter((line) => !line.startsWith("@"));
 		expect(selectors.length).toBeGreaterThan(40);
 		for (const selector of selectors)
-			expect(selector.startsWith(".ml-tab")).toBe(true);
+			expect(selector.startsWith(".ml-console")).toBe(true);
 	});
 
 	it("holds no literal colour", () => {
-		expect(TAB_CSS).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-		expect(TAB_CSS).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/i);
+		expect(CONSOLE_CSS).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+		expect(CONSOLE_CSS).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/i);
 	});
 
 	it("reaches no page element", () => {
-		expect(TAB_CSS).not.toMatch(/(^|[\s,{])(:root|html|body|\*)/m);
+		expect(CONSOLE_CSS).not.toMatch(/(^|[\s,{])(:root|html|body|\*)/m);
 	});
 });

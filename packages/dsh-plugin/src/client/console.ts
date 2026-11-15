@@ -1,11 +1,14 @@
 /**
  * #region moduleContract
- * @purpose Wire one console to the plugin host over the Remote, so the tab holds a store, a
- *   controller, and a port with the session of its own slot.
+ * @purpose Wire one console to the plugin host over the Remote, so a surface holds a store, a
+ *   controller, and a port with the identity of that surface.
  * @scope The first state, the local storage, the in-memory address, the Remote mount, and the port.
- * NOT: the tab markup, the styles, and the host service.
- * @invariants The port sends the session id of the tab in the input of each method.
- * @invariants The address stays in memory. The tab reads and writes no page address and no history.
+ * NOT: the surface markup, the styles, and the host service.
+ * @invariants The port of a session surface sends the session id in the input of each method.
+ * @invariants The port of a profile surface sends the profile of the request in the input of each
+ *   method, so one panel reads each profile of the base file.
+ * @invariants The address stays in memory. A surface reads and writes no page address and no
+ *   history.
  * @invariants The API state reads the current snapshot, so the screen store stays stable.
  * @invariants A refused call rejects with an error that carries the cause text of its failure.
  * @invariants A missing namespace rejects each call, so no call falls back to a second transport.
@@ -249,19 +252,26 @@ export function mountConsole(ctx: ClientContext): void {
 
 // #region FUNC_statusOf
 /**
- * @purpose Read the host runtime state of one session, so the maintenance screen shows it.
+ * @purpose Read the host runtime state of one surface, so the maintenance screen shows it.
  * @invariants A missing field stays absent, so the screen renders no empty row.
- * @param sessionId - The session id of the tab.
+ * @param surface - The surface of the console.
+ * @param profile - The profile of the request. A session surface ignores it.
  */
-async function statusOf(sessionId: string): Promise<ConsoleRuntime> {
-	const value = await call("status", { session: sessionId });
-	const runtime: MutableRuntime = { session: value.session };
-	if (value.snapshot.materializedAt) {
-		runtime.materializedAt = value.snapshot.materializedAt;
+async function statusOf(
+	surface: Surface,
+	profile: string,
+): Promise<ConsoleRuntime> {
+	const value = await call("status", identityOf(surface, profile));
+	const runtime: MutableRuntime = {};
+	if (value.session !== undefined) runtime.session = value.session;
+	const snapshot = value.snapshot;
+	if (snapshot !== undefined) {
+		if (snapshot.materializedAt)
+			runtime.materializedAt = snapshot.materializedAt;
+		const next = snapshot.nextRefreshAt ?? snapshot.nextTrigger;
+		if (next) runtime.nextTrigger = next;
+		runtime.snapshotSaved = snapshot.saved;
 	}
-	const next = value.snapshot.nextRefreshAt ?? value.snapshot.nextTrigger;
-	if (next) runtime.nextTrigger = next;
-	runtime.snapshotSaved = value.snapshot.saved;
 	runtime.compaction = {
 		attempts: value.compaction.attempts,
 		active: value.compaction.active,
@@ -298,25 +308,54 @@ function createStorage(): ConsoleStorage {
 }
 // #endregion FUNC_createStorage
 
+// #region TYPE_Surface
+/**
+ * @purpose Name the surface that one console reads: one session or one profile.
+ * @invariants A session surface holds the id of its session. A profile surface holds no id, so each
+ *   request names its profile.
+ */
+export type Surface =
+	| { readonly kind: "session"; readonly session: string }
+	| { readonly kind: "profile" };
+// #endregion TYPE_Surface
+
+// #region FUNC_identityOf
+/**
+ * @purpose Give the surface identity of one wire input.
+ * @invariants A session surface sends the session id. A profile surface sends the profile name,
+ *   which the host reads as the default profile when it is empty.
+ * @param surface - The surface of the console.
+ * @param profile - The profile of the request. A session surface ignores it.
+ */
+function identityOf(
+	surface: Surface,
+	profile: string,
+): { readonly session: string } | { readonly profile: string } {
+	return surface.kind === "session"
+		? { session: surface.session }
+		: { profile };
+}
+// #endregion FUNC_identityOf
+
 // #region FUNC_portOf
 /**
- * @purpose Build the store port of one session from the mounted namespace.
- * @invariants Each input carries the session id of the tab, because the transport carries no query.
+ * @purpose Build the store port of one surface from the mounted namespace.
+ * @invariants Each input carries the identity of the surface, because the transport carries no
+ *   query.
  * @invariants The wire carries a position as text, as the host operations parse it.
+ * @param surface - The surface of the console.
  */
-function portOf(sessionId: string): StorePort {
+function portOf(surface: Surface): StorePort {
 	return {
 		view: async (fields) =>
 			(await call("view", {
-				session: sessionId,
-				profile: fields.profile,
+				...identityOf(surface, fields.profile),
 				scope: fields.scope,
 				kind: fields.kind,
 			})) as unknown as View,
 		search: async (fields) =>
 			(await call("search", {
-				session: sessionId,
-				profile: fields.profile,
+				...identityOf(surface, fields.profile),
 				scope: fields.scope,
 				query: fields.query,
 				kind: fields.kind,
@@ -325,23 +364,20 @@ function portOf(sessionId: string): StorePort {
 			})) as unknown as readonly IndexHit[],
 		open: async (fields) =>
 			(await call("open", {
-				session: sessionId,
-				profile: fields.profile,
+				...identityOf(surface, fields.profile),
 				scope: fields.scope,
 				target: fields.target,
 			})) as unknown as OpenedTarget,
 		catalog: async (fields) =>
 			(await call("catalog", {
-				session: sessionId,
-				profile: fields.profile,
+				...identityOf(surface, fields.profile),
 				scope: fields.scope,
 				start: String(fields.start),
 				level: String(fields.level),
 			})) as unknown as readonly SliceLine[],
 		action: (name, fields) =>
 			call("action", {
-				session: sessionId,
-				profile: String(fields.profile ?? ""),
+				...identityOf(surface, String(fields.profile ?? "")),
 				scope: String(fields.scope ?? ""),
 				...fields,
 				action: name as ConsoleInputs["action"]["action"],
@@ -350,19 +386,19 @@ function portOf(sessionId: string): StorePort {
 }
 // #endregion FUNC_portOf
 
-// #region FUNC_createTabConsole
+// #region FUNC_createConsole
 /**
- * @purpose Build the console of one tab from its session id and its translate function.
- * @invariants The port sends the session id in the input of each method.
+ * @purpose Build the console of one surface from its identity and its translate function.
+ * @invariants The port sends the identity of the surface in the input of each method.
  * @invariants The route pair keeps the address in memory, so the harness page keeps its own address.
- * @param sessionId - The session id that the slot inject gives.
- * @param t - The translate function of the tab.
+ * @param surface - The session or the profile surface of the console.
+ * @param t - The translate function of the surface.
  */
-export function createTabConsole(sessionId: string, t: Translate): ConsoleApi {
+export function createConsole(surface: Surface, t: Translate): ConsoleApi {
 	const store = createConsoleStore(initialState());
 	let route: Route = DEFAULT_ROUTE;
-	const port = portOf(sessionId);
-	port.runtime = () => statusOf(sessionId);
+	const port = portOf(surface);
+	port.runtime = () => statusOf(surface, store.getSnapshot().profile);
 	const call = createConsoleController({
 		port,
 		storage: createStorage(),
@@ -373,7 +409,7 @@ export function createTabConsole(sessionId: string, t: Translate): ConsoleApi {
 			route = next;
 		},
 	});
-	console.debug("Tab console ready", { event: "start", session: sessionId });
+	console.debug("Console ready", { event: "start", surface: surface.kind });
 	return {
 		get state(): ConsoleState {
 			return store.getSnapshot();
@@ -383,4 +419,30 @@ export function createTabConsole(sessionId: string, t: Translate): ConsoleApi {
 		call,
 	};
 }
-// #endregion FUNC_createTabConsole
+// #endregion FUNC_createConsole
+
+// #region FUNC_createSessionConsole
+/**
+ * @purpose Build the console of one session, so the tab shows the state of that session.
+ * @invariants The port sends the session id in the input of each method.
+ * @param sessionId - The session id that the slot inject gives.
+ * @param t - The translate function of the tab.
+ */
+export function createSessionConsole(
+	sessionId: string,
+	t: Translate,
+): ConsoleApi {
+	return createConsole({ kind: "session", session: sessionId }, t);
+}
+// #endregion FUNC_createSessionConsole
+
+// #region FUNC_createProfileConsole
+/**
+ * @purpose Build the console of the profiles of the base file, so the page reads each profile.
+ * @invariants The console starts on the default profile of the base file.
+ * @param t - The translate function of the page.
+ */
+export function createProfileConsole(t: Translate): ConsoleApi {
+	return createConsole({ kind: "profile" }, t);
+}
+// #endregion FUNC_createProfileConsole

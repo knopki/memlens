@@ -9,7 +9,8 @@
  *    client mount, and the manifest.
  * @invariants The plugin registers the console namespace only when the Typert service is present.
  * @invariants The namespace and its descriptors end with the plugin context.
- * @invariants The session names the profile. A requested scope must belong to that profile.
+ * @invariants The session or the profile names the profile of the request. A requested scope must
+ *   belong to that profile.
  * @invariants The transport checks each input and each answer with the strict contract schemas.
  * @invariants A Memlens error keeps its message and becomes one Remote error of the request.
  * @usecases
@@ -83,9 +84,10 @@ function hostContribution(): TypertContribution {
 
 // #region CLASS_ConsoleRemote
 /**
- * @purpose Give the harness Gateway one Remote service for the console operations of a session.
+ * @purpose Give the harness Gateway one Remote service for the console operations of a surface.
  * @invariants The Cordis key is `memlensRemote` and the wire namespace is `memlens`.
- * @invariants The service reads the agent from the session field of each input.
+ * @invariants A session input reads the agent, and a profile input reads the profile of the base
+ *   file.
  * @invariants A disposed plugin removes the service and the descriptors together.
  */
 export class ConsoleRemote extends TypertRemoteService {
@@ -192,40 +194,49 @@ export class ConsoleRemote extends TypertRemoteService {
 
 	// #region METHOD_request
 	/**
-	 * @purpose Give the session agent, the memory inputs, the scope, and the fields of one call.
-	 * @invariants The session field names the agent. The host holds no other profile or store.
+	 * @purpose Give the memory inputs, the scope, the fields, and the profiles of one call.
+	 * @invariants The session field names the agent of a session surface.
+	 * @invariants Without a session, the profile field names the profile of a profile surface, and
+	 *   an empty field names the default profile of the base file.
+	 * @invariants The host holds no other profile and no other store.
 	 * @param input - The input object of the call.
 	 */
 	private request<M extends ConsoleMethod>(
 		input: ConsoleInputs[M],
 	): ConsoleRequest {
 		const fields = input as Fields;
+		const profiles = this.memlens.profiles();
 		const session = fields.session;
-		if (typeof session !== "string" || session === "") {
-			debug("Session absent", { event: "session" });
-			throw new RemoteError(
-				"gateway/bad-request",
-				"The request needs a session.",
-				{},
-			);
+		if (typeof session === "string" && session !== "") {
+			const agent: Agent | undefined = this.ctx
+				.get("agents")
+				?.get(session as SessionId);
+			if (agent === undefined) {
+				debug("Session unknown", { event: "session", session });
+				throw new RemoteError(
+					"gateway/bad-request",
+					"The session is unknown.",
+					{},
+				);
+			}
+			const memory = this.memlens.forAgent(agent);
+			return {
+				agent,
+				memory,
+				scope: requestScope(memory, text(fields, "scope")),
+				fields,
+				profiles,
+			};
 		}
-		const agent: Agent | undefined = this.ctx
-			.get("agents")
-			?.get(session as SessionId);
-		if (agent === undefined) {
-			debug("Session unknown", { event: "session", session });
-			throw new RemoteError(
-				"gateway/bad-request",
-				"The session is unknown.",
-				{},
-			);
-		}
-		const memory = this.memlens.forAgent(agent);
+		const requested = text(fields, "profile");
+		const profile =
+			requested === "" ? this.memlens.resolved.defaultProfile : requested;
+		const memory = this.memlens.forProfile(profile);
 		return {
-			agent,
 			memory,
 			scope: requestScope(memory, text(fields, "scope")),
 			fields,
+			profiles,
 		};
 	}
 	// #endregion METHOD_request

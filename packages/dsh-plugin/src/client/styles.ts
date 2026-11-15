@@ -1,15 +1,16 @@
 /**
  * #region moduleContract
- * @purpose Give the memory tab its own stylesheet, so the shared console components read as one page
- *   inside the harness Web page and no harness style changes.
+ * @purpose Give the memory surfaces their own stylesheet, so the shared console components read as
+ *   one page inside the harness Web page and no harness style changes.
  * @scope The class names of the shared components and the primitives, the record dialog, the status
- *   line, and the tab bar. NOT: the components, the state, and the transport.
- * @invariants Each selector starts with the tab root class `.ml-tab`, so no rule reaches outside the
- *   tab and no page rule reaches inside it.
+ *   line, the page head, the session state, and the panel bar. NOT: the components, the state, and
+ *   the transport.
+ * @invariants Each selector starts with the surface root class `.ml-console`, so no rule reaches
+ *   outside a surface and no page rule reaches inside it.
  * @invariants Each colour is a harness alias token of the family `--dsw-alias-*`. The sheet holds no
  *   literal colour.
- * @invariants The sheet is a text constant. The tab renders it in a `style` element, so the CSS
- *   leaves the page with the tab.
+ * @invariants The sheet is a text constant. Each surface renders it in a `style` element, so the
+ *   CSS leaves the page with its surface.
  * @rationale
  *  - Q: Why not reuse the standalone stylesheet? A: It holds literal colours and its own palettes.
  *    The harness page supplies the alias tokens instead.
@@ -17,13 +18,13 @@
  * #endregion moduleContract
  */
 
-// #region CONST_TAB_CSS
+// #region CONST_CONSOLE_CSS
 /**
- * @purpose Hold the stylesheet of the tab.
+ * @purpose Hold the stylesheet of the surfaces.
  * @invariants The rules follow the class names that the shared components and the primitives emit.
  */
-export const TAB_CSS = `
-.ml-tab {
+export const CONSOLE_CSS = `
+.ml-console {
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -33,11 +34,11 @@ export const TAB_CSS = `
 	color: var(--dsw-alias-label-primary);
 	font: 13px / 1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
-.ml-tab :focus-visible {
+.ml-console :focus-visible {
 	outline: 2px solid var(--dsw-alias-brand-primary);
 	outline-offset: 1px;
 }
-.ml-tab .ml-bar {
+.ml-console .ml-bar {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -46,14 +47,14 @@ export const TAB_CSS = `
 	background: var(--dsw-alias-bg-layer-1);
 	border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
-.ml-tab .ml-bar-title {
+.ml-console .ml-bar-title {
 	color: var(--dsw-alias-label-tertiary);
 	font-size: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 }
-.ml-tab .ml-screens,
-.ml-tab .ml-scopes {
+.ml-console .ml-screens,
+.ml-console .ml-scopes {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 4px;
@@ -61,8 +62,8 @@ export const TAB_CSS = `
 	padding: 0;
 	list-style: none;
 }
-.ml-tab .ml-screen,
-.ml-tab .ml-scope {
+.ml-console .ml-screen,
+.ml-console .ml-scope {
 	padding: 4px 8px;
 	border: 1px solid transparent;
 	border-radius: 6px;
@@ -72,23 +73,23 @@ export const TAB_CSS = `
 	text-align: left;
 	cursor: pointer;
 }
-.ml-tab .ml-screen:hover,
-.ml-tab .ml-scope:hover {
+.ml-console .ml-screen:hover,
+.ml-console .ml-scope:hover {
 	background: var(--dsw-alias-interactive-bg-hover);
 	color: var(--dsw-alias-label-primary);
 }
-.ml-tab .ml-screen.on,
-.ml-tab .ml-scope.on {
+.ml-console .ml-screen.on,
+.ml-console .ml-scope.on {
 	background: var(--dsw-alias-interactive-bg-hover-accent);
 	border-color: var(--dsw-alias-brand-primary);
 	color: var(--dsw-alias-brand-primary);
 }
-.ml-tab .ml-scope {
+.ml-console .ml-scope {
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font-size: 11.5px;
 	word-break: break-all;
 }
-.ml-tab .ml-new {
+.ml-console .ml-new {
 	margin-left: auto;
 	padding: 4px 10px;
 	border: 1px solid var(--dsw-alias-border-l2);
@@ -98,10 +99,10 @@ export const TAB_CSS = `
 	font: inherit;
 	cursor: pointer;
 }
-.ml-tab .ml-new:hover {
+.ml-console .ml-new:hover {
 	background: var(--dsw-alias-button-primary-hover);
 }
-.ml-tab .ml-body {
+.ml-console .ml-body {
 	display: grid;
 	flex: 1 1 auto;
 	align-content: start;
@@ -110,15 +111,15 @@ export const TAB_CSS = `
 	padding: 14px 16px 26px;
 	overflow: auto;
 }
-.ml-tab .sub {
+.ml-console .sub {
 	margin: 0;
 	max-width: 78ch;
 	color: var(--dsw-alias-label-secondary);
 }
-.ml-tab .muted {
+.ml-console .muted {
 	color: var(--dsw-alias-label-secondary);
 }
-.ml-tab .panel {
+.ml-console .panel {
 	display: grid;
 	gap: 10px;
 	min-width: 0;
@@ -127,25 +128,25 @@ export const TAB_CSS = `
 	border: 1px solid var(--dsw-alias-border-l2);
 	border-radius: 10px;
 }
-.ml-tab .panel .head {
+.ml-console .panel .head {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
 	gap: 12px;
 }
-.ml-tab .panel .head .t {
+.ml-console .panel .head .t {
 	font-weight: 600;
 }
-.ml-tab .panel .head .r {
+.ml-console .panel .head .r {
 	color: var(--dsw-alias-label-secondary);
 	font-size: 12px;
 }
-.ml-tab .cards {
+.ml-console .cards {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 	gap: 12px;
 }
-.ml-tab .card {
+.ml-console .card {
 	display: grid;
 	gap: 8px;
 	min-width: 0;
@@ -154,34 +155,34 @@ export const TAB_CSS = `
 	border: 1px solid var(--dsw-alias-border-l2);
 	border-radius: 10px;
 }
-.ml-tab .card.active {
+.ml-console .card.active {
 	border-color: var(--dsw-alias-brand-primary);
 }
-.ml-tab .card-head {
+.ml-console .card-head {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 	min-width: 0;
 }
-.ml-tab .card-head .key {
+.ml-console .card-head .key {
 	font-weight: 600;
 	word-break: break-all;
 }
-.ml-tab .tag {
+.ml-console .tag {
 	padding: 1px 6px;
 	border-radius: 999px;
 	background: var(--dsw-alias-interactive-bg-hover-accent);
 	color: var(--dsw-alias-brand-primary);
 	font-size: 11px;
 }
-.ml-tab .stats {
+.ml-console .stats {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 10px;
 	color: var(--dsw-alias-label-secondary);
 	font-size: 12px;
 }
-.ml-tab .mini {
+.ml-console .mini {
 	display: grid;
 	gap: 4px;
 	overflow: hidden;
@@ -189,15 +190,15 @@ export const TAB_CSS = `
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font-size: 11.5px;
 }
-.ml-tab .mini div {
+.ml-console .mini div {
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
-.ml-tab .card .btn {
+.ml-console .card .btn {
 	justify-self: start;
 }
-.ml-tab pre.slice {
+.ml-console pre.slice {
 	margin: 0;
 	padding: 12px 14px;
 	background: var(--dsw-alias-bg-layer-2);
@@ -209,24 +210,24 @@ export const TAB_CSS = `
 	white-space: pre-wrap;
 	word-break: break-word;
 }
-.ml-tab .split {
+.ml-console .split {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
 	align-items: start;
 	gap: 14px;
 }
-.ml-tab .column {
+.ml-console .column {
 	display: grid;
 	gap: 14px;
 }
-.ml-tab .legend {
+.ml-console .legend {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px;
 	color: var(--dsw-alias-label-secondary);
 	font-size: 12px;
 }
-.ml-tab .legend .lg::before {
+.ml-console .legend .lg::before {
 	content: "";
 	display: inline-block;
 	width: 9px;
@@ -236,27 +237,27 @@ export const TAB_CSS = `
 	background: var(--dsw-alias-fill-l2);
 	vertical-align: -1px;
 }
-.ml-tab .legend .lg.r::before {
+.ml-console .legend .lg.r::before {
 	background: var(--dsw-alias-state-success-primary);
 }
-.ml-tab .legend .lg.s::before {
+.ml-console .legend .lg.s::before {
 	background: var(--dsw-alias-brand-primary);
 }
-.ml-tab .legend .lg.t::before {
+.ml-console .legend .lg.t::before {
 	background: var(--dsw-alias-state-warn-primary);
 }
-.ml-tab .lines {
+.ml-console .lines {
 	display: grid;
 	gap: 3px;
 }
-.ml-tab button,
-.ml-tab select,
-.ml-tab input,
-.ml-tab textarea {
+.ml-console button,
+.ml-console select,
+.ml-console input,
+.ml-console textarea {
 	font: inherit;
 	color: inherit;
 }
-.ml-tab .btn {
+.ml-console .btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -269,30 +270,30 @@ export const TAB_CSS = `
 	color: var(--dsw-alias-label-primary);
 	cursor: pointer;
 }
-.ml-tab .btn:hover:not(:disabled) {
+.ml-console .btn:hover:not(:disabled) {
 	border-color: var(--dsw-alias-brand-primary);
 }
-.ml-tab .btn:disabled {
+.ml-console .btn:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
-.ml-tab .btn.pri {
+.ml-console .btn.pri {
 	background: var(--dsw-alias-button-primary-fill);
 	border-color: var(--dsw-alias-button-primary-fill);
 	color: var(--dsw-alias-label-on-color);
 }
-.ml-tab .btn.pri:hover:not(:disabled) {
+.ml-console .btn.pri:hover:not(:disabled) {
 	background: var(--dsw-alias-button-primary-hover);
 	border-color: var(--dsw-alias-button-primary-hover);
 }
-.ml-tab .btn.ghost {
+.ml-console .btn.ghost {
 	background: transparent;
 }
-.ml-tab .btn.danger {
+.ml-console .btn.danger {
 	border-color: var(--dsw-alias-state-error-primary);
 	color: var(--dsw-alias-state-error-primary);
 }
-.ml-tab .line {
+.ml-console .line {
 	display: grid;
 	grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
 	align-items: baseline;
@@ -308,80 +309,80 @@ export const TAB_CSS = `
 	text-align: left;
 	cursor: pointer;
 }
-.ml-tab .line:hover {
+.ml-console .line:hover {
 	background: var(--dsw-alias-interactive-bg-hover);
 }
-.ml-tab .line.sel {
+.ml-console .line.sel {
 	background: var(--dsw-alias-interactive-bg-hover-accent);
 	border-color: var(--dsw-alias-brand-primary);
 }
-.ml-tab .line .id {
+.ml-console .line .id {
 	color: var(--dsw-alias-label-secondary);
 }
-.ml-tab .keys .line .id {
+.ml-console .keys .line .id {
 	max-width: 26ch;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
-.ml-tab .line.r .id {
+.ml-console .line.r .id {
 	color: var(--dsw-alias-state-success-primary);
 }
-.ml-tab .line.s .id {
+.ml-console .line.s .id {
 	color: var(--dsw-alias-brand-primary);
 }
-.ml-tab .line.t .id {
+.ml-console .line.t .id {
 	color: var(--dsw-alias-state-warn-primary);
 }
-.ml-tab .line .tx {
+.ml-console .line .tx {
 	overflow: hidden;
 	font-family: inherit;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 }
-.ml-tab .line.pending .tx {
+.ml-console .line.pending .tx {
 	color: var(--dsw-alias-state-warn-primary);
 }
-.ml-tab .ins .quote {
+.ml-console .ins .quote {
 	padding: 10px 12px;
 	background: var(--dsw-alias-bg-layer-2);
 	border-left: 3px solid var(--dsw-alias-border-l3);
 	border-radius: 0 6px 6px 0;
 	white-space: pre-wrap;
 }
-.ml-tab .ins .quote .doc {
+.ml-console .ins .quote .doc {
 	margin-top: 8px;
 	color: var(--dsw-alias-label-secondary);
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font-size: 12px;
 }
-.ml-tab .kv {
+.ml-console .kv {
 	display: grid;
 	grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
 	gap: 4px 12px;
 	font-size: 12px;
 }
-.ml-tab .kv b {
+.ml-console .kv b {
 	color: var(--dsw-alias-label-secondary);
 	font-weight: 500;
 }
-.ml-tab .kv span {
+.ml-console .kv span {
 	word-break: break-all;
 }
-.ml-tab .actions {
+.ml-console .actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
 }
-.ml-tab .table-wrap {
+.ml-console .table-wrap {
 	overflow-x: auto;
 }
-.ml-tab table {
+.ml-console table {
 	width: 100%;
 	border-collapse: collapse;
 	font-size: 12.5px;
 }
-.ml-tab th {
+.ml-console th {
 	padding: 6px 10px 6px 0;
 	border-bottom: 1px solid var(--dsw-alias-border-l2);
 	color: var(--dsw-alias-label-tertiary);
@@ -391,69 +392,69 @@ export const TAB_CSS = `
 	text-align: left;
 	text-transform: uppercase;
 }
-.ml-tab td {
+.ml-console td {
 	padding: 7px 10px 7px 0;
 	border-bottom: 1px solid var(--dsw-alias-border-l1);
 	vertical-align: top;
 }
-.ml-tab tr:last-child td {
+.ml-console tr:last-child td {
 	border-bottom: 0;
 }
-.ml-tab td:first-child {
+.ml-console td:first-child {
 	padding-left: 2px;
 }
-.ml-tab th:last-child,
-.ml-tab td:last-child {
+.ml-console th:last-child,
+.ml-console td:last-child {
 	padding-right: 6px;
 }
-.ml-tab .tiles {
+.ml-console .tiles {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 	gap: 12px;
 }
-.ml-tab .tile {
+.ml-console .tile {
 	padding: 12px 14px;
 	background: var(--dsw-alias-bg-layer-1);
 	border: 1px solid var(--dsw-alias-border-l2);
 	border-radius: 10px;
 }
-.ml-tab .tile .n {
+.ml-console .tile .n {
 	font-size: 22px;
 	font-weight: 600;
 }
-.ml-tab .tile .l {
+.ml-console .tile .l {
 	color: var(--dsw-alias-label-secondary);
 	font-size: 12px;
 }
-.ml-tab .bar {
+.ml-console .bar {
 	display: grid;
 	grid-template-columns: 110px minmax(0, 1fr) auto;
 	align-items: center;
 	gap: 10px;
 	font-size: 12px;
 }
-.ml-tab .bar .track {
+.ml-console .bar .track {
 	height: 6px;
 	border-radius: 999px;
 	background: var(--dsw-alias-fill-l2);
 	overflow: hidden;
 }
-.ml-tab .bar .track i {
+.ml-console .bar .track i {
 	display: block;
 	height: 100%;
 	background: var(--dsw-alias-brand-primary);
 }
-.ml-tab .lbl {
+.ml-console .lbl {
 	color: var(--dsw-alias-label-tertiary);
 	font-size: 11px;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 }
-.ml-tab .searchbar {
+.ml-console .searchbar {
 	display: flex;
 	gap: 8px;
 }
-.ml-tab .searchbar input {
+.ml-console .searchbar input {
 	flex: 1;
 	min-width: 0;
 	padding: 6px 10px;
@@ -461,12 +462,12 @@ export const TAB_CSS = `
 	border: 1px solid var(--dsw-alias-border-l2);
 	border-radius: 7px;
 }
-.ml-tab .filters {
+.ml-console .filters {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px;
 }
-.ml-tab .filters label {
+.ml-console .filters label {
 	display: grid;
 	gap: 4px;
 	color: var(--dsw-alias-label-tertiary);
@@ -474,46 +475,46 @@ export const TAB_CSS = `
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 }
-.ml-tab .filters select,
-.ml-tab .filters input {
+.ml-console .filters select,
+.ml-console .filters input {
 	padding: 4px 8px;
 	background: var(--dsw-alias-bg-layer-1);
 	border: 1px solid var(--dsw-alias-border-l2);
 	border-radius: 6px;
 	font-size: 12.5px;
 }
-.ml-tab .hit {
+.ml-console .hit {
 	grid-template-columns: minmax(120px, auto) 90px minmax(0, 1fr) auto;
 	font-family: inherit;
 }
-.ml-tab .hit .id {
+.ml-console .hit .id {
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
-.ml-tab .hit .kind {
+.ml-console .hit .kind {
 	color: var(--dsw-alias-state-business-primary);
 }
-.ml-tab .hit .when {
+.ml-console .hit .when {
 	color: var(--dsw-alias-label-secondary);
 }
-.ml-tab mark {
+.ml-console mark {
 	padding: 0 1px;
 	background: var(--dsw-alias-interactive-bg-hover-accent);
 	border-radius: 3px;
 	color: var(--dsw-alias-brand-primary);
 }
-.ml-tab .meter {
+.ml-console .meter {
 	width: 90px;
 	height: 6px;
 	background: var(--dsw-alias-fill-l2);
 	border-radius: 999px;
 	overflow: hidden;
 }
-.ml-tab .meter i {
+.ml-console .meter i {
 	display: block;
 	height: 100%;
 	background: var(--dsw-alias-brand-primary);
 }
-.ml-tab .pill {
+.ml-console .pill {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -523,19 +524,19 @@ export const TAB_CSS = `
 	border-radius: 999px;
 	font-size: 12px;
 }
-.ml-tab .pill .k {
+.ml-console .pill .k {
 	color: var(--dsw-alias-label-secondary);
 }
-.ml-tab .pill.warn {
+.ml-console .pill.warn {
 	border-color: var(--dsw-alias-state-warn-label);
 	color: var(--dsw-alias-state-warn-label);
 }
-.ml-tab .field {
+.ml-console .field {
 	display: grid;
 	gap: 5px;
 	min-width: 0;
 }
-.ml-tab .field label {
+.ml-console .field label {
 	display: grid;
 	gap: 5px;
 	color: var(--dsw-alias-label-tertiary);
@@ -543,10 +544,10 @@ export const TAB_CSS = `
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 }
-.ml-tab .field input,
-.ml-tab .field select,
-.ml-tab .field textarea,
-.ml-tab dialog textarea {
+.ml-console .field input,
+.ml-console .field select,
+.ml-console .field textarea,
+.ml-console dialog textarea {
 	padding: 6px 9px;
 	background: var(--dsw-alias-bg-layer-2);
 	border: 1px solid var(--dsw-alias-border-l2);
@@ -555,26 +556,26 @@ export const TAB_CSS = `
 	letter-spacing: normal;
 	text-transform: none;
 }
-.ml-tab .field textarea,
-.ml-tab dialog textarea {
+.ml-console .field textarea,
+.ml-console dialog textarea {
 	min-height: 64px;
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font-size: 12.5px;
 	resize: vertical;
 }
-.ml-tab .field input:disabled,
-.ml-tab .field select:disabled {
+.ml-console .field input:disabled,
+.ml-console .field select:disabled {
 	opacity: 0.6;
 }
-.ml-tab .field input,
-.ml-tab .field select {
+.ml-console .field input,
+.ml-console .field select {
 	height: 34px;
 }
-.ml-tab .hint {
+.ml-console .hint {
 	color: var(--dsw-alias-label-dimmed);
 	font-size: 11.5px;
 }
-.ml-tab .banner {
+.ml-console .banner {
 	margin: 0;
 	padding: 8px 10px;
 	border: 1px solid var(--dsw-alias-state-error-primary);
@@ -582,17 +583,17 @@ export const TAB_CSS = `
 	color: var(--dsw-alias-state-error-primary);
 	font-size: 12.5px;
 }
-.ml-tab .counter {
+.ml-console .counter {
 	color: var(--dsw-alias-label-secondary);
 	font-size: 11.5px;
 }
-.ml-tab .row2 {
+.ml-console .row2 {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	align-items: start;
 	gap: 12px;
 }
-.ml-tab dialog {
+.ml-console dialog {
 	width: min(680px, 94vw);
 	padding: 0;
 	background: var(--dsw-alias-bg-layer-1);
@@ -600,34 +601,34 @@ export const TAB_CSS = `
 	border-radius: 12px;
 	color: var(--dsw-alias-label-primary);
 }
-.ml-tab dialog::backdrop {
+.ml-console dialog::backdrop {
 	background: var(--dsw-alias-bg-mask-1);
 }
-.ml-tab dialog .head {
+.ml-console dialog .head {
 	padding: 14px 16px;
 	border-bottom: 1px solid var(--dsw-alias-border-l1);
 	font-weight: 600;
 }
-.ml-tab dialog form {
+.ml-console dialog form {
 	display: grid;
 	gap: 12px;
 	padding: 14px 16px 16px;
 }
-.ml-tab .dlg-note {
+.ml-console .dlg-note {
 	min-height: 16px;
 	color: var(--dsw-alias-label-secondary);
 	font-size: 11.5px;
 }
-.ml-tab .dlg-note.error {
+.ml-console .dlg-note.error {
 	color: var(--dsw-alias-state-error-primary);
 }
-.ml-tab .dlg-foot {
+.ml-console .dlg-foot {
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;
 	padding-top: 4px;
 }
-.ml-tab .status {
+.ml-console .status {
 	position: absolute;
 	left: 50%;
 	bottom: 14px;
@@ -644,24 +645,142 @@ export const TAB_CSS = `
 	transform: translateX(-50%);
 	transition: opacity 120ms;
 }
-.ml-tab .status:not(:empty) {
+.ml-console .status:not(:empty) {
 	padding: 7px 12px;
 	border-color: var(--dsw-alias-border-l2);
 	opacity: 1;
 }
-.ml-tab .status.error {
+.ml-console .status.error {
 	color: var(--dsw-alias-state-error-primary);
 }
-.ml-tab .status.error:not(:empty) {
+.ml-console .status.error:not(:empty) {
 	border-color: var(--dsw-alias-state-error-primary);
 }
+.ml-console.ml-page {
+	height: 100%;
+}
+.ml-console .ml-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 12px;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--dsw-alias-border-l2);
+	background: var(--dsw-alias-bg-layer-1);
+}
+.ml-console .ml-title {
+	color: var(--dsw-alias-label-primary);
+	font-size: 13px;
+	font-weight: 600;
+}
+.ml-console .ml-hspacer {
+	flex: 1 1 auto;
+}
+.ml-console .ml-field {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.ml-console .ml-field select {
+	max-width: 220px;
+	padding: 3px 6px;
+	border: 1px solid var(--dsw-alias-border-l2);
+	border-radius: 6px;
+	background: var(--dsw-alias-bg-base);
+	color: var(--dsw-alias-label-primary);
+	font: inherit;
+	font-size: 12px;
+}
+.ml-console .ml-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--dsw-alias-label-secondary);
+}
+.ml-console .ml-chip b {
+	color: var(--dsw-alias-label-primary);
+	font-weight: 600;
+}
+.ml-console.ml-session .ml-head {
+	padding: 8px 12px;
+}
+.ml-console .ml-scoperow {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 8px 12px 0;
+}
+.ml-console .ml-scoperow .ml-bar-title {
+	padding-top: 3px;
+}
+.ml-console .ml-scoperow .ml-scopes,
+.ml-console .ml-scoperow .ml-scopelist {
+	padding: 0;
+}
+.ml-console .ml-scopelist {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	max-height: 84px;
+	overflow-y: auto;
+}
+.ml-console .ml-scope-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 1px 8px;
+	border: 1px solid var(--dsw-alias-border-l2);
+	border-radius: 999px;
+	color: var(--dsw-alias-label-secondary);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 11px;
+	word-break: break-all;
+}
+.ml-console .ml-scope-tag.on {
+	border-color: var(--dsw-alias-brand-primary);
+	color: var(--dsw-alias-label-primary);
+}
+.ml-console .ml-scope-tag i {
+	color: var(--dsw-alias-label-tertiary);
+	font-style: normal;
+}
+.ml-console .ml-slice-head {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 12px 12px 4px;
+	color: var(--dsw-alias-label-tertiary);
+	font-size: 10px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+.ml-console .ml-slice {
+	flex: 1 1 auto;
+	min-height: 0;
+	margin: 0;
+	padding: 0 12px 30px;
+	overflow: auto;
+	color: var(--dsw-alias-label-secondary);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12px;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+.ml-console .ml-muted {
+	margin: 12px;
+	color: var(--dsw-alias-label-tertiary);
+	font-size: 12px;
+}
+
 @media (max-width: 860px) {
-	.ml-tab .split {
+	.ml-console .split {
 		grid-template-columns: 1fr;
 	}
-	.ml-tab .row2 {
+	.ml-console .row2 {
 		grid-template-columns: 1fr;
 	}
 }
 `;
-// #endregion CONST_TAB_CSS
+// #endregion CONST_CONSOLE_CSS

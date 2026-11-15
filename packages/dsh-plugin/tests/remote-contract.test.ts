@@ -145,7 +145,10 @@ function composition(): {
 		ts: "2026-01-01T00:00:00.000Z",
 	});
 	debug("Case start", { event: "start", directory, scope });
-	return { request: { agent, memory, scope, fields: {} }, root };
+	return {
+		request: { agent, memory, scope, fields: {}, profiles: ["default"] },
+		root,
+	};
 }
 // #endregion FUNC_composition
 
@@ -292,13 +295,16 @@ describe("console Remote input schemas", () => {
 		}
 	});
 
-	it("requires the session id of each input", () => {
+	it("takes the session id or the profile name of each input", () => {
 		for (const method of CONSOLE_METHODS) {
 			const { session: _session, ...rest } = CLIENT_INPUTS[method] as Record<
 				string,
 				unknown
 			>;
-			expect(() => consoleSchemas[method].parse(rest)).toThrow();
+			expect(consoleSchemas[method].parse(rest)).toBeTruthy();
+			expect(
+				consoleSchemas[method].parse({ ...rest, profile: "work" }),
+			).toBeTruthy();
 		}
 	});
 
@@ -371,6 +377,6 @@ describe("console Remote result schemas", () => {
 			composition().request,
 			worker,
 		);
-		expect(sample.snapshot.nextTrigger).toBe("idle");
+		expect(sample.snapshot?.nextTrigger).toBe("idle");
 	});
 });

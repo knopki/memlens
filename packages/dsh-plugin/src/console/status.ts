@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
- * @purpose Answer the host state of one session, so the tab states the snapshot timing and the
- *   compaction state that the standalone console cannot hold.
+ * @purpose Answer the host state of one surface, so the tab states the snapshot timing and the
+ *   console states the compaction state that the standalone console cannot hold.
  * @scope
  *  - The session snapshot facts, the local snapshot tracker, and the compaction state read.
  *  - NOT: the render of the slice, the snapshot publication, and the compaction rules.
@@ -70,11 +70,14 @@ export interface SnapshotAnswer {
 	readonly nextRefreshAt: string | null;
 }
 
-/** One status answer of the plugin host. */
+/**
+ * One status answer of the plugin host.
+ * A profile surface holds the compaction state only, because it has no session.
+ */
 export interface StatusAnswer {
-	readonly session: string;
+	readonly session?: string;
 	readonly scope: ScopeKey;
-	readonly snapshot: SnapshotAnswer;
+	readonly snapshot?: SnapshotAnswer;
 	readonly compaction: WorkerStatus;
 }
 
@@ -162,6 +165,15 @@ export function statusAnswer(
 	worker: MemoryWorker,
 ): StatusAnswer {
 	const { agent, memory, scope } = request;
+	const compaction = worker.status();
+	if (agent === undefined) {
+		debug("Status answered for a profile", {
+			event: "status",
+			profile: memory.config.defaultProfile,
+			dirty: compaction.dirty,
+		});
+		return { scope, compaction };
+	}
 	const saved = savedSnapshot(agent);
 	const state = states.get(agent.session);
 	const idle = idleDelay(agent, memory.config.cacheTtl);
@@ -177,13 +189,13 @@ export function statusAnswer(
 				? toIso(state.lastEventAt + idle)
 				: null,
 		},
-		compaction: worker.status(),
+		compaction,
 	};
 	debug("Status answered", {
 		event: "status",
 		session: agent.id,
 		saved: saved.saved,
-		dirty: answer.compaction.dirty,
+		dirty: compaction.dirty,
 	});
 	return answer;
 }

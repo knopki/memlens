@@ -1,6 +1,6 @@
 /**
  * #region moduleContract
- * @purpose Answer each console read from the store of the session, so the tab shows one view
+ * @purpose Answer each console read from the store of the request, so a console shows one view
  *   without a store handle of its own.
  * @scope
  *  - The routes view, search, open, and catalog.
@@ -35,11 +35,11 @@ const debug = debuglog("memlens:plugin:console");
 // #region FUNC_viewAnswer
 /**
  * @purpose Give the console model of one scope with its proposals and its policy.
- * @invariants The answer holds the pending proposals, the session profile, and the review policy.
+ * @invariants The answer holds the pending proposals, the profile names, and the review policy.
  * @invariants The plugin host permits the delete action through the harness Remote service.
  */
 export async function viewAnswer(request: ConsoleRequest): Promise<unknown> {
-	const { memory, scope, fields } = request;
+	const { memory, scope, fields, profiles } = request;
 	const kind = text(fields, "kind");
 	const model = await readConsole(
 		memory.store,
@@ -52,7 +52,7 @@ export async function viewAnswer(request: ConsoleRequest): Promise<unknown> {
 	return {
 		...model,
 		proposals: pending(memory.store),
-		profiles: [memory.config.defaultProfile],
+		profiles: [...profiles],
 		path: memory.config.store.path,
 		backend: "sqlite",
 		allowDelete: true,

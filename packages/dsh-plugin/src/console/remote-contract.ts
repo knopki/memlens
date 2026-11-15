@@ -11,8 +11,8 @@
  * @invariants Both faces read the same descriptors, so the descriptor ids and the wire names are
  *   equal.
  * @invariants The wire carries a text field as text, so the console operations keep their rules.
- * @invariants The wire input of each method holds the session id, because the transport carries no
- *   query string.
+ * @invariants The wire input of each method holds the surface identity, because the transport
+ *   carries no query string.
  * @usecases
  *  - Mount: client => mounts the contribution => gets `remote.memlens` with six methods
  * @dependencies USES API: @deepseek-ai/dsh-typert-protocol, zod
@@ -45,7 +45,7 @@ const noteKind = z.enum(["decision", "preference", "fact", "task", "note"]);
 /** A note kind or the empty text that the console sends when no kind narrows the read. */
 const anyKind = z.union([noteKind, z.literal("")]);
 
-/** A scope key. The console operations check the key against the session profile. */
+/** A scope key. The console operations check the key against the profile of the request. */
 const scopeKey = z.string();
 
 /** One range of positions of a store tree. */
@@ -106,19 +106,20 @@ export const CONSOLE_METHODS: readonly ConsoleMethod[] = [
 /**
  * @purpose Give the strict wire input of each console method, so the Gateway rejects a request of
  *   another shape before the operation runs.
- * @invariants The session id is required in each input.
+ * @invariants Each input names its surface: the session id of a session surface, or the profile
+ *   name of a profile surface.
  * @invariants A field that the console carries as text on the wire stays text, so the operations
  *   keep their parse rules.
  */
 const inputs = {
 	view: z.strictObject({
-		session: z.string(),
+		session: z.string().optional(),
 		profile: z.string().optional(),
 		scope: z.string().optional(),
 		kind: anyKind.optional(),
 	}),
 	search: z.strictObject({
-		session: z.string(),
+		session: z.string().optional(),
 		profile: z.string().optional(),
 		scope: z.string().optional(),
 		q: z.string().optional(),
@@ -128,14 +129,14 @@ const inputs = {
 		limit: z.string().optional(),
 	}),
 	open: z.strictObject({
-		session: z.string(),
+		session: z.string().optional(),
 		profile: z.string().optional(),
 		scope: z.string().optional(),
 		target: z.string(),
 		offset: z.string().optional(),
 	}),
 	catalog: z.strictObject({
-		session: z.string(),
+		session: z.string().optional(),
 		profile: z.string().optional(),
 		scope: z.string().optional(),
 		start: z.string(),
@@ -143,12 +144,12 @@ const inputs = {
 		budget: z.string().optional(),
 	}),
 	status: z.strictObject({
-		session: z.string(),
+		session: z.string().optional(),
 		profile: z.string().optional(),
 		scope: z.string().optional(),
 	}),
 	action: z.strictObject({
-		session: z.string(),
+		session: z.string().optional(),
 		profile: z.string().optional(),
 		scope: z.string().optional(),
 		action: z.enum([
@@ -405,15 +406,17 @@ const results = {
 	]),
 	catalog: z.array(catalogLine),
 	status: z.strictObject({
-		session: z.string(),
+		session: z.string().optional(),
 		scope: scopeKey,
-		snapshot: z.strictObject({
-			saved: z.boolean(),
-			chars: z.number(),
-			materializedAt: z.string().nullable(),
-			nextTrigger: z.literal("idle"),
-			nextRefreshAt: z.string().nullable(),
-		}),
+		snapshot: z
+			.strictObject({
+				saved: z.boolean(),
+				chars: z.number(),
+				materializedAt: z.string().nullable(),
+				nextTrigger: z.literal("idle"),
+				nextRefreshAt: z.string().nullable(),
+			})
+			.optional(),
 		compaction: z.strictObject({
 			attempts: z.number(),
 			active: z.number(),

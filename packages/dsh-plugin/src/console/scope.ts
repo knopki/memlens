@@ -1,14 +1,15 @@
 /**
  * #region moduleContract
  * @purpose Resolve the fields, the scope, and the target of one console request, so every handler
- *   works on one scope that the session profile lists.
+ *   works on one scope that the profile of the request lists.
  * @scope
  *  - The request fields, the note kind, the listed scope check, the request scope, and the target
  *    row.
  *  - NOT: the transport, the reads, the actions, and the status.
- * @invariants An invalid scope key gives Usage. A scope outside the session profile gives
+ * @invariants An invalid scope key gives Usage. A scope outside the profile of the request gives
  *   NotAllowed.
- * @invariants The session supplies the active scope and the profile. The request supplies neither.
+ * @invariants The session supplies the active scope and the profile of a session request. A profile
+ *   request names its profile, and the host file gives its fallback scope.
  * @dependencies USES API: @memlens/core, ../service.ts, ../tools/shared.ts
  * @keywords console, scope, profile, target, kind, request, field
  * #endregion moduleContract
@@ -35,14 +36,19 @@ export type Fields = Record<string, unknown>;
 
 // #region INTERFACE_ConsoleRequest
 /**
- * @purpose Give each console handler the session, the memory inputs, the scope, and the fields.
- * @invariants The transport resolves the session. The handler reads no other profile or store.
+ * @purpose Give each console handler the memory inputs, the scope, the fields, and the profiles.
+ * @invariants The transport resolves the surface. The handler reads no other profile or store.
  */
 export interface ConsoleRequest {
-	readonly agent: Agent;
 	readonly memory: AgentMemory;
 	readonly scope: ScopeKey;
 	readonly fields: Fields;
+
+	/** The live agent of a session request. A profile request holds none. */
+	readonly agent?: Agent;
+
+	/** The profile names of the base file, so the console offers each profile. */
+	readonly profiles: readonly string[];
 }
 // #endregion INTERFACE_ConsoleRequest
 

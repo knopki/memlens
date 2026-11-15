@@ -63,6 +63,28 @@ afterEach(async () => {
 	vi.restoreAllMocks();
 });
 
+// #region FUNC_snapshotOf
+/**
+ * @purpose Give the snapshot of one status answer, so a test reads it with no optional field.
+ * @invariants A session status answer always holds a snapshot.
+ */
+function snapshotOf(answer: {
+	readonly snapshot?:
+		| {
+				readonly saved: boolean;
+				readonly chars: number;
+				readonly materializedAt: string | null;
+				readonly nextTrigger: string;
+				readonly nextRefreshAt: string | null;
+		  }
+		| undefined;
+}): NonNullable<typeof answer.snapshot> {
+	if (answer.snapshot === undefined)
+		throw new Error("The status answer holds no snapshot.");
+	return answer.snapshot;
+}
+// #endregion FUNC_snapshotOf
+
 // #region CLASS_StubLlm
 /** @purpose Answer one merge call with a scripted text, or fail it. */
 class StubLlm implements WorkerLlm {
@@ -353,9 +375,17 @@ describe("console remote registration", () => {
 		);
 		expect(unknown.code).toBe("gateway/bad-request");
 		expect(unknown.message).toBe("The session is unknown.");
-		const missing = await failure(direct(testCase, "view", {}));
-		expect(missing.code).toBe("gateway/bad-request");
-		expect(missing.message).toBe("The request needs a session.");
+	});
+
+	it("reads the default profile when the request names no session", async () => {
+		const testCase = composition();
+		await registered(testCase);
+		const answer = (await direct(testCase, "view", {})) as {
+			readonly profile: string;
+			readonly profiles: readonly string[];
+		};
+		expect(answer.profile).toBe("default");
+		expect(answer.profiles).toEqual(["default"]);
 	});
 
 	it("resolves the profile and the scope from the session, not from the request", async () => {
@@ -389,6 +419,74 @@ describe("console remote registration", () => {
 			call(testCase, "view", { session: testCase.agent.id, scope: "Bad Key" }),
 		);
 		expect(invalid.message).toMatch(/invalid/);
+	});
+});
+
+describe("console profile surface", () => {
+	const twoProfiles = DEFAULT_CONFIG_TOML.replace(
+		"[profile.default.budget]",
+		'[profile.work]\nscopes = ["project:*"]\n\n[profile.default.budget]',
+	);
+
+	it("reads one named profile with no session and lists each profile", async () => {
+		const testCase = composition({ base: twoProfiles });
+		await registered(testCase);
+		const view = await call(testCase, "view", { profile: "work" });
+		expect(view.profile).toBe("work");
+		expect(view.profiles).toEqual(["default", "work"]);
+		expect(view.scope).toBe("user:notes");
+		expect(view.scopes.map((scope) => scope.key)).toContain("user:notes");
+	});
+
+	it("resolves the scope of the profile, not of a session", async () => {
+		const testCase = composition({ base: twoProfiles });
+		await registered(testCase);
+		const fallback = await call(testCase, "view", { profile: "work" });
+		expect(fallback.scope).toBe("user:notes");
+		const outside = await failure(
+			call(testCase, "view", { profile: "work", scope: "user:other" }),
+		);
+		expect(outside.code).toBe("gateway/bad-request");
+		expect(outside.message).toMatch(/outside this profile/);
+	});
+
+	it("refuses a profile that the base file does not hold", async () => {
+		const testCase = composition();
+		await registered(testCase);
+		const answer = await failure(call(testCase, "view", { profile: "nope" }));
+		expect(answer.code).toBe("gateway/bad-request");
+		expect(answer.message).toBe("config.profile holds no profile nope");
+	});
+
+	it("writes a note through a profile and reads it back", async () => {
+		const testCase = composition({ base: twoProfiles });
+		await registered(testCase);
+		const saved = await call(testCase, "action", {
+			profile: "work",
+			action: "note",
+			scope: "user:notes",
+			body: "a profile record",
+		});
+		expect("id" in saved ? saved.id : undefined).toBeTypeOf("string");
+		const view = await call(testCase, "view", { profile: "work" });
+		expect(view.records).toHaveLength(1);
+	});
+
+	it("answers the compaction state of a profile with no snapshot", async () => {
+		const testCase = composition();
+		await registered(testCase);
+		const answer = (await direct(testCase, "status", {
+			profile: "default",
+		})) as {
+			readonly session?: string;
+			readonly snapshot?: unknown;
+			readonly scope: string;
+			readonly compaction: { readonly attempts: number };
+		};
+		expect(answer.session).toBeUndefined();
+		expect(answer.snapshot).toBeUndefined();
+		expect(answer.scope).toBe("user:notes");
+		expect(answer.compaction.attempts).toBe(0);
 	});
 });
 
@@ -775,14 +873,14 @@ describe("console status", () => {
 		});
 		expect(answer.session).toBe(testCase.agent.id);
 		expect(answer.scope).toBe("user:notes");
-		expect(answer.snapshot.saved).toBe(false);
-		expect(answer.snapshot.materializedAt).toBe(toIso(1_000));
-		expect(answer.snapshot.nextTrigger).toBe("idle");
+		expect(snapshotOf(answer).saved).toBe(false);
+		expect(snapshotOf(answer).materializedAt).toBe(toIso(1_000));
+		expect(snapshotOf(answer).nextTrigger).toBe("idle");
 		const ttl = ttlSeconds(
 			testCase.memlens.forAgent(testCase.agent).config.cacheTtl,
 			"test/large",
 		);
-		expect(answer.snapshot.nextRefreshAt).toBe(toIso(1_000 + ttl * 1000));
+		expect(snapshotOf(answer).nextRefreshAt).toBe(toIso(1_000 + ttl * 1000));
 		expect(answer.compaction).toEqual({
 			attempts: 0,
 			active: 0,
@@ -812,10 +910,10 @@ describe("console status", () => {
 		const answer = await call(testCase, "status", {
 			session: testCase.agent.id,
 		});
-		expect(answer.snapshot.saved).toBe(true);
-		expect(answer.snapshot.chars).toBe("memory slice".length);
-		expect(answer.snapshot.materializedAt).toBe(null);
-		expect(answer.snapshot.nextRefreshAt).toBe(null);
+		expect(snapshotOf(answer).saved).toBe(true);
+		expect(snapshotOf(answer).chars).toBe("memory slice".length);
+		expect(snapshotOf(answer).materializedAt).toBe(null);
+		expect(snapshotOf(answer).nextRefreshAt).toBe(null);
 	});
 
 	it("states the local compaction counts of the worker", async () => {

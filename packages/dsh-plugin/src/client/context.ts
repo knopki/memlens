@@ -47,24 +47,26 @@ export interface LocaleService {
 
 // #region INTERFACE_SlotRegistration
 /**
- * @purpose Give the slot service the entry name, the id, the place, the locale, the label, and the
- *   props of the entry.
+ * @purpose Give the slot service the entry name, its place, its locale, its label, and its props.
+ * @invariants A list entry holds an id and an order. A keyed entry holds a key.
  * @invariants The label is a text or a function. A function reads the active language at call time.
- * @invariants The inject function takes the session id and gives the props of the tab component.
+ * @invariants The inject function takes the session id and gives the props of the surface
+ *   component. A keyed entry without a session holds no inject function.
  */
 export interface SlotRegistration {
 	readonly name: string;
-	readonly id: string;
-	readonly order: number;
-	readonly locale: string;
-	readonly label: string | (() => string);
-	readonly inject: (sessionId: string) => object;
+	readonly id?: string;
+	readonly key?: string;
+	readonly order?: number;
+	readonly locale?: string;
+	readonly label?: string | (() => string);
+	readonly inject?: (sessionId: string) => object;
 }
 // #endregion INTERFACE_SlotRegistration
 
 // #region INTERFACE_SlotService
 /**
- * @purpose Register one tab entry for the lifetime of the slot declaration.
+ * @purpose Register one entry for the lifetime of the slot declaration.
  * @invariants The register call takes the component that draws the entry.
  */
 export interface SlotService {
@@ -72,9 +74,23 @@ export interface SlotService {
 	inject(key: string, callback: () => unknown): unknown;
 
 	/** Register one entry, and return its disposer. */
-	register<P>(options: SlotRegistration, component: ComponentType<P>): unknown;
+	register<P extends object>(
+		options: SlotRegistration,
+		component: ComponentType<P>,
+	): unknown;
 }
 // #endregion INTERFACE_SlotService
+
+// #region TYPE_PanelIconProps
+/**
+ * @purpose Hold the presentation that the sidebar gives one panel icon.
+ * @invariants The size is the square edge in pixels. The active flag marks the selected panel.
+ */
+export type PanelIconProps = {
+	readonly size: number;
+	readonly active: boolean;
+};
+// #endregion TYPE_PanelIconProps
 
 // #region INTERFACE_RemoteFailure
 /**

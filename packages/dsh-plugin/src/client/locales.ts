@@ -4,7 +4,8 @@
  *   language of the harness page.
  * @scope The namespace, the eight dictionaries, the tab name, and the translate function with the
  * English fallback. NOT: the slot registration, the tab body, and the host route.
- * @invariants The namespace holds the eight message tables of the console and one tab name.
+ * @invariants The namespace holds the eight message tables of the console, one panel name, and one
+ *   tab name.
  * @invariants A refused registration gives the English table, so the tab still draws its text.
  * @invariants The translate function reads the active language at call time.
  * @dependencies USES: the message tables and the fill helper of the console, and the locale service
@@ -29,6 +30,10 @@ export const NS = "memlens";
 /** The message key of the tab name. The console tables hold no tab name, so the client adds one. */
 export const TAB_KEY = "tab";
 
+/** The message key of the panel name. The console tables hold no panel name, so the client adds
+ * one. */
+export const PANEL_KEY = "panel";
+
 // #region CONST_TAB_NAMES
 /**
  * @purpose Name the tab in each language of the console, so the tab row shows a short name.
@@ -46,15 +51,29 @@ export const TAB_NAMES: Readonly<Record<Lang, string>> = {
 };
 // #endregion CONST_TAB_NAMES
 
+// #region CONST_PANEL_NAMES
+/**
+ * @purpose Name the panel in each language of the console, so the sidebar row and the page head
+ * show a short name.
+ * @invariants Each name follows the word of the console title of the same language.
+ */
+export const PANEL_NAMES: Readonly<Record<Lang, string>> = TAB_NAMES;
+// #endregion CONST_PANEL_NAMES
+
 // #region FUNC_dictionaries
 /**
  * @purpose Build the dictionary of each language for one register call.
- * @invariants Each dictionary holds every key of its message table and the tab name.
+ * @invariants Each dictionary holds every key of its message table, the panel name, and the tab
+ *   name.
  */
 export function dictionaries(): Record<string, Record<string, string>> {
 	const all: Record<string, Record<string, string>> = {};
 	for (const code of LANGS)
-		all[code] = { ...MESSAGES[code], [TAB_KEY]: TAB_NAMES[code] };
+		all[code] = {
+			...MESSAGES[code],
+			[PANEL_KEY]: PANEL_NAMES[code],
+			[TAB_KEY]: TAB_NAMES[code],
+		};
 	return all;
 }
 // #endregion FUNC_dictionaries
@@ -70,6 +89,7 @@ function english(
 	values: Record<string, string | number> = {},
 ): string {
 	if (key === TAB_KEY) return fill(TAB_NAMES.en, values);
+	if (key === PANEL_KEY) return fill(PANEL_NAMES.en, values);
 	return fill(messages("en")[key as keyof Table] ?? key, values);
 }
 // #endregion FUNC_english
