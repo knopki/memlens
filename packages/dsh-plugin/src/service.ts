@@ -136,8 +136,12 @@ export class Memlens extends Service {
 		return resolveConfig(this.base, this.patch, null);
 	}
 	private readonly listeners = new Set<() => void>();
+	private readonly presetListeners = new Set<
+		(scope: RegistrationScope) => void
+	>();
 	private readonly presets = new Map<RegistrationScope, PresetConfig>();
 	private memories = new WeakMap<Agent, AgentMemory>();
+	private readonly memoryDisposers = new Set<() => unknown>();
 	private closed = false;
 
 	constructor(ctx: Context, patch: PatchConfig) {
@@ -149,9 +153,12 @@ export class Memlens extends Service {
 		const configPath = join(xdgDirs(process.env).configDir, "config.toml");
 		const reload = () => this.reloadBase();
 		watchFile(configPath, { interval: 1000, persistent: false }, reload);
-		ctx.effect(() => () => {
+		ctx.effect(() => async () => {
 			unwatchFile(configPath, reload);
+			await Promise.all([...this.memoryDisposers].map((dispose) => dispose()));
+			this.memoryDisposers.clear();
 			this.listeners.clear();
+			this.presetListeners.clear();
 			this.closed = true;
 			this.memories = new WeakMap();
 			this.presets.clear();
@@ -209,6 +216,18 @@ export class Memlens extends Service {
 		for (const listener of this.listeners) listener();
 	}
 
+	// #region METHOD_onPresetChange
+	/**
+	 * @purpose Notify the host when one preset scope changes.
+	 * @param listener - The callback that receives the preset scope.
+	 * @returns A function that removes the callback.
+	 */
+	onPresetChange(listener: (scope: RegistrationScope) => void): () => void {
+		this.presetListeners.add(listener);
+		return () => this.presetListeners.delete(listener);
+	}
+	// #endregion METHOD_onPresetChange
+
 	// #region METHOD_registerPreset
 	/**
 	 * @purpose Bind one validated configuration to the caller's preset scope.
@@ -242,9 +261,11 @@ export class Memlens extends Service {
 				);
 			}
 			this.presets.set(scope, preset);
+			for (const listener of this.presetListeners) listener(scope);
 			debug("Preset registered", { event: "preset", profile: preset.profile });
 			return () => {
 				this.presets.delete(scope);
+				for (const listener of this.presetListeners) listener(scope);
 				debug("Preset removed", {
 					event: "preset-dispose",
 					profile: preset.profile,
@@ -299,7 +320,14 @@ export class Memlens extends Service {
 			scope,
 		};
 		this.memories.set(agent, memory);
-		agent.ctx.effect(() => () => this.memories.delete(agent));
+		const dispose = agent.ctx.effect(
+			() => () => {
+				this.memories.delete(agent);
+				this.memoryDisposers.delete(dispose);
+			},
+			"memlens.agent-memory",
+		);
+		this.memoryDisposers.add(dispose);
 		debug("Agent configured", {
 			event: "agent",
 			session: agent.id,

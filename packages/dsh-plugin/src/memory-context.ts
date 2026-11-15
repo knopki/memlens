@@ -56,16 +56,20 @@ const MAX_TIMER_MS = 2 ** 31 - 1;
  * @invariants A refresh with the same text keeps the old text.
  * @param agent - The live agent that owns the context scope.
  * @param memory - The store, the resolved configuration, and the active scope of the agent.
+ * @returns The function that removes the context and its listeners.
  */
-export function registerMemoryContext(agent: Agent, memory: AgentMemory): void {
+export function registerMemoryContext(
+	agent: Agent,
+	memory: AgentMemory,
+): () => unknown {
 	if (
 		agent.session.header.origin === "subagent" &&
 		memory.config.profile.subagents === "off"
 	) {
 		debug("Context skipped", { event: "off", session: agent.id });
-		return;
+		return () => {};
 	}
-	agent.ctx.effect(() => {
+	return agent.ctx.effect(() => {
 		let text = snapshotText(agent.session) ?? renderSlice(memory);
 		let live = true;
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -96,19 +100,19 @@ export function registerMemoryContext(agent: Agent, memory: AgentMemory): void {
 					lastActivity + idleDelay(agent, memory.config.cacheTtl) - Date.now(),
 				),
 			);
-		timer = arm();
-		const unsubscribe = agent.ctx.get("memlens")?.onConfigChange(() => {
-			clearTimeout(timer);
-			timer = arm();
-		});
-		agent.ctx.systemPrompt.context({
+		const removeContext = agent.ctx.systemPrompt.context({
 			name: CONTEXT_NAME,
 			order: CONTEXT_ORDER,
 			required: true,
 			interpolate: false,
 			text: () => text,
 		});
-		agent.ctx.on("session/event", (session, event) => {
+		timer = arm();
+		const unsubscribe = agent.ctx.get("memlens")?.onConfigChange(() => {
+			clearTimeout(timer);
+			timer = arm();
+		});
+		const removeListener = agent.ctx.on("session/event", (session, event) => {
 			if (session !== agent.session) return;
 			if (compactionSucceeded(event)) {
 				refresh("compaction");
@@ -127,6 +131,8 @@ export function registerMemoryContext(agent: Agent, memory: AgentMemory): void {
 		return () => {
 			live = false;
 			unsubscribe?.();
+			removeContext();
+			removeListener();
 			clearTimeout(timer);
 		};
 	}, "memlens.context");

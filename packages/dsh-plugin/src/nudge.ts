@@ -107,8 +107,12 @@ export class NudgeCounters {
  * @param agent - The live agent that receives the nudge lines.
  * @param memory - The resolved memory inputs of the agent.
  * @invariants The registration lives on the agent context, so it ends with the agent.
+ * @returns The function that removes the listeners.
  */
-export function registerMemoryNudge(agent: Agent, memory: AgentMemory): void {
+export function registerMemoryNudge(
+	agent: Agent,
+	memory: AgentMemory,
+): () => void {
 	const counters = new NudgeCounters(memory.config.nudge);
 	const deliver = (lines: readonly string[]): void => {
 		for (const text of lines) {
@@ -120,16 +124,20 @@ export function registerMemoryNudge(agent: Agent, memory: AgentMemory): void {
 			});
 		}
 	};
-	agent.ctx.on("tools/result", (exec, result) => {
+	const tools = agent.ctx.on("tools/result", (exec, result) => {
 		counters.config = memory.config.nudge;
 		deliver(counters.onToolResult(exec.name, result.isError));
 	});
-	agent.ctx.on("session/event", (_session, event) => {
+	const session = agent.ctx.on("session/event", (_session, event) => {
 		if (event.type === "turn/end") {
 			counters.config = memory.config.nudge;
 			deliver(counters.onTurnEnd());
 		}
 	});
+	return () => {
+		tools();
+		session();
+	};
 }
 // #endregion FUNC_registerMemoryNudge
 

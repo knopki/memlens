@@ -3,7 +3,8 @@
  * @purpose Start shared memory storage and give each agent its context, tools, and nudge.
  * @scope The host entry, patch schema, service registration, context, nudge, and worker.
  * @invariants The host owns one store and one worker. The preset entry supplies only scoped configuration.
- * @invariants The memory context and each memory tool live on the agent context of their agent.
+ * @invariants The host and the agent both own the memory surface of the agent.
+ * @invariants A host restart restores the memory surface of each live agent.
  * @invariants The plugin checks no model metadata. A model that holds no memory is a configuration error of the user.
  * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @memlens/core.
  * @keywords dsh, plugin, memlens, configuration, registration, context, nudge, worker
@@ -13,6 +14,7 @@
 import { debuglog } from "node:util";
 import type { Context } from "@deepseek-ai/cordis";
 import type { Agent } from "@deepseek-ai/dsh-agent";
+import { scopeChainOf, scopeOf } from "@deepseek-ai/dsh-scope";
 import type {} from "@deepseek-ai/dsh-workspace";
 import { type PatchConfig, parseDuration } from "@memlens/core";
 import { PatchConfigSchema } from "./config.js";
@@ -44,7 +46,7 @@ export const inject = ["llm"];
  * @param ctx - The host plugin context.
  * @param config - The validated patch layer.
  */
-export function apply(ctx: Context, config: Config = {}): void {
+export async function apply(ctx: Context, config: Config = {}): Promise<void> {
 	const memlens = new Memlens(ctx, config);
 	ctx.on("internal/update", (next: Config) => {
 		memlens.updatePatch(next);
@@ -67,37 +69,88 @@ export function apply(ctx: Context, config: Config = {}): void {
 		memlens.onConfigChange(() => worker.updateInputs(workerInputs())),
 	);
 	const consoleRemote = registerConsoleRemote(ctx, memlens, worker);
-	const disabled = (agent: Agent) =>
-		agent.session.header.origin === "subagent" &&
-		memlens.configFor(agent).profile.subagents === "off";
+	const surfaces = new Map<Agent, () => unknown>();
+	const pending = new Map<Agent, Promise<void>>();
+	let live = true;
+	ctx.effect(() => async () => {
+		live = false;
+		await Promise.all([...surfaces.values()].map((dispose) => dispose()));
+		surfaces.clear();
+	});
 
+	const attach = (agent: Agent): Promise<void> => {
+		const existing = pending.get(agent);
+		if (existing) return existing;
+		if (surfaces.has(agent)) return Promise.resolve();
+		const task = (async () => {
+			try {
+				if (
+					agent.session.header.origin === "subagent" &&
+					memlens.configFor(agent).profile.subagents === "off"
+				)
+					return;
+				const cwd = agent.session.header.cwd;
+				const workspace = cwd
+					? await ctx
+							.get("workspaceRegistry")
+							?.resolveByPath(cwd)
+							.catch(() => undefined)
+					: undefined;
+				if (!live) return;
+				const memory = memlens.forAgent(agent, workspace?.id);
+				let report = true;
+				const dispose = agent.ctx.effect(() => {
+					const cleanups: (() => unknown)[] = [];
+					try {
+						cleanups.push(registerMemoryContext(agent, memory));
+						cleanups.push(registerMemoryTools(agent, memory, () => report));
+						if (agent.session.header.origin !== "subagent")
+							cleanups.push(registerMemoryNudge(agent, memory));
+					} catch (error) {
+						for (const cleanup of cleanups.reverse()) cleanup();
+						throw error;
+					}
+					return async () => {
+						for (const cleanup of cleanups.reverse()) await cleanup();
+						surfaces.delete(agent);
+					};
+				}, "memlens.surface");
+				surfaces.set(agent, () => {
+					report = false;
+					return dispose();
+				});
+			} catch (error) {
+				debug("Memory surface skipped", {
+					event: "agent-skip",
+					session: agent.id,
+					error: String(error),
+				});
+			}
+		})().finally(() => pending.delete(agent));
+		pending.set(agent, task);
+		return task;
+	};
+	ctx.effect(() =>
+		memlens.onPresetChange((scope) => {
+			for (const agent of ctx.get("agents")?.list() ?? []) {
+				if (!scopeChainOf(scopeOf(agent.ctx)).includes(scope)) continue;
+				void (async () => {
+					await pending.get(agent);
+					if (!live) return;
+					await surfaces.get(agent)?.();
+					if (live) await attach(agent);
+				})();
+			}
+		}),
+	);
 	ctx.on("agent/created", async ({ agent }) => {
-		if (disabled(agent)) return undefined;
-		const cwd = agent.session.header.cwd;
-		const workspace = cwd
-			? await ctx
-					.get("workspaceRegistry")
-					?.resolveByPath(cwd)
-					.catch(() => undefined)
-			: undefined;
-		try {
-			const memory = memlens.forAgent(agent, workspace?.id);
-			registerMemoryContext(agent, memory);
-			registerMemoryTools(agent, memory);
-			if (agent.session.header.origin !== "subagent")
-				registerMemoryNudge(agent, memory);
-		} catch (error) {
-			debug(
-				"Memory surface skipped after an error; the session continues without memory",
-				{ event: "agent-skip", session: agent.id, error: String(error) },
-			);
-			return undefined;
-		}
+		await attach(agent);
 		return undefined;
 	});
 	ctx.on("tools/result", (exec) => {
 		worker.onMemoryTool(exec.name);
 	});
 	ctx.effect(() => consoleRemote, "memlens: console remote");
+	await Promise.all((ctx.get("agents")?.list() ?? []).map(attach));
 }
 // #endregion FUNC_apply

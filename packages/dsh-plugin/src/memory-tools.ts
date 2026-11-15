@@ -180,8 +180,14 @@ function toolOf(
  * @ensures A child subagent sends its open proposals to its parent when it ends.
  * @param agent - The agent that receives the tools.
  * @param memory - The store, the profile, and the active scope of the agent.
+ * @param report - True when tool removal must report child proposals.
+ * @returns The function that removes the tools and reports child proposals.
  */
-export function registerMemoryTools(agent: Agent, memory: AgentMemory): void {
+export function registerMemoryTools(
+	agent: Agent,
+	memory: AgentMemory,
+	report: () => boolean = () => true,
+): () => unknown {
 	const tools = agent.ctx.get("tools");
 	if (tools === undefined)
 		throw new MemlensError("Data", "The tools service is not available.");
@@ -190,9 +196,9 @@ export function registerMemoryTools(agent: Agent, memory: AgentMemory): void {
 	const names = toolNames(child, mode);
 	if (names.length === 0) {
 		debug("No tool for the agent", { event: "register", session: agent.id });
-		return;
+		return () => {};
 	}
-	agent.ctx.effect(() => {
+	return agent.ctx.effect(() => {
 		const disposers = names.map((name) =>
 			tools.register(toolOf(name, agent, memory, child)),
 		);
@@ -204,7 +210,7 @@ export function registerMemoryTools(agent: Agent, memory: AgentMemory): void {
 		});
 		return () => {
 			for (const dispose of disposers) dispose();
-			reportProposals(agent, memory, child);
+			if (report()) reportProposals(agent, memory, child);
 			debug("Tools removed", { event: "dispose", session: agent.id });
 		};
 	});

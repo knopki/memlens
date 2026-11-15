@@ -11,8 +11,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Context, Service } from "@deepseek-ai/cordis";
 import { type Agent, agentEvents } from "@deepseek-ai/dsh-agent";
-import { createScope } from "@deepseek-ai/dsh-scope";
-import { SystemPrompt } from "@deepseek-ai/dsh-system-prompt";
+import { createScope, scopeOf } from "@deepseek-ai/dsh-scope";
+import {
+	renderContextSections,
+	SystemPrompt,
+} from "@deepseek-ai/dsh-system-prompt";
 import { ToolsService } from "@deepseek-ai/dsh-tools";
 import { DEFAULT_CONFIG_TOML, Store } from "@memlens/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -54,8 +57,9 @@ async function composition(baseText?: string) {
 	new SystemPrompt(root, {});
 	root.plugin(ToolsService, {});
 	await root.plugin(WorkerLlm);
-	await root.plugin(host, {});
-	return { root, directory };
+	const hostFiber = root.plugin(host, {});
+	await hostFiber;
+	return { root, directory, hostFiber };
 }
 // #endregion FUNC_composition
 
@@ -115,6 +119,131 @@ describe("Memlens host service", () => {
 		expect(root.memlens.forAgent(subject(root, key)).config.budget.here).toBe(
 			20,
 		);
+	});
+
+	it("restores a live agent after the host restarts", async () => {
+		const { root, hostFiber } = await composition();
+		const key = {};
+		const scope = createScope(root, key);
+		await scope.ctx.plugin(preset, { profile: "default", budget: { here: 7 } });
+		const agent = subject(root, key);
+		root.provide("agents", { list: () => [agent] } as Context["agents"]);
+		await agentEvents(root, agent).serial("agent/created", {
+			source: "startup",
+		});
+		const agentKey = scopeOf(agent.ctx);
+		if (!agentKey) throw new Error("The agent scope is absent.");
+		const oldTool = root.tools.get("memory_note", agentKey);
+		expect(oldTool).toBeDefined();
+		await hostFiber.dispose();
+		expect(root.tools.get("memory_note", agentKey)).toBeUndefined();
+		const nextHost = root.plugin(host, {});
+		await nextHost;
+		await vi.waitFor(() => {
+			expect(root.memlens.forAgent(agent).config.budget.here).toBe(7);
+			expect(root.tools.get("memory_note", agentKey)).toBeDefined();
+		});
+		const tool = root.tools.get("memory_note", agentKey);
+		expect(tool).not.toBe(oldTool);
+		const result = await tool?.execute(
+			{ body: "A note after restart." },
+			{} as Parameters<NonNullable<typeof tool>["execute"]>[1],
+		);
+		expect(result).toMatchObject({ state: "live" });
+		const find = root.tools.get("memory_find", agentKey);
+		if (!find) throw new Error("The find tool is absent.");
+		const found = await find.execute(
+			{ query: "restart" },
+			{} as Parameters<typeof find.execute>[1],
+		);
+		expect(found).toMatchObject({ hits: [{ body: "A note after restart." }] });
+		root.tools.setExecutor({
+			describe: () => ({ schemas: [] }),
+			execute: async () => ({
+				results: [],
+				additionalContexts: [],
+				concluded: false,
+			}),
+		});
+		const assembly = await root.systemPrompt.assemble({ scope: agentKey });
+		expect(
+			renderContextSections(assembly).map((section) => section.name),
+		).toContain("memlens");
+	});
+
+	it("restores an off-mode child after its preset registers again", async () => {
+		const { root, hostFiber } = await composition(
+			`${DEFAULT_CONFIG_TOML}\n[profile.off]\nscopes = ["*"]\nsubagents = "off"\n`,
+		);
+		const key = {};
+		const scope = createScope(root, key);
+		await scope.ctx.plugin(preset, { profile: "off" });
+		const agent = subject(root, key);
+		Object.assign(agent.session.header, { origin: "subagent" });
+		root.provide("agents", { list: () => [agent] } as Context["agents"]);
+		await agentEvents(root, agent).serial("agent/created", {
+			source: "startup",
+		});
+		expect(root.tools.get("memory_find", scopeOf(agent.ctx))).toBeUndefined();
+		await hostFiber.dispose();
+		await root.plugin(host, {});
+		expect(root.memlens.forAgent(agent).config.profile.subagents).toBe("off");
+		expect(root.tools.get("memory_find", scopeOf(agent.ctx))).toBeUndefined();
+	});
+
+	it("removes agent memory effects on each host restart", async () => {
+		const { root, hostFiber } = await composition();
+		const agent = subject(root);
+		root.provide("agents", { list: () => [agent] } as Context["agents"]);
+		await agentEvents(root, agent).serial("agent/created", {
+			source: "startup",
+		});
+		let fiber = hostFiber;
+		for (let index = 0; index < 3; index += 1) {
+			await fiber.dispose();
+			expect(
+				agent.ctx.fiber
+					.getEffects()
+					.filter((effect) => effect.label === "memlens.agent-memory"),
+			).toHaveLength(0);
+			fiber = root.plugin(host, {});
+			await fiber;
+			expect(
+				agent.ctx.fiber
+					.getEffects()
+					.filter((effect) => effect.label === "memlens.agent-memory"),
+			).toHaveLength(1);
+		}
+	});
+
+	it("reports a child proposal only when the child ends", async () => {
+		const { root, hostFiber } = await composition();
+		const child = subject(root);
+		Object.assign(child.session.header, {
+			origin: "subagent",
+			parentSession: "parent",
+		});
+		const inject = vi.fn();
+		root.provide("agents", {
+			list: () => [child],
+			get: () => ({ inject }),
+		} as unknown as Context["agents"]);
+		await agentEvents(root, child).serial("agent/created", {
+			source: "startup",
+		});
+		const tool = root.tools.get("memory_note", scopeOf(child.ctx));
+		if (!tool) throw new Error("The note tool is absent.");
+		expect(
+			await tool.execute(
+				{ body: "Child proposal." },
+				{} as Parameters<typeof tool.execute>[1],
+			),
+		).toMatchObject({ proposed: true });
+		await hostFiber.dispose();
+		expect(inject).not.toHaveBeenCalled();
+		await root.plugin(host, {});
+		await child.ctx.fiber.dispose();
+		expect(inject).toHaveBeenCalledTimes(1);
 	});
 
 	it("closes the store once when the host ends", async () => {
