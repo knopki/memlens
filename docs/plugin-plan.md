@@ -10,14 +10,18 @@ The package `@memlens/dsh-plugin` does all of this today:
 - The host entry and the `./preset` entry resolve the configuration per agent.
 - The plugin gives each agent one memory context, the six memory tools, the nudge, and the
   background compaction worker.
-- The Web page gets the tab `Memory` from the slot `conversation.view`. The entry id is `memlens`.
-- `memlens ui` and the tab share one component layer in `packages/ui`. A component holds no style,
-  no transport, and no address. Each shell supplies its own.
+- The Web page gets the page `Memory` from the slot `main` under the panel id `memlens`, and the
+  left side panel gets the row of the slot `sidebar.panellist` that opens it.
+- The page reads each profile of the base file. It belongs to no session.
+- The session tab `Memory` in the slot `conversation.view` shows the saved slice of the session
+  scope, the profile name, and the available scopes.
+- `memlens ui` and the plugin share one component layer in `packages/ui`. A component holds no
+  style, no transport, and no address. Each shell supplies its own.
 - The picture [demo/plugin-tab.png](demo/plugin-tab.png) shows the tab in an isolated profile.
 
-The tab reads and writes through the harness Remote service. The service resolves the session
-profile and scope through the plugin service. The Remote serves console reads, note actions, and
-host runtime state.
+The two surfaces read and write through the harness Remote service. A session input resolves the
+profile and the scope of that session, and a profile input resolves one profile of the base file.
+The Remote serves console reads, note actions, and host runtime state.
 
 ## Why the route was the wrong transport
 
