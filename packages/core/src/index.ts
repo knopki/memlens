@@ -21,6 +21,7 @@ export {
 	repoName,
 	type ScopeSubject,
 	visibleScopes,
+	withActiveScope,
 } from "./domain/active-scope.js";
 export {
 	type ParsedAddress,

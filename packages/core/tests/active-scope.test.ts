@@ -10,6 +10,7 @@ import {
 	repoName,
 	type ScopeSubject,
 	visibleScopes,
+	withActiveScope,
 } from "../src/domain/active-scope.js";
 import type { Rule, ScopeDefault } from "../src/domain/config-types.js";
 
@@ -127,5 +128,32 @@ describe("visibleScopes", () => {
 		expect(visibleScopes(["project:acme/*"], KNOWN)).toEqual([
 			"project:acme/x",
 		]);
+	});
+});
+
+describe("withActiveScope", () => {
+	it("appends the literal key when no glob matches", () => {
+		expect(withActiveScope(["user:notes"], "project:memlens")).toEqual([
+			"user:notes",
+			"project:memlens",
+		]);
+	});
+
+	it("adds no entry when a glob matches the key", () => {
+		expect(withActiveScope(["project:*"], "project:memlens")).toEqual([
+			"project:*",
+		]);
+	});
+
+	it("adds no entry when the literal key is present", () => {
+		expect(withActiveScope(["project:memlens"], "project:memlens")).toEqual([
+			"project:memlens",
+		]);
+	});
+
+	it("keeps the given order and adds the key last", () => {
+		expect(
+			withActiveScope(["*:prefs", "project:other/*"], "project:memlens"),
+		).toEqual(["*:prefs", "project:other/*", "project:memlens"]);
 	});
 });

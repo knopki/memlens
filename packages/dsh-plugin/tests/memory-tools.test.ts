@@ -530,24 +530,42 @@ describe("memory tools of one agent", () => {
 	});
 
 	it("refuses a foreign scope on each read tool", async () => {
-		const record = seed("user:notes", "The hidden scope record.");
+		const record = seed("global:prefs", "The hidden scope record.");
 		const narrow = subject("narrow", "narrow");
 
 		await expect(
 			call(narrow, "memory_find", {
 				query: "record",
-				scopes: ["user:notes"],
+				scopes: ["global:prefs"],
 			}),
 		).rejects.toThrow(/not visible/);
 		await expect(
-			call(narrow, "memory_open", { target: `user:notes#${record.pos}` }),
+			call(narrow, "memory_open", { target: `global:prefs#${record.pos}` }),
 		).rejects.toThrow(/not visible/);
 		await expect(
-			call(narrow, "memory_map", { scope: "user:notes" }),
+			call(narrow, "memory_map", { scope: "global:prefs" }),
 		).rejects.toThrow(/not visible/);
 		await expect(
-			call(narrow, "memory_review", { scope: "user:notes" }),
+			call(narrow, "memory_review", { scope: "global:prefs" }),
 		).rejects.toThrow(/not visible/);
+	});
+
+	it("joins the active scope into a profile that lists it not", async () => {
+		const narrow = subject("narrow", "narrow");
+
+		const answer = (await call(narrow, "memory_note", {
+			body: "The note of the session scope.",
+		})) as { addr: string; state: string };
+
+		expect(answer.addr).toMatch(/^user:notes#/);
+		expect(answer.state).toBe("live");
+		expect(pending(host.store)).toHaveLength(0);
+		const map = (await call(narrow, "memory_map", {})) as {
+			lines: { keys: string[] }[];
+		};
+		expect(map.lines.some((line) => line.keys.includes("user:notes"))).toBe(
+			true,
+		);
 	});
 
 	it("hides a record and gives the empty object", async () => {
@@ -573,11 +591,11 @@ describe("memory tools of one agent", () => {
 	});
 
 	it("proposes a hide for a foreign scope and gives the empty object", async () => {
-		const record = seed("user:notes", "The foreign record.");
+		const record = seed("global:prefs", "The foreign record.");
 		const narrow = subject("narrow", "narrow");
 
 		const answer = await call(narrow, "memory_forget", {
-			targets: [record.pos],
+			targets: [`global:prefs#${record.pos}`],
 			reason: "The note is wrong.",
 		});
 
@@ -636,12 +654,12 @@ describe("memory tools of one agent", () => {
 	});
 
 	it("refuses a review target outside the profile", async () => {
-		const record = seed("user:notes", "The foreign review record.");
+		const record = seed("global:prefs", "The foreign review record.");
 		const narrow = subject("narrow", "narrow");
 
 		await expect(
 			call(narrow, "memory_review", {
-				reviewed: [`user:notes#${record.pos}`],
+				reviewed: [`global:prefs#${record.pos}`],
 			}),
 		).rejects.toThrow(/not visible/);
 	});
@@ -751,7 +769,10 @@ describe("memory tools of one agent", () => {
 		const live = (await call(main, "memory_note", { body })) as {
 			state: string;
 		};
-		const proposed = (await call(narrow, "memory_note", { body })) as {
+		const proposed = (await call(narrow, "memory_note", {
+			body,
+			scope: "global:prefs",
+		})) as {
 			proposed?: boolean;
 		};
 
@@ -823,14 +844,14 @@ describe("memory tools of one agent", () => {
 	});
 
 	it("refuses a supersede target outside the profile", async () => {
-		const record = seed("user:notes", "The foreign target.");
+		const record = seed("global:prefs", "The foreign target.");
 		const narrow = subject("narrow", "narrow");
 
 		await expect(
 			call(narrow, "memory_note", {
 				body: "The note of the profile scope.",
 				scope: "project:memlens",
-				supersedes: [`user:notes#${record.pos}`],
+				supersedes: [`global:prefs#${record.pos}`],
 			}),
 		).rejects.toThrow(/not visible/);
 		expect(pending(host.store)).toHaveLength(0);

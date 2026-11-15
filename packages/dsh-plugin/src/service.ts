@@ -33,6 +33,7 @@ import {
 	resolveConfig,
 	type ScopeKey,
 	Store,
+	withActiveScope,
 	xdgDirs,
 } from "@memlens/core";
 import {
@@ -90,6 +91,27 @@ export interface AgentMemory {
 	readonly config: ResolvedConfig;
 	readonly scope: ScopeKey;
 }
+
+// #region FUNC_withSessionScope
+/**
+ * @purpose Join the active scope key into the resolved profile of one agent, so the session works in
+ * its own scope.
+ * @invariants The join adds the literal key of the active scope when no profile glob matches it.
+ * @invariants The join writes no configuration file and applies to each configuration read.
+ * @param config - The resolved layers of the agent.
+ * @param scope - The active scope key of the agent.
+ * @returns The resolved configuration with the joined scope list.
+ */
+function withSessionScope(
+	config: ResolvedConfig,
+	scope: ScopeKey,
+): ResolvedConfig {
+	const scopes = withActiveScope(config.profile.scopes, scope);
+	return scopes.length === config.profile.scopes.length
+		? config
+		: { ...config, profile: { ...config.profile, scopes } };
+}
+// #endregion FUNC_withSessionScope
 
 declare module "@deepseek-ai/cordis" {
 	interface Context {
@@ -253,6 +275,7 @@ export class Memlens extends Service {
 	// #region METHOD_forAgent
 	/**
 	 * @purpose Resolve shared memory inputs once for each agent without changing another agent's configuration.
+	 * @invariants Each configuration read joins the active scope key into the scope list of the profile.
 	 * @param agent - The live agent with its preset scope and session directory.
 	 * @param workspace - The workspace id, when the host has a workspace registry.
 	 * @returns The store, resolved configuration, and active scope of the agent.
@@ -263,16 +286,17 @@ export class Memlens extends Service {
 		const cached = this.memories.get(agent);
 		if (cached) return cached;
 		const cwd = agent.session.header.cwd;
+		const scope = cwd
+			? pluginActiveScope(this.base, cwd, workspace)
+			: activeScope(this.base.scope_default, { workspace: workspace ?? null })
+					.key;
 		const host = this;
 		const memory: AgentMemory = {
 			store: this.store,
 			get config() {
-				return host.configFor(agent);
+				return withSessionScope(host.configFor(agent), scope);
 			},
-			scope: cwd
-				? pluginActiveScope(this.base, cwd, workspace)
-				: activeScope(this.base.scope_default, { workspace: workspace ?? null })
-						.key,
+			scope,
 		};
 		this.memories.set(agent, memory);
 		agent.ctx.effect(() => () => this.memories.delete(agent));

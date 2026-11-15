@@ -6,16 +6,19 @@
  * @purpose Resolve one active scope key for one working context, so each session writes the scope
  * that its directory and workspace name.
  * @scope
- *  - Rule matching, the repository name of a remote, and the visible scope list of a profile.
+ *  - Rule matching, the repository name of a remote, the visible scope list of a profile, and the
+ *    join of the active scope into the globs of a profile.
  *  - NOT: reading the git configuration, the file system, or the harness state. The caller collects
  *    the subject.
  * @invariants
  *  - Each match gives a valid scope key, or falls through to the next rule or the default.
  *  - The visible list holds only scope keys that a profile glob matches, in the given order.
+ *  - The join adds the literal key of the active scope when no profile glob matches it.
  * @usecases
  *  - Active scope: caller => gives the rules and the subject => gets the key and the rule index
+ *  - Session scopes: caller => gives the profile globs and the active key => gets the joined globs
  * @dependencies USES API: config.ts globMatches, config-types.ts, scope.ts
- * @keywords active, scope, rule, git_remote, path, workspace, repo, visible
+ * @keywords active, scope, rule, git_remote, path, workspace, repo, visible, join
  * #endregion moduleContract
  */
 
@@ -90,6 +93,28 @@ export function activeScope(
 	return { key: scopeDefault.default, rule: null };
 }
 // #endregion FUNC_activeScope
+
+// #region FUNC_withActiveScope
+/**
+ * @purpose Add the active scope key to the globs of one profile, so a session works in its own scope.
+ * @invariants The result holds the given globs, and a new last entry with the literal key.
+ * @invariants A glob that matches the key gives the given globs with no new entry.
+ * @param globs - The scope globs of the profile.
+ * @param active - The active scope key of the session.
+ * @returns The joined globs of the session.
+ */
+export function withActiveScope(
+	globs: readonly Glob[],
+	active: ScopeKey,
+): Glob[] {
+	if (globs.some((glob) => globMatches(glob, active))) return [...globs];
+	debug("Active scope joined the profile", {
+		event: "active-scope-join",
+		scope: active,
+	});
+	return [...globs, active];
+}
+// #endregion FUNC_withActiveScope
 
 // #region FUNC_visibleScopes
 /**
