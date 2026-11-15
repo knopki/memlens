@@ -24,10 +24,7 @@ The transform branch of each schema checks the raw value with the core rule and 
 The declared fields stay permissive, so no row value blocks a session. The service re-reads the merged
 row with the same rule.
 
-The host checks the model context when an agent already has a selected model.
-An agent without a selected model receives the check at the start of its first model stream.
-The `llm/stream` hook checks only requests that carry the agent loop marker. Auxiliary model calls keep their own context limits.
-This boundary retains the user message before a failed check. A route change receives a new check. A model below 65 536 tokens, or without context metadata, fails the check.
+The plugin checks no model metadata. A model that holds no memory is a configuration error of the user.
 
 ## Alternatives
 

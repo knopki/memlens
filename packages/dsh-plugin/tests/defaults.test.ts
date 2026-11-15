@@ -23,18 +23,14 @@ afterEach(async () => {
 	vi.unstubAllEnvs();
 });
 
-// #region CLASS_MetadataLlm
-/** @purpose Supply exact model metadata without a provider request. */
-class MetadataLlm extends Service {
+// #region CLASS_WorkerLlm
+/** @purpose Supply the LLM service name without a model call. */
+class WorkerLlm extends Service {
 	constructor(ctx: Context) {
 		super(ctx, "llm");
 	}
-
-	async resolveModelInfo(provider: string, id: string) {
-		return { provider, id, name: id, context: { contextWindow: 131_072 } };
-	}
 }
-// #endregion CLASS_MetadataLlm
+// #endregion CLASS_WorkerLlm
 
 // #region FUNC_composition
 /**
@@ -53,7 +49,7 @@ async function composition(baseText?: string) {
 	vi.stubEnv("MEMLENS_STORE", undefined);
 	const root = new Context();
 	roots.push(root);
-	await root.plugin(MetadataLlm);
+	await root.plugin(WorkerLlm);
 	return { root, directory };
 }
 // #endregion FUNC_composition

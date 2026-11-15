@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
- * @purpose Check preset isolation, store ownership, and model validation through actual Cordis plugins.
- * @scope The host service and agent creation event with controlled model metadata.
+ * @purpose Check preset isolation and store ownership through actual Cordis plugins.
+ * @scope The host service and the agent creation event.
  * @invariants Tests use temporary XDG directories and make no model call.
  * #endregion moduleContract
  */
@@ -11,7 +11,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Context, Service } from "@deepseek-ai/cordis";
 import { type Agent, agentEvents } from "@deepseek-ai/dsh-agent";
-import { markAgentLoopRequest } from "@deepseek-ai/dsh-llm";
 import { createScope } from "@deepseek-ai/dsh-scope";
 import { SystemPrompt } from "@deepseek-ai/dsh-system-prompt";
 import { ToolsService } from "@deepseek-ai/dsh-tools";
@@ -30,30 +29,14 @@ afterEach(async () => {
 	vi.restoreAllMocks();
 });
 
-// #region CLASS_MetadataLlm
-/** @purpose Supply exact model metadata without a provider request. */
-class MetadataLlm extends Service {
-	capacity: number | undefined = 131_072;
-
+// #region CLASS_WorkerLlm
+/** @purpose Supply the LLM service name without a model call. */
+class WorkerLlm extends Service {
 	constructor(ctx: Context) {
 		super(ctx, "llm");
 	}
-
-	// #region METHOD_resolveModelInfo
-	/** @purpose Return controlled model capacity without a provider request. */
-	async resolveModelInfo(provider: string, id: string) {
-		return {
-			provider,
-			id,
-			name: id,
-			...(this.capacity === undefined
-				? {}
-				: { context: { contextWindow: this.capacity } }),
-		};
-	}
-	// #endregion METHOD_resolveModelInfo
 }
-// #endregion CLASS_MetadataLlm
+// #endregion CLASS_WorkerLlm
 
 // #region FUNC_composition
 /** @purpose Start the real host plugin under temporary configuration roots. */
@@ -70,7 +53,7 @@ async function composition(baseText?: string) {
 	roots.push(root);
 	new SystemPrompt(root, {});
 	root.plugin(ToolsService, {});
-	await root.plugin(MetadataLlm);
+	await root.plugin(WorkerLlm);
 	await root.plugin(host, {});
 	return { root, directory };
 }
@@ -93,33 +76,6 @@ function subject(root: Context, parent?: object): Agent {
 	return agent;
 }
 // #endregion FUNC_subject
-
-// #region FUNC_modelStream
-/** @purpose Exercise the model guard at the actual LLM middleware boundary. */
-async function modelStream(
-	root: Context,
-	agent: Agent,
-	model = "large",
-	marked = true,
-) {
-	const options = {
-		provider: "test",
-		model,
-		messages: [],
-		sessionId: agent.id,
-		signal: new AbortController().signal,
-	};
-	const stream = root.waterfall(
-		root.llm,
-		"llm/stream",
-		marked ? markAgentLoopRequest(options) : options,
-		async function* () {},
-	);
-	const chunks: unknown[] = [];
-	for await (const chunk of stream) chunks.push(chunk);
-	return chunks;
-}
-// #endregion FUNC_modelStream
 
 describe("Memlens host service", () => {
 	it("resolves preset settings without opening a second store", async () => {
@@ -232,7 +188,6 @@ describe("Memlens host service", () => {
 		root.provide("workspaceRegistry", {
 			resolveByPath: lookup,
 		} as unknown as Context["workspaceRegistry"]);
-		(root.llm as unknown as MetadataLlm).capacity = undefined;
 		const agent = subject(root);
 		Object.assign(agent, {
 			session: {
@@ -244,54 +199,5 @@ describe("Memlens host service", () => {
 			source: "startup",
 		});
 		expect(lookup).not.toHaveBeenCalled();
-	});
-
-	it("rejects small models at agent creation", async () => {
-		const { root } = await composition();
-		(root.llm as unknown as MetadataLlm).capacity = 32_768;
-		await expect(
-			agentEvents(root, subject(root)).serial("agent/created", {
-				source: "startup",
-			}),
-		).rejects.toThrow(/65536.*32768/);
-	});
-
-	it("checks a model selected after creation and checks a later route change", async () => {
-		const { root } = await composition();
-		const agent = subject(root);
-		root.provide("agents", {
-			get: () => agent,
-		} as unknown as Context["agents"]);
-		Object.assign(agent, { model: { current: () => undefined } });
-		await agentEvents(root, agent).serial("agent/created", {
-			source: "startup",
-		});
-		expect(await modelStream(root, agent)).toEqual([]);
-		(root.llm as unknown as MetadataLlm).capacity = undefined;
-		expect(await modelStream(root, agent)).toEqual([]);
-		(root.llm as unknown as MetadataLlm).capacity = 32_768;
-		await expect(modelStream(root, agent, "small")).rejects.toThrow(
-			/65536.*32768/,
-		);
-	});
-
-	it("leaves auxiliary model calls outside the session context guard", async () => {
-		const { root } = await composition();
-		const agent = subject(root);
-		root.provide("agents", {
-			get: () => agent,
-		} as unknown as Context["agents"]);
-		(root.llm as unknown as MetadataLlm).capacity = undefined;
-		expect(await modelStream(root, agent, "small", false)).toEqual([]);
-	});
-
-	it("rejects missing model context metadata", async () => {
-		const { root } = await composition();
-		(root.llm as unknown as MetadataLlm).capacity = undefined;
-		await expect(
-			agentEvents(root, subject(root)).serial("agent/created", {
-				source: "startup",
-			}),
-		).rejects.toThrow(/context size.*absent/);
 	});
 });

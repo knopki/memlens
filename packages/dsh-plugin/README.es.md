@@ -73,9 +73,6 @@ después del archivo base.
 Los ajustes se combinan en este orden: el preajuste, el parche del plugin, el perfil base. La clave
 `profile` del preajuste selecciona el nombre del perfil.
 
-El modelo de la sesión necesita al menos 65 536 tokens de contexto. El plugin detiene una sesión con
-un modelo más pequeño.
-
 Los metadatos de visualización están en `locale/<language>.json`. El icono es `icon.svg`.
 
 ## Compilar y probar

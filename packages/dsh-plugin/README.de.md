@@ -72,9 +72,6 @@ Basisdatei.
 Die Einstellungen werden in dieser Reihenfolge zusammengeführt: Preset, Plugin-Patch, Basisprofil.
 Der Preset-Schlüssel `profile` wählt den Profilnamen.
 
-Das Sitzungsmodell braucht mindestens 65 536 Kontext-Tokens. Das Plugin stoppt eine Sitzung mit
-einem kleineren Modell.
-
 Die Anzeigemetadaten liegen in `locale/<language>.json`. Das Symbol ist `icon.svg`.
 
 ## Bauen und testen

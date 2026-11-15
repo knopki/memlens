@@ -9,6 +9,7 @@ replaced it. The owner column in those sections names the live contract, or the 
 
 | ID | Requirement | Type | Source | Replaced by |
 | --- | --- | --- | --- | --- |
+| REQ-445 | The model of a session has a context of 65 536 tokens at least. | C | S-083 | The customer removed the model context check on 2026-11-15. The plugin checks no model metadata. A model that holds no memory is a configuration error of the user. |
 | REQ-371 | The answer of a `forget` to a record of a scope outside `scopes` gives `hidden: 0`. | FR | S-072 | The customer removed all forget counters on 2026-11-14. The revised [REQ-371](02-requirements.md) defines the empty result. |
 | REQ-307 | A second write with the same `idem` creates no record. | FR | S-070 | [0016 Write boundary](../adr/0016-write-boundary.md) removes idem. |
 | REQ-368 | The tool call sets the `idem` of a write. | FR | S-071 | [0016 Write boundary](../adr/0016-write-boundary.md) removes idem. |

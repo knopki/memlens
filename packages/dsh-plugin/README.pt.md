@@ -72,9 +72,6 @@ do arquivo base.
 As configurações são mescladas nesta ordem: a predefinição, o patch do plugin, o perfil base. A chave
 `profile` da predefinição escolhe o nome do perfil.
 
-O modelo da sessão precisa de pelo menos 65 536 tokens de contexto. O plugin para uma sessão com um
-modelo menor.
-
 Os metadados de exibição estão em `locale/<language>.json`. O ícone é `icon.svg`.
 
 ## Compilar e testar

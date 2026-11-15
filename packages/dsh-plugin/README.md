@@ -63,15 +63,14 @@ selects the profile `default`.
 
 The plugin reads the base file `$XDG_CONFIG_HOME/memlens/config.toml`. The plugin does not write this
 file. If the file is absent, the built-in fallback applies: the profile `default`, the scopes `*`,
-the budgets 20 and 10, and the scope `user:notes`.
+the budgets 20 and 10, and the scope `user:notes`. An absent section of the file gives its default
+value. A file with an invalid value degrades to the built-in fallback. No configuration state
+blocks a session.
 
 The store path comes from the plugin config first, then from `MEMLENS_STORE`, then from the base file.
 
 The preset overrides the plugin patch. The plugin patch overrides the base profile.
 The preset key `profile` selects the profile name.
-
-The session model needs at least 65 536 context tokens. The plugin stops a session with a smaller
-model.
 
 Display metadata is in `locale/<language>.json`. The icon is `icon.svg`.
 

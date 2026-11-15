@@ -73,9 +73,6 @@ fichier de base.
 Les réglages sont fusionnés dans cet ordre : le préréglage, le patch du plugin, le profil de base. La
 clé `profile` du préréglage choisit le nom du profil.
 
-Le modèle de la session a besoin d'au moins 65 536 jetons de contexte. Le plugin arrête une session
-avec un modèle plus petit.
-
 Les métadonnées d'affichage sont dans `locale/<language>.json`. L'icône est `icon.svg`.
 
 ## Compilation et tests

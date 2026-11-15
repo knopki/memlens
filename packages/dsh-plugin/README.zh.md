@@ -57,8 +57,6 @@ memlens 的 DeepSeek Harness 插件。
 
 设置按这个顺序合并：预设、插件补丁、基础配置文件。预设键 `profile` 选择配置文件名。
 
-会话模型至少需要 65 536 个上下文令牌。插件会停止模型更小的会话。
-
 展示元数据在 `locale/<language>.json` 中。图标是 `icon.svg`。
 
 ## 构建与测试

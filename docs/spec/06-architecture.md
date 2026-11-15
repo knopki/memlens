@@ -127,7 +127,6 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
 | `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 characters.                   |
 | `cacheTtl`       | `deepseek/*` 2 hours, `anthropic/*` 5 minutes, another model 1 hour        | An idle time above the TTL gives a new snapshot.                 |
-| Context          | 65 536 tokens at least                                                    | The slice and the reserve fit.                                   |
 
 ## Store
 
