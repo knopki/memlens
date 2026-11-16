@@ -147,6 +147,11 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 		]);
 	const compaction = runtime.compaction;
 	if (compaction !== undefined) {
+		rows.push([t("modelRoute"), `${compaction.provider}/${compaction.model}`]);
+		if (compaction.lastRunAt !== null)
+			rows.push([t("lastRun"), compaction.lastRunAt]);
+		if (compaction.nextRunAt !== null)
+			rows.push([t("nextRun"), compaction.nextRunAt]);
 		rows.push([t("attempts"), String(compaction.attempts)]);
 		rows.push([t("activeBuilds"), String(compaction.active)]);
 		rows.push([
@@ -154,6 +159,9 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 			t("seconds", { count: Math.round(compaction.backoffMs / 1000) }),
 		]);
 		rows.push([t("failures"), String(compaction.failures)]);
+		rows.push([t("dirtyRanges"), String(compaction.dirty)]);
+		if (compaction.lastError !== null)
+			rows.push([t("lastError"), compaction.lastError]);
 	}
 	return (
 		<Panel title={t("runtime")}>

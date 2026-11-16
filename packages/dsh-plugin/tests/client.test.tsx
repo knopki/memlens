@@ -198,6 +198,11 @@ function answerOf(method: string): unknown {
 				backoff: 5,
 				failures: 0,
 				dirty: 0,
+				provider: "stub",
+				model: "stub-model",
+				lastRunAt: null,
+				nextRunAt: "2026-11-02T00:00:00Z",
+				lastError: null,
 			},
 		};
 	}
@@ -686,6 +691,11 @@ describe("profile console", () => {
 							backoff: 5,
 							failures: 0,
 							dirty: 1,
+							provider: "stub",
+							model: "stub-model",
+							lastRunAt: null,
+							nextRunAt: null,
+							lastError: null,
 						},
 					},
 				}),

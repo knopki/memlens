@@ -34,6 +34,7 @@ import {
 	type Store,
 	type StoreConfig,
 	sweep,
+	toIso,
 } from "@memlens/core";
 
 const debug = debuglog("memlens:plugin:worker");
@@ -63,6 +64,21 @@ export interface WorkerStatus {
 
 	/** The count of dirty merge ranges over each live scope. */
 	readonly dirty: number;
+
+	/** The provider of the model route of the current inputs. */
+	readonly provider: string;
+
+	/** The model of the route of the current inputs. */
+	readonly model: string;
+
+	/** The start time of the last pass, or null before the first pass. */
+	readonly lastRunAt: string | null;
+
+	/** The time of the next timer fire, or null when a pass runs or no timer waits. */
+	readonly nextRunAt: string | null;
+
+	/** The error text of the last failed call or pass, or null after a clean pass. */
+	readonly lastError: string | null;
 }
 // #endregion INTERFACE_WorkerStatus
 
@@ -107,6 +123,8 @@ export class MemoryWorker {
 	private attempts = 0;
 	private inFlight = 0;
 	private retryAt = 0;
+	private lastRunAt = 0;
+	private lastError: string | null = null;
 
 	constructor(
 		ctx: Context,
@@ -147,12 +165,23 @@ export class MemoryWorker {
 			this.retryAt === 0
 				? 0
 				: Math.max(0, Math.ceil((this.retryAt - Date.now()) / 1000));
+		const nextAt =
+			this.disposed || this.running || this.timer === null
+				? null
+				: this.retryAt > 0
+					? this.retryAt
+					: this.lastActivity + this.inputs.store.idle * 1000;
 		return {
 			attempts: this.attempts,
 			active: this.inFlight,
 			backoff,
 			failures: this.failures,
 			dirty: this.dirtyCount(),
+			provider: this.inputs.compaction.provider,
+			model: this.inputs.compaction.model,
+			lastRunAt: this.lastRunAt === 0 ? null : toIso(this.lastRunAt),
+			nextRunAt: nextAt === null ? null : toIso(nextAt),
+			lastError: this.lastError,
 		};
 	}
 	// #endregion METHOD_status
@@ -201,7 +230,11 @@ export class MemoryWorker {
 					return;
 				}
 				if (this.dirtyCount() > 0) void this.run();
-				else this.scheduleIdle();
+				else {
+					// An empty check counts as activity, so the next wait is one full idle time.
+					this.lastActivity = Date.now();
+					this.scheduleIdle();
+				}
 			},
 			Math.max(waitMs, 0),
 		);
@@ -221,6 +254,7 @@ export class MemoryWorker {
 		if (this.running || this.disposed) return;
 		this.running = true;
 		this.attempts += 1;
+		this.lastRunAt = Date.now();
 		const inputs = this.inputs;
 		// The pass uses the call limit of its start. The window keeps the calls of the hour.
 		this.rate.setLimit(inputs.compaction.maxCallsPerHour);
@@ -236,10 +270,12 @@ export class MemoryWorker {
 				failed += result.failed;
 			}
 			this.failures = failed > 0 ? this.failures + 1 : 0;
+			if (failed === 0) this.lastError = null;
 			debug("Pass complete", { event: "pass", built, failed });
 			if (!this.disposed) this.paceNext(failed);
 		} catch (error) {
 			this.failures += 1;
+			this.lastError = String(error);
 			debug("Pass failed", { event: "pass-error", error: String(error) });
 			if (!this.disposed) this.paceNext(1);
 		} finally {
@@ -267,8 +303,11 @@ export class MemoryWorker {
 	/** The model call of one merge task, with one rate slot and the route of the given inputs. */
 	private modelFor(inputs: WorkerInputs): MergeModel {
 		return async (system, task) => {
-			if (!this.rate.tryAcquire(Date.now()))
-				throw new Error("The compaction call limit of one hour is reached.");
+			if (!this.rate.tryAcquire(Date.now())) {
+				const denial = "The compaction call limit of one hour is reached.";
+				this.lastError = denial;
+				throw new Error(denial);
+			}
 			this.inFlight += 1;
 			try {
 				let text = "";
@@ -291,6 +330,9 @@ export class MemoryWorker {
 					if (chunk.type === "text-delta") text += chunk.text;
 				}
 				return text;
+			} catch (error) {
+				this.lastError = String(error);
+				throw error;
 			} finally {
 				this.inFlight -= 1;
 			}

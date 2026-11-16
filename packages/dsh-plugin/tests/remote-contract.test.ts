@@ -199,6 +199,11 @@ const worker = {
 		backoff: 0,
 		failures: 0,
 		dirty: 1,
+		provider: "test",
+		model: "merge-model",
+		lastRunAt: null,
+		nextRunAt: null,
+		lastError: null,
 	}),
 } as unknown as MemoryWorker;
 

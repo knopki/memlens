@@ -78,6 +78,12 @@ interface MutableRuntime {
 		active: number;
 		backoffMs: number;
 		failures: number;
+		dirty: number;
+		provider: string;
+		model: string;
+		lastRunAt: string | null;
+		nextRunAt: string | null;
+		lastError: string | null;
 	};
 }
 
@@ -277,6 +283,12 @@ async function statusOf(
 		active: value.compaction.active,
 		backoffMs: value.compaction.backoff * 1000,
 		failures: value.compaction.failures,
+		dirty: value.compaction.dirty,
+		provider: value.compaction.provider,
+		model: value.compaction.model,
+		lastRunAt: value.compaction.lastRunAt,
+		nextRunAt: value.compaction.nextRunAt,
+		lastError: value.compaction.lastError,
 	};
 	return runtime;
 }

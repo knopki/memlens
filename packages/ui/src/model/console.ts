@@ -201,6 +201,12 @@ export interface ConsoleRuntime {
 		readonly active: number;
 		readonly backoffMs: number;
 		readonly failures: number;
+		readonly dirty: number;
+		readonly provider: string;
+		readonly model: string;
+		readonly lastRunAt: string | null;
+		readonly nextRunAt: string | null;
+		readonly lastError: string | null;
 	};
 }
 // #endregion INTERFACE_ConsoleRuntime

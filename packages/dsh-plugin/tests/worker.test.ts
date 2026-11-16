@@ -132,6 +132,50 @@ describe("MemoryWorker", () => {
 		expect(llm.log.length).toBeGreaterThan(0);
 	});
 
+	it("states the route, the times, and the last error of the status", async () => {
+		vi.useFakeTimers();
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new StubLlm();
+		llm.fail = true;
+		const worker = new MemoryWorker(root, store, inputs(), llm);
+		const before = worker.status();
+		expect(before.provider).toBe("test");
+		expect(before.model).toBe("merge-model");
+		expect(before.lastRunAt).toBeNull();
+		expect(before.lastError).toBeNull();
+		expect(before.nextRunAt).not.toBeNull();
+		worker.onMemoryTool("memory_note");
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(worker.status().attempts).toBe(1);
+		expect(worker.status().lastRunAt).not.toBeNull();
+		expect(worker.status().lastError).toContain("stub refusal");
+		llm.fail = false;
+		await vi.advanceTimersByTimeAsync(10_000);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(worker.status().lastError).toBeNull();
+	});
+
+	it("waits one full idle time after an empty idle check", async () => {
+		vi.useFakeTimers();
+		const store = new Store(mkdtempSync(join(tmpdir(), "memlens-worker-")));
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new StubLlm();
+		const worker = new MemoryWorker(root, store, inputs(), llm);
+		await vi.advanceTimersByTimeAsync(301_000);
+		expect(worker.status().attempts).toBe(0);
+		const next = worker.status().nextRunAt;
+		expect(next).not.toBeNull();
+		expect(Date.parse(next ?? "") - Date.now()).toBeGreaterThanOrEqual(290_000);
+		await vi.advanceTimersByTimeAsync(5_000);
+		expect(worker.status().attempts).toBe(0);
+	});
+
 	it("schedules one retry after a failed pass", async () => {
 		vi.useFakeTimers();
 		const store = dirtyStore();

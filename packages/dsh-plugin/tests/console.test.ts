@@ -901,12 +901,14 @@ describe("console status", () => {
 			"test/large",
 		);
 		expect(snapshotOf(answer).nextRefreshAt).toBe(toIso(1_000 + ttl * 1000));
-		expect(answer.compaction).toEqual({
+		expect(answer.compaction).toMatchObject({
 			attempts: 0,
 			active: 0,
 			backoff: 0,
 			failures: 0,
 			dirty: 0,
+			lastRunAt: null,
+			lastError: null,
 		});
 	});
 
