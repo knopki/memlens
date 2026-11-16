@@ -299,11 +299,14 @@ export class Memlens extends Service {
 
 	// #region METHOD_profiles
 	/**
-	 * @purpose List the profile names of the base file, so the console offers each profile.
-	 * @invariants The list follows the base file order.
+	 * @purpose List the profile names that the console offers, so the switcher always holds one name.
+	 * @invariants The list follows the base file order. The list ends with the default profile name
+	 *   when the base file does not name it.
 	 */
 	profiles(): string[] {
-		return Object.keys(this.base.profile);
+		const names = Object.keys(this.base.profile);
+		const fallback = this.resolved.defaultProfile;
+		return names.includes(fallback) ? names : [...names, fallback];
 	}
 	// #endregion METHOD_profiles
 
@@ -311,17 +314,16 @@ export class Memlens extends Service {
 	/**
 	 * @purpose Resolve the shared memory inputs of one named profile, so the console reads and
 	 *   writes that profile with no agent.
-	 * @invariants An unknown profile gives a Data error, as the CLI gives.
+	 * @invariants An absent profile uses the default values of the base file, so the console
+	 *   answers and holds no failure.
 	 * @invariants The fallback scope is the default scope key of the base file, and the profile
 	 *   lists that key.
-	 * @param name - The profile name of the base file.
+	 * @param name - The profile name of the request.
 	 * @returns The store, the resolved configuration, and the fallback scope of the profile.
 	 */
 	forProfile(name: string): AgentMemory {
 		if (this.closed)
 			throw new MemlensError("Data", "The Memlens host is disposed.");
-		if (!Object.hasOwn(this.base.profile, name))
-			throw new MemlensError("Data", `config.profile holds no profile ${name}`);
 		const scope = activeScope(this.base.scope_default, {
 			workspace: null,
 		}).key;

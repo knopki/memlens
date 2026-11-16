@@ -450,12 +450,26 @@ describe("console profile surface", () => {
 		expect(outside.message).toMatch(/outside this profile/);
 	});
 
-	it("refuses a profile that the base file does not hold", async () => {
+	it("answers a profile that the base file does not name", async () => {
 		const testCase = composition();
 		await registered(testCase);
-		const answer = await failure(call(testCase, "view", { profile: "nope" }));
-		expect(answer.code).toBe("gateway/bad-request");
-		expect(answer.message).toBe("config.profile holds no profile nope");
+		const view = await call(testCase, "view", { profile: "nope" });
+		expect(view.profile).toBe("nope");
+		expect(view.scope).toBe("user:notes");
+		expect(view.profiles).toEqual(["default"]);
+	});
+
+	it("answers a base file that names no profile at all", async () => {
+		const bare =
+			'language = "en"\ndefaultProfile = "default"\n\n' +
+			'[scope_default]\nrules = []\ndefault = "user:notes"\n';
+		const testCase = composition({ base: bare });
+		await registered(testCase);
+		const view = await call(testCase, "view", {});
+		expect(view.profile).toBe("default");
+		expect(view.profiles).toEqual(["default"]);
+		expect(view.scope).toBe("user:notes");
+		expect(view.scopes.map((scope) => scope.key)).toContain("user:notes");
 	});
 
 	it("writes a note through a profile and reads it back", async () => {

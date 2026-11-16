@@ -57,10 +57,11 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 	const model = state.model;
 	const Screen = SCREEN_COMPONENTS[state.screen];
 	const scopes = model?.scopes ?? [];
-	const profile = state.profile || model?.profile || "";
+	const selected = state.profile || model?.profile || "";
 	const names = model?.profiles.length
 		? model.profiles
-		: [profile].filter(Boolean);
+		: [selected].filter(Boolean);
+	const profile = names.includes(selected) ? selected : (names[0] ?? "");
 	return (
 		<div className="ml-console ml-page">
 			<style>{CONSOLE_CSS}</style>
