@@ -61,8 +61,9 @@ decision, a correction, or a preference, when a fact changes later work, and whe
 cause matters. Do not save greetings, routine tool output, work in progress, or a duplicate.
 
 One note holds one kind: decision, preference, fact, task, or note. Copy names, numbers, paths, dates,
-and errors exactly. When a note replaces an older one, give the older one in `supersedes`. Never
-record secrets, credentials, or keys.
+and errors exactly. Give the moment of a past event in `ts`, as ISO 8601. A write with no `ts` takes
+the write time. When a note replaces an older one, give the older one in `supersedes`. Never record
+secrets, credentials, or keys.
 
 `memory_forget` takes an obsolete note out of the view: a fact that changed, or a note that was wrong.
 ```
