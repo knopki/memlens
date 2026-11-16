@@ -29,9 +29,6 @@ export type Glob = string;
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
-/** The shape of a run of the compaction. */
-export type CompactionMode = "parallel" | "batch" | "auto";
-
 export interface StoreConfig {
 	path: Path;
 
@@ -97,7 +94,8 @@ export interface CompactionConfig {
 	provider: string;
 	model: string;
 	effort: string;
-	mode: CompactionMode;
+
+	/** The maximum count of inputs of one pass. */
 	batch: number;
 	maxCallsPerHour: number;
 }
@@ -174,13 +172,15 @@ export const DEFAULT_REVIEW_DAYS: ReviewConfig = {
 /** The default budget of a profile that states no complete budget. */
 export const DEFAULT_BUDGET: Budget = { here: 20, directions: 10 };
 
+/** The default count of inputs of one compaction pass. A configuration can state more. */
+export const DEFAULT_COMPACTION_BATCH = 10;
+
 /** The default compaction route and limits of a base file that states none. */
 export const DEFAULT_COMPACTION: CompactionConfig = {
 	provider: "",
 	model: "",
 	effort: "",
-	mode: "auto",
-	batch: 6,
+	batch: DEFAULT_COMPACTION_BATCH,
 	maxCallsPerHour: 120,
 };
 
@@ -201,8 +201,7 @@ defaultProfile = "default"
 idle = 300
 
 [compaction]
-mode = "auto"
-batch = 6
+batch = 10
 maxCallsPerHour = 120
 
 [profile.default]

@@ -32,7 +32,6 @@ const fullPatch = {
 		provider: "deepseek",
 		model: "deepseek-chat",
 		effort: "high",
-		mode: "batch",
 		batch: 4,
 		maxCallsPerHour: 60,
 	},
@@ -72,6 +71,15 @@ describe("PatchConfigSchema", () => {
 		});
 	});
 
+	it("keeps a compaction batch above 10, so the transform drops no valid patch", () => {
+		expect(readPatch({ compaction: { batch: 25 } })).toEqual({
+			compaction: { batch: 25 },
+		});
+		expect(readPatch({ compaction: { batch: 40 } })).toEqual({
+			compaction: { batch: 40 },
+		});
+	});
+
 	it.each([
 		["the row", { writer: { provider: "deepseek" } }],
 		["the store section", { store: { path: "x", journal: "y" } }],
@@ -80,6 +88,7 @@ describe("PatchConfigSchema", () => {
 			"the compaction section",
 			{ compaction: { model: "m", provider: "p", extra: 1 } },
 		],
+		["the compaction batch below 1", { compaction: { batch: 0 } }],
 		[
 			"the nudge text",
 			{ nudge: { text: { tool_calls: "A {n}", turns: "B {n}", more: 1 } } },

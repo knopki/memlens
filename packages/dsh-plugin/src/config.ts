@@ -51,7 +51,6 @@ const compactionFields = withoutEmptyDefault(
 		provider: z.any(),
 		model: z.any(),
 		effort: z.any(),
-		mode: z.any(),
 		batch: z.any(),
 		maxCallsPerHour: z.any(),
 	}),

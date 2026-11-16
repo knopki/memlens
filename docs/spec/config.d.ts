@@ -42,9 +42,6 @@ export type ScopeKey = `${string}:${string}`;
 /** The memory that a subagent gets. */
 export type SubagentMode = "propose" | "read" | "off";
 
-/** The shape of a run of the compaction. */
-export type CompactionMode = "parallel" | "batch" | "auto";
-
 export interface StoreConfig {
 	path: Path;
 	/** The idle time before background compaction starts, in seconds. The default is 300. */
@@ -108,7 +105,7 @@ export interface CompactionConfig {
 	model: string;
 	/** An empty value leaves the effort to the provider. */
 	effort: string;
-	mode: CompactionMode;
+	/** The input count of one model call. The value is a whole number above zero, and the default is 10. The key sets no upper limit. */
 	batch: number;
 	maxCallsPerHour: number;
 }

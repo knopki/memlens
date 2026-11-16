@@ -1,6 +1,6 @@
 # 0004. Tree and writer
 
-Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the projection and the node events.
+Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the projection and the node events. [0023 Batch compaction](0023-batch-compaction.md) replaces the run form.
 
 ## Context
 
@@ -21,7 +21,8 @@ The writer uses the existing order: `due`, then level, then start. This list has
 
 Local in-flight work and a retry backoff are ephemeral. The existing backoff is 10 seconds, then 60
 seconds, then 300 seconds. A restart clears each local value. The existing settings stay:
-`provider`, `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. The triggers remain: the
+`provider`, `model`, `effort`, `batch`, and `maxCallsPerHour`. The product removes the key `mode`. See
+[0023 Batch compaction](0023-batch-compaction.md). The triggers remain: the
 candidate count reaches `writer.batch`, no event arrives for `store.idle` seconds, and
 `memlens compact` runs. `store.idle` is a number of seconds with a default of 300.
 

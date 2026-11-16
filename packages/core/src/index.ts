@@ -30,9 +30,7 @@ export {
 	renderAddress,
 } from "./domain/address.js";
 export {
-	autoForm,
 	COMPACTION_BATCH,
-	COMPACTION_PARALLEL,
 	type CompactionRun,
 	compactionPass,
 	type PassResult,
@@ -58,7 +56,6 @@ export {
 	type Budget,
 	type CacheTtl,
 	type CompactionConfig,
-	type CompactionMode,
 	type Days,
 	DEFAULT_CACHE_TTL,
 	DEFAULT_CONFIG_TOML,

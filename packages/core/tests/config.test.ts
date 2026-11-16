@@ -104,8 +104,7 @@ describe("loadBaseConfig", () => {
 		expect(config.nudge.turns).toBe(10);
 		expect(config.nudge.tool_calls).toBe(5);
 		expect(config.compaction.effort).toBe("");
-		expect(config.compaction.mode).toBe("auto");
-		expect(config.compaction.batch).toBe(6);
+		expect(config.compaction.batch).toBe(10);
 		expect(config.compaction.maxCallsPerHour).toBe(120);
 		expect(config.review).toEqual({
 			decision: 365,
@@ -175,6 +174,24 @@ scopes = ["*"]
 		expect(config.compaction.model).toBe("m");
 	});
 
+	it("takes the batch default of 10 and no upper bound", () => {
+		const text = configToml({ compaction: 'provider = "dsh"\nmodel = "m"' });
+		expect(loadBaseConfig(text, "/s").compaction.batch).toBe(10);
+		const read = (batch: string) =>
+			loadBaseConfig(configToml({ compaction: `batch = ${batch}` }), "/s")
+				.compaction.batch;
+		expect(read("1")).toBe(1);
+		expect(read("10")).toBe(10);
+		expect(read("11")).toBe(11);
+		expect(read("40")).toBe(40);
+		expect(read("1000")).toBe(1000);
+		for (const batch of ["0", "1.5", "-2"]) {
+			expect(() =>
+				loadBaseConfig(configToml({ compaction: `batch = ${batch}` }), "/s"),
+			).toThrow(/compaction\.batch/);
+		}
+	});
+
 	it("rejects a nudge text without {n}", () => {
 		const text = configToml({
 			nudge: '[nudge.text]\ntool_calls = "no placeholder"',
@@ -200,6 +217,25 @@ describe("loadPatchConfig and loadPresetConfig", () => {
 	it("reads the compaction section of a patch", () => {
 		const patch = loadPatchConfig({ compaction: { model: "m", batch: 2 } });
 		expect(patch.compaction).toEqual({ model: "m", batch: 2 });
+	});
+
+	it("takes a patch batch count above 10", () => {
+		const patch = loadPatchConfig({ compaction: { batch: 10 } });
+		expect(patch.compaction).toEqual({ batch: 10 });
+		expect(loadPatchConfig({ compaction: { batch: 11 } }).compaction).toEqual({
+			batch: 11,
+		});
+		expect(loadPatchConfig({ compaction: { batch: 40 } }).compaction).toEqual({
+			batch: 40,
+		});
+	});
+
+	it("rejects a patch batch count that is not a positive whole number", () => {
+		for (const batch of [0, 1.5, -3]) {
+			expect(() => loadPatchConfig({ compaction: { batch } })).toThrow(
+				/compaction\.batch/,
+			);
+		}
 	});
 
 	it("reads a preset without a profile", () => {
@@ -262,7 +298,6 @@ describe("resolveConfig", () => {
 			provider: "dsh",
 			model: "patch-model",
 			effort: "",
-			mode: "auto",
 			batch: 2,
 			maxCallsPerHour: 120,
 		});

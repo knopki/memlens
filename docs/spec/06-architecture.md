@@ -121,7 +121,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Input of a merge | Two children. At level 1, a leaf gives its body and its complete `longform` | The input holds no context, so a delete stays derivable.         |
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
 | Fold             | Stop at the first line-budget fit. The demo orders pairs by jump, due, level, and start. | The order gives one answer. |
-| Compaction       | `parallel` 6, `batch` 6, no default model or effort, 120 calls in an hour | The user chooses the model route and optional effort. |
+| Compaction       | `batch` 10, a whole number above zero with no upper limit, no default model or effort, 120 calls in an hour | The user chooses the model route and optional effort. |
 | Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
@@ -273,10 +273,15 @@ The [tree contract](../../packages/core/src/domain/tree.ts) owns the candidate o
 stores no queue, job row, or lease.
 A restart derives candidates again from the tree. In-flight attempts and retry delays are local runtime state.
 
-A run uses `parallel`, `batch`, or `auto`. Parallel makes six concurrent calls, one line per call.
-Batch makes one call for up to six lines. A broken batch answer retries once, then uses parallel.
-Auto follows the model family. The existing retry waits are ten, sixty, then three hundred seconds.
-The model sees the child inputs only.
+A run takes ready merge inputs. The key `batch` gives the count of inputs of one model call. Its
+default is ten, and the value is a whole number above zero. The key sets no upper limit, and the load
+rejects a value below one. The compaction section holds no key `mode`, and the load rejects a file
+that holds it. The model sees the child inputs only.
+
+A batch answer publishes each range with a good line at once. An absent line, an empty line, and a
+line that is not shorter than its input leave their ranges open. The compaction retries the open
+ranges in a batch of half the size, down to one input. A range that no attempt builds stays dirty,
+and the worker waits ten, sixty, then three hundred seconds before its next pass.
 
 At level 1, each leaf child gives its body and its complete `longform`. A child above level 1 gives
 its summary. A join or a copy needs no model call. The build applies it only when no child carries a
@@ -288,8 +293,8 @@ A changed input, a hidden record, or a dirty child rejects the result. One match
 The compaction starts at the accepted triggers of the plugin worker, at `memlens compact`, or at a
 console job. The worker makes its first pass ten seconds after activation when work waits.
 The worker mirrors each pass, scope, model call, retry, and failure to the host log and console journal.
-A model call states its start, first text, finish, close, duration, and text size. It gives no note text.
-The journal keeps the last 100 events. A failed merge answer states `no_answer` or `not_shorter`.
+A model call states its start, finish, duration, and text size. It gives no note text.
+The journal keeps the last 100 events. A failed merge answer states `no_answer`, `not_shorter`, or `invalid_batch`.
 A failed model call also states the first error code and message from that pass.
 Rendering returns immediately with current clean summaries and temporary lines.
 See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0020 Storage pivot](../adr/0020-storage-pivot.md).

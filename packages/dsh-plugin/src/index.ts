@@ -16,7 +16,7 @@ import type { Context } from "@deepseek-ai/cordis";
 import type { Agent } from "@deepseek-ai/dsh-agent";
 import { scopeChainOf, scopeOf } from "@deepseek-ai/dsh-scope";
 import type {} from "@deepseek-ai/dsh-workspace";
-import { type PatchConfig, parseDuration } from "@memlens/core";
+import type { PatchConfig } from "@memlens/core";
 import { PatchConfigSchema } from "./config.js";
 import { registerConsoleRemote } from "./console/remote.js";
 import { registerMemoryContext } from "./memory-context.js";
@@ -56,12 +56,6 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
 		return {
 			compaction: config.compaction,
 			store: { ...config.store, path: memlens.path },
-			cacheTtl: Object.fromEntries(
-				Object.entries(config.cacheTtl).map(([glob, value]) => [
-					glob,
-					parseDuration(value),
-				]),
-			),
 		};
 	};
 	const worker = new MemoryWorker(ctx, memlens.store, workerInputs(), ctx.llm);

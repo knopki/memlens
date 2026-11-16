@@ -103,8 +103,10 @@ For one child, the task uses `Summarize this line` and gives that child only.
 
 ## Batch task
 
-One call of the batch form holds up to six inputs. It names the form of the answer, so the answer
-needs no guess.
+One call holds the input count that `batch` gives. The batch call changes the answer form of the
+system prompt. It replaces `Output only the line.` with the following sentence:
+
+`Output one line for each input, in the form "#a-b: line".`
 
 ```text
 Summarize each input, including every line in it, as one line of at most {TARGET} characters (about {TARGET/6} words) each.

@@ -110,19 +110,16 @@ function subject(root: Context): Agent {
 function workerInputs(): {
 	compaction: CompactionConfig;
 	store: StoreConfig;
-	cacheTtl: Record<string, number>;
 } {
 	return {
 		compaction: {
 			provider: "test",
 			model: "merge-model",
 			effort: "",
-			mode: "parallel",
 			batch: 1,
 			maxCallsPerHour: 60,
 		},
 		store: { path: "unused", idle: 300 },
-		cacheTtl: {},
 	};
 }
 

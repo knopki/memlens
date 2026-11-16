@@ -46,6 +46,12 @@ Copy names, numbers, ids, paths, dates and errors exactly. Keep each decision's 
 among lines about other subjects, so name the subject: "billing: …", not "it". Never make anything look
 further along than it was. If told the line is too long, shorten it.`;
 
+/** The system prompt of a batch call. */
+export const MERGE_SYSTEM_BATCH = MERGE_SYSTEM.replace(
+	"Output only the line.",
+	'Output one line for each input, in the form "#a-b: line".',
+);
+
 /** The summary target of a merge, in characters. */
 export const NODE_TARGET = 512;
 
@@ -71,7 +77,10 @@ export type LineBuild =
 			readonly ts_from: string;
 			readonly ts_to: string;
 	  }
-	| { readonly ok: false; readonly reason: "no_answer" | "not_shorter" };
+	| {
+			readonly ok: false;
+			readonly reason: "no_answer" | "not_shorter" | "invalid_batch";
+	  };
 
 // #region FUNC_childLine
 /**
@@ -133,7 +142,7 @@ ${childLine(a)}${b ? `\n${childLine(b)}` : ""}
 
 // #region FUNC_batchTask
 /**
- * @purpose Ask for up to six lines in one call.
+ * @purpose Ask for the summary line of each input in one call.
  * @invariants The header keeps the target and the word count. Each input block carries its "#a-b" id.
  * The answer instruction names the form "#a-b: line".
  * A catalog job gives the scope keys, so each child line names its scope and no range of a scope
@@ -362,25 +371,40 @@ export async function mergeLine(
 
 // #region FUNC_parseBatchAnswer
 /**
- * @purpose Read the lines of a batch answer.
+ * @purpose Read the usable lines of a batch answer.
  * @invariants Each answer line has the form "#a-b: line" and names one requested range.
- * A missing range, an unknown address, or a malformed line gives null.
+ * An empty line, a line that does not parse, and an unknown address give no result.
+ * A repeated address gives no result, because two lines for one range can disagree.
+ * @rationale The caller publishes each read line and asks again for each absent range, so one
+ * broken line must not discard the good lines of the same answer.
+ * @returns The line of each accepted range. An absent range has no entry.
  */
 export function parseBatchAnswer(
 	answer: string,
 	inputs: readonly BuildInput[],
-): Map<string, string> | null {
+): Map<string, string> {
 	const wanted = new Set(inputs.map((input) => address(input.range)));
+	const seen = new Set<string>();
 	const result = new Map<string, string>();
 	for (const raw of answer.split("\n")) {
 		const text = raw.trim();
 		if (!text) continue;
 		const match = /^#(\d+)-(\d+): ?(.*)$/.exec(text);
-		if (!match?.[1] || !match[2] || match[3] === undefined) return null;
+		if (!match?.[1] || !match[2] || match[3] === undefined) continue;
 		const key = `#${match[1]}-${match[2]}`;
-		if (!wanted.has(key) || result.has(key)) return null;
+		if (!wanted.has(key)) continue;
+		if (seen.has(key)) {
+			debug("Batch line repeated", { range: key });
+			result.delete(key);
+			continue;
+		}
+		seen.add(key);
 		result.set(key, match[3]);
 	}
-	return result.size === inputs.length ? result : null;
+	debug("Batch answer read", {
+		requested: inputs.length,
+		accepted: result.size,
+	});
+	return result;
 }
 // #endregion FUNC_parseBatchAnswer

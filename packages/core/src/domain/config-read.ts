@@ -7,6 +7,7 @@
  * @invariants An absent section or field gives its default value. A present value of a wrong type is an error at load.
  * @invariants A key outside the layer type is an error at load.
  * @invariants A scope key outside the two-segment shape is an error at load, except the `{repo}` placeholder of a `git_remote` rule.
+ * @invariants The compaction batch is a whole number above 0. It has no upper limit.
  * @dependencies types/errors.ts, domain/scope.ts, domain/config-types.ts.
  * @keywords config, read, validate, expect, layer, base, patch, preset, rule
  * #endregion moduleContract
@@ -275,7 +276,7 @@ export function readCompaction(value: unknown): CompactionConfig {
 	const record = expectRecord(value, "compaction");
 	expectKeys(
 		record,
-		["provider", "model", "effort", "mode", "batch", "maxCallsPerHour"],
+		["provider", "model", "effort", "batch", "maxCallsPerHour"],
 		"compaction",
 	);
 	return {
@@ -291,17 +292,9 @@ export function readCompaction(value: unknown): CompactionConfig {
 			record.effort === undefined
 				? DEFAULT_COMPACTION.effort
 				: expectString(record.effort, "compaction.effort"),
-		mode:
-			record.mode === undefined
-				? "auto"
-				: expectOneOf(
-						record.mode,
-						["parallel", "batch", "auto"],
-						"compaction.mode",
-					),
 		batch:
 			record.batch === undefined
-				? 6
+				? DEFAULT_COMPACTION.batch
 				: expectCount(record.batch, "compaction.batch"),
 		maxCallsPerHour:
 			record.maxCallsPerHour === undefined
@@ -317,7 +310,7 @@ export function readPartialCompaction(
 	const record = expectRecord(value, where);
 	expectKeys(
 		record,
-		["provider", "model", "effort", "mode", "batch", "maxCallsPerHour"],
+		["provider", "model", "effort", "batch", "maxCallsPerHour"],
 		where,
 	);
 	const partial: Partial<CompactionConfig> = {};
@@ -327,12 +320,6 @@ export function readPartialCompaction(
 		partial.model = expectString(record.model, `${where}.model`);
 	if (record.effort !== undefined)
 		partial.effort = expectString(record.effort, `${where}.effort`);
-	if (record.mode !== undefined)
-		partial.mode = expectOneOf(
-			record.mode,
-			["parallel", "batch", "auto"],
-			`${where}.mode`,
-		);
 	if (record.batch !== undefined)
 		partial.batch = expectCount(record.batch, `${where}.batch`);
 	if (record.maxCallsPerHour !== undefined) {

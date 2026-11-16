@@ -2,13 +2,15 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Build clean summaries for dirty tree ranges, so the view holds text without waiting.
- * @scope The call form of auto, the retry pacing, the model call limit, and one compaction pass.
+ * @scope The retry pacing, the model call limit, and one compaction pass.
  *  NOT: the line text, the prompts, the triggers, the timers, and the model service.
  * @invariants The host owns the trigger, the timer, the loop, and the model service.
  * @invariants Failed attempts wait 10, 60, then 300 seconds. The waits and in-flight work are local
  * state, and a restart clears them: candidates always derive from the current tree.
+ * @invariants A partial, malformed, or rejected batch answer keeps its good lines and retries each
+ * unresolved range in a batch half the size, down to one range. A range that still fails stays dirty.
  * @dependencies store/build.ts, store/store.ts, domain/merge-line.ts.
- * @keywords compaction, merge, batch, parallel, retry, rate, pass, node
+ * @keywords compaction, merge, batch, retry, rate, pass, node
  * #endregion moduleContract
  */
 
@@ -23,14 +25,14 @@ import {
 import type { Store } from "../store/store.js";
 import type { ScopeKey } from "../types/primitives.js";
 import type { BuildChild, BuildInput } from "../types/tree.js";
+import { DEFAULT_COMPACTION_BATCH } from "./config-types.js";
 import {
 	address,
 	batchTask,
 	finalizeLine,
 	type LineBuild,
-	MERGE_SYSTEM,
+	MERGE_SYSTEM_BATCH,
 	type MergeModel,
-	mergeLine,
 	NODE_TARGET,
 	parseBatchAnswer,
 } from "./merge-line.js";
@@ -40,68 +42,22 @@ const debug = debuglog("memlens:compaction");
 /** The local waits between failed compaction attempts, in seconds. A restart clears them. */
 export const RETRY_WAITS: readonly number[] = [10, 60, 300];
 
-/** The default line count of one compaction batch. */
-export const COMPACTION_BATCH = 6;
-
-/** The concurrent call count of the parallel form. */
-export const COMPACTION_PARALLEL = 6;
-
-/** The resolved settings of one compaction pass. */
-export interface CompactionRun {
-	readonly form: "parallel" | "batch";
-	readonly batch: number;
-	readonly parallel: number;
-}
+/** The default line count of one compaction batch. The configuration holds the same value. */
+export const COMPACTION_BATCH = DEFAULT_COMPACTION_BATCH;
 
 /** The counts of one compaction pass. */
 export interface PassResult {
 	readonly built: number;
 	readonly rejected: number;
 	readonly reasons: readonly "input_changed"[];
+
+	/** The ranges that no attempt built. Each such range counts once. */
 	readonly failed: number;
-	readonly failures: readonly ("no_answer" | "not_shorter")[];
+	readonly failures: readonly ("no_answer" | "not_shorter" | "invalid_batch")[];
+
+	/** Each model call of the pass, the retries included. */
 	readonly calls: number;
 }
-
-/** Match one cacheTtl glob against a model name. A `P/*` pattern matches the family of P. */
-function matchGlob(pattern: string, model: string): boolean {
-	const family = /^(.+)\/\*$/.exec(pattern);
-	if (family?.[1])
-		return (
-			model === family[1] ||
-			model.startsWith(`${family[1]}/`) ||
-			model.startsWith(`${family[1]}-`)
-		);
-	const source = pattern
-		.split("*")
-		.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-		.join(".*");
-	return new RegExp(`^${source}$`).test(model);
-}
-
-// #region FUNC_autoForm
-/**
- * @purpose Pick the call form of auto from the cache knowledge of the model.
- * @invariants A model under a specific cacheTtl glob gives parallel: a family pattern P/* matches
- * the exact name P and each name after P/ or P-. The bare "*" and no match give batch.
- * The most specific glob wins.
- */
-export function autoForm(
-	model: string,
-	cacheTtl: Readonly<Record<string, number>>,
-): "parallel" | "batch" {
-	let best = "";
-	for (const pattern of Object.keys(cacheTtl)) {
-		if (
-			pattern !== "*" &&
-			pattern.length > best.length &&
-			matchGlob(pattern, model)
-		)
-			best = pattern;
-	}
-	return best ? "parallel" : "batch";
-}
-// #endregion FUNC_autoForm
 
 // #region FUNC_retryDelay
 /** @purpose Give the local wait after the given count of failed attempts. */
@@ -160,18 +116,19 @@ export class RateWindow {
 
 /** The resolved settings of one compaction pass. */
 export interface CompactionRun {
-	readonly form: "parallel" | "batch";
 	readonly batch: number;
-	readonly parallel: number;
 }
 
 // #region FUNC_compactionPass
 /**
  * @purpose Build and publish the next batch of dirty lines of one tree.
- * @invariants A pass takes at most batch ready inputs and uses one form only. Inputs without a
- * longform publish a copy or fitting join with no model call.
- * The batch form makes one call, retries a broken answer once with the error text, then falls
- * back to parallel. Each result checks its captured keys under the write lock. A pass stores no state and starts no timers.
+ * @invariants A pass takes at most `batch` ready inputs, ten by default, with no upper limit. The
+ *   batch is a whole number above 0.
+ * @invariants Inputs without a longform publish a copy or
+ * fitting join with no model call. A batch makes one model call. The pass publishes each good line
+ * of the answer, and asks again for each unresolved range in a batch half the size, down to one
+ * range. A range that no attempt builds stays dirty. Each result checks its captured keys under the
+ * write lock. A pass stores no state and starts no timers.
  * @returns The counts of the pass: built, rejected, failed, and calls.
  */
 export async function compactionPass(
@@ -180,16 +137,16 @@ export async function compactionPass(
 	model: MergeModel,
 	run: Partial<CompactionRun> = {},
 ): Promise<PassResult> {
-	const form = run.form ?? "parallel";
 	const batch = run.batch ?? COMPACTION_BATCH;
-	const parallel = run.parallel ?? COMPACTION_PARALLEL;
+	if (!Number.isInteger(batch) || batch < 1)
+		throw new RangeError("Invalid compaction batch size");
 	const result = {
 		built: 0,
 		rejected: 0,
 		failed: 0,
 		calls: 0,
 		reasons: [] as "input_changed"[],
-		failures: [] as ("no_answer" | "not_shorter")[],
+		failures: [] as ("no_answer" | "not_shorter" | "invalid_batch")[],
 	};
 	const captured = new Map<BuildInput, BuildRead>();
 	const inputs: BuildInput[] = [];
@@ -271,7 +228,7 @@ export async function compactionPass(
 			});
 		}
 	};
-	debug("Compaction pass", { scope, form, candidates: inputs.length });
+	debug("Compaction pass", { scope, candidates: inputs.length });
 	const merges: BuildInput[] = [];
 	for (const input of inputs) {
 		const read = captured.get(input);
@@ -296,67 +253,59 @@ export async function compactionPass(
 			}
 		} else merges.push(input);
 	}
-	if (merges.length) {
-		if (form === "batch") await runBatch(merges, counted, publish, parallel);
-		else await runParallel(merges, counted, publish, parallel);
-	}
+	if (merges.length) await runBatch(merges, counted, publish);
 	debug("Compaction pass complete", { scope, ...result });
 	return result;
 }
 // #endregion FUNC_compactionPass
 
-/** Publish each merge input through one concurrent group of model calls. */
-async function runParallel(
-	merges: readonly BuildInput[],
+/** Ask for the lines of one batch. A rejected call gives an empty answer. */
+async function callBatch(
+	batch: readonly BuildInput[],
 	model: MergeModel,
-	publish: (input: BuildInput, line: LineBuild) => Promise<void>,
-	parallel: number,
-): Promise<void> {
-	for (let index = 0; index < merges.length; index += parallel) {
-		await Promise.all(
-			merges
-				.slice(index, index + parallel)
-				.map(async (input) => publish(input, await mergeLine(input, model))),
+): Promise<string> {
+	try {
+		const answer = await model(
+			MERGE_SYSTEM_BATCH,
+			batchTask(NODE_TARGET, batch),
 		);
+		return answer.trim();
+	} catch (error) {
+		debug("Batch call failed", { count: batch.length, error: String(error) });
+		return "";
 	}
 }
 
 /**
- * Publish each merge input from one batch call, with one retry, then a parallel fallback.
+ * Publish the good lines of one batch call, then retry the unresolved ranges in halved batches.
  *
- * @invariants The batch form makes one call for up to 6 lines. A broken answer gives one retry
- * with the error of the first answer, and a second broken answer falls back to parallel.
+ * @invariants Each range with a good line publishes at once, whatever else the answer holds.
+ * An absent line, a line that fails the shrink check, and an empty line leave a range unresolved.
+ * A batch of two or more ranges retries its unresolved ranges in batches of half the size, so the
+ * retries stop. A batch of one range records the failure of that range; the range stays dirty.
  */
 async function runBatch(
-	merges: readonly BuildInput[],
+	batch: readonly BuildInput[],
 	model: MergeModel,
 	publish: (input: BuildInput, line: LineBuild) => Promise<void>,
-	parallel: number,
 ): Promise<void> {
-	const task = batchTask(NODE_TARGET, merges);
-	let answer = "";
-	try {
-		answer = (await model(MERGE_SYSTEM, task)).trim();
-	} catch (error) {
-		debug("Batch failed", { error: String(error) });
+	const answer = await callBatch(batch, model);
+	const parsed = parseBatchAnswer(answer, batch);
+	const unresolved: BuildInput[] = [];
+	for (const input of batch) {
+		const text = parsed.get(address(input.range));
+		const line = finalizeLine(input, text ?? "");
+		if (line.ok) await publish(input, line);
+		else if (batch.length === 1)
+			await publish(input, {
+				ok: false,
+				reason: text === undefined && answer ? "invalid_batch" : line.reason,
+			});
+		else unresolved.push(input);
 	}
-	let parsed = parseBatchAnswer(answer, merges);
-	if (!parsed) {
-		const retry = `${task}\nThe last answer did not parse. Answer one line for each input, in the form "#a-b: line". The last answer was:\n${answer}`;
-		try {
-			answer = (await model(MERGE_SYSTEM, retry)).trim();
-			parsed = parseBatchAnswer(answer, merges);
-		} catch (error) {
-			debug("Batch retry failed", { error: String(error) });
-		}
-	}
-	if (!parsed) {
-		debug("Batch broken twice", { count: merges.length, fallback: "parallel" });
-		await runParallel(merges, model, publish, parallel);
-		return;
-	}
-	for (const input of merges) {
-		const text = parsed.get(address(input.range)) ?? "";
-		await publish(input, finalizeLine(input, text));
-	}
+	if (!unresolved.length) return;
+	const size = Math.ceil(batch.length / 2);
+	debug("Batch retry", { unresolved: unresolved.length, size });
+	for (let index = 0; index < unresolved.length; index += size)
+		await runBatch(unresolved.slice(index, index + size), model, publish);
 }

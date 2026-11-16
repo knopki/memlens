@@ -86,13 +86,20 @@ function snapshotOf(answer: {
 // #endregion FUNC_snapshotOf
 
 // #region CLASS_StubLlm
+/** @purpose Give one answer line for each input id of a batch task, so the merge accepts it. */
+function batchAnswer(options: GenerateOptions, line: string): string {
+	const text = JSON.stringify(options.messages);
+	const ids = [...text.matchAll(/<input id=\\?"(#[0-9]+-[0-9]+)\\?">/g)];
+	return ids.map((match) => `${match[1]}: ${line}`).join("\n");
+}
+
 /** @purpose Answer one merge call with a scripted text, or fail it. */
 class StubLlm implements WorkerLlm {
 	answer = "one line summary";
 	fail = false;
 
-	stream(_options: GenerateOptions): AsyncIterable<StreamChunk> {
-		const answer = this.answer;
+	stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+		const answer = batchAnswer(options, this.answer) || this.answer;
 		const fail = this.fail;
 		return (async function* (): AsyncGenerator<StreamChunk> {
 			if (fail) throw new Error("stub refusal");
@@ -136,19 +143,16 @@ function subject(root: Context): Agent {
 function workerInputs(): {
 	compaction: CompactionConfig;
 	store: StoreConfig;
-	cacheTtl: Record<string, number>;
 } {
 	return {
 		compaction: {
 			provider: "test",
 			model: "merge-model",
 			effort: "",
-			mode: "parallel",
 			batch: 1,
 			maxCallsPerHour: 60,
 		},
 		store: { path: "unused", idle: 300 },
-		cacheTtl: {},
 	};
 }
 

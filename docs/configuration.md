@@ -116,10 +116,8 @@ provider = "my-provider"
 model = "my-model"
 # Set effort only when the model needs a specific value.
 # effort = "low"
-# The run shape: parallel, batch, or auto.
-mode = "auto"
-# The note count of one batch run.
-batch = 6
+# The input count of one model call. The default is 10, and the key sets no upper limit.
+batch = 10
 # The model call limit per hour.
 maxCallsPerHour = 120
 
@@ -192,15 +190,21 @@ remote, the repository name, the workspace name, the directory name, then `proje
 
 The worker needs an explicit `provider` and `model`. When either is absent, it logs an error and
 makes no model call. A model call error appears in the worker journal and the host log.
+Each model call carries one batch of merge inputs, and the default batch is ten. The key `batch` sets
+no upper limit, and one call can hold any count above zero.
 
 | Key              | Type   | Default         | Effect                                        |
 | ---------------- | ------ | --------------- | --------------------------------------------- |
 | `provider`       | string | `""`            | The provider of the merge model.              |
 | `model`          | string | `""`            | The model of the merge.                       |
 | `effort`         | string | `""`            | The effort value. An empty value sends no effort. |
-| `mode`           | string | `"auto"`        | The run shape: `parallel`, `batch`, or `auto`. |
-| `batch`          | number | `6`             | The note count of one batch run.              |
+| `batch`          | number | `10`            | The input count of one model call. The value is a whole number above zero, and the key sets no upper limit. |
 | `maxCallsPerHour`| number | `120`           | The model call limit per hour.                |
+
+The product removes the key `mode`, and the section accepts no key of that name. A file that holds it
+fails the check.
+A batch answer publishes each range with a good line. The worker retries an open range in a batch of
+half the size, down to one input. A range that no attempt builds stays dirty for the next pass.
 
 ### The review section
 

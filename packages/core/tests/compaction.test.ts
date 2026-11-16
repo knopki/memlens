@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Check merge attempts, batch answers, job answers, form choice, pacing, and one compaction pass.
+ * @purpose Check merge attempts, batch answers, job answers, pacing, and one compaction pass.
  * #endregion moduleContract
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -9,7 +9,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
-	autoForm,
 	compactionPass,
 	RateWindow,
 	retryDelay,
@@ -224,15 +223,29 @@ describe("batch answers", () => {
 
 	it("reads one line for each requested range", () => {
 		const parsed = parseBatchAnswer("#0-1: one\n#2-3: two", inputs);
-		expect(parsed?.get("#0-1")).toBe("one");
-		expect(parsed?.get("#2-3")).toBe("two");
+		expect(parsed.get("#0-1")).toBe("one");
+		expect(parsed.get("#2-3")).toBe("two");
 	});
 
-	it("rejects a missing range, an unknown address, and a malformed line", () => {
-		expect(parseBatchAnswer("#0-1: one", inputs)).toBeNull();
-		expect(parseBatchAnswer("#0-1: one\n#9-9: two", inputs)).toBeNull();
-		expect(parseBatchAnswer("#0-1 one\n#2-3: two", inputs)).toBeNull();
-		expect(parseBatchAnswer("#0-1: one\n#0-1: again", inputs)).toBeNull();
+	it("keeps the good lines of an answer with a malformed and an unknown line", () => {
+		const parsed = parseBatchAnswer(
+			"Here are the lines.\n#9-9: elsewhere\n#0-1 one\n#2-3: two",
+			inputs,
+		);
+		expect([...parsed]).toEqual([["#2-3", "two"]]);
+	});
+
+	it("keeps a reported range absent from a short answer", () => {
+		expect(parseBatchAnswer("#0-1: one", inputs).get("#2-3")).toBeUndefined();
+	});
+
+	it("keeps a repeated address unresolved", () => {
+		const parsed = parseBatchAnswer(
+			"#0-1: one\n#0-1: again\n#2-3: two",
+			inputs,
+		);
+		expect(parsed.has("#0-1")).toBe(false);
+		expect(parsed.get("#2-3")).toBe("two");
 	});
 });
 
@@ -313,15 +326,7 @@ describe("job answers", () => {
 	});
 });
 
-describe("form choice and pacing", () => {
-	it("picks parallel for a model under a specific cache glob", () => {
-		const cacheTtl = { "deepseek/*": 7200, "anthropic/*": 300, "*": 3600 };
-		expect(autoForm("deepseek-chat", cacheTtl)).toBe("parallel");
-		expect(autoForm("gpt-5", cacheTtl)).toBe("batch");
-		expect(autoForm("gpt-5", {})).toBe("batch");
-		expect(autoForm("anthropic/opus", cacheTtl)).toBe("parallel");
-	});
-
+describe("pacing", () => {
 	it("gives the waits ten, sixty, then three hundred", () => {
 		expect(retryDelay(1)).toBe(10);
 		expect(retryDelay(2)).toBe(60);
@@ -374,7 +379,7 @@ describe("compactionPass", () => {
 			session: "s",
 			turn: "t",
 			preset: "p",
-			ts: `2026-01-0${index + 1}T00:00:00.000Z`,
+			ts: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
 		});
 	}
 	it("publishes join nodes bottom up without a model", async () => {
@@ -400,43 +405,39 @@ describe("compactionPass", () => {
 			summary: "note 0; note 1",
 		});
 	});
-	it.each(["parallel", "batch"] as const)(
-		"sends complete longforms to the %s model, including a single child",
-		async (form) => {
-			for (const count of [1, 2]) {
-				const store = open();
-				const documents = Array.from(
-					{ length: count },
-					(_, i) => `${String(i).repeat(16370)}-END-${i}`,
-				);
-				for (let i = 0; i < count; i++) {
-					note(store, {
-						scope: "p:x",
-						kind: "note",
-						body: `body ${i}`,
-						longform: documents[i],
-						session: "s",
-						turn: "t",
-						preset: "p",
-						ts: `2026-01-0${i + 1}T00:00:00.000Z`,
-					});
-				}
-				const calls: string[] = [];
-				const result = await compactionPass(
-					store,
-					"p:x",
-					async (_system, task) => {
-						calls.push(task);
-						return form === "batch" ? "#0-1: summary" : "summary";
-					},
-					{ form },
-				);
-				expect(result).toMatchObject({ built: 1, failed: 0 });
-				expect(calls).toHaveLength(1);
-				for (const document of documents) expect(calls[0]).toContain(document);
+	it("sends complete longforms to the batch model, including a single child", async () => {
+		for (const count of [1, 2]) {
+			const store = open();
+			const documents = Array.from(
+				{ length: count },
+				(_, i) => `${String(i).repeat(16370)}-END-${i}`,
+			);
+			for (let i = 0; i < count; i++) {
+				note(store, {
+					scope: "p:x",
+					kind: "note",
+					body: `body ${i}`,
+					longform: documents[i],
+					session: "s",
+					turn: "t",
+					preset: "p",
+					ts: `2026-01-0${i + 1}T00:00:00.000Z`,
+				});
 			}
-		},
-	);
+			const calls: string[] = [];
+			const result = await compactionPass(
+				store,
+				"p:x",
+				async (_system, task) => {
+					calls.push(task);
+					return "#0-1: summary";
+				},
+			);
+			expect(result).toMatchObject({ built: 1, failed: 0 });
+			expect(calls).toHaveLength(1);
+			for (const document of documents) expect(calls[0]).toContain(document);
+		}
+	});
 	it("sends even short longforms to the model", async () => {
 		const store = open();
 		for (let i = 0; i < 2; i++)
@@ -453,7 +454,7 @@ describe("compactionPass", () => {
 		const calls: string[] = [];
 		const result = await compactionPass(store, "p:x", async (_system, task) => {
 			calls.push(task);
-			return "summary";
+			return "#0-1: summary";
 		});
 		expect(result).toMatchObject({ built: 1, calls: 1 });
 		expect(calls[0]).toContain("document 0");
@@ -463,20 +464,176 @@ describe("compactionPass", () => {
 		const store = open();
 		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
 		expect(
-			await compactionPass(
-				store,
-				"p:x",
-				async () => "#0-1: first summary\n#2-3: second summary",
-				{ form: "batch" },
-			),
+			await compactionPass(store, "p:x", async (system) => {
+				expect(system).toContain(
+					'Output one line for each input, in the form "#a-b: line".',
+				);
+				return "#0-1: first summary\n#2-3: second summary";
+			}),
 		).toMatchObject({ built: 2, calls: 1, failed: 0 });
+	});
+	it("takes ten inputs by default", async () => {
+		const store = open();
+		for (let i = 0; i < 22; i++)
+			add(store, `${"long body ".repeat(40)}${i}`, i);
+		const calls: string[] = [];
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			calls.push(task);
+			return Array.from(
+				{ length: 10 },
+				(_, i) => `#${i * 2}-${i * 2 + 1}: summary`,
+			).join("\n");
+		});
+		expect(result).toMatchObject({ built: 10, calls: 1, failed: 0 });
+		expect(calls[0]?.match(/<input id=/g)).toHaveLength(10);
+	});
+	it("keeps the good lines of an answer with a broken line and an unknown address", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
+		const calls: string[] = [];
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			calls.push(task);
+			return calls.length === 1
+				? "Thinking.\n#9-9: elsewhere\n#0-1 one\n#0-1: first summary"
+				: "#2-3: second summary";
+		});
+		expect(result).toMatchObject({ built: 2, calls: 2, failed: 0 });
+		expect(calls[1]).toContain('<input id="#2-3">');
+		expect(calls[1]).not.toContain('<input id="#0-1">');
+	});
+	it("publishes the other lines of an answer that repeats one range", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
+		const calls: string[] = [];
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			calls.push(task);
+			return calls.length === 1
+				? "#0-1: one\n#0-1: again\n#2-3: second summary"
+				: "#0-1: first summary";
+		});
+		expect(result).toMatchObject({ built: 2, calls: 2, failed: 0 });
+	});
+	it("asks again for a range whose line was too long", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
+		const calls: string[] = [];
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			calls.push(task);
+			return calls.length === 1
+				? `#0-1: first summary\n#2-3: ${"x".repeat(1000)}`
+				: "#2-3: second summary";
+		});
+		expect(result).toMatchObject({ built: 2, calls: 2, failed: 0 });
+	});
+	it("records the last reason of a range that never builds", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
+		const calls: string[] = [];
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			calls.push(task);
+			return calls.length === 1
+				? `#0-1: first summary\n#2-3: ${"x".repeat(1000)}`
+				: `#2-3: ${"y".repeat(1000)}`;
+		});
+		expect(result).toMatchObject({ built: 1, calls: 2, failed: 1 });
+		expect(result.failures).toEqual(["not_shorter"]);
+		expect(loadView(store.handle(), "p:x").nodes).toHaveLength(1);
+	});
+	it("halves a malformed batch down to one input and leaves it dirty", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
+		const result = await compactionPass(
+			store,
+			"p:x",
+			async () => "bad response",
+		);
+		expect(result).toMatchObject({
+			built: 0,
+			failed: 2,
+			calls: 3,
+			failures: ["invalid_batch", "invalid_batch"],
+		});
+		expect(loadView(store.handle(), "p:x").nodes).toHaveLength(0);
+	});
+	it("halves a rejected call down to one input and keeps it dirty", async () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
+		const result = await compactionPass(store, "p:x", async () => {
+			throw new Error("provider down");
+		});
+		expect(result).toMatchObject({
+			built: 0,
+			failed: 2,
+			calls: 3,
+			failures: ["no_answer", "no_answer"],
+		});
+	});
+	it("halves a rejected batch of four and publishes every range once", async () => {
+		const store = open();
+		for (let i = 0; i < 8; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
+		const tasks: string[] = [];
+		let first = true;
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			tasks.push(task);
+			if (first) {
+				first = false;
+				throw new Error("provider rejected the batch");
+			}
+			const ids = [...task.matchAll(/<input id="(#\d+-\d+)">/g)].map(
+				(match) => match[1] ?? "",
+			);
+			return ids.map((id) => `${id}: summary`).join("\n");
+		});
+		expect(result).toMatchObject({ built: 4, calls: 3, failed: 0 });
+		expect(tasks.map((task) => task.match(/<input id=/g)?.length)).toEqual([
+			4, 2, 2,
+		]);
+		const asked = tasks
+			.slice(1)
+			.flatMap((task) =>
+				[...task.matchAll(/<input id="(#\d+-\d+)">/g)].map(
+					(match) => match[1] ?? "",
+				),
+			);
+		expect(new Set(asked).size).toBe(4);
+		expect(loadView(store.handle(), "p:x").nodes).toHaveLength(4);
+	});
+	it("takes a batch above ten in one call", async () => {
+		const store = open();
+		for (let i = 0; i < 60; i++)
+			add(store, `${"long body ".repeat(40)}${i}`, i);
+		const calls: string[] = [];
+		const result = await compactionPass(
+			store,
+			"p:x",
+			async (_system, task) => {
+				calls.push(task);
+				const ids = [...task.matchAll(/<input id="(#\d+-\d+)">/g)].map(
+					(match) => match[1] ?? "",
+				);
+				return ids.map((id) => `${id}: summary`).join("\n");
+			},
+			{ batch: 25 },
+		);
+		expect(result).toMatchObject({ built: 25, calls: 1, failed: 0 });
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.match(/<input id=/g)).toHaveLength(25);
+	});
+	it("rejects invalid batch sizes", async () => {
+		const store = open();
+		for (const batch of [0, 1.5, -4])
+			await expect(
+				compactionPass(store, "p:x", async () => "", { batch }),
+			).rejects.toThrow(RangeError);
 	});
 	it("states the reason of each failed merge answer", async () => {
 		const store = open();
 		add(store, `${"long body ".repeat(40)}0`, 0);
 		add(store, `${"long body ".repeat(40)}1`, 1);
-		const result = await compactionPass(store, "p:x", async () =>
-			"x".repeat(1000),
+		const result = await compactionPass(
+			store,
+			"p:x",
+			async () => `#0-1: ${"x".repeat(1000)}`,
 		);
 		expect(result).toMatchObject({ failed: 1, built: 0 });
 		expect(result.failures).toEqual(["not_shorter"]);
@@ -489,7 +646,7 @@ describe("compactionPass", () => {
 		if (!id) throw new Error("missing note");
 		const result = await compactionPass(store, "p:x", async () => {
 			amend(store, { id, body: "changed" });
-			return "summary";
+			return "#0-1: summary";
 		});
 		expect(result).toMatchObject({ rejected: 1, built: 0, calls: 1 });
 		expect(loadView(store.handle(), "p:x").nodes).toHaveLength(0);

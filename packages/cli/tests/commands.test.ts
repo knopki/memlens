@@ -107,7 +107,6 @@ idle = 300
 provider = "deepseek"
 model = "deepseek-chat"
 effort = "off"
-mode = "auto"
 batch = 6
 maxCallsPerHour = 120
 
