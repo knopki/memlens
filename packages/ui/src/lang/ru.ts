@@ -101,6 +101,7 @@ export const ru: Table = {
 	propText:
 		"Предложение ждёт решения человека. «Принять» пишет операцию по обычным правилам. «Отклонить» закрывает предложение и не меняет записи.",
 	waiting: "Ожидают",
+	otherScopes: "В других областях: {count}",
 	decision: "Решение",
 	accept: "Принять",
 	dismiss: "Отклонить",
@@ -148,6 +149,8 @@ export const ru: Table = {
 	scopeField: "Область",
 	kindField: "Вид",
 	supersedesField: "Заменяет · адреса через запятую",
+	supersedesLinks: "Ссылки записи",
+	addSupersedes: "Добавить адреса",
 	newScopeHint: "Новая область начинается с этой записи.",
 	characters: "{count} символов",
 	cancel: "Отмена",

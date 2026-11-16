@@ -103,6 +103,7 @@ export const pt: Table = {
 	propText:
 		"Uma proposta espera uma pessoa. Aceitar grava a operação pelas regras comuns. Descartar fecha a proposta e não altera nenhum registro.",
 	waiting: "Aguardando",
+	otherScopes: "Em outros escopos: {count}",
 	decision: "Decisão",
 	accept: "Aceitar",
 	dismiss: "Descartar",
@@ -150,6 +151,8 @@ export const pt: Table = {
 	scopeField: "Escopo",
 	kindField: "Tipo",
 	supersedesField: "Substitui · endereços separados por vírgulas",
+	supersedesLinks: "Vínculos do registro",
+	addSupersedes: "Adicionar endereços",
 	newScopeHint: "Um novo escopo começa com esta nota.",
 	characters: "{count} caracteres",
 	cancel: "Cancelar",

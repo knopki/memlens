@@ -103,6 +103,7 @@ export const fr: Table = {
 	propText:
 		"Une proposition attend une personne. Accepter écrit l’opération selon les règles habituelles. Rejeter ferme la proposition et ne change aucun enregistrement.",
 	waiting: "En attente",
+	otherScopes: "Dans d’autres portées : {count}",
 	decision: "Décision",
 	accept: "Accepter",
 	dismiss: "Rejeter",
@@ -150,6 +151,8 @@ export const fr: Table = {
 	scopeField: "Domaine",
 	kindField: "Type",
 	supersedesField: "Remplace · adresses séparées par des virgules",
+	supersedesLinks: "Liens de l’enregistrement",
+	addSupersedes: "Ajouter des adresses",
 	newScopeHint: "Un nouveau domaine commence avec cette note.",
 	characters: "{count} caractères",
 	cancel: "Annuler",

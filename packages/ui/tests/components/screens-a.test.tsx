@@ -280,7 +280,7 @@ describe("catalog screen", () => {
 		expect(markup).toContain('class="split keys"');
 		expect(markup).toContain('class="btn line s sel"');
 		expect(markup).toContain('class="btn line t pending"');
-		expect(markup).toContain('<span class="id">#2-3</span>');
+		expect(markup).toContain('<span class="id" title="#2-3">#2-3</span>');
 		expect(markup).toContain("Children · project:alpha,project:beta");
 		expect(markup).toContain('<span class="r">1</span>');
 	});

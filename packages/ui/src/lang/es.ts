@@ -103,6 +103,7 @@ export const es: Table = {
 	propText:
 		"Una propuesta espera a una persona. Aceptar escribe la operación según las reglas habituales. Descartar cierra la propuesta y no cambia ninguna entrada.",
 	waiting: "En espera",
+	otherScopes: "En otros ámbitos: {count}",
 	decision: "Decisión",
 	accept: "Aceptar",
 	dismiss: "Descartar",
@@ -150,6 +151,8 @@ export const es: Table = {
 	scopeField: "Ámbito",
 	kindField: "Tipo",
 	supersedesField: "Reemplaza · direcciones separadas por comas",
+	supersedesLinks: "Vínculos del registro",
+	addSupersedes: "Añadir direcciones",
 	newScopeHint: "Un ámbito nuevo empieza con esta nota.",
 	characters: "{count} caracteres",
 	cancel: "Cancelar",

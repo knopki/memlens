@@ -447,12 +447,19 @@ export function createConsoleController(
 	 * @purpose Build the record dialog of one record, or of a new note.
 	 * @invariants An amendment keeps the record. A supersede writes a new record with a link.
 	 * @invariants The kind is empty for an open entry, because an open entry holds no note kind.
+	 * @invariants The amendment form shows the supersede links of the record and starts the field
+	 * empty.
+	 *   A save adds the links of the field that the record lacks. It removes no link.
 	 */
 	function dialogOf(
 		record: RecordModel | OpenEntry | undefined,
 		supersedes: string,
 	): DialogState {
 		const amend = record !== undefined && supersedes === "";
+		const links =
+			amend && record !== undefined && "supersedes" in record
+				? record.supersedes
+				: [];
 		return {
 			mode: amend ? "amend" : supersedes ? "supersede" : "create",
 			target: record === undefined ? "" : `${record.scope}#${record.pos}`,
@@ -460,7 +467,8 @@ export function createConsoleController(
 			longform: record?.longform ?? "",
 			scope: record?.scope ?? get().scope,
 			kind: record === undefined ? "note" : kindOf(record.kind),
-			supersedes,
+			supersedes: amend ? "" : supersedes,
+			links,
 		};
 	}
 	// #endregion FUNC_dialogOf

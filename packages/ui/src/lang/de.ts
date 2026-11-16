@@ -103,6 +103,7 @@ export const de: Table = {
 	propText:
 		"Ein Vorschlag wartet auf einen Menschen. Annehmen schreibt den Vorgang nach den üblichen Regeln. Verwerfen schließt den Vorschlag und ändert keinen Eintrag.",
 	waiting: "Wartend",
+	otherScopes: "In anderen Bereichen: {count}",
 	decision: "Entscheidung",
 	accept: "Annehmen",
 	dismiss: "Verwerfen",
@@ -150,6 +151,8 @@ export const de: Table = {
 	scopeField: "Bereich",
 	kindField: "Art",
 	supersedesField: "Ersetzt · Adressen durch Kommas getrennt",
+	supersedesLinks: "Links des Datensatzes",
+	addSupersedes: "Adressen hinzufügen",
 	newScopeHint: "Ein neuer Bereich beginnt mit dieser Notiz.",
 	characters: "{count} Zeichen",
 	cancel: "Abbrechen",

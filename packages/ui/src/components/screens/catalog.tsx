@@ -46,6 +46,7 @@ function CatalogLine({
 	const scope =
 		range.level === 0 ? model.catalogScopes[range.start] : undefined;
 	const text = lineText(line);
+	const name = catalogName(model, range);
 	const className = [
 		"line",
 		line.kind[0],
@@ -63,7 +64,9 @@ function CatalogLine({
 				else void api.call.openCatalog(range);
 			}}
 		>
-			<span className="id">{catalogName(model, range)}</span>
+			<span className="id" title={name}>
+				{name}
+			</span>
 			<span className="tx">{text || dateSpan(line.from, line.to)}</span>
 		</Button>
 	);

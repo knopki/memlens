@@ -101,6 +101,7 @@ export const ja: Table = {
 	propText:
 		"提案は人の判断を待ちます。承認すると通常の規則で操作が書き込まれます。却下すると提案を閉じ、記録は変わりません。",
 	waiting: "待機中",
+	otherScopes: "他のスコープ: {count}",
 	decision: "判断",
 	accept: "承認",
 	dismiss: "却下",
@@ -147,6 +148,8 @@ export const ja: Table = {
 	scopeField: "スコープ",
 	kindField: "種類",
 	supersedesField: "置き換え元 · カンマ区切りのアドレス",
+	supersedesLinks: "記録のリンク",
+	addSupersedes: "アドレスを追加",
 	newScopeHint: "新しいスコープはこのノートから始まります。",
 	characters: "{count} 文字",
 	cancel: "キャンセル",

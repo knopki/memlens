@@ -170,6 +170,7 @@ describe("console controller dialog", () => {
 			scope: "project:alpha",
 			kind: "note",
 			supersedes: "",
+			links: [],
 		});
 		h.call.closeDialog();
 		expect(h.state().dialog).toBeNull();
@@ -212,6 +213,7 @@ describe("console controller dialog", () => {
 			scope: "project:alpha",
 			kind: "fact",
 			supersedes: "",
+			links: [],
 		});
 		await h.call.saveDialog({
 			body: "new body",
@@ -230,6 +232,33 @@ describe("console controller dialog", () => {
 			supersedes: "",
 			target: "project:alpha#3",
 			dest: "team:beta",
+		});
+	});
+
+	it("shows the supersede links of the record and adds no removal", async () => {
+		const record = {
+			...recordOf("project:alpha", 3),
+			supersedes: ["project:alpha#1", "project:alpha#2"],
+		};
+		const h = harness(
+			{},
+			{ model: viewOf("default", "project:alpha", [record]) },
+		);
+		await h.call.editNote("project:alpha#3", false);
+		expect(h.state().dialog).toMatchObject({
+			mode: "amend",
+			supersedes: "",
+			links: ["project:alpha#1", "project:alpha#2"],
+		});
+		await h.call.saveDialog({
+			body: "body",
+			longform: "",
+			scope: "project:alpha",
+			kind: "fact",
+			supersedes: "",
+		});
+		expect(callsOf(h, "action")[0]?.fields).toMatchObject({
+			supersedes: "",
 		});
 	});
 

@@ -8,6 +8,9 @@
  * @invariants A field text goes into a control value or into a text node, never into markup.
  * @invariants The form holds the drafts only. The open dialog, the status text, and the save come
  * from the API.
+ * @invariants The body field shows a body of the declared size without a scroll, and it grows with
+ * the text. The amendment form shows the supersede links of the record as text, and its field
+ * takes the added addresses only.
  * @dependencies USES: the dialog, field, input, text area, select, and button primitives. USES: the
  * kind list and the message keys.
  * @keywords dialog, note, create, amend, supersede, scope, kind, characters, react
@@ -96,7 +99,7 @@ function NoteForm({ api, dialog }: NoteFormProps): JSX.Element {
 				<TextArea
 					value={draft.body}
 					onChange={(body) => patch({ body })}
-					rows={3}
+					rows={6}
 					spellCheck={false}
 					required={true}
 				/>
@@ -133,7 +136,18 @@ function NoteForm({ api, dialog }: NoteFormProps): JSX.Element {
 					/>
 				</Field>
 			</div>
-			<Field label={t("supersedesField")}>
+			{amend && dialog.links.length ? (
+				<Field label={t("supersedesLinks")}>
+					<div className="links">
+						{dialog.links.map((link) => (
+							<span key={link} className="tag">
+								{link}
+							</span>
+						))}
+					</div>
+				</Field>
+			) : null}
+			<Field label={amend ? t("addSupersedes") : t("supersedesField")}>
 				<TextInput
 					value={draft.supersedes}
 					onChange={(supersedes) => patch({ supersedes })}

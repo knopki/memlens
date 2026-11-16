@@ -6,6 +6,8 @@
  * @invariants The filter drafts start from the search filters of the API state, so a restored
  * address shows its own values.
  * @invariants A hit body goes into text nodes. The words of the query mark the matches.
+ * @invariants A hit address splits into the scope prefix and the position, so the column cuts the
+ * prefix and keeps the position.
  * @dependencies USES: the inspector, the primitives, the console api, and the kind name helper.
  * @keywords search, find, hit, filter, highlight, scope, react
  * #endregion moduleContract
@@ -175,6 +177,8 @@ function SearchScreen({ api }: ScreenProps): JSX.Element {
 /**
  * @purpose Show one hit and open its target.
  * @invariants The selected hit takes the sel class.
+ * @invariants The address is two spans: the scope prefix and the position. The column gives the
+ * prefix a cut and the position a free space, so a long address keeps the position.
  */
 interface HitRowProps {
 	readonly api: ConsoleApi;
@@ -183,12 +187,18 @@ interface HitRowProps {
 
 function HitRow({ api, hit }: HitRowProps): JSX.Element {
 	const selected = api.state.selection?.target === hit.addr;
+	const cut = hit.addr.lastIndexOf("#");
 	return (
 		<Button
 			className={selected ? "line hit sel" : "line hit"}
 			onClick={() => void api.call.openTarget(hit.addr)}
 		>
-			<span className="id">{hit.addr}</span>
+			<span className="id">
+				<span className="scope">
+					{cut < 0 ? hit.addr : hit.addr.slice(0, cut)}
+				</span>
+				<span className="pos">{cut < 0 ? "" : hit.addr.slice(cut)}</span>
+			</span>
 			<span className="kind">{kindName(api.t, hit.kind)}</span>
 			<span className="tx">{highlighted(hit.body, api.state.query)}</span>
 			<span className="when">{hit.ts.slice(0, 10)}</span>

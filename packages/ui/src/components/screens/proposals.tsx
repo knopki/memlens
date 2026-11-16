@@ -6,6 +6,8 @@
  * and the stylesheet.
  * @invariants The payload text goes into a text node.
  * @invariants A decision calls the API intent and holds no state of its own.
+ * @invariants The table lists the proposals of the view scope only, so the list follows the
+ *   selected scope. A line below the table states the count of the other scopes.
  * @dependencies USES: the panel, table, and button primitives, the console api, and the message
  * keys.
  * @keywords proposal, waiting, accept, dismiss, decision, react
@@ -48,8 +50,10 @@ function Decision({ api, item }: DecisionProps): JSX.Element {
 
 // #region COMPONENT_Proposals
 /**
- * @purpose Show each pending proposal with its decision.
+ * @purpose Show each pending proposal of the view scope with its decision.
  * @invariants The table states the count of its rows. An empty table states that fact.
+ * @invariants A proposal of another scope stays out of the table, and a line below the table
+ *   states its count.
  */
 export function Proposals({ api }: ScreenProps): JSX.Element {
 	const state = useSyncExternalStore(
@@ -60,10 +64,14 @@ export function Proposals({ api }: ScreenProps): JSX.Element {
 	const model = state.model;
 	if (!model) return <></>;
 	const t = api.t;
+	const proposals = model.proposals.filter(
+		(item) => item.scope === model.scope,
+	);
+	const foreign = model.proposals.length - proposals.length;
 	return (
 		<>
 			<p className="sub">{t("propText")}</p>
-			<Panel title={t("waiting")} right={String(model.proposals.length)}>
+			<Panel title={t("waiting")} right={String(proposals.length)}>
 				<Table
 					headers={[
 						t("id"),
@@ -72,7 +80,7 @@ export function Proposals({ api }: ScreenProps): JSX.Element {
 						t("scope"),
 						t("decision"),
 					]}
-					rows={model.proposals.map((item) => [
+					rows={proposals.map((item) => [
 						item.id,
 						t("none"),
 						item.payload,
@@ -81,6 +89,9 @@ export function Proposals({ api }: ScreenProps): JSX.Element {
 					])}
 					empty={t("none")}
 				/>
+				{foreign > 0 ? (
+					<p className="muted">{t("otherScopes", { count: foreign })}</p>
+				) : null}
 			</Panel>
 		</>
 	);

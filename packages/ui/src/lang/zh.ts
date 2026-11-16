@@ -99,6 +99,7 @@ export const zh: Table = {
 	propText:
 		"提案等待人工处理。接受会按常规规则写入操作。驳回会关闭提案，不更改任何记录。",
 	waiting: "等待中",
+	otherScopes: "其他范围: {count}",
 	decision: "决定",
 	accept: "接受",
 	dismiss: "驳回",
@@ -143,6 +144,8 @@ export const zh: Table = {
 	scopeField: "范围",
 	kindField: "种类",
 	supersedesField: "替换 · 用逗号分隔的地址",
+	supersedesLinks: "记录链接",
+	addSupersedes: "添加地址",
 	newScopeHint: "新范围以这条笔记开始。",
 	characters: "{count} 个字符",
 	cancel: "取消",

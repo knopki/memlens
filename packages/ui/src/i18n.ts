@@ -136,6 +136,7 @@ const en = {
 	propText:
 		"A proposal waits for a human. Accept writes the operation by the ordinary rules. Dismiss closes the proposal and changes no record.",
 	waiting: "Waiting",
+	otherScopes: "In other scopes: {count}",
 	decision: "Decision",
 	accept: "Accept",
 	dismiss: "Dismiss",
@@ -183,6 +184,8 @@ const en = {
 	scopeField: "Scope",
 	kindField: "Kind",
 	supersedesField: "Supersedes · comma-separated addresses",
+	supersedesLinks: "Record links",
+	addSupersedes: "Add addresses",
 	newScopeHint: "A new scope starts with this note.",
 	characters: "{count} characters",
 	cancel: "Cancel",

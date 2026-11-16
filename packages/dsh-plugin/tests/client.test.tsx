@@ -742,11 +742,11 @@ describe("page body", () => {
 		expect(markup).toContain('role="status"');
 	});
 
-	it("holds no scope list before the view arrives", () => {
+	it("holds no scope control before the view arrives", () => {
 		const markup = renderToStaticMarkup(
 			<MemoryPage t={english} title="Memory" />,
 		);
-		expect(markup).not.toContain('class="ml-scopes"');
+		expect(markup).not.toContain('class="ml-field ml-scope-field"');
 	});
 });
 

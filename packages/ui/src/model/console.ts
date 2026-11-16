@@ -70,12 +70,17 @@ export interface DialogPayload {
 /**
  * @purpose Hold the open record dialog with its form values.
  * @invariants The target is the address of the amended record. It is empty for a new note.
+ * @invariants The links are the supersede links of the amended record. The field holds the targets
+ *   that the save adds, so a cleared field adds nothing.
  * @invariants The kind is empty when the form opens from an open entry, because an open entry holds
  * no note kind.
  */
 export interface DialogState extends DialogPayload {
 	readonly mode: DialogMode;
 	readonly target: string;
+
+	/** The supersede links that the record holds. The form shows them and adds no removal. */
+	readonly links: readonly string[];
 }
 // #endregion INTERFACE_DialogState
 

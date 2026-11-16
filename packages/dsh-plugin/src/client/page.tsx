@@ -2,9 +2,9 @@
  * #region moduleContract
  * @purpose Draw the memory page of the harness window, so a human reads and changes the records of
  *   each profile of the base file with no session.
- * @scope The head line, the profile control, the screen bar, the scope list, the screen body, the
- *   record dialog, the status line, and the stylesheet. NOT: the slot registration, the transport,
- *   the store, and the session tab.
+ * @scope The head line, the profile control, the scope control, the screen bar, the screen body,
+ *   the record dialog, the status line, and the stylesheet. NOT: the slot registration, the
+ *   transport, the store, and the session tab.
  * @invariants The page holds one console for the profiles of the base file, and the console starts
  *   on the default profile.
  * @invariants The page reads and writes no page address and no history. The address stays in memory.
@@ -42,6 +42,8 @@ export type MemoryPageProps = {
  * @purpose Hold one console of the base file profiles and draw its controls and its screen.
  * @invariants The console starts once per mount. The first restore reads the default profile.
  * @invariants The profile control follows the resolved profile of the view.
+ * @invariants The scope control follows the resolved scope of the view, and a choice of it opens
+ *   that scope.
  * @invariants The status line is the only place for a failed call.
  */
 export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
@@ -62,6 +64,9 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 		? model.profiles
 		: [selected].filter(Boolean);
 	const profile = names.includes(selected) ? selected : (names[0] ?? "");
+	const selectedScope = scopes.some((item) => item.key === state.scope)
+		? state.scope
+		: (scopes[0]?.key ?? "");
 	return (
 		<div className="ml-console ml-page">
 			<style>{CONSOLE_CSS}</style>
@@ -82,6 +87,23 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 						))}
 					</select>
 				</label>
+				{scopes.length ? (
+					<label className="ml-field ml-scope-field">
+						<span className="ml-bar-title">{t("scopes")}</span>
+						<select
+							value={selectedScope}
+							onChange={(event) => {
+								void api.call.reset(event.target.value);
+							}}
+						>
+							{scopes.map((scope) => (
+								<option key={scope.key} value={scope.key}>
+									{scope.key}
+								</option>
+							))}
+						</select>
+					</label>
+				) : null}
 				<span className="ml-hspacer" />
 				<button
 					type="button"
@@ -108,27 +130,6 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 					</button>
 				))}
 			</nav>
-			{scopes.length ? (
-				<div className="ml-scoperow">
-					<span className="ml-bar-title">{t("scopes")}</span>
-					<div className="ml-scopes">
-						{scopes.map((scope) => (
-							<button
-								key={scope.key}
-								type="button"
-								className={
-									scope.key === state.scope ? "ml-scope on" : "ml-scope"
-								}
-								onClick={() => {
-									void api.call.reset(scope.key);
-								}}
-							>
-								{scope.key}
-							</button>
-						))}
-					</div>
-				</div>
-			) : null}
 			<div className="ml-body">
 				<Screen api={api} />
 			</div>

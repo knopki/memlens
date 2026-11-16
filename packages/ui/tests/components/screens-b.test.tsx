@@ -81,6 +81,7 @@ const CREATE_NOTE: DialogState = {
 	scope: "project:alpha",
 	kind: "note",
 	supersedes: "",
+	links: [],
 };
 
 /** The open dialog of an amendment. */
@@ -92,6 +93,7 @@ const AMEND_NOTE: DialogState = {
 	scope: "project:alpha",
 	kind: "task",
 	supersedes: "",
+	links: [],
 };
 
 // #region FUNC_viewOf
@@ -211,7 +213,9 @@ describe("search screen", () => {
 		expect(markup).toContain('<span class="t">1 matches</span>');
 		expect(markup).toContain('<span class="r">project:alpha</span>');
 		expect(markup).toContain('class="btn line hit"');
-		expect(markup).toContain('<span class="id">project:alpha#0</span>');
+		expect(markup).toContain(
+			'<span class="id"><span class="scope">project:alpha</span><span class="pos">#0</span></span>',
+		);
 		expect(markup).toContain('<span class="kind">fact</span>');
 		expect(markup).toContain(
 			'<span class="tx">the <mark>alpha</mark> note</span>',
@@ -291,6 +295,49 @@ describe("proposals screen", () => {
 		expect(markup).toContain(">Dismiss</button>");
 	});
 
+	it("lists only the proposals of the view scope", () => {
+		const other: Proposal = {
+			...PROPOSAL,
+			id: "01JAZ5S0V0S9Z3H7Y8F4W6Q2P9",
+			scope: "user:notes",
+			payload: "the foreign payload",
+		};
+		const markup = renderToStaticMarkup(
+			<Proposals
+				api={apiOf(
+					stateOf({
+						screen: "proposals",
+						model: viewOf({ proposals: [PROPOSAL, other] }),
+					}),
+				)}
+			/>,
+		);
+		expect(markup).toContain("<td>the waiting payload</td>");
+		expect(markup).not.toContain("the foreign payload");
+		expect(markup).toContain('<span class="r">1</span>');
+		expect(markup).toContain('<p class="muted">In other scopes: 1</p>');
+	});
+
+	it("states the count of the other scopes with an empty table", () => {
+		const other: Proposal = {
+			...PROPOSAL,
+			id: "01JAZ5S0V0S9Z3H7Y8F4W6Q2P9",
+			scope: "user:notes",
+		};
+		const markup = renderToStaticMarkup(
+			<Proposals
+				api={apiOf(
+					stateOf({
+						screen: "proposals",
+						model: viewOf({ proposals: [other] }),
+					}),
+				)}
+			/>,
+		);
+		expect(markup).toContain('<span class="r">0</span>');
+		expect(markup).toContain('<p class="muted">In other scopes: 1</p>');
+	});
+
 	it("states the empty table", () => {
 		const markup = renderToStaticMarkup(
 			<Proposals api={apiOf(stateOf({ model: viewOf({ proposals: [] }) }))} />,
@@ -331,6 +378,26 @@ describe("note dialog", () => {
 		expect(markup).toContain('<span class="t">Amend note</span>');
 		expect(markup).toContain(">Save changes</button>");
 		expect(markup).not.toContain('class="hint"');
+	});
+
+	it("shows the links of the record as text and takes added addresses only", () => {
+		const markup = renderToStaticMarkup(
+			<NoteDialog
+				api={apiOf(
+					stateOf({
+						dialog: {
+							...AMEND_NOTE,
+							links: ["project:alpha#1", "project:alpha#2"],
+						},
+					}),
+				)}
+			/>,
+		);
+		expect(markup).toContain('<span class="tag">project:alpha#1</span>');
+		expect(markup).toContain('<span class="tag">project:alpha#2</span>');
+		expect(markup).toContain("Record links");
+		expect(markup).toContain("Add addresses");
+		expect(markup).toContain('class="links"');
 	});
 
 	it("blocks the save action while an action runs", () => {

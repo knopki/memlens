@@ -9,6 +9,14 @@
  *   outside a surface and no page rule reaches inside it.
  * @invariants Each colour is a harness alias token of the family `--dsw-alias-*`. The sheet holds no
  *   literal colour.
+ * @invariants The sheet states the border box inside the surface, so a control of the page and a
+ *   control of the surface keep one size.
+ * @invariants A result line holds four fixed tracks, so each row starts its columns at one place.
+ *   A long address cuts the scope prefix and keeps the position.
+ * @invariants A caption of the page head shares the baseline of its value, so the head reads as one
+ *   line of text.
+ * @invariants A dialog with no status text shows no status row, so the footer follows the last
+ *   field.
  * @invariants The sheet is a text constant. Each surface renders it in a `style` element, so the
  *   CSS leaves the page with its surface.
  * @rationale
@@ -34,6 +42,9 @@ export const CONSOLE_CSS = `
 	color: var(--dsw-alias-label-primary);
 	font: 13px / 1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+.ml-console :where(*) {
+	box-sizing: border-box;
+}
 .ml-console :focus-visible {
 	outline: 2px solid var(--dsw-alias-brand-primary);
 	outline-offset: 1px;
@@ -53,17 +64,7 @@ export const CONSOLE_CSS = `
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 }
-.ml-console .ml-screens,
-.ml-console .ml-scopes {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-.ml-console .ml-screen,
-.ml-console .ml-scope {
+.ml-console .ml-screen {
 	padding: 4px 8px;
 	border: 1px solid transparent;
 	border-radius: 6px;
@@ -73,21 +74,14 @@ export const CONSOLE_CSS = `
 	text-align: left;
 	cursor: pointer;
 }
-.ml-console .ml-screen:hover,
-.ml-console .ml-scope:hover {
+.ml-console .ml-screen:hover {
 	background: var(--dsw-alias-interactive-bg-hover);
 	color: var(--dsw-alias-label-primary);
 }
-.ml-console .ml-screen.on,
-.ml-console .ml-scope.on {
+.ml-console .ml-screen.on {
 	background: var(--dsw-alias-interactive-bg-hover-accent);
 	border-color: var(--dsw-alias-brand-primary);
 	color: var(--dsw-alias-brand-primary);
-}
-.ml-console .ml-scope {
-	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	font-size: 11.5px;
-	word-break: break-all;
 }
 .ml-console .ml-new {
 	margin-left: auto;
@@ -95,7 +89,7 @@ export const CONSOLE_CSS = `
 	border: 1px solid var(--dsw-alias-border-l2);
 	border-radius: 6px;
 	background: var(--dsw-alias-button-primary-fill);
-	color: var(--dsw-alias-label-on-color);
+	color: var(--dsw-alias-label-primary-foreground);
 	font: inherit;
 	cursor: pointer;
 }
@@ -148,6 +142,7 @@ export const CONSOLE_CSS = `
 }
 .ml-console .card {
 	display: grid;
+	align-content: start;
 	gap: 8px;
 	min-width: 0;
 	padding: 12px 14px;
@@ -196,6 +191,7 @@ export const CONSOLE_CSS = `
 	text-overflow: ellipsis;
 }
 .ml-console .card .btn {
+	align-self: start;
 	justify-self: start;
 }
 .ml-console pre.slice {
@@ -234,7 +230,7 @@ export const CONSOLE_CSS = `
 	height: 9px;
 	margin-right: 5px;
 	border-radius: 2px;
-	background: var(--dsw-alias-fill-l2);
+	background: var(--dsw-alias-border-l2);
 	vertical-align: -1px;
 }
 .ml-console .legend .lg.r::before {
@@ -280,7 +276,7 @@ export const CONSOLE_CSS = `
 .ml-console .btn.pri {
 	background: var(--dsw-alias-button-primary-fill);
 	border-color: var(--dsw-alias-button-primary-fill);
-	color: var(--dsw-alias-label-on-color);
+	color: var(--dsw-alias-label-primary-foreground);
 }
 .ml-console .btn.pri:hover:not(:disabled) {
 	background: var(--dsw-alias-button-primary-hover);
@@ -319,8 +315,10 @@ export const CONSOLE_CSS = `
 .ml-console .line .id {
 	color: var(--dsw-alias-label-secondary);
 }
+.ml-console .keys .line {
+	grid-template-columns: minmax(0, 26ch) minmax(0, 1fr);
+}
 .ml-console .keys .line .id {
-	max-width: 26ch;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -376,6 +374,9 @@ export const CONSOLE_CSS = `
 }
 .ml-console .table-wrap {
 	overflow-x: auto;
+}
+.ml-console .table-wrap + .muted {
+	margin-top: 6px;
 }
 .ml-console table {
 	width: 100%;
@@ -436,7 +437,7 @@ export const CONSOLE_CSS = `
 .ml-console .bar .track {
 	height: 6px;
 	border-radius: 999px;
-	background: var(--dsw-alias-fill-l2);
+	background: var(--dsw-alias-border-l2);
 	overflow: hidden;
 }
 .ml-console .bar .track i {
@@ -477,6 +478,7 @@ export const CONSOLE_CSS = `
 }
 .ml-console .filters select,
 .ml-console .filters input {
+	height: 30px;
 	padding: 4px 8px;
 	background: var(--dsw-alias-bg-layer-1);
 	border: 1px solid var(--dsw-alias-border-l2);
@@ -484,17 +486,33 @@ export const CONSOLE_CSS = `
 	font-size: 12.5px;
 }
 .ml-console .hit {
-	grid-template-columns: minmax(120px, auto) 90px minmax(0, 1fr) auto;
+	grid-template-columns: minmax(0, 176px) 92px minmax(0, 1fr) 84px;
 	font-family: inherit;
 }
 .ml-console .hit .id {
+	display: flex;
+	min-width: 0;
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+.ml-console .hit .id .scope {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ml-console .hit .id .pos {
+	flex: 0 0 auto;
+}
 .ml-console .hit .kind {
+	overflow: hidden;
 	color: var(--dsw-alias-state-business-primary);
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 .ml-console .hit .when {
 	color: var(--dsw-alias-label-secondary);
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+	white-space: nowrap;
 }
 .ml-console mark {
 	padding: 0 1px;
@@ -505,7 +523,7 @@ export const CONSOLE_CSS = `
 .ml-console .meter {
 	width: 90px;
 	height: 6px;
-	background: var(--dsw-alias-fill-l2);
+	background: var(--dsw-alias-border-l2);
 	border-radius: 999px;
 	overflow: hidden;
 }
@@ -519,7 +537,7 @@ export const CONSOLE_CSS = `
 	align-items: center;
 	gap: 6px;
 	padding: 3px 8px;
-	background: var(--dsw-alias-fill-l2);
+	background: var(--dsw-alias-bg-layer-2);
 	border: 1px solid var(--dsw-alias-border-l2);
 	border-radius: 999px;
 	font-size: 12px;
@@ -558,9 +576,11 @@ export const CONSOLE_CSS = `
 }
 .ml-console .field textarea,
 .ml-console dialog textarea {
-	min-height: 64px;
+	min-height: 127px;
+	max-height: 50vh;
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font-size: 12.5px;
+	field-sizing: content;
 	resize: vertical;
 }
 .ml-console .field input:disabled,
@@ -582,6 +602,16 @@ export const CONSOLE_CSS = `
 	border-radius: 7px;
 	color: var(--dsw-alias-state-error-primary);
 	font-size: 12.5px;
+}
+.ml-console .links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	letter-spacing: normal;
+	text-transform: none;
+}
+.ml-console .links .tag {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .ml-console .counter {
 	color: var(--dsw-alias-label-secondary);
@@ -618,6 +648,9 @@ export const CONSOLE_CSS = `
 	min-height: 16px;
 	color: var(--dsw-alias-label-secondary);
 	font-size: 11.5px;
+}
+.ml-console .dlg-note:empty {
+	display: none;
 }
 .ml-console .dlg-note.error {
 	color: var(--dsw-alias-state-error-primary);
@@ -662,7 +695,7 @@ export const CONSOLE_CSS = `
 .ml-console .ml-head {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: center;
+	align-items: baseline;
 	gap: 6px 12px;
 	padding: 8px 12px;
 	border-bottom: 1px solid var(--dsw-alias-border-l2);
@@ -678,7 +711,7 @@ export const CONSOLE_CSS = `
 }
 .ml-console .ml-field {
 	display: inline-flex;
-	align-items: center;
+	align-items: baseline;
 	gap: 6px;
 }
 .ml-console .ml-field select {
@@ -691,9 +724,12 @@ export const CONSOLE_CSS = `
 	font: inherit;
 	font-size: 12px;
 }
+.ml-console .ml-scope-field select {
+	max-width: min(320px, 32vw);
+}
 .ml-console .ml-chip {
 	display: inline-flex;
-	align-items: center;
+	align-items: baseline;
 	gap: 6px;
 	font-size: 12px;
 	color: var(--dsw-alias-label-secondary);
@@ -709,19 +745,18 @@ export const CONSOLE_CSS = `
 	display: flex;
 	align-items: flex-start;
 	gap: 8px;
+	min-width: 0;
 	padding: 8px 12px 0;
 }
 .ml-console .ml-scoperow .ml-bar-title {
 	padding-top: 3px;
 }
-.ml-console .ml-scoperow .ml-scopes,
-.ml-console .ml-scoperow .ml-scopelist {
-	padding: 0;
-}
 .ml-console .ml-scopelist {
 	display: flex;
+	flex: 1 1 auto;
 	flex-wrap: wrap;
 	gap: 4px;
+	min-width: 0;
 	max-height: 84px;
 	overflow-y: auto;
 }
