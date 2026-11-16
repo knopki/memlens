@@ -281,7 +281,8 @@ The model sees the two child inputs only. One non-empty child copies its text wi
 Each attempt copies exact child inputs as `BuildInput`. The store compares both current children under the write lock before publication.
 A changed input, a hidden record, or a dirty child rejects the result. One matching key alone does not permit a result.
 The compaction starts at the accepted triggers of the plugin worker, at `memlens compact`, or at a
-console job. The worker mirrors each pass, retry, and failure to the host log and to the console
+console job. The worker makes its first pass ten seconds after activation when work waits.
+The worker mirrors each pass, retry, and failure to the host log and to the console
 journal. A failed merge answer states its reason: `no_answer` or `not_shorter`.
 Rendering returns immediately with current clean summaries and temporary lines.
 See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0020 Storage pivot](../adr/0020-storage-pivot.md).

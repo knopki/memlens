@@ -47,6 +47,9 @@ const LOG = "[dsh-memlens] ";
 /** The greatest count of journal events that the worker keeps. */
 const JOURNAL_LIMIT = 10;
 
+/** The delay of the first check after activation, in seconds. */
+const STARTUP_DELAY = 10;
+
 /** The LLM surface that the worker needs. The host service satisfies this shape. */
 export interface WorkerLlm {
 	stream(options: GenerateOptions): AsyncIterable<StreamChunk>;
@@ -137,6 +140,8 @@ function count(map: Map<string, number>, reasons: readonly string[]): void {
 /**
  * @purpose Own the background compaction of one store, from the triggers to the model calls.
  * @invariants The timer lives under a Cordis effect and ends with the owner context.
+ * @invariants One check runs ten seconds after activation, before the idle timer. A pass, a retry,
+ *  or a config change cancels the startup check.
  * @invariants A disposed worker starts no pass, answers no late model reply, and starts no timer.
  * @invariants An inputs update applies to the next pass. The rate window, the running pass, and the
  *  retry wait keep their state.
@@ -145,6 +150,7 @@ export class MemoryWorker {
 	private readonly rate: RateWindow;
 	private inputs: WorkerInputs;
 	private timer: ReturnType<typeof setTimeout> | null = null;
+	private startupTimer: ReturnType<typeof setTimeout> | null = null;
 	private lastActivity = Date.now();
 	private failures = 0;
 	private running = false;
@@ -165,9 +171,15 @@ export class MemoryWorker {
 		this.inputs = inputs;
 		this.rate = new RateWindow(inputs.compaction.maxCallsPerHour);
 		ctx.effect(() => () => this.dispose());
-		this.scheduleIdle();
+		this.startupTimer = setTimeout(() => {
+			this.startupTimer = null;
+			if (this.disposed || this.running || this.timer !== null) return;
+			if (this.dirtyCount() > 0) void this.run();
+			else this.scheduleIdle();
+		}, STARTUP_DELAY * 1000);
 		debug("Worker started", {
 			event: "start",
+			startupDelay: STARTUP_DELAY,
 			idle: inputs.store.idle,
 			batch: inputs.compaction.batch,
 		});
@@ -196,11 +208,15 @@ export class MemoryWorker {
 				? 0
 				: Math.max(0, Math.ceil((this.retryAt - Date.now()) / 1000));
 		const nextAt =
-			this.disposed || this.running || this.timer === null
+			this.disposed || this.running
 				? null
-				: this.retryAt > 0
-					? this.retryAt
-					: this.lastActivity + this.inputs.store.idle * 1000;
+				: this.startupTimer !== null
+					? this.lastActivity + STARTUP_DELAY * 1000
+					: this.timer === null
+						? null
+						: this.retryAt > 0
+							? this.retryAt
+							: this.lastActivity + this.inputs.store.idle * 1000;
 		return {
 			attempts: this.attempts,
 			active: this.inFlight,
@@ -403,11 +419,13 @@ export class MemoryWorker {
 		console.log(`${LOG}${text}`);
 	}
 
-	/** Stop the timer and reject each later start. Cordis disposal calls this. */
+	/** Stop the timers and reject each later start. Cordis disposal calls this. */
 	private dispose(): void {
 		this.disposed = true;
 		this.retryAt = 0;
 		this.clearTimer();
+		if (this.startupTimer !== null) clearTimeout(this.startupTimer);
+		this.startupTimer = null;
 		debug("Worker disposed", { event: "dispose" });
 	}
 }

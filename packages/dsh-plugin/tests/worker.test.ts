@@ -74,19 +74,23 @@ const SCOPES: readonly ScopeKey[] = ["user:a", "user:b"];
 function dirtyStore(scopes: readonly ScopeKey[] = ["user:notes"]): Store {
 	const directory = mkdtempSync(join(tmpdir(), "memlens-worker-"));
 	const store = new Store(directory);
-	for (const scope of scopes)
-		for (const index of [0, 1]) {
-			note(store, {
-				scope,
-				kind: "note",
-				body: `${"long body ".repeat(40)}${index}`,
-				session: "session-1",
-				turn: "turn-1",
-				preset: "default",
-				ts: `2026-01-0${index + 1}T00:00:00.000Z`,
-			});
-		}
+	for (const scope of scopes) addNotes(store, scope);
 	return store;
+}
+
+/** Add two long notes of one scope to a live store. */
+function addNotes(store: Store, scope: ScopeKey = "user:notes"): void {
+	for (const index of [0, 1]) {
+		note(store, {
+			scope,
+			kind: "note",
+			body: `${"long body ".repeat(40)}${index}`,
+			session: "session-1",
+			turn: "turn-1",
+			preset: "default",
+			ts: `2026-01-0${index + 1}T00:00:00.000Z`,
+		});
+	}
 }
 
 const roots: Context[] = [];
@@ -118,7 +122,7 @@ describe("MemoryWorker", () => {
 		);
 	});
 
-	it("starts a pass at the idle limit through fake time", async () => {
+	it("starts a pass ten seconds after activation when work waits", async () => {
 		vi.useFakeTimers();
 		const store = dirtyStore();
 		stores.push(store);
@@ -126,7 +130,23 @@ describe("MemoryWorker", () => {
 		roots.push(root);
 		const llm = new StubLlm();
 		new MemoryWorker(root, store, inputs({ batch: 2 }), llm);
-		await vi.advanceTimersByTimeAsync(299_000);
+		await vi.advanceTimersByTimeAsync(9_000);
+		expect(llm.log).toHaveLength(0);
+		await vi.advanceTimersByTimeAsync(1_000);
+		expect(llm.log.length).toBeGreaterThan(0);
+	});
+
+	it("starts a pass at the idle limit through fake time", async () => {
+		vi.useFakeTimers();
+		const store = new Store(mkdtempSync(join(tmpdir(), "memlens-worker-")));
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new StubLlm();
+		new MemoryWorker(root, store, inputs({ batch: 2 }), llm);
+		await vi.advanceTimersByTimeAsync(10_000);
+		addNotes(store);
+		await vi.advanceTimersByTimeAsync(289_000);
 		expect(llm.log).toHaveLength(0);
 		await vi.advanceTimersByTimeAsync(2_000);
 		expect(llm.log.length).toBeGreaterThan(0);
@@ -338,7 +358,7 @@ describe("MemoryWorker", () => {
 
 	it("re-arms the idle timer when the idle time falls", async () => {
 		vi.useFakeTimers();
-		const store = dirtyStore();
+		const store = new Store(mkdtempSync(join(tmpdir(), "memlens-worker-")));
 		stores.push(store);
 		const root = new Context();
 		roots.push(root);
@@ -349,7 +369,9 @@ describe("MemoryWorker", () => {
 			inputs({ batch: 2 }, 600),
 			llm,
 		);
-		await vi.advanceTimersByTimeAsync(299_000);
+		await vi.advanceTimersByTimeAsync(10_000);
+		addNotes(store);
+		await vi.advanceTimersByTimeAsync(289_000);
 		expect(llm.log).toHaveLength(0);
 		worker.updateInputs(inputs({ batch: 2 }, 300));
 		await vi.advanceTimersByTimeAsync(2_000);
@@ -358,13 +380,15 @@ describe("MemoryWorker", () => {
 
 	it("defers the idle pass when the idle time rises", async () => {
 		vi.useFakeTimers();
-		const store = dirtyStore();
+		const store = new Store(mkdtempSync(join(tmpdir(), "memlens-worker-")));
 		stores.push(store);
 		const root = new Context();
 		roots.push(root);
 		const llm = new StubLlm();
 		const worker = new MemoryWorker(root, store, inputs({ batch: 2 }), llm);
-		await vi.advanceTimersByTimeAsync(299_000);
+		await vi.advanceTimersByTimeAsync(10_000);
+		addNotes(store);
+		await vi.advanceTimersByTimeAsync(289_000);
 		worker.updateInputs(inputs({ batch: 2 }, 600));
 		await vi.advanceTimersByTimeAsync(299_000);
 		expect(llm.log).toHaveLength(0);
