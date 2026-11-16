@@ -8,15 +8,19 @@
  * @scope
  *  - The base TOML load with a built-in fallback, the CLI store path order, the profile scopes,
  *    and the visible scope list.
+ *  - The active scope of one directory: the configured rules, then the automatic list.
  *  - NOT: command semantics, argument parsing, output formats, and the harness patch.
  * @invariants
  *  - The store path order is --store, then MEMLENS_STORE, then the base file.
  *  - A missing base file falls back to the built-in default configuration, and the CLI writes no
  *    file.
  *  - Each runtime owns one row store and the visible scopes of its selected profile.
- *  - Scope rules take precedence over the Git repository name and the configured fallback.
+ *  - Scope rules take precedence over the automatic list: the Git remote, the repository name,
+ *    the directory name, and the fallback `project:misc`.
+ *  - The Git remote is origin when it exists, and the first remote otherwise.
  * @usecases
  *  - Open: command => gives --store and a profile name => gets one runtime and closes it
+ *  - Scope: command => gives one directory => gets the key, its rule, and its source
  * @dependencies USES API: @memlens/core; READS: config.toml, the store directory
  * @keywords runtime, config, store, open, profiles, visible, cli
  * #endregion moduleContract
@@ -26,9 +30,15 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { debuglog } from "node:util";
-import type { BaseConfig, ResolvedConfig, ScopeKey } from "@memlens/core";
+import type {
+	BaseConfig,
+	ResolvedConfig,
+	ScopeKey,
+	ScopeSubject,
+} from "@memlens/core";
 import {
 	activeScope,
+	automaticScope,
 	DEFAULT_CONFIG_TOML,
 	expandTilde,
 	globMatches,
@@ -39,7 +49,6 @@ import {
 	resolveConfig,
 	Store,
 	storePath,
-	validateScopeKey,
 	visibleScopes,
 	xdgDirs,
 } from "@memlens/core";
@@ -147,8 +156,10 @@ export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
 }
 
 /**
- * @purpose Resolve the scope of a directory from rules, Git, and the configured fallback.
- * @invariants A matching rule takes precedence. A Git worktree uses the main repository name.
+ * @purpose Resolve the scope of a directory from the rules and the automatic list.
+ * @invariants A matching rule takes precedence over the automatic list.
+ * @invariants A Git worktree uses the name of the main repository.
+ * @invariants The remote is origin when it exists, and the first remote otherwise.
  */
 export function cliScopeResult(
 	base: BaseConfig,
@@ -167,23 +178,79 @@ export function cliScopeResult(
 			return null;
 		}
 	};
-	const remote = git("remote", "get-url", "origin");
-	const gitRemote =
-		remote
-			?.replace(/^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?/i, "")
-			.replace(/^[^@/]+@([^:]+):/, "$1/") ?? null;
-	const result = activeScope(base.scope_default, { path: cwd, gitRemote });
+	const remote = selectedRemote(git);
+	const subject: ScopeSubject = {
+		gitRemote: remote === null ? null : normalizedRemote(remote),
+		path: cwd,
+		workspace: null,
+		workspaceName: null,
+		repo: repositoryName(git),
+	};
+	const result = activeScope(base.scope_default, subject);
 	if (result.rule !== null) return { ...result, source: "rule" };
+	const automatic = automaticScope({ ...subject, gitRemote: remote });
+	debug("Scope selected automatically", {
+		event: "scope",
+		key: automatic.key,
+		source: automatic.source,
+	});
+	return { key: automatic.key, rule: null, source: automatic.source };
+}
+
+// #region FUNC_selectedRemote
+/**
+ * @purpose Select the one remote URL of a directory, so each caller reads the same remote.
+ * @invariants The remote origin wins, and the first remote applies when origin is absent.
+ * @invariants A missing repository or remote gives null.
+ * @param git - The Git runner of the directory.
+ * @returns The remote URL in its Git form, or null.
+ */
+function selectedRemote(
+	git: (...args: string[]) => string | null,
+): string | null {
+	const names =
+		git("remote")
+			?.split("\n")
+			.map((name) => name.trim())
+			.filter((name) => name.length > 0) ?? [];
+	const name = names.includes("origin") ? "origin" : names[0];
+	return name === undefined ? null : git("remote", "get-url", name);
+}
+// #endregion FUNC_selectedRemote
+
+// #region FUNC_normalizedRemote
+/**
+ * @purpose Write one remote URL in the `host/path` form, so a rule glob matches it.
+ * @invariants The scheme and the user part are removed.
+ * @param remote - The remote URL in its Git form.
+ * @returns The normalized remote URL.
+ */
+function normalizedRemote(remote: string): string {
+	return remote
+		.replace(/^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?/i, "")
+		.replace(/^[^@/]+@([^:]+):/, "$1/");
+}
+// #endregion FUNC_normalizedRemote
+
+// #region FUNC_repositoryName
+/**
+ * @purpose Take the repository name from the common Git directory, so a worktree keeps the main name.
+ * @invariants A worktree takes the name of the directory that holds the common Git directory.
+ * @invariants The name keeps its case. A directory outside a repository gives null.
+ * @param git - The Git runner of the directory.
+ * @returns The repository name, or null.
+ */
+function repositoryName(
+	git: (...args: string[]) => string | null,
+): string | null {
 	const common = git("rev-parse", "--path-format=absolute", "--git-common-dir");
 	const root = common === null ? null : git("rev-parse", "--show-toplevel");
-	if (common !== null && root !== null) {
-		const repo =
-			basename(common) === ".git" ? basename(dirname(common)) : basename(root);
-		const key = `project:${repo.toLowerCase()}`;
-		if (validateScopeKey(key)) return { key, rule: null, source: "git" };
-	}
-	return { ...result, source: "default" };
+	if (common === null || root === null) return null;
+	return basename(common) === ".git"
+		? basename(dirname(common))
+		: basename(root);
 }
+// #endregion FUNC_repositoryName
 
 /** The active scope key of one directory. */
 export function cliActiveScope(base: BaseConfig, cwd: string): ScopeKey {

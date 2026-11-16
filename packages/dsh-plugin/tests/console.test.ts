@@ -156,6 +156,9 @@ function workerInputs(): {
 const CASE_BASE = DEFAULT_CONFIG_TOML.replace(
 	'default = "project:misc"',
 	'default = "user:notes"',
+).replace(
+	"rules = []",
+	'rules = [{ match = "path", glob = "*", key = "user:notes" }]',
 );
 
 // #region FUNC_composition

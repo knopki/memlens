@@ -344,18 +344,25 @@ export class Memlens extends Service {
 	 * @invariants Each configuration read joins the active scope key into the scope list of the profile.
 	 * @param agent - The live agent with its preset scope and session directory.
 	 * @param workspace - The workspace id, when the host has a workspace registry.
+	 * @param workspaceName - The workspace title, when the host has a workspace registry.
 	 * @returns The store, resolved configuration, and active scope of the agent.
 	 */
-	forAgent(agent: Agent, workspace?: string): AgentMemory {
+	forAgent(
+		agent: Agent,
+		workspace?: string,
+		workspaceName?: string,
+	): AgentMemory {
 		if (this.closed)
 			throw new MemlensError("Data", "The Memlens host is disposed.");
 		const cached = this.memories.get(agent);
 		if (cached) return cached;
 		const cwd = agent.session.header.cwd;
-		const scope = cwd
-			? pluginActiveScope(this.base, cwd, workspace)
-			: activeScope(this.base.scope_default, { workspace: workspace ?? null })
-					.key;
+		const scope = pluginActiveScope(
+			this.base,
+			cwd ?? "",
+			workspace,
+			workspaceName,
+		);
 		const host = this;
 		const memory: AgentMemory = {
 			store: this.store,

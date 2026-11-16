@@ -272,6 +272,18 @@ describe("Memlens host service", () => {
 		expect(root.memlens.forAgent(agent).scope).toBe("project:workspace");
 	});
 
+	it("uses the workspace title when no Git repository exists", async () => {
+		const { root } = await composition();
+		root.provide("workspaceRegistry", {
+			resolveByPath: async () => ({ id: "ws-a", title: "Workspace-A" }),
+		} as unknown as Context["workspaceRegistry"]);
+		const agent = subject(root);
+		await agentEvents(root, agent).serial("agent/created", {
+			source: "startup",
+		});
+		expect(root.memlens.forAgent(agent).scope).toBe("project:workspace-a");
+	});
+
 	it("resumes a session whose former directory is absent", async () => {
 		const { root, directory } = await composition();
 		root.provide("workspaceRegistry", {
@@ -289,7 +301,7 @@ describe("Memlens host service", () => {
 		await agentEvents(root, agent).serial("agent/created", {
 			source: "resume",
 		});
-		expect(root.memlens.forAgent(agent).scope).toBe("project:misc");
+		expect(root.memlens.forAgent(agent).scope).toBe("project:missing");
 	});
 
 	it("uses the built-in fallback key when a session has no directory", async () => {

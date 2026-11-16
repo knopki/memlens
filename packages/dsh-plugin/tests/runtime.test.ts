@@ -172,10 +172,32 @@ describe("pluginStorePath", () => {
 });
 
 describe("pluginActiveScope", () => {
-	it("uses the configured default when no rule matches", () => {
+	it("uses the directory when no rule or workspace matches", () => {
 		writeBase(BASE_CONFIG);
 		const base = loadPluginBase(env());
-		expect(pluginActiveScope(base, join(rootDir, "plain"))).toBe("user:notes");
+		expect(pluginActiveScope(base, join(rootDir, "plain"))).toBe(
+			"project:plain",
+		);
+	});
+
+	it("uses the workspace title before the directory", () => {
+		writeBase(BASE_CONFIG);
+		const base = loadPluginBase(env());
+		expect(
+			pluginActiveScope(base, join(rootDir, "plain"), "ws-1", "My-Workspace"),
+		).toBe("project:my-workspace");
+	});
+
+	it.skipIf(!hasGit)("uses the remote before the workspace title", () => {
+		writeBase(BASE_CONFIG);
+		const base = loadPluginBase(env());
+		const repo = join(rootDir, "local");
+		mkdirSync(repo, { recursive: true });
+		git(repo, "init");
+		git(repo, "remote", "add", "upstream", "git@github.com:Acme/Demo.git");
+		expect(pluginActiveScope(base, repo, "ws-1", "workspace")).toBe(
+			"project:acme/demo",
+		);
 	});
 
 	it("uses a matching path rule", () => {

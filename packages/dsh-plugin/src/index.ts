@@ -97,7 +97,7 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
 							.catch(() => undefined)
 					: undefined;
 				if (!live) return;
-				const memory = memlens.forAgent(agent, workspace?.id);
+				const memory = memlens.forAgent(agent, workspace?.id, workspace?.title);
 				let report = true;
 				const dispose = agent.ctx.effect(() => {
 					const cleanups: (() => unknown)[] = [];

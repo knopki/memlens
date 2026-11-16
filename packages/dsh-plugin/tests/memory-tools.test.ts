@@ -113,6 +113,7 @@ directions = 10
 
 [scope_default]
 default = "user:notes"
+rules = [{ match = "path", glob = "*", key = "user:notes" }]
 `;
 
 const savedEnv = { ...process.env };

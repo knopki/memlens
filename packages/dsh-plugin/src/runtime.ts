@@ -15,6 +15,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { debuglog } from "node:util";
 import {
 	activeScope,
+	automaticScope,
 	type BaseConfig,
 	DEFAULT_CONFIG_TOML,
 	expandTilde,
@@ -23,7 +24,6 @@ import {
 	type PatchConfig,
 	type ScopeKey,
 	storePath,
-	validateScopeKey,
 	xdgDirs,
 } from "@memlens/core";
 
@@ -92,19 +92,22 @@ export function pluginStorePath(
 
 // #region FUNC_pluginActiveScope
 /**
- * @purpose Select the write scope through ordered rules, the repository name, and the configured fallback.
- * @invariants A Git worktree uses the main repository name. A missing Git repository uses the configured fallback.
+ * @purpose Select the write scope through ordered rules and the working context.
+ * @invariants A Git worktree uses the main repository name.
  * @param base - The base layer that supplies the scope rules.
  * @param cwd - The session working directory.
  * @param workspace - The workspace id, when the harness supplies one.
+ * @param workspaceName - The workspace title, when the harness supplies one.
  * @returns The active scope key.
  */
 export function pluginActiveScope(
 	base: BaseConfig,
 	cwd: string,
 	workspace?: string,
+	workspaceName?: string,
 ): ScopeKey {
 	const git = (...args: string[]): string | null => {
+		if (!cwd) return null;
 		try {
 			return (
 				execFileSync("git", args, {
@@ -117,25 +120,32 @@ export function pluginActiveScope(
 			return null;
 		}
 	};
-	const remote = git("remote", "get-url", "origin");
+	const firstRemote = git("remote")?.split("\n")[0];
+	const remote =
+		git("remote", "get-url", "origin") ??
+		(firstRemote ? git("remote", "get-url", firstRemote) : null);
 	const gitRemote =
 		remote
 			?.replace(/^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?/i, "")
 			.replace(/^[^@/]+@([^:]+):/, "$1/") ?? null;
-	const selected = activeScope(base.scope_default, {
-		path: cwd,
-		gitRemote,
-		workspace: workspace ?? null,
-	});
-	if (selected.rule !== null) return selected.key;
 	const common = git("rev-parse", "--path-format=absolute", "--git-common-dir");
 	const root = common === null ? null : git("rev-parse", "--show-toplevel");
-	if (common !== null && root !== null) {
-		const repo =
-			basename(common) === ".git" ? basename(dirname(common)) : basename(root);
-		const key = `project:${repo.toLowerCase()}`;
-		if (validateScopeKey(key)) return key;
-	}
-	return selected.key;
+	const repo =
+		common !== null && root !== null
+			? basename(common) === ".git"
+				? basename(dirname(common))
+				: basename(root)
+			: null;
+	const subject = {
+		path: cwd || null,
+		gitRemote,
+		repo,
+		workspace: workspace ?? null,
+		workspaceName: workspaceName ?? null,
+	};
+	const selected = activeScope(base.scope_default, subject);
+	return selected.rule === null
+		? automaticScope({ ...subject, gitRemote: remote }).key
+		: selected.key;
 }
 // #endregion FUNC_pluginActiveScope

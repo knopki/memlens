@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	activeScope,
+	automaticScope,
 	repoName,
 	type ScopeSubject,
 	visibleScopes,
@@ -98,6 +99,214 @@ describe("activeScope", () => {
 		expect(activeScope(scopeDefault, { path: "/b/x" }).key).toBe(
 			"project:same",
 		);
+	});
+
+	it("keeps the workspace id for the rules", () => {
+		const result = activeScope(SCOPE_DEFAULT, {
+			workspace: "ws_01H",
+			workspaceName: "dsh",
+		});
+		expect(result).toEqual({ key: "project:dsh/optmem", rule: 2 });
+	});
+
+	it("keeps the configured default with no matching rule", () => {
+		expect(activeScope({ rules: [], default: "project:other" }, {})).toEqual({
+			key: "project:other",
+			rule: null,
+		});
+	});
+});
+
+describe("automaticScope", () => {
+	it("takes the organization and the repository from a normalized remote", () => {
+		expect(automaticScope({ gitRemote: "github.com/knopki/memlens" })).toEqual({
+			key: "project:knopki/memlens",
+			source: "git_remote",
+		});
+	});
+
+	it("takes the organization and the repository from an scp remote", () => {
+		expect(
+			automaticScope({ gitRemote: "git@github.com:knopki/OptMem.git" }),
+		).toEqual({
+			key: "project:knopki/optmem",
+			source: "git_remote",
+		});
+	});
+
+	it("takes the organization and the repository from an https remote", () => {
+		expect(
+			automaticScope({
+				gitRemote: "https://github.com/knopki/memlens.git",
+			}),
+		).toEqual({
+			key: "project:knopki/memlens",
+			source: "git_remote",
+		});
+	});
+
+	it("takes the organization and the repository from an ssh url", () => {
+		expect(
+			automaticScope({
+				gitRemote: "ssh://git@github.com:2222/knopki/memlens.git",
+			}),
+		).toEqual({
+			key: "project:knopki/memlens",
+			source: "git_remote",
+		});
+	});
+
+	it("drops a port from a normalized remote", () => {
+		expect(
+			automaticScope({ gitRemote: "github.com:2222/knopki/memlens.git" }),
+		).toEqual({
+			key: "project:knopki/memlens",
+			source: "git_remote",
+		});
+	});
+
+	it("keeps each nested group after the host", () => {
+		expect(
+			automaticScope({
+				gitRemote: "git@gitlab.com:acme/team/MemLens.git",
+			}),
+		).toEqual({
+			key: "project:acme/team/memlens",
+			source: "git_remote",
+		});
+	});
+
+	it("skips an absolute local remote", () => {
+		expect(
+			automaticScope({
+				gitRemote: "/srv/git/memlens.git",
+				repo: "memlens",
+			}),
+		).toEqual({ key: "project:memlens", source: "git" });
+	});
+
+	it("skips a relative local remote", () => {
+		expect(
+			automaticScope({
+				gitRemote: "../repos/memlens",
+				repo: "memlens",
+			}),
+		).toEqual({ key: "project:memlens", source: "git" });
+	});
+
+	it("skips a relative local remote with no host", () => {
+		expect(
+			automaticScope({ gitRemote: "acme/memlens", repo: "memlens" }),
+		).toEqual({ key: "project:memlens", source: "git" });
+	});
+
+	it("skips a file remote", () => {
+		expect(
+			automaticScope({
+				gitRemote: "file:///srv/git/acme/memlens.git",
+				repo: "memlens",
+			}),
+		).toEqual({ key: "project:memlens", source: "git" });
+	});
+
+	it("skips a remote with no organization", () => {
+		expect(
+			automaticScope({
+				gitRemote: "git@github.com:memlens.git",
+				repo: "memlens",
+			}),
+		).toEqual({ key: "project:memlens", source: "git" });
+	});
+
+	it("takes the repository name with no remote", () => {
+		expect(automaticScope({ repo: "MemLens" })).toEqual({
+			key: "project:memlens",
+			source: "git",
+		});
+	});
+
+	it("keeps a nested repository name", () => {
+		expect(automaticScope({ repo: "Acme/Team/MemLens" })).toEqual({
+			key: "project:acme/team/memlens",
+			source: "git",
+		});
+	});
+
+	it("takes the workspace name", () => {
+		expect(automaticScope({ workspaceName: "Dsh" })).toEqual({
+			key: "project:dsh",
+			source: "workspace",
+		});
+	});
+
+	it("takes the directory name", () => {
+		expect(automaticScope({ path: "/home/knopki/prj/memlens/" })).toEqual({
+			key: "project:memlens",
+			source: "path",
+		});
+	});
+
+	it("takes the file system root as the default", () => {
+		expect(automaticScope({ path: "/" })).toEqual({
+			key: "project:misc",
+			source: "default",
+		});
+	});
+
+	it("gives the default with no input", () => {
+		expect(automaticScope({})).toEqual({
+			key: "project:misc",
+			source: "default",
+		});
+	});
+
+	it("takes the remote before the other inputs", () => {
+		expect(
+			automaticScope({
+				gitRemote: "github.com/acme/api",
+				repo: "memlens",
+				workspaceName: "dsh",
+				path: "/home/knopki/prj/other",
+			}),
+		).toEqual({
+			key: "project:acme/api",
+			source: "git_remote",
+		});
+	});
+
+	it("takes the repository before the workspace and the path", () => {
+		expect(
+			automaticScope({
+				repo: "api",
+				workspaceName: "dsh",
+				path: "/home/knopki/prj/other",
+			}),
+		).toEqual({ key: "project:api", source: "git" });
+	});
+
+	it("takes the workspace before the path", () => {
+		expect(
+			automaticScope({
+				workspaceName: "dsh",
+				path: "/home/knopki/prj/other",
+			}),
+		).toEqual({ key: "project:dsh", source: "workspace" });
+	});
+
+	it("skips an invalid name and takes the next step", () => {
+		expect(
+			automaticScope({
+				workspaceName: "My Project",
+				path: "/home/knopki/prj/memlens",
+			}),
+		).toEqual({ key: "project:memlens", source: "path" });
+	});
+
+	it("keeps the result shape to the key and the source", () => {
+		expect(Object.keys(automaticScope({ repo: "memlens" })).sort()).toEqual([
+			"key",
+			"source",
+		]);
 	});
 });
 

@@ -59,6 +59,9 @@ it("restores a live agent through the built host entry", async () => {
 		model: { current: () => ({ provider: "test", model: "route" }) },
 	});
 	root.provide("agents", { list: () => [agent] } as Context["agents"]);
+	root.provide("workspaceRegistry", {
+		resolveByPath: async () => ({ id: "ws-loader", title: "Loader-Workspace" }),
+	} as unknown as Context["workspaceRegistry"]);
 	await agentEvents(root, agent).serial("agent/created", { source: "startup" });
 	const key = scopeOf(agent.ctx);
 	const oldTool = root.tools.get("memory_note", key);
@@ -79,7 +82,7 @@ it("restores a live agent through the built host entry", async () => {
 			{ body: "Built entry restart." },
 			{} as Parameters<typeof note.execute>[1],
 		),
-	).toMatchObject({ state: "live" });
+	).toMatchObject({ state: "live", addr: "project:loader-workspace#0" });
 	const find = root.tools.get("memory_find", key);
 	if (!find) throw new Error("The find tool is absent.");
 	expect(

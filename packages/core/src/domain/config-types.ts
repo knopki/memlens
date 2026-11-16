@@ -80,7 +80,7 @@ export type Rule = RuleGitRemote | RulePath | RuleWorkspace;
 export interface ScopeDefault {
 	rules: Rule[];
 
-	/** The key when no rule matches. */
+	/** The fallback key for a profile without a session. */
 	default: ScopeKey;
 }
 

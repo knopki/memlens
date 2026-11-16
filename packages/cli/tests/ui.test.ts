@@ -27,10 +27,12 @@ async function fixture(allowDelete = false, scopes = '["*"]') {
 	await mkdir(config, { recursive: true });
 	await writeFile(
 		join(config, "config.toml"),
-		DEFAULT_CONFIG_TOML.replace('scopes = ["*"]', `scopes = ${scopes}`).replace(
-			'default = "project:misc"',
-			'default = "user:notes"',
-		),
+		DEFAULT_CONFIG_TOML.replace('scopes = ["*"]', `scopes = ${scopes}`)
+			.replace('default = "project:misc"', 'default = "user:notes"')
+			.replace(
+				"rules = []",
+				'rules = [{ match = "path", glob = "*", key = "user:notes" }]',
+			),
 	);
 	const env = {
 		XDG_CONFIG_HOME: join(root, "config"),

@@ -219,6 +219,105 @@ describe("@memlens/cli commands", () => {
 			"saved project:chosen#0",
 		);
 	});
+	it("uses the Git remote with no rule", async () => {
+		const test = makeEnv();
+		const repo = join(test.home, "remote-repo");
+		mkdirSync(repo);
+		execFileSync("git", ["init", "-q", repo]);
+		execFileSync("git", [
+			"-C",
+			repo,
+			"remote",
+			"add",
+			"origin",
+			"git@github.com:knopki/Remote-Name.git",
+		]);
+		test.io = { ...test.io, cwd: repo };
+		expect((await run(test, "scope")).out).toContain(
+			"project:knopki/remote-name\nrule: git_remote",
+		);
+	});
+
+	it("uses the first remote when origin is absent", async () => {
+		const test = makeEnv();
+		const repo = join(test.home, "first-remote");
+		mkdirSync(repo);
+		execFileSync("git", ["init", "-q", repo]);
+		execFileSync("git", [
+			"-C",
+			repo,
+			"remote",
+			"add",
+			"upstream",
+			"ssh://git@github.com/knopki/Upstream-Name.git",
+		]);
+		test.io = { ...test.io, cwd: repo };
+		expect((await run(test, "scope")).out).toContain(
+			"project:knopki/upstream-name\nrule: git_remote",
+		);
+		execFileSync("git", [
+			"-C",
+			repo,
+			"remote",
+			"add",
+			"origin",
+			"git@github.com:knopki/Origin-Name.git",
+		]);
+		expect((await run(test, "scope")).out).toContain(
+			"project:knopki/origin-name\nrule: git_remote",
+		);
+	});
+
+	it("keeps an SSH alias remote in the automatic scope", async () => {
+		const test = makeEnv();
+		const repo = join(test.home, "alias-repo");
+		mkdirSync(repo);
+		execFileSync("git", ["init", "-q", repo]);
+		execFileSync("git", [
+			"-C",
+			repo,
+			"remote",
+			"add",
+			"origin",
+			"git@server:knopki/Custom-Name.git",
+		]);
+		test.io = { ...test.io, cwd: repo };
+		expect((await run(test, "scope")).out).toContain(
+			"project:knopki/custom-name\nrule: git_remote",
+		);
+	});
+
+	it("does not take the organization from a local remote", async () => {
+		const test = makeEnv();
+		const repo = join(test.home, "Local-Repo");
+		mkdirSync(repo);
+		execFileSync("git", ["init", "-q", repo]);
+		execFileSync("git", [
+			"-C",
+			repo,
+			"remote",
+			"add",
+			"origin",
+			"/srv/git/Local-Repo.git",
+		]);
+		test.io = { ...test.io, cwd: repo };
+		expect((await run(test, "scope")).out).toContain(
+			"project:local-repo\nrule: git",
+		);
+	});
+
+	it("uses the directory name when no Git repository exists", async () => {
+		const test = makeEnv();
+		const directory = join(test.home, "Plain-Directory");
+		mkdirSync(directory);
+		test.io = { ...test.io, cwd: directory };
+		expect((await run(test, "scope")).out).toContain(
+			"project:plain-directory\nrule: path",
+		);
+		expect((await run(test, "note", "Directory note")).out).toContain(
+			"saved project:plain-directory#0",
+		);
+	});
 	it("writes, finds, and opens one note", async () => {
 		const test = makeEnv();
 		const saved = await run(
@@ -351,9 +450,12 @@ describe("@memlens/cli commands", () => {
 		const scopes = await run(test, "scopes");
 		expect(scopes.code).toBe(0);
 		expect(scopes.out).toContain("project:acme/x");
+		const directory = join(test.home, "plain-directory");
+		mkdirSync(directory);
+		test.io = { ...test.io, cwd: directory };
 		const scope = await run(test, "scope");
 		expect(scope.code).toBe(0);
-		expect(scope.out).toContain("project:misc");
+		expect(scope.out).toContain("project:plain-directory\nrule: path");
 		const slice = await run(test, "slice", "--scope", "project:acme/x");
 		expect(slice.code).toBe(0);
 		expect(slice.out).toContain("<memory>");
