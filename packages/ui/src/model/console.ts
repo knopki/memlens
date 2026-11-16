@@ -207,6 +207,11 @@ export interface ConsoleRuntime {
 		readonly lastRunAt: string | null;
 		readonly nextRunAt: string | null;
 		readonly lastError: string | null;
+		readonly events: readonly {
+			readonly at: string;
+			readonly kind: "pass" | "retry" | "error";
+			readonly text: string;
+		}[];
 	};
 }
 // #endregion INTERFACE_ConsoleRuntime

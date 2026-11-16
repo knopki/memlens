@@ -153,10 +153,17 @@ describe("MemoryWorker", () => {
 		expect(worker.status().attempts).toBe(1);
 		expect(worker.status().lastRunAt).not.toBeNull();
 		expect(worker.status().lastError).toContain("stub refusal");
+		const failedKinds = worker.status().events.map((entry) => entry.kind);
+		expect(failedKinds).toContain("error");
+		expect(failedKinds).toContain("retry");
 		llm.fail = false;
 		await vi.advanceTimersByTimeAsync(10_000);
 		await vi.advanceTimersByTimeAsync(0);
 		expect(worker.status().lastError).toBeNull();
+		const events = worker.status().events;
+		expect(events.length).toBeLessThanOrEqual(10);
+		expect(events[events.length - 1]?.kind).toBe("pass");
+		expect(events[events.length - 1]?.text).toContain("built");
 	});
 
 	it("waits one full idle time after an empty idle check", async () => {

@@ -203,6 +203,7 @@ function answerOf(method: string): unknown {
 				lastRunAt: null,
 				nextRunAt: "2026-11-02T00:00:00Z",
 				lastError: null,
+				events: [],
 			},
 		};
 	}
@@ -696,6 +697,7 @@ describe("profile console", () => {
 							lastRunAt: null,
 							nextRunAt: null,
 							lastError: null,
+							events: [],
 						},
 					},
 				}),

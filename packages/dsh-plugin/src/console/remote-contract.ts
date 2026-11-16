@@ -428,6 +428,13 @@ const results = {
 			lastRunAt: z.string().nullable(),
 			nextRunAt: z.string().nullable(),
 			lastError: z.string().nullable(),
+			events: z.array(
+				z.strictObject({
+					at: z.string(),
+					kind: z.enum(["pass", "retry", "error"]),
+					text: z.string(),
+				}),
+			),
 		}),
 	}),
 	action: actionResult,

@@ -121,6 +121,24 @@ describe("maintenance screen", () => {
 							active: 1,
 							backoffMs: 2000,
 							failures: 2,
+							dirty: 1,
+							provider: "test",
+							model: "merge-model",
+							lastRunAt: "2026-11-14T10:30:00.000Z",
+							nextRunAt: "2026-11-14T11:30:00.000Z",
+							lastError: null,
+							events: [
+								{
+									at: "2026-11-14T10:30:00.000Z",
+									kind: "retry",
+									text: "compaction retry in 10 s",
+								},
+								{
+									at: "2026-11-14T10:31:00.000Z",
+									kind: "pass",
+									text: "compaction pass: built 2, failed 0",
+								},
+							],
 						},
 					},
 				})}
@@ -137,6 +155,13 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("Backoff time");
 		expect(markup).toContain("2 s");
 		expect(markup).toContain("Compaction failures");
+		expect(markup).toContain("Model route");
+		expect(markup).toContain("test/merge-model");
+		expect(markup).toContain("Last run");
+		expect(markup).toContain("Next run");
+		expect(markup).toContain("Dirty ranges");
+		expect(markup).toContain("Worker journal");
+		expect(markup).toContain("compaction pass: built 2, failed 0");
 	});
 });
 

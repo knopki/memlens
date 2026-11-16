@@ -204,6 +204,7 @@ const worker = {
 		lastRunAt: null,
 		nextRunAt: null,
 		lastError: null,
+		events: [],
 	}),
 } as unknown as MemoryWorker;
 

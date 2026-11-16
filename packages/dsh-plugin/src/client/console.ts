@@ -84,6 +84,11 @@ interface MutableRuntime {
 		lastRunAt: string | null;
 		nextRunAt: string | null;
 		lastError: string | null;
+		events: {
+			at: string;
+			kind: "pass" | "retry" | "error";
+			text: string;
+		}[];
 	};
 }
 
@@ -289,6 +294,7 @@ async function statusOf(
 		lastRunAt: value.compaction.lastRunAt,
 		nextRunAt: value.compaction.nextRunAt,
 		lastError: value.compaction.lastError,
+		events: value.compaction.events,
 	};
 	return runtime;
 }

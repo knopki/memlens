@@ -10,6 +10,8 @@
  * @invariants A read of the store never waits for this work. The pass writes only through the core.
  * @invariants The host replaces the inputs at run time. A pass uses the inputs of its start, and an
  *  update keeps the call times of the hour and the armed retry wait.
+ * @invariants The journal holds the last ten events in local state, and the host log mirrors each
+ *  entry. A restart clears the journal.
  * @dependencies node:util, @deepseek-ai/cordis, @deepseek-ai/dsh-llm, @memlens/core, @memlens/core (store helpers).
  * @keywords worker, compaction, background, timer, idle, dirty, retry, rate, llm
  * #endregion moduleContract
@@ -38,6 +40,12 @@ import {
 } from "@memlens/core";
 
 const debug = debuglog("memlens:plugin:worker");
+
+/** The prefix of each host log line of the worker. */
+const LOG = "[dsh-memlens] ";
+
+/** The greatest count of journal events that the worker keeps. */
+const JOURNAL_LIMIT = 10;
 
 /** The LLM surface that the worker needs. The host service satisfies this shape. */
 export interface WorkerLlm {
@@ -79,8 +87,23 @@ export interface WorkerStatus {
 
 	/** The error text of the last failed call or pass, or null after a clean pass. */
 	readonly lastError: string | null;
+
+	/** The recent events of the local journal, oldest entry first. */
+	readonly events: WorkerEvent[];
 }
 // #endregion INTERFACE_WorkerStatus
+
+/** One recent event of the local worker journal. */
+export interface WorkerEvent {
+	/** The time of the event. */
+	readonly at: string;
+
+	/** The class of the event. */
+	readonly kind: "pass" | "retry" | "error";
+
+	/** The event text in Simplified Technical English. */
+	readonly text: string;
+}
 
 /** The resolved inputs of one worker. */
 export interface WorkerInputs {
@@ -125,6 +148,7 @@ export class MemoryWorker {
 	private retryAt = 0;
 	private lastRunAt = 0;
 	private lastError: string | null = null;
+	private readonly journal: WorkerEvent[] = [];
 
 	constructor(
 		ctx: Context,
@@ -182,6 +206,7 @@ export class MemoryWorker {
 			lastRunAt: this.lastRunAt === 0 ? null : toIso(this.lastRunAt),
 			nextRunAt: nextAt === null ? null : toIso(nextAt),
 			lastError: this.lastError,
+			events: [...this.journal],
 		};
 	}
 	// #endregion METHOD_status
@@ -271,11 +296,17 @@ export class MemoryWorker {
 			}
 			this.failures = failed > 0 ? this.failures + 1 : 0;
 			if (failed === 0) this.lastError = null;
+			this.record(
+				failed === 0 ? "pass" : "error",
+				`compaction pass: built ${built}, failed ${failed}` +
+					(failed > 0 && this.lastError !== null ? `: ${this.lastError}` : ""),
+			);
 			debug("Pass complete", { event: "pass", built, failed });
 			if (!this.disposed) this.paceNext(failed);
 		} catch (error) {
 			this.failures += 1;
 			this.lastError = String(error);
+			this.record("error", `compaction pass failed: ${String(error)}`);
 			debug("Pass failed", { event: "pass-error", error: String(error) });
 			if (!this.disposed) this.paceNext(1);
 		} finally {
@@ -294,6 +325,7 @@ export class MemoryWorker {
 				this.retryAt = 0;
 				void this.run();
 			}, wait);
+			this.record("retry", `compaction retry in ${wait / 1000} s`);
 			debug("Retry scheduled", { event: "retry", failures: this.failures });
 			return;
 		}
@@ -342,6 +374,19 @@ export class MemoryWorker {
 	private clearTimer(): void {
 		if (this.timer !== null) clearTimeout(this.timer);
 		this.timer = null;
+	}
+
+	/**
+	 * @purpose Add one event to the journal, mirror it to the host log, and keep the newest entries.
+	 * @invariants The journal holds at most ten entries. The host log holds each entry.
+	 * @param kind - The class of the event.
+	 * @param text - The event text in Simplified Technical English.
+	 */
+	private record(kind: WorkerEvent["kind"], text: string): void {
+		this.journal.push({ at: toIso(Date.now()), kind, text });
+		if (this.journal.length > JOURNAL_LIMIT)
+			this.journal.splice(0, this.journal.length - JOURNAL_LIMIT);
+		console.log(`${LOG}${text}`);
 	}
 
 	/** Stop the timer and reject each later start. Cordis disposal calls this. */

@@ -163,10 +163,35 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 		if (compaction.lastError !== null)
 			rows.push([t("lastError"), compaction.lastError]);
 	}
+	const journal =
+		compaction !== undefined && compaction.events.length > 0 ? (
+			<Panel
+				title={t("workerJournal")}
+				right={String(compaction.events.length)}
+			>
+				<Table
+					headers={[t("time"), t("event"), t("details")]}
+					rows={[...compaction.events]
+						.toReversed()
+						.map((entry) => [entry.at, t(KIND_KEYS[entry.kind]), entry.text])}
+					empty={t("none")}
+				/>
+			</Panel>
+		) : null;
 	return (
-		<Panel title={t("runtime")}>
-			<KeyValue rows={rows} />
-		</Panel>
+		<>
+			<Panel title={t("runtime")}>
+				<KeyValue rows={rows} />
+			</Panel>
+			{journal}
+		</>
 	);
 }
 // #endregion FUNC_runtimePanel
+
+/** The message key of each journal event kind. */
+const KIND_KEYS = {
+	pass: "kindPass",
+	retry: "kindRetry",
+	error: "kindError",
+} as const;
