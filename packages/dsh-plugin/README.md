@@ -47,6 +47,19 @@ worker calls the configured LLM route and keeps its call limits.
       name: "@memlens/dsh-plugin"
 ```
 
+Add a `config` table to this row in the patch file of your profile to override the settings. Each
+key is optional:
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### Preset row
 
 Add this row to the `plugins` list of an agent preset. The key `profile` is optional. An absent key
@@ -56,7 +69,9 @@ selects the profile `default`.
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## Configuration
@@ -71,6 +86,8 @@ The store path comes from the plugin config first, then from `MEMLENS_STORE`, th
 
 The preset overrides the plugin patch. The plugin patch overrides the base profile.
 The preset key `profile` selects the profile name.
+
+See each key, its default, and full examples in [docs/configuration.md](../../docs/configuration.md).
 
 Display metadata is in `locale/<language>.json`. The icon is `icon.svg`.
 

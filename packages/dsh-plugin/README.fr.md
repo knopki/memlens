@@ -49,6 +49,19 @@ d'appels.
       name: "@memlens/dsh-plugin"
 ```
 
+Ajoutez une table `config` à cette ligne dans le fichier patch de votre profil pour remplacer les
+réglages. Chaque clé est facultative :
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### Ligne de préréglage
 
 Ajoutez cette ligne à la liste `plugins` d'un préréglage d'agent. La clé `profile` est facultative.
@@ -58,7 +71,9 @@ Sans la clé, le profil `default` s'applique.
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## Configuration
@@ -72,6 +87,9 @@ fichier de base.
 
 Les réglages sont fusionnés dans cet ordre : le préréglage, le patch du plugin, le profil de base. La
 clé `profile` du préréglage choisit le nom du profil.
+
+Chaque clé, sa valeur par défaut et d'autres exemples sont dans
+[docs/configuration.md](../../docs/configuration.md).
 
 Les métadonnées d'affichage sont dans `locale/<language>.json`. L'icône est `icon.svg`.
 

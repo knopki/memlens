@@ -104,12 +104,32 @@ synchronization between machines. See [01-goals-nongoals.md](docs/spec/01-goals-
 | File                                                             | Content                                   |
 | ---------------------------------------------------------------- | ----------------------------------------- |
 | [docs/spec/00-overview.md](docs/spec/00-overview.md)             | The product boundary.                     |
+| [docs/configuration.md](docs/configuration.md)                   | The configuration format and examples.    |
 | [docs/spec/README.md](docs/spec/README.md)                       | Specification index and rules.            |
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | Requirements with identifiers and status. |
 | [docs/spec/04-data.md](docs/spec/04-data.md)                     | Tables, field groups, and merge channels. |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Open questions that block work.           |
 | [docs/statements.md](docs/statements.md)                         | Customer statements, word for word.       |
 | [AGENTS.md](AGENTS.md)                                           | Work rules for agents.                    |
+
+## Configuration
+
+memlens works with no configuration file. To change a value, copy the parts that you want into
+`~/.config/memlens/config.toml`:
+
+```toml
+defaultProfile = "default"
+
+[profile.default]
+scopes = ["*"]
+
+[profile.default.budget]
+here = 20
+directions = 10
+```
+
+The DSH plugin reads the same file and adds two layers of its own. See each key, default, and
+example in [docs/configuration.md](docs/configuration.md).
 
 ## Setup
 

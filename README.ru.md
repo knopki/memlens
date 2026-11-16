@@ -26,12 +26,32 @@ memlens — долговременная память агента: набор �
 | Файл                                                             | Содержимое                                 |
 | ---------------------------------------------------------------- | ------------------------------------------ |
 | [docs/spec/00-overview.md](docs/spec/00-overview.md)             | Граница продукта.                          |
+| [docs/configuration.md](docs/configuration.md)                   | Формат конфигурации и примеры.             |
 | [docs/spec/README.md](docs/spec/README.md)                       | Индекс спецификации и правила её ведения.  |
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | Требования с идентификаторами и статусами. |
 | [docs/spec/04-data.md](docs/spec/04-data.md)                     | Таблицы, группы полей и каналы слияния.    |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Открытые вопросы, блокирующие работу.      |
 | [docs/statements.md](docs/statements.md)                         | Утверждения заказчика дословно.            |
 | [AGENTS.md](AGENTS.md)                                           | Правила работы для агентов.                |
+
+## Конфигурация
+
+memlens работает без файла конфигурации. Чтобы изменить значение, скопируй нужные куски в
+`~/.config/memlens/config.toml`:
+
+```toml
+defaultProfile = "default"
+
+[profile.default]
+scopes = ["*"]
+
+[profile.default.budget]
+here = 20
+directions = 10
+```
+
+Плагин DSH читает тот же файл и добавляет два своих слоя. Все ключи, дефолты и примеры — в
+[docs/configuration.md](docs/configuration.md).
 
 ## Установка
 

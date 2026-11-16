@@ -48,6 +48,19 @@ armazenamento. O trabalhador chama a rota LLM configurada e mantém os seus limi
       name: "@memlens/dsh-plugin"
 ```
 
+Adicione uma tabela `config` a esta linha no arquivo de patch do seu perfil para substituir as
+configurações. Cada chave é opcional:
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### Linha da predefinição
 
 Adicione esta linha à lista `plugins` de uma predefinição de agente. A chave `profile` é opcional.
@@ -57,7 +70,9 @@ Sem a chave, aplica-se o perfil `default`.
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## Configuração
@@ -71,6 +86,9 @@ do arquivo base.
 
 As configurações são mescladas nesta ordem: a predefinição, o patch do plugin, o perfil base. A chave
 `profile` da predefinição escolhe o nome do perfil.
+
+Cada chave, seu valor padrão e mais exemplos estão em
+[docs/configuration.md](../../docs/configuration.md).
 
 Os metadados de exibição estão em `locale/<language>.json`. O ícone é `icon.svg`.
 

@@ -38,6 +38,18 @@ memlens 的 DeepSeek Harness 插件。
       name: "@memlens/dsh-plugin"
 ```
 
+在个人 profile 的 patch 文件里给这一行加上 `config` 表即可覆盖设置。每个键都是可选的：
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### 预设行
 
 把这个行加入智能体预设的 `plugins` 列表。键 `profile` 是可选的。省略时使用配置文件 `default`。
@@ -46,7 +58,9 @@ memlens 的 DeepSeek Harness 插件。
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## 配置
@@ -56,6 +70,8 @@ memlens 的 DeepSeek Harness 插件。
 存储路径先来自插件配置，然后来自 `MEMLENS_STORE`，然后来自基础文件。
 
 设置按这个顺序合并：预设、插件补丁、基础配置文件。预设键 `profile` 选择配置文件名。
+
+全部键、默认值和更多示例见 [docs/configuration.md](../../docs/configuration.md)。
 
 展示元数据在 `locale/<language>.json` 中。图标是 `icon.svg`。
 

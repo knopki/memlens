@@ -26,12 +26,32 @@ memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构
 | 文件                                                             | 内容                   |
 | ---------------------------------------------------------------- | ---------------------- |
 | [docs/spec/00-overview.md](docs/spec/00-overview.md)             | 产品边界。             |
+| [docs/configuration.md](docs/configuration.md)                   | 配置格式与示例。       |
 | [docs/spec/README.md](docs/spec/README.md)                       | 规范的目录与维护规则。 |
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | 带标识符和状态的需求。 |
 | [docs/spec/04-data.md](docs/spec/04-data.md)                     | 表、字段组与合并通道。 |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | 阻塞工作的未决问题。   |
 | [docs/statements.md](docs/statements.md)                         | 客户的原始陈述。       |
 | [AGENTS.md](AGENTS.md)                                           | 代理工作规则。         |
+
+## 配置
+
+memlens 无需配置文件即可工作。要修改某个值，把需要的部分复制到
+`~/.config/memlens/config.toml`：
+
+```toml
+defaultProfile = "default"
+
+[profile.default]
+scopes = ["*"]
+
+[profile.default.budget]
+here = 20
+directions = 10
+```
+
+DSH 插件读取同一个文件，并增加自己的两个层。全部键、默认值和示例见
+[docs/configuration.md](docs/configuration.md)。
 
 ## 安装
 

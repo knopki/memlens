@@ -47,6 +47,19 @@ DeepSeek Harness のコンパクションの成功、モデル TTL を超えた�
       name: "@memlens/dsh-plugin"
 ```
 
+プロファイルの patch ファイルでこの行に `config` テーブルを追加すると、設定を上書きできます。
+各キーは任意です：
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### プリセット行
 
 この行をエージェントプリセットの `plugins` リストに追加します。キー `profile` は任意です。省略時はプロファイル `default` を使います。
@@ -55,7 +68,9 @@ DeepSeek Harness のコンパクションの成功、モデル TTL を超えた�
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## 設定
@@ -68,6 +83,9 @@ DeepSeek Harness のコンパクションの成功、モデル TTL を超えた�
 
 設定はプリセット、プラグインパッチ、基本プロファイルの順にマージされます。プリセットのキー
 `profile` がプロファイル名を選びます。
+
+すべてのキー、デフォルト値、詳細な例は [docs/configuration.md](../../docs/configuration.md)
+にあります。
 
 表示メタデータは `locale/<language>.json` にあります。アイコンは `icon.svg` です。
 

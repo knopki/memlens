@@ -48,6 +48,19 @@ Speichers. Der Worker ruft die konfigurierte LLM-Route auf und hält seine Aufru
       name: "@memlens/dsh-plugin"
 ```
 
+Füge dieser Zeile in der Patch-Datei deines Profils eine Tabelle `config` hinzu, um die
+Einstellungen zu überschreiben. Jeder Schlüssel ist optional:
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### Preset-Zeile
 
 Füge diese Zeile in die Liste `plugins` eines Agent-Presets ein. Der Schlüssel `profile` ist
@@ -57,7 +70,9 @@ optional. Ohne den Schlüssel gilt das Profil `default`.
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## Konfiguration
@@ -71,6 +86,9 @@ Basisdatei.
 
 Die Einstellungen werden in dieser Reihenfolge zusammengeführt: Preset, Plugin-Patch, Basisprofil.
 Der Preset-Schlüssel `profile` wählt den Profilnamen.
+
+Alle Schlüssel, Standardwerte und weitere Beispiele stehen in
+[docs/configuration.md](../../docs/configuration.md).
 
 Die Anzeigemetadaten liegen in `locale/<language>.json`. Das Symbol ist `icon.svg`.
 

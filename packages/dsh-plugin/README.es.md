@@ -49,6 +49,19 @@ llamadas.
       name: "@memlens/dsh-plugin"
 ```
 
+Añade una tabla `config` a esta fila en el archivo patch de tu perfil para cambiar los ajustes.
+Cada clave es opcional:
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### Fila del preajuste
 
 Añade esta fila a la lista `plugins` de un preajuste de agente. La clave `profile` es opcional. Sin
@@ -58,7 +71,9 @@ la clave se aplica el perfil `default`.
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## Configuración
@@ -72,6 +87,9 @@ después del archivo base.
 
 Los ajustes se combinan en este orden: el preajuste, el parche del plugin, el perfil base. La clave
 `profile` del preajuste selecciona el nombre del perfil.
+
+Cada clave, su valor por defecto y más ejemplos están en
+[docs/configuration.md](../../docs/configuration.md).
 
 Los metadatos de visualización están en `locale/<language>.json`. El icono es `icon.svg`.
 

@@ -48,6 +48,19 @@
       name: "@memlens/dsh-plugin"
 ```
 
+Добавь таблицу `config` к этой строке в patch-файле своего профиля, чтобы переопределить настройки.
+Каждый ключ необязателен:
+
+```yaml
+- insert:
+    - id: memlens
+      name: "@memlens/dsh-plugin"
+      config:
+        defaultProfile: work
+        budget:
+          here: 40
+```
+
 ### Строка пресета
 
 Добавь эту строку в список `plugins` пресета агента. Ключ `profile` необязателен. Без ключа действует
@@ -57,7 +70,9 @@
 - id: memlens/preset
   name: "@memlens/dsh-plugin/preset"
   config:
-    profile: default
+    profile: work
+    budget:
+      here: 30
 ```
 
 ## Конфигурация
@@ -71,6 +86,8 @@ scope `project:misc`.
 
 Настройки объединяются в этом порядке: пресет, патч плагина, базовый профиль. Ключ пресета
 `profile` выбирает имя профиля.
+
+Все ключи, дефолты и подробные примеры — в [docs/configuration.md](../../docs/configuration.md).
 
 Метаданные показа лежат в `locale/<language>.json`. Значок — `icon.svg`.
 
