@@ -59,6 +59,7 @@ export interface PassResult {
 	readonly rejected: number;
 	readonly reasons: readonly "input_changed"[];
 	readonly failed: number;
+	readonly failures: readonly ("no_answer" | "not_shorter")[];
 	readonly calls: number;
 }
 
@@ -164,15 +165,6 @@ export interface CompactionRun {
 	readonly parallel: number;
 }
 
-/** The counts of one compaction pass. */
-export interface PassResult {
-	readonly built: number;
-	readonly rejected: number;
-	readonly reasons: readonly "input_changed"[];
-	readonly failed: number;
-	readonly calls: number;
-}
-
 // #region FUNC_compactionPass
 /**
  * @purpose Build and publish the next batch of dirty lines of one tree.
@@ -197,6 +189,7 @@ export async function compactionPass(
 		failed: 0,
 		calls: 0,
 		reasons: [] as "input_changed"[],
+		failures: [] as ("no_answer" | "not_shorter")[],
 	};
 	const captured = new Map<BuildInput, BuildRead>();
 	const inputs: BuildInput[] = [];
@@ -246,6 +239,12 @@ export async function compactionPass(
 	const publish = async (input: BuildInput, line: LineBuild): Promise<void> => {
 		if (!line.ok) {
 			result.failed += 1;
+			result.failures.push(line.reason);
+			debug("Merge answer failed", {
+				start: input.range.start,
+				level: input.range.level,
+				reason: line.reason,
+			});
 			return;
 		}
 		const read = captured.get(input);

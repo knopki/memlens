@@ -112,8 +112,14 @@ export interface WorkerInputs {
 	readonly cacheTtl: Readonly<Record<string, number>>;
 }
 
-/** The call form of one pass: the mode, or the cache knowledge of the model under auto. */
-function runSettings(inputs: WorkerInputs): {
+/** Count each rejection reason of one pass into the summary map. */
+function count(map: Map<string, number>, reasons: readonly string[]): void {
+	for (const reason of reasons) map.set(reason, (map.get(reason) ?? 0) + 1);
+}
+
+/** The call form of one pass: the mode, or the cache knowledge of the model under auto. */ function runSettings(
+	inputs: WorkerInputs,
+): {
 	form: "parallel" | "batch";
 	batch: number;
 } {
@@ -280,6 +286,7 @@ export class MemoryWorker {
 		this.running = true;
 		this.attempts += 1;
 		this.lastRunAt = Date.now();
+		this.lastError = null;
 		const inputs = this.inputs;
 		// The pass uses the call limit of its start. The window keeps the calls of the hour.
 		this.rate.setLimit(inputs.compaction.maxCallsPerHour);
@@ -288,20 +295,27 @@ export class MemoryWorker {
 			const model = this.modelFor(inputs);
 			let built = 0;
 			let failed = 0;
+			const reasons = new Map<string, number>();
 			for (const scope of liveCounts(this.store).keys()) {
 				if (candidates(this.store, scope).length === 0) continue;
 				const result = await compactionPass(this.store, scope, model, run);
 				built += result.built;
 				failed += result.failed;
+				count(reasons, result.failures);
+				count(reasons, result.reasons);
 			}
+			const summary = [...reasons]
+				.map(([reason, count]) => `${reason} ${count}`)
+				.join(", ");
 			this.failures = failed > 0 ? this.failures + 1 : 0;
-			if (failed === 0) this.lastError = null;
+			if (this.lastError === null && failed > 0 && summary)
+				this.lastError = `merge answers rejected: ${summary}`;
 			this.record(
 				failed === 0 ? "pass" : "error",
 				`compaction pass: built ${built}, failed ${failed}` +
-					(failed > 0 && this.lastError !== null ? `: ${this.lastError}` : ""),
+					(summary ? ` (${summary})` : ""),
 			);
-			debug("Pass complete", { event: "pass", built, failed });
+			debug("Pass complete", { event: "pass", built, failed, summary });
 			if (!this.disposed) this.paceNext(failed);
 		} catch (error) {
 			this.failures += 1;

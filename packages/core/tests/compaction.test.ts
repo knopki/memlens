@@ -412,6 +412,16 @@ describe("compactionPass", () => {
 			),
 		).toMatchObject({ built: 2, calls: 1, failed: 0 });
 	});
+	it("states the reason of each failed merge answer", async () => {
+		const store = open();
+		add(store, `${"long body ".repeat(40)}0`, 0);
+		add(store, `${"long body ".repeat(40)}1`, 1);
+		const result = await compactionPass(store, "p:x", async () =>
+			"x".repeat(1000),
+		);
+		expect(result).toMatchObject({ failed: 1, built: 0 });
+		expect(result.failures).toEqual(["not_shorter"]);
+	});
 	it("rejects a model answer after a child changes", async () => {
 		const store = open();
 		add(store, "a".repeat(400), 0);

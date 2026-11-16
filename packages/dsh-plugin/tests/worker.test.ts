@@ -166,6 +166,26 @@ describe("MemoryWorker", () => {
 		expect(events[events.length - 1]?.text).toContain("built");
 	});
 
+	it("states the rejection reasons of failed merge answers", async () => {
+		vi.useFakeTimers();
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new StubLlm();
+		llm.answer = "x".repeat(1000);
+		const worker = new MemoryWorker(root, store, inputs(), llm);
+		worker.onMemoryTool("memory_note");
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+		const status = worker.status();
+		expect(status.attempts).toBe(1);
+		expect(status.lastError).toContain("not_shorter");
+		const failedEntry = status.events.find((entry) => entry.kind === "error");
+		expect(failedEntry?.text).toContain("not_shorter");
+		expect(status.events[status.events.length - 1]?.kind).toBe("retry");
+	});
+
 	it("waits one full idle time after an empty idle check", async () => {
 		vi.useFakeTimers();
 		const store = new Store(mkdtempSync(join(tmpdir(), "memlens-worker-")));
