@@ -102,7 +102,6 @@ function noteAnswer(
 			addr: renderAddress(scope, live.pos, null),
 			id: live.id,
 			state: "live",
-			review_at: live.review_at,
 		};
 	}
 	debug("Note saved", { event: "note", scope, pos: saved.value.pos });
@@ -110,7 +109,6 @@ function noteAnswer(
 		addr: renderAddress(scope, saved.value.pos, null),
 		id: saved.value.id,
 		state: "live",
-		review_at: saved.value.review_at,
 	};
 }
 // #endregion FUNC_noteAnswer
@@ -170,10 +168,6 @@ export function noteTool(
 							addr: { type: "string", required: true },
 							id: { type: "string", required: true },
 							state: { type: "string", const: "live", required: true },
-							review_at: {
-								oneOf: [{ type: "string" }, { type: "null" }],
-								required: true,
-							},
 						},
 					},
 					{
@@ -190,7 +184,7 @@ export function noteTool(
 				blocks(
 					"proposed" in value
 						? `Proposed to your parent: ${args.body} (proposal ${value.id})`
-						: `saved ${value.addr} review ${value.review_at ?? "never"}`,
+						: `saved ${value.addr}`,
 				),
 		},
 		presentResult(_args, result) {

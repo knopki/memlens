@@ -59,7 +59,7 @@ export interface MemoryNoteInput {
 }
 
 export type MemoryNoteOutput =
-	| { addr: Address; id: string; state: "live"; review_at: string | null }
+	| { addr: Address; id: string; state: "live" }
 	| { id: string; proposed: true };
 
 export interface MemoryFindInput {

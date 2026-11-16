@@ -43,7 +43,7 @@ export interface MemoryNoteInput {
  * The answer of a write. A live record gives its address. A proposed write gives its proposal `id`.
  */
 export type MemoryNoteOutput =
-	| { addr: Address; id: string; state: "live"; review_at: string | null }
+	| { addr: Address; id: string; state: "live" }
 	| { id: string; proposed: true };
 
 export interface MemoryFindInput {

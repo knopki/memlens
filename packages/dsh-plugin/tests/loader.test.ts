@@ -77,12 +77,18 @@ it("restores a live agent through the built host entry", async () => {
 	const note = root.tools.get("memory_note", key);
 	if (!note) throw new Error("The note tool is absent.");
 	expect(note).not.toBe(oldTool);
+	const answer = await note.execute(
+		{ body: "Built entry restart." },
+		{} as Parameters<typeof note.execute>[1],
+	);
+	expect(answer).toEqual({
+		state: "live",
+		addr: "project:loader-workspace#0",
+		id: expect.any(String),
+	});
 	expect(
-		await note.execute(
-			{ body: "Built entry restart." },
-			{} as Parameters<typeof note.execute>[1],
-		),
-	).toMatchObject({ state: "live", addr: "project:loader-workspace#0" });
+		note.output.render({ body: "Built entry restart." }, answer as never),
+	).toEqual([{ type: "text", text: "saved project:loader-workspace#0" }]);
 	const find = root.tools.get("memory_find", key);
 	if (!find) throw new Error("The find tool is absent.");
 	expect(

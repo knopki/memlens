@@ -343,19 +343,31 @@ describe("memory tools of one agent", () => {
 			body: "The store keeps one row for each note.",
 			kind: "fact",
 			reviewIn: "30d",
-		})) as { addr: string; id: string; state: string; review_at: string };
+		})) as { addr: string; id: string; state: string };
 
-		expect(answer.state).toBe("live");
-		expect(answer.addr).toMatch(/^user:notes#\d+$/);
-		expect(answer.review_at).not.toBeNull();
-		expect(render(main, "memory_note", {}, answer)).toContain(
+		expect(answer).toEqual({
+			addr: expect.stringMatching(/^user:notes#\d+$/),
+			id: expect.any(String),
+			state: "live",
+		});
+		expect(render(main, "memory_note", {}, answer)).toBe(
 			`saved ${answer.addr}`,
 		);
+		expect(
+			await call(main, "memory_open", { target: answer.addr }),
+		).toMatchObject({
+			review_at: expect.any(String),
+		});
 		const never = (await call(main, "memory_note", {
 			body: "The note without a review.",
 			reviewIn: "never",
-		})) as { review_at: string | null };
-		expect(never.review_at).toBeNull();
+		})) as { addr: string };
+		expect(render(main, "memory_note", {}, never)).toBe(`saved ${never.addr}`);
+		expect(
+			await call(main, "memory_open", { target: never.addr }),
+		).toMatchObject({
+			review_at: null,
+		});
 		expect(
 			tool(main, "memory_note").presentResult?.(
 				{},
@@ -386,9 +398,10 @@ describe("memory tools of one agent", () => {
 			state: string;
 		};
 
-		expect(again.state).toBe("live");
-		expect(again.id).toBe(first.id);
-		expect(again.addr).toBe(first.addr);
+		expect(again).toEqual(first);
+		expect(render(main, "memory_note", input, again)).toBe(
+			`saved ${first.addr}`,
+		);
 	});
 
 	it("finds the written note with its declared shape", async () => {
