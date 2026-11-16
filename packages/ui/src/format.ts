@@ -49,3 +49,15 @@ export function lineText(line: SliceLine): string {
 			: line.text;
 }
 // #endregion FUNC_lineText
+
+// #region FUNC_localTime
+/**
+ * @purpose Format one ISO time string in the local zone of the browser, so a screen shows no UTC text.
+ * @invariants An invalid input returns the raw string.
+ * @param iso - The ISO time string of the host.
+ */
+export function localTime(iso: string): string {
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
+}
+// #endregion FUNC_localTime

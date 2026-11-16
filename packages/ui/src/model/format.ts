@@ -19,6 +19,7 @@ export {
 	address,
 	lineAddress,
 	lineText,
+	localTime,
 	rangeAddress,
 	rangeId,
 	rangeOf,

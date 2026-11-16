@@ -15,7 +15,7 @@
 
 import type { JSX } from "react";
 import type { ConsoleApi, ConsoleRuntime } from "../../model/console.js";
-import { rangeAddress } from "../../model/format.js";
+import { localTime, rangeAddress } from "../../model/format.js";
 import type { View } from "../../types.js";
 import { KeyValue, Panel, Table, widthPercent } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
@@ -137,9 +137,9 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 	const rows: [string, string][] = [];
 	if (runtime.session !== undefined) rows.push([t("session"), runtime.session]);
 	if (runtime.materializedAt !== undefined)
-		rows.push([t("materializedAt"), runtime.materializedAt]);
+		rows.push([t("materializedAt"), localTime(runtime.materializedAt)]);
 	if (runtime.nextTrigger !== undefined)
-		rows.push([t("nextTrigger"), runtime.nextTrigger]);
+		rows.push([t("nextTrigger"), localTime(runtime.nextTrigger)]);
 	if (runtime.snapshotSaved !== undefined)
 		rows.push([
 			t("snapshotSaved"),
@@ -149,9 +149,9 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 	if (compaction !== undefined) {
 		rows.push([t("modelRoute"), `${compaction.provider}/${compaction.model}`]);
 		if (compaction.lastRunAt !== null)
-			rows.push([t("lastRun"), compaction.lastRunAt]);
+			rows.push([t("lastRun"), localTime(compaction.lastRunAt)]);
 		if (compaction.nextRunAt !== null)
-			rows.push([t("nextRun"), compaction.nextRunAt]);
+			rows.push([t("nextRun"), localTime(compaction.nextRunAt)]);
 		rows.push([t("attempts"), String(compaction.attempts)]);
 		rows.push([t("activeBuilds"), String(compaction.active)]);
 		rows.push([
@@ -173,7 +173,11 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 					headers={[t("time"), t("event"), t("details")]}
 					rows={[...compaction.events]
 						.toReversed()
-						.map((entry) => [entry.at, t(KIND_KEYS[entry.kind]), entry.text])}
+						.map((entry) => [
+							localTime(entry.at),
+							t(KIND_KEYS[entry.kind]),
+							entry.text,
+						])}
 					empty={t("none")}
 				/>
 			</Panel>

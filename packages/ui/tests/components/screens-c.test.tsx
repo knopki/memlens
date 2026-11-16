@@ -162,6 +162,8 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("Dirty ranges");
 		expect(markup).toContain("Worker journal");
 		expect(markup).toContain("compaction pass: built 2, failed 0");
+		expect(markup).not.toContain("2026-11-14T10:30:00.000Z");
+		expect(markup).not.toContain("2026-11-14T11:00:00.000Z");
 	});
 });
 
