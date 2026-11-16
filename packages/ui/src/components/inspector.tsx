@@ -24,9 +24,15 @@ import { Button, KeyValue, Panel } from "./primitives.js";
 /**
  * @purpose Show the selected note or range with its record actions.
  * @invariants An absent selection gives no markup, so the shell shows no empty panel.
- * @invariants A range answer gives the no-summary line.
+ * @invariants A range answer shows the selected line text when the caller supplies it.
  */
-export function Inspector({ api }: { api: ConsoleApi }): JSX.Element | null {
+export function Inspector({
+	api,
+	rangeText,
+}: {
+	api: ConsoleApi;
+	rangeText?: string;
+}): JSX.Element | null {
 	const selection = api.state.selection;
 	if (!selection) return null;
 	const { target, result } = selection;
@@ -34,7 +40,11 @@ export function Inspector({ api }: { api: ConsoleApi }): JSX.Element | null {
 	if (result.kind !== "entry")
 		return (
 			<Panel title={title} className="ins">
-				<p className="muted">{api.t("noSummary")}</p>
+				{rangeText ? (
+					<div className="quote">{rangeText}</div>
+				) : (
+					<p className="muted">{api.t("noSummary")}</p>
+				)}
 			</Panel>
 		);
 	const row = api.state.model?.records.find((item) => item.id === result.id);

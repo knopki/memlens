@@ -18,7 +18,7 @@ import { dateSpan } from "../../../../core/src/domain/date-span.js";
 import type { OpenLine } from "../../../../core/src/domain/reads.js";
 import type { SliceLine } from "../../../../core/src/types/tree.js";
 import type { ConsoleApi } from "../../model/console.js";
-import { lineAddress, lineText } from "../../model/format.js";
+import { lineAddress, lineText, rangeAddress } from "../../model/format.js";
 import { Inspector } from "../inspector.js";
 import { ChildrenPanel, Legend } from "../line-views.js";
 import { Button, Panel } from "../primitives.js";
@@ -111,6 +111,31 @@ export function TreeView({ api }: ScreenProps): JSX.Element {
 	);
 	const selection = state.selection;
 	const children = selection?.result;
+	const target = selection?.target.startsWith("#")
+		? `${state.scope}${selection.target}`
+		: selection?.target;
+	const selectedLine = lines.find(
+		(line) => lineAddress(state.scope, line) === target,
+	);
+	const selectedNode = model.nodes.find(
+		({ scope, node, clean }) => clean && rangeAddress(scope, node) === target,
+	);
+	const range = target?.match(/^(.*)#(\d+)-(\d+)$/);
+	const rangeNotes = range
+		? model.records.filter(
+				(record) =>
+					record.scope === range[1] &&
+					record.state === "live" &&
+					record.pos >= Number(range[2]) &&
+					record.pos <= Number(range[3]),
+			)
+		: [];
+	const first = rangeNotes[0];
+	const last = rangeNotes.at(-1);
+	const rangeText = selectedLine
+		? lineText(selectedLine) || dateSpan(selectedLine.from, selectedLine.to)
+		: selectedNode?.node.summary ||
+			(first && last ? dateSpan(first.ts, last.ts) : "");
 	return (
 		<>
 			<p className="sub">{api.t("treeText")}</p>
@@ -142,7 +167,7 @@ export function TreeView({ api }: ScreenProps): JSX.Element {
 					</div>
 				</Panel>
 				{selection ? (
-					<Inspector api={api} />
+					<Inspector api={api} rangeText={rangeText} />
 				) : (
 					<Panel title={api.t("inspector")} className="ins">
 						<p className="muted">{api.t("selectLine")}</p>

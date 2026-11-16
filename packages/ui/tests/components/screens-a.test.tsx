@@ -249,11 +249,62 @@ describe("tree screen", () => {
 		expect(markup).toContain('<span class="id">project:alpha#0</span>');
 		expect(markup).toContain('<span class="tx">first note</span>');
 		expect(markup).toContain('title="range summary"');
+		expect(markup).toContain('<div class="quote">range summary</div>');
+		expect(markup).not.toContain("No summary yet.");
 		expect(markup).toContain('<div class="column">');
 		expect(markup).toContain("Children · project:alpha#0-1");
 		expect(markup).toContain('<span class="id">project:alpha#1</span>');
 		expect(markup).toContain('class="btn line pending"');
 		expect(markup).toContain('<span class="tx">2026-11-02</span>');
+	});
+
+	it("shows a temporary frontier line in the inspector", () => {
+		const selection = { ...childrenSelection, target: "project:alpha#0-3" };
+		const markup = renderToStaticMarkup(
+			<TreeView api={apiOf(stateOf({ screen: "tree", selection }))} />,
+		);
+		expect(markup).toContain('<div class="quote">assembled range</div>');
+	});
+
+	it("shows a nested range after its parent is closed", () => {
+		const model = {
+			...viewOf(),
+			nodes: [
+				{
+					scope: "project:alpha",
+					clean: true,
+					node: { start: 4, level: 1, summary: "nested summary" },
+				},
+			],
+		} as unknown as View;
+		const selection = { ...childrenSelection, target: "project:alpha#4-5" };
+		const markup = renderToStaticMarkup(
+			<TreeView api={apiOf(stateOf({ screen: "tree", model, selection }))} />,
+		);
+		expect(markup).toContain('<div class="quote">nested summary</div>');
+	});
+
+	it("shows the current period of a dirty nested range", () => {
+		const model = {
+			...viewOf(),
+			records: [
+				{ scope: "project:alpha", state: "live", pos: 4, ts: "2026-11-03" },
+				{ scope: "project:alpha", state: "live", pos: 5, ts: "2026-11-04" },
+			],
+			nodes: [
+				{
+					scope: "project:alpha",
+					clean: false,
+					node: { start: 4, level: 1, summary: "stale summary" },
+				},
+			],
+		} as unknown as View;
+		const selection = { ...childrenSelection, target: "project:alpha#4-5" };
+		const markup = renderToStaticMarkup(
+			<TreeView api={apiOf(stateOf({ screen: "tree", model, selection }))} />,
+		);
+		expect(markup).toContain('<div class="quote">2026-11-03..04</div>');
+		expect(markup).not.toContain("stale summary");
 	});
 
 	it("shows the inspector hint when no line is open", () => {
