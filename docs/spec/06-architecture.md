@@ -369,6 +369,10 @@ The plugin registers these tools in the context of each agent. The mode of the p
 | memory_review | main agent            | The due records, or the count of the reviewed records.                  |
 | memory_map    | main agent, subagent  | The visible scopes, or the tree slice of one scope.                     |
 
+A write gives the time of the note, and the default is the write time. The store ranks the note by
+that time, so a note of a past moment lands before the notes of the later time. The order of the
+positions therefore follows the time of the note, and not the order of the writes.
+
 The tool behavior and the errors are in the [tool types](tools.d.ts) and in
 [REQ-024](02-requirements.md) to [REQ-477](02-requirements.md). The subagent modes are in
 [REQ-542](02-requirements.md) to [REQ-543](02-requirements.md), and the log keeps the content of a
@@ -393,7 +397,7 @@ The binary `memlens` runs without the harness, and it takes one command. The usa
 commands and their flags. A flag outside the usage is an error by usage.
 
 ```text
-memlens note "<body>" [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
+memlens note "<body>" [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never] [--ts iso]
 memlens find "<words>" [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
 memlens open <target> [--scope key] [--no-longform] [--offset N]
 memlens forget <target> [--scope key] [--reason "text"]

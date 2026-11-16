@@ -808,6 +808,34 @@ describe("console actions", () => {
 		expect(dismiss).toEqual({ ok: true });
 	});
 
+	it("accepts a note proposal with the time of the agent", async () => {
+		const testCase = composition();
+		await registered(testCase);
+		const proposed = propose(testCase.memlens.store, {
+			scope: "user:notes",
+			op: "note",
+			payload: {
+				body: "A fact of the past.",
+				kind: "fact",
+				scope: "user:notes",
+				review_at: null,
+				ts: "2026-01-02T03:04:05.000Z",
+				session: testCase.agent.id,
+			},
+		});
+
+		const accept = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "accept",
+			target: proposed.id,
+		});
+
+		expect(accept).toEqual({ ok: true });
+		const row = byAddress(testCase.memlens.store, "user:notes", 0);
+		expect(row?.body).toBe("A fact of the past.");
+		expect(row?.ts).toBe("2026-01-02T03:04:05.000Z");
+	});
+
 	it("forgets or deletes one scope with confirmation", async () => {
 		const testCase = composition();
 		insert(testCase, "alpha beta", 1);

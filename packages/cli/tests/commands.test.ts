@@ -359,6 +359,27 @@ describe("@memlens/cli commands", () => {
 		expect(opened.out).toContain("Deploy on friday");
 	});
 
+	it("writes a note of a past time with the flag --ts", async () => {
+		const test = makeEnv();
+		await run(test, "note", "Later fact", "--scope", "project:acme/x");
+		const backdated = await run(
+			test,
+			"note",
+			"Earlier fact",
+			"--scope",
+			"project:acme/x",
+			"--ts",
+			"2026-01-02T03:04:05Z",
+		);
+		expect(backdated.code).toBe(0);
+		expect(backdated.out).toContain("saved project:acme/x#0");
+		const opened = await run(test, "open", "project:acme/x#0", "--json");
+		expect(JSON.parse(opened.out).ts).toBe("2026-01-02T03:04:05.000Z");
+		const bad = await run(test, "note", "No date", "--ts", "yesterday");
+		expect(bad.code).toBe(2);
+		expect(bad.err).toContain("--ts");
+	});
+
 	it("marks a review and lists the due records", async () => {
 		const test = makeEnv();
 		await run(test, "note", "Check the certificate", "--scope", "project:ssl");

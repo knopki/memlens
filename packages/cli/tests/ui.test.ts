@@ -246,6 +246,32 @@ describe("console", () => {
 		);
 	});
 
+	it("accepts a note proposal with the time of the agent", async () => {
+		const { root, env, get, post } = await fixture();
+		const runtime = await openRuntime({
+			storeFlag: join(root, "store"),
+			env,
+		});
+		try {
+			propose(runtime.store, {
+				scope: "other:demo",
+				op: "note",
+				payload: {
+					body: "suggestion",
+					kind: "note",
+					ts: "2026-01-02T03:04:05.000Z",
+				},
+			});
+		} finally {
+			await runtime.close();
+		}
+		const proposal = (await get()).proposals[0];
+		expect((await post({ action: "accept", target: proposal.id })).status).toBe(
+			200,
+		);
+		expect((await get()).records[0]?.ts).toBe("2026-01-02T03:04:05.000Z");
+	});
+
 	it("approves a duplicate note through ordinary write rules", async () => {
 		const { root, env, get, post } = await fixture();
 		const runtime = await openRuntime({

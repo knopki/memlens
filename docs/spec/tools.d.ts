@@ -37,6 +37,12 @@ export interface MemoryNoteInput {
 	/** The records that the new record replaces. A target is a `pos` or an `Address`. */
 	supersedes?: (number | string)[];
 	reviewIn?: ReviewIn;
+	/**
+	 * The time of the note, as ISO 8601 text. A past moment writes a note of that time, and the store
+	 * ranks the note by it. The default is the write time. A value that is not a date gives a Usage
+	 * error.
+	 */
+	ts?: string;
 }
 
 /**

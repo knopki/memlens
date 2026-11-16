@@ -404,6 +404,39 @@ describe("memory tools of one agent", () => {
 		);
 	});
 
+	it("writes a note of a past time before the newer notes", async () => {
+		const main = subject("main", "all");
+		const newer = (await call(main, "memory_note", {
+			body: "A fact of the write time.",
+		})) as { addr: string };
+
+		expect(newer.addr).toBe("user:notes#0");
+		const older = (await call(main, "memory_note", {
+			body: "A fact of the past.",
+			ts: "2026-01-02T03:04:05Z",
+		})) as { addr: string };
+
+		expect(older.addr).toBe("user:notes#0");
+		expect(
+			await call(main, "memory_open", { target: older.addr }),
+		).toMatchObject({
+			body: "A fact of the past.",
+			ts: "2026-01-02T03:04:05.000Z",
+		});
+		expect(
+			await call(main, "memory_open", { target: "user:notes#1" }),
+		).toMatchObject({ body: "A fact of the write time." });
+	});
+
+	it("refuses a note time that is not a date", async () => {
+		const main = subject("main", "all");
+
+		await expect(
+			call(main, "memory_note", { body: "A fact.", ts: "yesterday" }),
+		).rejects.toThrow(/is not a date/);
+		expect(pending(host.store)).toHaveLength(0);
+	});
+
 	it("finds the written note with its declared shape", async () => {
 		seed("user:notes", "A decision about the cache.");
 		const main = subject("main", "all");
@@ -698,6 +731,20 @@ describe("memory tools of one agent", () => {
 		expect(open[0]?.id).toBe(answer.id);
 		expect(open[0]?.op).toBe("note");
 		expect(open[0]?.payload).toContain(child.agent.id);
+	});
+
+	it("keeps the time of a note proposal for the parent", async () => {
+		const child = subject("child", "propose", { origin: "subagent" });
+
+		const answer = (await call(child, "memory_note", {
+			body: "The child proposes one note of a past time.",
+			ts: "2026-01-02T03:04:05Z",
+		})) as { id: string };
+
+		const open = pending(host.store);
+		expect(open).toHaveLength(1);
+		expect(open[0]?.id).toBe(answer.id);
+		expect(open[0]?.payload).toContain("2026-01-02T03:04:05.000Z");
 	});
 
 	it("answers the child with the parent sentence and the body", async () => {

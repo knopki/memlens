@@ -1,9 +1,11 @@
 /**
  * #region moduleContract
  * @purpose Write one note, or store one proposal when a child or an invisible scope cannot write it.
- * @scope The memory_note schema, the scope choice, the supersede targets, the review time, and the proposal payload.
+ * @scope The memory_note schema, the scope choice, the supersede targets, the note time, the review time, and
+ *  the proposal payload.
  *  NOT: the row rules, the proposal table, and the console.
  * @invariants A child gives a proposal with its session id. A supersede target outside the profile gives NotAllowed.
+ * @invariants A call may name the moment of the note, and the store ranks the note by that time.
  * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools; shared.ts
  * @keywords memlens, tool, note, write, supersede, proposal, review
  * #endregion moduleContract
@@ -27,6 +29,7 @@ import {
 	listedInProfile,
 	type MemoryNoteInput,
 	type MemoryNoteOutput,
+	noteTime,
 	resolveTarget,
 	reviewTime,
 } from "./shared.js";
@@ -49,6 +52,7 @@ function noteAnswer(
 			? memory.scope
 			: (normalizeScopeKey(input.scope) as ScopeKey);
 	const reviewAt = reviewTime(memory, kind, input.reviewIn);
+	const ts = noteTime(input.ts);
 	const targets = (input.supersedes ?? []).map((target) => {
 		const resolved = resolveTarget(memory, scope, target);
 		if (!listedInProfile(memory, resolved.scope))
@@ -72,6 +76,7 @@ function noteAnswer(
 				review_at: reviewAt,
 				...longform,
 				...(ids.length === 0 ? {} : { supersedes: ids }),
+				...(ts === undefined ? {} : { ts }),
 				session: agent.id,
 			},
 		});
@@ -87,6 +92,7 @@ function noteAnswer(
 		body: input.body,
 		kind,
 		review_at: reviewAt,
+		...(ts === undefined ? {} : { ts }),
 		session: agent.id,
 		turn: "tool",
 		preset: agent.session.header.agentPreset ?? "memlens",
@@ -156,6 +162,11 @@ export function noteTool(
 				type: "string",
 				description:
 					"The review period as <count>d or never. The default is the period of the kind.",
+			},
+			ts: {
+				type: "string",
+				description:
+					"The time of the note, as ISO 8601. Give a past moment for a note that records what happened then. The default is the write time.",
 			},
 		},
 		output: {

@@ -34,6 +34,7 @@ import {
 	parseAddress,
 	redact,
 	review,
+	toIso,
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import {
@@ -80,13 +81,14 @@ export async function noteCommand(
 			"review",
 			runtime.config.review[kind],
 		);
+		const ts = tsFlag(args.flags);
 		if (!profileLists(runtime, scope))
 			throw new MemlensError("NotAllowed", "The scope is not listed.");
 		const saved = note(runtime.store, {
 			scope,
 			body: args.positional[0] ?? "",
 			kind,
-			ts: nowIso(),
+			ts,
 			review_at: reviewAt,
 			session: "cli",
 			turn: "cli",
@@ -340,6 +342,22 @@ function reviewFlag(
 		);
 	return addDaysAtTime(Date.now(), Number(raw.slice(0, -1)));
 }
+
+// #region FUNC_tsFlag
+/**
+ * @purpose Read the flag --ts as the time of the note in the stored form.
+ * @invariants An absent flag gives the write time.
+ * @invariants A value that is not a date gives a Usage error.
+ */
+function tsFlag(flags: ParsedArgs["flags"]): string {
+	const raw = flagValue(flags, "ts");
+	if (raw === null) return nowIso();
+	const time = Date.parse(raw);
+	if (Number.isNaN(time))
+		throw new MemlensError("Usage", "The flag --ts needs an ISO 8601 time.");
+	return toIso(time);
+}
+// #endregion FUNC_tsFlag
 
 function readBodyFile(path: string): string {
 	try {

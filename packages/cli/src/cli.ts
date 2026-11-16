@@ -52,7 +52,7 @@ const debug = debuglog("memlens:cli");
 /** The usage text of the binary. */
 const USAGE = `Usage: ${NAME} <command> [flags]
 
-  note <body> [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never]
+  note <body> [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never] [--ts iso]
   find <words> [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
   open <target> [--scope key] [--no-longform] [--offset N] [--json]
   forget <target> [--scope key] [--reason "text"]
@@ -89,7 +89,14 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 		run: noteCommand,
 		spec: {
 			positional: ["body"],
-			flags: { scope: 1, longform: 1, kind: 1, supersedes: 1, review: 1 },
+			flags: {
+				scope: 1,
+				longform: 1,
+				kind: 1,
+				supersedes: 1,
+				review: 1,
+				ts: 1,
+			},
 		},
 	},
 	find: {

@@ -66,6 +66,7 @@ interface ProposalPayload {
 	readonly kind?: NoteKind;
 	readonly scope?: ScopeKey;
 	readonly review_at?: string | null;
+	readonly ts?: string;
 	readonly longform?: string;
 	readonly supersedes?: readonly string[];
 	readonly session?: string;
@@ -196,7 +197,7 @@ function acceptedNote(proposal: Proposal, data: ProposalPayload): NoteInput {
 		scope: proposal.scope,
 		body: data.body ?? "",
 		kind: data.kind ?? "note",
-		ts: nowIso(),
+		ts: data.ts ?? nowIso(),
 		review_at: data.review_at ?? null,
 		session: "ui",
 		turn: "ui",

@@ -1,7 +1,8 @@
 /**
  * #region moduleContract
  * @purpose Give each tool module one copy of the tool types and one copy of the store helpers.
- * @scope The input and output types of the tool document, the profile check, the target read, and the review time.
+ * @scope The input and output types of the tool document, the profile check, the target read, the note
+ *  time, and the review time.
  *  NOT: the tool schemas, the registration, and the parent report.
  * @invariants A scope field of an input is key text, and the helper normalizes it before the profile check.
  * @invariants The output types copy the tool document, because the package does not ship that file.
@@ -24,6 +25,7 @@ import {
 	normalizeScopeKey,
 	parseAddress,
 	type ScopeKey,
+	toIso,
 	validateScopeKey,
 	visibleScopes,
 } from "@memlens/core";
@@ -56,6 +58,8 @@ export interface MemoryNoteInput {
 	kind?: NoteKind | undefined;
 	supersedes?: (number | string)[] | undefined;
 	reviewIn?: string | undefined;
+	// The time of the note. The tool normalizes it to ISO 8601 UTC.
+	ts?: string | undefined;
 }
 
 export type MemoryNoteOutput =
@@ -295,3 +299,20 @@ export function reviewTime(
 	return addDaysAtTime(Date.now(), Number(days[1]));
 }
 // #endregion FUNC_reviewTime
+
+// #region FUNC_noteTime
+/**
+ * @purpose Give the time of one note in the stored form, so a call names the moment of the note.
+ * @invariants An absent value gives undefined, and the store takes the write time.
+ * @invariants A value that is not a date gives a Usage error.
+ * @param ts - The time of the tool call as ISO 8601 text, or none.
+ * @returns The time as ISO 8601 UTC with Z, or undefined.
+ */
+export function noteTime(ts: string | undefined): string | undefined {
+	if (ts === undefined) return undefined;
+	const time = Date.parse(ts);
+	if (Number.isNaN(time))
+		throw new MemlensError("Usage", `The time ${ts} is not a date.`);
+	return toIso(time);
+}
+// #endregion FUNC_noteTime
