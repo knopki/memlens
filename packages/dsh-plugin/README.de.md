@@ -64,7 +64,7 @@ optional. Ohne den Schlüssel gilt das Profil `default`.
 
 Das Plugin liest die Basisdatei `$XDG_CONFIG_HOME/memlens/config.toml`. Das Plugin schreibt diese
 Datei nicht. Wenn die Datei fehlt, gilt der eingebaute Ersatz: das Profil `default`, die Scopes `*`,
-die Budgets 20 und 10 und der Scope `user:notes`.
+die Budgets 20 und 10 und der Scope `project:misc`.
 
 Der Speicherpfad kommt zuerst aus der Plugin-Konfiguration, dann aus `MEMLENS_STORE`, dann aus der
 Basisdatei.

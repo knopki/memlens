@@ -51,7 +51,7 @@ memlens 的 DeepSeek Harness 插件。
 
 ## 配置
 
-插件读取基础文件 `$XDG_CONFIG_HOME/memlens/config.toml`。插件不写这个文件。如果文件不存在，内置回退生效：配置文件 `default`、作用域 `*`、预算 20 和 10、作用域 `user:notes`。
+插件读取基础文件 `$XDG_CONFIG_HOME/memlens/config.toml`。插件不写这个文件。如果文件不存在，内置回退生效：配置文件 `default`、作用域 `*`、预算 20 和 10、作用域 `project:misc`。
 
 存储路径先来自插件配置，然后来自 `MEMLENS_STORE`，然后来自基础文件。
 

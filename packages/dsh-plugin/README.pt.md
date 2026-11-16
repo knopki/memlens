@@ -64,7 +64,7 @@ Sem a chave, aplica-se o perfil `default`.
 
 O plugin lê o arquivo base `$XDG_CONFIG_HOME/memlens/config.toml`. O plugin não grava esse arquivo. Se
 o arquivo não existir, vale a substituição integrada: o perfil `default`, os escopos `*`, os
-orçamentos 20 e 10 e o escopo `user:notes`.
+orçamentos 20 e 10 e o escopo `project:misc`.
 
 O caminho do armazenamento vem primeiro da configuração do plugin, depois de `MEMLENS_STORE`, depois
 do arquivo base.

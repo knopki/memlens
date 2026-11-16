@@ -88,7 +88,10 @@ describe("loadBaseConfig", () => {
 		expect(config.defaultProfile).toBe("default");
 		expect(config.store).toEqual({ path: "/default/store", idle: 300 });
 		expect(config.profile).toEqual({});
-		expect(config.scope_default).toEqual({ rules: [], default: "user:notes" });
+		expect(config.scope_default).toEqual({
+			rules: [],
+			default: "project:misc",
+		});
 		expect(config.compaction.provider).toBe("deepseek");
 		expect(config.compaction.model).toBe("deepseek-chat");
 	});

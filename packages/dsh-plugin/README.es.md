@@ -65,7 +65,7 @@ la clave se aplica el perfil `default`.
 
 El plugin lee el archivo base `$XDG_CONFIG_HOME/memlens/config.toml`. El plugin no escribe este
 archivo. Si el archivo no existe, se aplica el reemplazo integrado: el perfil `default`, los ámbitos
-`*`, los presupuestos 20 y 10 y el ámbito `user:notes`.
+`*`, los presupuestos 20 y 10 y el ámbito `project:misc`.
 
 La ruta del almacén viene primero de la configuración del plugin, después de `MEMLENS_STORE`,
 después del archivo base.

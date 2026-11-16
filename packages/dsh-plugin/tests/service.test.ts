@@ -289,10 +289,10 @@ describe("Memlens host service", () => {
 		await agentEvents(root, agent).serial("agent/created", {
 			source: "resume",
 		});
-		expect(root.memlens.forAgent(agent).scope).toBe("user:notes");
+		expect(root.memlens.forAgent(agent).scope).toBe("project:misc");
 	});
 
-	it("uses the configured fallback when a session has no directory", async () => {
+	it("uses the built-in fallback key when a session has no directory", async () => {
 		const { root } = await composition();
 		const agent = subject(root);
 		Object.assign(agent, {
@@ -301,7 +301,7 @@ describe("Memlens host service", () => {
 		await agentEvents(root, agent).serial("agent/created", {
 			source: "startup",
 		});
-		expect(root.memlens.forAgent(agent).scope).toBe("user:notes");
+		expect(root.memlens.forAgent(agent).scope).toBe("project:misc");
 	});
 
 	it("skips directory and model checks for an off-mode child", async () => {

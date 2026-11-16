@@ -353,7 +353,7 @@ describe("@memlens/cli commands", () => {
 		expect(scopes.out).toContain("project:acme/x");
 		const scope = await run(test, "scope");
 		expect(scope.code).toBe(0);
-		expect(scope.out).toContain("user:notes");
+		expect(scope.out).toContain("project:misc");
 		const slice = await run(test, "slice", "--scope", "project:acme/x");
 		expect(slice.code).toBe(0);
 		expect(slice.out).toContain("<memory>");

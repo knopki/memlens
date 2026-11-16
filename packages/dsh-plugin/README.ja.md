@@ -62,7 +62,7 @@ DeepSeek Harness のコンパクションの成功、モデル TTL を超えた�
 
 プラグインは基本ファイル `$XDG_CONFIG_HOME/memlens/config.toml` を読みます。プラグインはこの
 ファイルを書きません。ファイルがない場合は、組み込みのフォールバックが使われます。プロファイ
-ル `default`、スコープ `*`、バジェット 20 と 10、スコープ `user:notes` です。
+ル `default`、スコープ `*`、バジェット 20 と 10、スコープ `project:misc` です。
 
 ストアのパスは、プラグイン設定、`MEMLENS_STORE`、基本ファイルの順に選ばれます。
 

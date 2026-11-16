@@ -187,7 +187,7 @@ export const DEFAULT_COMPACTION: CompactionConfig = {
 /** The default scope rules of a base file that states no `[scope_default]` section. */
 export const DEFAULT_SCOPE_DEFAULT: ScopeDefault = {
 	rules: [],
-	default: "user:notes",
+	default: "project:misc",
 };
 
 /** The default cache TTL of any model. */
@@ -217,7 +217,7 @@ directions = 10
 
 [scope_default]
 rules = []
-default = "user:notes"
+default = "project:misc"
 `;
 
 /** The default cache TTL map. */

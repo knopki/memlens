@@ -63,7 +63,7 @@ selects the profile `default`.
 
 The plugin reads the base file `$XDG_CONFIG_HOME/memlens/config.toml`. The plugin does not write this
 file. If the file is absent, the built-in fallback applies: the profile `default`, the scopes `*`,
-the budgets 20 and 10, and the scope `user:notes`. An absent section of the file gives its default
+the budgets 20 and 10, and the scope `project:misc`. An absent section of the file gives its default
 value. A file with an invalid value degrades to the built-in fallback. No configuration state
 blocks a session.
 

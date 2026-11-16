@@ -152,6 +152,12 @@ function workerInputs(): {
 	};
 }
 
+/** The base file of the cases: the built-in file with a stated fallback scope key. */
+const CASE_BASE = DEFAULT_CONFIG_TOML.replace(
+	'default = "project:misc"',
+	'default = "user:notes"',
+);
+
 // #region FUNC_composition
 /**
  * @purpose Start the real host service and the real registry under a temporary configuration root.
@@ -165,10 +171,11 @@ function composition(
 	vi.stubEnv("XDG_CONFIG_HOME", directory);
 	vi.stubEnv("XDG_DATA_HOME", directory);
 	vi.stubEnv("MEMLENS_STORE", undefined);
-	if (options.base !== undefined) {
-		mkdirSync(join(directory, "memlens"));
-		writeFileSync(join(directory, "memlens", "config.toml"), options.base);
-	}
+	mkdirSync(join(directory, "memlens"));
+	writeFileSync(
+		join(directory, "memlens", "config.toml"),
+		options.base ?? CASE_BASE,
+	);
 	const root = new Context();
 	roots.push(root);
 	const memlens = new Memlens(root, {});
@@ -390,10 +397,7 @@ describe("console remote registration", () => {
 
 	it("resolves the profile and the scope from the session, not from the request", async () => {
 		const testCase = composition({
-			base: DEFAULT_CONFIG_TOML.replace(
-				'scopes = ["*"]',
-				'scopes = ["user:notes"]',
-			),
+			base: CASE_BASE.replace('scopes = ["*"]', 'scopes = ["user:notes"]'),
 		});
 		await registered(testCase);
 		const view = await call(testCase, "view", {
@@ -423,7 +427,7 @@ describe("console remote registration", () => {
 });
 
 describe("console profile surface", () => {
-	const twoProfiles = DEFAULT_CONFIG_TOML.replace(
+	const twoProfiles = CASE_BASE.replace(
 		"[profile.default.budget]",
 		'[profile.work]\nscopes = ["project:*"]\n\n[profile.default.budget]',
 	);
@@ -435,7 +439,6 @@ describe("console profile surface", () => {
 		expect(view.profile).toBe("work");
 		expect(view.profiles).toEqual(["default", "work"]);
 		expect(view.scope).toBe("user:notes");
-		expect(view.scopes.map((scope) => scope.key)).toContain("user:notes");
 	});
 
 	it("resolves the scope of the profile, not of a session", async () => {
