@@ -19,8 +19,12 @@ import {
 	childLine,
 	copyBuild,
 	joinBuild,
+	MERGE_SYSTEM,
+	MERGE_SYSTEM_BATCH,
 	mergeLine,
 	mergeTask,
+	OUTPUT_MANY,
+	OUTPUT_ONE,
 	parseBatchAnswer,
 } from "../src/domain/merge-line.js";
 import { amend, note } from "../src/store/notes.js";
@@ -98,6 +102,22 @@ describe("prompts", () => {
 		expect(task).toContain('"#a-b: line"');
 		expect(task).toContain('<input id="#0-1">');
 		expect(task).toContain("</input>");
+	});
+
+	it("keeps the map rule in the system prompt and in the last task", () => {
+		expect(MERGE_SYSTEM).toContain(
+			"A line is a map of its children, not a join of them.",
+		);
+		expect(MERGE_SYSTEM).toContain("The example below is invented");
+		expect(batchTask(512, [input(record(0, "a"), record(1, "b"))])).toContain(
+			"not a join of the children's sentences",
+		);
+	});
+
+	it("gives the batch form its own answer sentence", () => {
+		expect(MERGE_SYSTEM.endsWith(OUTPUT_ONE)).toBe(true);
+		expect(MERGE_SYSTEM_BATCH.endsWith(OUTPUT_MANY)).toBe(true);
+		expect(MERGE_SYSTEM_BATCH).not.toContain(OUTPUT_ONE);
 	});
 
 	it("names the scope of each child in a catalog job", () => {
@@ -465,9 +485,7 @@ describe("compactionPass", () => {
 		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);
 		expect(
 			await compactionPass(store, "p:x", async (system) => {
-				expect(system).toContain(
-					'Output one line for each input, in the form "#a-b: line".',
-				);
+				expect(system).toContain(OUTPUT_MANY);
 				return "#0-1: first summary\n#2-3: second summary";
 			}),
 		).toMatchObject({ built: 2, calls: 1, failed: 0 });

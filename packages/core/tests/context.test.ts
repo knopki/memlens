@@ -266,7 +266,7 @@ describe("renderContext", () => {
 		expect(text).toContain("<memory>\n<how-to>\n");
 		expect(text).toContain(POLICY);
 		expect(text).toContain(
-			"One line for each range of scopes: the keys, the age, and the summary.",
+			"One line for each scope: the key in brackets, the age, and the newest summary.",
 		);
 		expect(text).toContain("[project:a] 0d root summary");
 		expect(text).toContain('<here scope="project:a">');

@@ -99,6 +99,7 @@ export {
 	joinBuild,
 	type LineBuild,
 	MERGE_SYSTEM,
+	MERGE_SYSTEM_BATCH,
 	type MergeModel,
 	mergeLine,
 	mergeTask,

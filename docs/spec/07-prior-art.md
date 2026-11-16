@@ -78,3 +78,18 @@ An unverified claim stays a claim. Do not build a requirement on it.
 ## ai-memory
 
 The reference directory has no copy of this project. The contrast row of the table stays unverified.
+
+## The example line of a merge prompt
+
+This section compares the example line of a merge prompt with the source of the projects on
+2026-11-16. The copy of the merge prompt in [09-prompts.md](09-prompts.md) uses that result.
+
+| Claim                                                                    | Evidence                                                                                                             | Verdict   |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | --------- |
+| uniichat replaced its sample line with a ruler of dashes.                | `uniichat/Memory.ts:167` "a ruler, not a sample line: the compactor copied a sample's content"                        | confirmed |
+| pi-optchat (biowaffeln) uses dashes for the same reason.                 | `biowaffeln_pi-optchat/src/prompts.ts:216` "a real sample line once got its content copied, so it is dashes"          | confirmed |
+| The sample line of elephant-memory put invented facts into real lines.   | `Shtukbase_elephant-memory/lib/prompts.js:11-14` "the sample line once used here leaked its invented facts ... into merged lines of real memories" | confirmed |
+
+A sample teaches the shape of an answer and its facts together. A model cannot tell the two apart.
+The prompt therefore states the shape and names the sample as invented. It also forbids a fact that
+the children do not hold.
