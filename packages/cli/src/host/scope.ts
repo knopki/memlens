@@ -21,6 +21,7 @@ import type { Note, NoteKind, ScopeKey } from "@memlens/core";
 import {
 	byAddress,
 	MemlensError,
+	newestScope,
 	parseAddress,
 	validateScopeKey,
 } from "@memlens/core";
@@ -49,8 +50,9 @@ export function allowedScope(runtime: Runtime, raw: string): ScopeKey {
  * Resolve the scope of one request.
  *
  * @purpose Give each request one listed scope, so the handlers share the default rule.
- * @invariants A requested scope wins. With no request, the active scope of the directory applies
- *   when the profile lists it, and the first visible scope applies otherwise.
+ * @invariants A requested scope wins. With no request, the scope of the newest live note applies,
+ *   else the active scope of the directory applies when the profile lists it, and the first visible
+ *   scope applies otherwise.
  */
 export function resolveScope(
 	runtime: Runtime,
@@ -59,6 +61,7 @@ export function resolveScope(
 ): ScopeKey {
 	const requested = text(fields, "scope");
 	const visible = runtime.scopes;
+	const fresh = requested ? null : newestScope(runtime.store, visible);
 	const fallback = cliActiveScope(runtime.base, options.cwd ?? process.cwd());
 	const first =
 		visible[0] ??
@@ -66,7 +69,7 @@ export function resolveScope(
 		fallback;
 	return allowedScope(
 		runtime,
-		requested || (profileLists(runtime, fallback) ? fallback : first),
+		requested || fresh || (profileLists(runtime, fallback) ? fallback : first),
 	);
 }
 // #endregion FUNC_resolveScope

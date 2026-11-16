@@ -197,6 +197,7 @@ export {
 	directionsData,
 	dueReviews,
 	liveCounts,
+	newestScope,
 	nodesOf,
 	scopeNotes,
 } from "./store/reads.js";

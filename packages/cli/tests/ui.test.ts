@@ -63,6 +63,27 @@ async function fixture(allowDelete = false, scopes = '["*"]', base?: string) {
 // #endregion FUNC_fixture
 
 describe("console", () => {
+	it("opens the view on the scope of the newest note", async () => {
+		const { get, post } = await fixture(true);
+		expect(
+			(await post({ scope: "user:notes", action: "note", body: "older note" }))
+				.status,
+		).toBe(200);
+		expect(
+			(
+				await post({
+					scope: "project:alpha",
+					action: "note",
+					body: "newer note",
+				})
+			).status,
+		).toBe(200);
+		const view = await get();
+		expect(view.scope).toBe("project:alpha");
+		const picked = await get("/api/view?scope=user%3Anotes");
+		expect(picked.scope).toBe("user:notes");
+	});
+
 	it("creates, amends, finds, reviews, supersedes, hides, and clears notes", async () => {
 		const { get, post } = await fixture(true);
 		expect(

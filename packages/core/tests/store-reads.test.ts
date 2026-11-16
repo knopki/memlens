@@ -19,6 +19,7 @@ import {
 	directionsData,
 	dueReviews,
 	liveCounts,
+	newestScope,
 	nodesOf,
 	scopeNotes,
 } from "../src/store/reads.js";
@@ -419,3 +420,61 @@ describe("directions", () => {
 	});
 });
 // #endregion FUNC_test_directions
+
+// #region FUNC_test_newest_scope
+describe("newest scope", () => {
+	it("gives the scope of the newest live note", () => {
+		const store = newStore();
+		addNote(store, {
+			id: "a",
+			pos: 0,
+			scope: "p:a",
+			body: "a",
+			modified_at: T1,
+		});
+		addNote(store, {
+			id: "b",
+			pos: 0,
+			scope: "p:b",
+			body: "b",
+			modified_at: T3,
+		});
+		addNote(store, {
+			id: "c",
+			pos: 0,
+			scope: "p:c",
+			body: "c",
+			modified_at: T2,
+		});
+		assert.equal(
+			newestScope(
+				store,
+				["p:a", "p:b", "p:c"].map((key) => key as ScopeKey),
+			),
+			"p:b",
+		);
+	});
+
+	it("ignores a scope outside the set and a scope with no live note", () => {
+		const store = newStore();
+		addNote(store, {
+			id: "a",
+			pos: 0,
+			scope: "p:a",
+			body: "a",
+			modified_at: T1,
+		});
+		addNote(store, {
+			id: "b",
+			pos: 0,
+			scope: "p:b",
+			body: "b",
+			state: "hidden",
+			modified_at: T3,
+		});
+		assert.equal(newestScope(store, ["p:a"]), "p:a");
+		assert.equal(newestScope(store, ["p:b"]), null);
+		assert.equal(newestScope(store, []), null);
+	});
+});
+// #endregion FUNC_test_newest_scope

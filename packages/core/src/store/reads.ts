@@ -201,27 +201,9 @@ export function directionsData(
 	profileScopes: readonly ScopeKey[],
 	budget: number,
 ): DirectionsData {
-	const scopes = [...new Set(profileScopes)];
 	const cap = Math.max(0, budget);
-	if (scopes.length === 0) {
-		debug("Directions empty", { event: "directions", scopes: 0, budget: cap });
-		return { lines: [], rest: [] };
-	}
-	const marks = scopes.map(() => "?").join(", ");
-	const rows = store
-		.handle()
-		.prepare(
-			`SELECT scope, MAX(modified_at) AS last_write FROM notes
-			WHERE state = 'live' AND scope IN (${marks})
-			GROUP BY scope`,
-		)
-		.all(...scopes);
-	const marksByWrite = rows
-		.map((row) => ({
-			scope: String(row.scope) as ScopeKey,
-			lastWrite: String(row.last_write),
-		}))
-		.sort(newerFirst);
+	const scopes = [...new Set(profileScopes)];
+	const marksByWrite = lastWrites(store, scopes);
 	const lines = marksByWrite
 		.slice(0, cap)
 		.reverse()
@@ -237,6 +219,57 @@ export function directionsData(
 	return { lines, rest };
 }
 // #endregion FUNC_directionsData
+
+// #region FUNC_lastWrites
+/**
+ * @purpose Give the last write of each scope with a live note, so a reader knows the recency of a
+ *   scope.
+ * @invariants A scope with no live note gives no entry. The newest write comes first, and an equal
+ *   write orders by the scope key.
+ */
+function lastWrites(
+	store: Store,
+	profileScopes: readonly ScopeKey[],
+): readonly { readonly scope: ScopeKey; readonly lastWrite: string }[] {
+	const scopes = [...new Set(profileScopes)];
+	if (scopes.length === 0) return [];
+	const marks = scopes.map(() => "?").join(", ");
+	const rows = store
+		.handle()
+		.prepare(
+			`SELECT scope, MAX(modified_at) AS last_write FROM notes
+			WHERE state = 'live' AND scope IN (${marks})
+			GROUP BY scope`,
+		)
+		.all(...scopes);
+	return rows
+		.map((row) => ({
+			scope: String(row.scope) as ScopeKey,
+			lastWrite: String(row.last_write),
+		}))
+		.sort(newerFirst);
+}
+// #endregion FUNC_lastWrites
+
+// #region FUNC_newestScope
+/**
+ * @purpose Give the scope of the newest live note among a set, so the console opens on the scope of
+ * the last write.
+ * @invariants A set with no live note gives null.
+ */
+export function newestScope(
+	store: Store,
+	scopes: readonly ScopeKey[],
+): ScopeKey | null {
+	const scope = lastWrites(store, scopes)[0]?.scope ?? null;
+	debug("Newest scope", {
+		event: "newest_scope",
+		scope,
+		scopes: scopes.length,
+	});
+	return scope;
+}
+// #endregion FUNC_newestScope
 
 /** Order the scope marks by the last write, the newest first, then by the scope key. */
 function newerFirst(

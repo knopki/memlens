@@ -234,7 +234,7 @@ export class ConsoleRemote extends TypertRemoteService {
 		const memory = this.memlens.forProfile(profile);
 		return {
 			memory,
-			scope: requestScope(memory, text(fields, "scope")),
+			scope: requestScope(memory, text(fields, "scope"), true),
 			fields,
 			profiles,
 		};

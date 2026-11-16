@@ -152,6 +152,45 @@ function composition(): {
 }
 // #endregion FUNC_composition
 
+describe("console scope of a profile request", () => {
+	it("opens on the scope of the newest note and keeps the active scope otherwise", () => {
+		const { request } = composition();
+		const memory = request.memory;
+		vi.useFakeTimers();
+		try {
+			vi.setSystemTime(new Date("2030-01-01T00:00:00.000Z"));
+			note(memory.store, {
+				scope: "project:alpha",
+				kind: "note",
+				body: "The older scope.",
+				session: "s",
+				turn: "t",
+				preset: "p",
+				ts: "2030-01-01T00:00:00.000Z",
+			});
+			vi.setSystemTime(new Date("2030-01-02T00:00:00.000Z"));
+			note(memory.store, {
+				scope: "project:beta",
+				kind: "note",
+				body: "The newer scope.",
+				session: "s",
+				turn: "t",
+				preset: "p",
+				ts: "2030-01-02T00:00:00.000Z",
+			});
+		} finally {
+			vi.useRealTimers();
+		}
+		expect(requestScope(memory, "", true)).toBe("project:beta");
+		expect(requestScope(memory, "", false)).toBe(memory.scope);
+	});
+
+	it("keeps a requested scope", () => {
+		const { request } = composition();
+		expect(requestScope(request.memory, "user:notes", true)).toBe("user:notes");
+	});
+});
+
 /** The worker state that the status answer reads. */
 const worker = {
 	status: () => ({

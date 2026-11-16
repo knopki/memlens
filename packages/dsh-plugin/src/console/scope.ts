@@ -22,6 +22,7 @@ import {
 	MemlensError,
 	type Note,
 	type NoteKind,
+	newestScope,
 	parseAddress,
 	type ScopeKey,
 	validateScopeKey,
@@ -102,20 +103,26 @@ export function allowedScope(memory: AgentMemory, raw: string): ScopeKey {
 // #region FUNC_requestScope
 /**
  * @purpose Give each console request one listed scope, so each handler shares the default rule.
- * @invariants A requested scope wins. With no request, the active scope of the session applies
- *   when the profile lists it, and the first visible scope applies otherwise.
+ * @invariants A requested scope wins. With no request, the newest listed scope applies when the
+ *   caller asks for it, else the active scope of the session applies when the profile lists it, and
+ *   the first visible scope applies otherwise.
  * @param memory - The store, the profile, and the active scope of the session.
  * @param requested - The scope text of the request, or an empty text.
  * @returns The checked scope key of the request.
  */
-export function requestScope(memory: AgentMemory, requested: string): ScopeKey {
+export function requestScope(
+	memory: AgentMemory,
+	requested: string,
+	newest = false,
+): ScopeKey {
 	if (requested) return allowedScope(memory, requested);
+	const visible = visibleScopeList(memory);
 	const active = memory.scope;
+	const fresh =
+		newest && visible.length > 0 ? newestScope(memory.store, visible) : null;
 	const first =
-		visibleScopeList(memory)[0] ??
-		memory.config.profile.scopes.find(validateScopeKey) ??
-		active;
-	const scope = listedInProfile(memory, active) ? active : first;
+		visible[0] ?? memory.config.profile.scopes.find(validateScopeKey) ?? active;
+	const scope = fresh ?? (listedInProfile(memory, active) ? active : first);
 	debug("Scope resolved", {
 		event: "scope",
 		scope,
