@@ -219,6 +219,29 @@ describe("@memlens/cli commands", () => {
 			"saved project:chosen#0",
 		);
 	});
+
+	it("answers a profile that the base file does not name", async () => {
+		const test = makeEnv();
+		const repo = join(test.home, "ghost-profile");
+		mkdirSync(repo);
+		test.io = { ...test.io, cwd: repo };
+		expect((await run(test, "note", "Ghost profile note")).code).toBe(0);
+		const slice = await run(test, "slice", "--profile", "ghost");
+		expect(slice.code).toBe(0);
+		expect(slice.out).toContain("Ghost profile note");
+	});
+
+	it("answers a base file that names no profile at all", async () => {
+		const test = makeEnv('defaultProfile = "default"\n');
+		const repo = join(test.home, "bare-base");
+		mkdirSync(repo);
+		test.io = { ...test.io, cwd: repo };
+		expect((await run(test, "note", "Bare base note")).code).toBe(0);
+		const slice = await run(test, "slice");
+		expect(slice.code).toBe(0);
+		expect(slice.out).toContain("Bare base note");
+	});
+
 	it("uses the Git remote with no rule", async () => {
 		const test = makeEnv();
 		const repo = join(test.home, "remote-repo");

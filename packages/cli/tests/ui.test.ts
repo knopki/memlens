@@ -20,14 +20,15 @@ afterEach(async () => {
 
 // #region FUNC_fixture
 /** @purpose Open an isolated console with its own configuration and store. */
-async function fixture(allowDelete = false, scopes = '["*"]') {
+async function fixture(allowDelete = false, scopes = '["*"]', base?: string) {
 	const root = await mkdtemp(join(tmpdir(), "memlens-ui-"));
 	cleanups.push(() => rm(root, { recursive: true, force: true }));
 	const config = join(root, "config", "memlens");
 	await mkdir(config, { recursive: true });
 	await writeFile(
 		join(config, "config.toml"),
-		DEFAULT_CONFIG_TOML.replace('scopes = ["*"]', `scopes = ${scopes}`)
+		(base ?? DEFAULT_CONFIG_TOML)
+			.replace('scopes = ["*"]', `scopes = ${scopes}`)
 			.replace('default = "project:misc"', 'default = "user:notes"')
 			.replace(
 				"rules = []",
@@ -110,7 +111,7 @@ describe("console", () => {
 		expect(view.records[1].content_cleared).toBe(true);
 	});
 
-	it("rejects foreign origins, invalid JSON, unlisted profiles, and disabled deletion", async () => {
+	it("rejects foreign origins, invalid JSON, and disabled deletion", async () => {
 		const { host, post } = await fixture();
 		expect(
 			(
@@ -130,12 +131,34 @@ describe("console", () => {
 			(await fetch(`${host.url}/api/action`, { method: "POST", body: "{}" }))
 				.status,
 		).toBe(400);
-		expect((await fetch(`${host.url}/api/view?profile=missing`)).status).toBe(
-			422,
-		);
 		expect(
 			(await post({ action: "delete", target: "0", confirm: true })).status,
 		).toBe(403);
+	});
+
+	it("answers a profile that the base file does not name", async () => {
+		const { get } = await fixture();
+		const view = await get("/api/view?profile=missing");
+		expect(view.profile).toBe("missing");
+		expect(view.profiles).toEqual(["default"]);
+		expect(view.scope).toBe("user:notes");
+	});
+
+	it("answers a base file that names no profile at all", async () => {
+		const bare =
+			'language = "en"\ndefaultProfile = "default"\n\n' +
+			'[scope_default]\nrules = []\ndefault = "user:notes"\n';
+		const { get, post } = await fixture(false, '["*"]', bare);
+		expect(
+			(await post({ action: "note", body: "bare base memory" })).status,
+		).toBe(200);
+		const view = await get();
+		expect(view.profile).toBe("default");
+		expect(view.profiles).toEqual(["default"]);
+		expect(view.scope).toBe("user:notes");
+		expect(view.scopes.map((scope: { key: string }) => scope.key)).toContain(
+			"user:notes",
+		);
 	});
 
 	it("narrows the review lists of a view by the scope and the kind", async () => {

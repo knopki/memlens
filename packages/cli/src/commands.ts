@@ -113,7 +113,7 @@ export function print(value: unknown): string {
 // #region FUNC_openCommandRuntime
 /**
  * @purpose Open the runtime of one command, so each command reads the store path in one place.
- * @invariants The profile name comes from the caller and must exist in the base layer.
+ * @invariants A profile that the base file does not name uses the default profile values.
  */
 export async function openCommandRuntime(
 	args: ParsedArgs,

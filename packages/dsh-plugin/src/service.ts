@@ -29,6 +29,7 @@ import {
 	MemlensError,
 	type PatchConfig,
 	type PresetConfig,
+	profileNames,
 	type ResolvedConfig,
 	resolveConfig,
 	type ScopeKey,
@@ -304,9 +305,7 @@ export class Memlens extends Service {
 	 *   when the base file does not name it.
 	 */
 	profiles(): string[] {
-		const names = Object.keys(this.base.profile);
-		const fallback = this.resolved.defaultProfile;
-		return names.includes(fallback) ? names : [...names, fallback];
+		return profileNames(this.base, this.resolved.defaultProfile);
 	}
 	// #endregion METHOD_profiles
 

@@ -250,7 +250,8 @@ function describeRule(rule: unknown): string {
  *
  * @purpose Give the context text of one profile and one active scope, so a user sees what a
  *   session reads.
- * @invariants The profile comes from --profile or defaultProfile. The render calls no model and
+ * @invariants The profile comes from --profile or defaultProfile. A profile that the base file
+ *   does not name uses the default profile values. The render calls no model and
  *   waits for no compaction.
  */
 export async function sliceCommand(
@@ -259,11 +260,6 @@ export async function sliceCommand(
 ): Promise<string> {
 	const base = loadCliBaseConfig(io.env);
 	const profile = flagValue(args.flags, "profile") ?? base.defaultProfile;
-	if (base.profile[profile] === undefined)
-		throw new MemlensError(
-			"Data",
-			`config.profile holds no profile ${profile}`,
-		);
 	const config = resolveForProfile(base, profile);
 	const active = normalizeScopeKey(
 		flagValue(args.flags, "scope") ?? cliActiveScope(base, io.cwd),

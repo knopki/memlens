@@ -26,6 +26,7 @@ import {
 	openRange,
 	parseAddress,
 	pending,
+	profileNames,
 	readConsole,
 	search,
 } from "@memlens/core";
@@ -55,7 +56,7 @@ async function viewAnswer(
 	return {
 		...model,
 		proposals: pending(runtime.store),
-		profiles: Object.keys(runtime.base.profile),
+		profiles: profileNames(runtime.base, runtime.base.defaultProfile),
 		path: runtime.path,
 		backend: "sqlite",
 		allowDelete: options.allowDelete === true,

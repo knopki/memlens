@@ -47,6 +47,7 @@ export {
 	loadPatchConfig,
 	loadPresetConfig,
 	parseDuration,
+	profileNames,
 	resolveConfig,
 	storePath,
 	ttlSeconds,

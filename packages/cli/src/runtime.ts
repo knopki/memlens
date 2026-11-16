@@ -45,7 +45,6 @@ import {
 	isCatalogKey,
 	liveCounts,
 	loadBaseConfig,
-	MemlensError,
 	resolveConfig,
 	Store,
 	storePath,
@@ -96,7 +95,8 @@ export function readCliFile(path: string): string | null {
  * Resolve the configuration and open the store of the CLI.
  *
  * @purpose Give one command one consistent runtime, so each command sees the same store rules.
- * @invariants The profile name comes from the caller and must exist in the base layer.
+ * @invariants A profile that the base file does not name uses the default profile values that
+ *   `resolveConfig` gives, so no config state fails the open.
  */
 export async function openRuntime(options: {
 	storeFlag: string | null;
@@ -106,12 +106,6 @@ export async function openRuntime(options: {
 	const env = options.env ?? process.env;
 	const base = loadCliBaseConfig(env);
 	const profile = options.profile ?? base.defaultProfile;
-	if (base.profile[profile] === undefined) {
-		throw new MemlensError(
-			"Data",
-			`config.profile holds no profile ${profile}`,
-		);
-	}
 	const config = resolveForProfile(base, profile);
 	const path = expandTilde(
 		storePath(options.storeFlag, env.MEMLENS_STORE ?? null, base.store),
@@ -119,7 +113,7 @@ export async function openRuntime(options: {
 	);
 	const store = new Store(path, config.language);
 	const known = [...liveCounts(store).keys()];
-	const scopes = visibleScopes(base.profile[profile]?.scopes ?? [], known);
+	const scopes = visibleScopes(config.profile.scopes, known);
 	debug("Runtime opened", {
 		event: "open",
 		path,

@@ -271,6 +271,26 @@ export function resolveConfig(
 }
 // #endregion FUNC_resolveConfig
 
+// #region FUNC_profileNames
+/**
+ * @purpose List the profile names that a console offers, so the switcher always holds one name.
+ * @invariants The list follows the base file order. The list ends with the fallback name when the
+ *   base file does not name it.
+ * @param base - The base layer.
+ * @param fallback - The effective profile name of the session.
+ * @returns The offered profile names. The list holds at least the fallback name.
+ */
+export function profileNames(base: BaseConfig, fallback: string): string[] {
+	const names = Object.keys(base.profile);
+	debug("Profile names listed", {
+		event: "profile-names",
+		named: names.length,
+		fallback,
+	});
+	return names.includes(fallback) ? names : [...names, fallback];
+}
+// #endregion FUNC_profileNames
+
 // #region FUNC_storePath
 /**
  * @purpose Pick the store path by the fixed order, so each frontend opens the same directory.
