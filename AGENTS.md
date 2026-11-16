@@ -3,7 +3,8 @@
 The core library implements the domain, one SQLite row store, the slice, and the configuration. The
 CLI implements the command surface, including `compact`, `check`, `repair`, and `ui`. The session
 import is pending. The plugin implements host and preset configuration, one shared store, the memory
-context, the six tools, the nudge, and the background compaction worker. Its console tab is pending.
+context, the six tools, the nudge, and the background compaction worker. The console surfaces are
+the profile page, the session tab, the worker status, and the worker journal.
 See [06-architecture.md](docs/spec/06-architecture.md) for the current state.
 The specification in `docs/spec/` owns cross-module requirements and pending behavior.
 Code contracts own implemented rules within one module. Read the module contract and the relevant
@@ -70,6 +71,10 @@ entity contract before a change.
 - The hooks run biome and the document check before a commit. They run the type check and the tests
   before a push. The document check `pnpm run lint:docs` uses the vendored linter in
   `scripts/vendor/`.
+- A rebuild of the plugin client does not refresh the GUI alone. The harness serves all plugin
+  clients as one revision-keyed bundle, and a service worker holds the `/plugins/` scope. Restart
+  the harness host, then reload the page. Unregister the service worker when the page still shows
+  old code.
 - Do not write a tool version in two files. Do not commit `mise.lock`.
 
 ## Language rules
