@@ -66,7 +66,7 @@ and a binary tree of summaries grows over them: two adjacent lines merge into on
 and so on. The agent sees recent notes one per line and older ones more per line, and can open a line back
 into the two lines it was made from.
 
-You write one step of the tree: merge two adjacent lines into one. Your line stands in for its notes for
+You write one step of the tree: summarize one or two lines into one. Your line stands in for its notes for
 weeks or years. The agent opens it only when its words show that what it needs is inside: what your line
 omits is lost for good.
 
@@ -99,13 +99,15 @@ Merge these two adjacent lines into one line of at most {TARGET} characters (abo
 </input>
 ```
 
+For one child, the task uses `Summarize this line` and gives that child only.
+
 ## Batch task
 
 One call of the batch form holds up to six inputs. It names the form of the answer, so the answer
 needs no guess.
 
 ```text
-Merge each pair of adjacent lines into one line of at most {TARGET} characters (about {TARGET/6} words) each.
+Summarize each input, including every line in it, as one line of at most {TARGET} characters (about {TARGET/6} words) each.
 Answer one line for each input, in the form "#a-b: line".
 <input id="{range}">
 {child_a}
@@ -122,16 +124,21 @@ catalog. The id of the input stays the catalog range.
 
 ## The input of the merge
 
-The input holds the two children only. It holds no frontier and no `<context>`. A summary that reads a
+The input holds its children only. It holds no frontier and no `<context>`. A summary that reads a
 record outside its range depends on that record. A delete of the record then has an effect that the
 store cannot derive. See the [build input contract](../../packages/core/src/domain/compaction.ts).
 
-At level 1, each child carries the preview of its `longform`, at most 1 024 characters. The preview belongs to the
-child. See the [build input contract](../../packages/core/src/domain/compaction.ts).
+At level 1, each leaf child carries its body and its complete `longform`, up to 16 384 characters. The
+child copy holds that text. A child above level 1 carries its summary. See the
+[build input contract](../../packages/core/src/domain/compaction.ts).
 
-A child line holds no time of day. A record gives `#<pos> <YYYY-MM-DD>` and its body. A node gives
-`#<a>-<b> <start>..<end>` and its summary. The span writes the shared year and month once, as
-`2026-10-30..11-01`. See [S-067](../statements.md#s-067).
+A join or a copy needs no model call. The build applies it only when no child carries a `longform` and
+the whole content fits the node limit. A `longform` gives a model call. One non-empty child follows the
+same rule. See the [compaction contract](../../packages/core/src/domain/compaction.ts).
+
+A child line holds no time of day. A record gives `#<pos> <YYYY-MM-DD>` and its body, with its
+`longform` below the body when present. A node gives `#<a>-<b> <start>..<end>` and its summary. The span
+writes the shared year and month once, as `2026-10-30..11-01`. See [S-067](../statements.md#s-067).
 
 ## Sizes and retries
 
@@ -144,8 +151,8 @@ shortest of the attempts. See the [compaction contract](../../packages/core/src/
 An answer above 640 characters after the attempts cuts at a word boundary, and the node takes
 `truncated: true`. See the [compaction contract](../../packages/core/src/domain/compaction.ts).
 
-The check "the line is shorter than the two children" applies to a model merge of two non-empty children
-only. The fold takes the length of each line from the field `chars`. See the
+The check "the line is shorter than its source" applies to a model call only. A copy, a join, and a
+human answer need no check. The fold takes the length of each line from the field `chars`. See the
 [compaction contract](../../packages/core/src/domain/compaction.ts).
 
 ## Nudge texts

@@ -400,6 +400,65 @@ describe("compactionPass", () => {
 			summary: "note 0; note 1",
 		});
 	});
+	it.each(["parallel", "batch"] as const)(
+		"sends complete longforms to the %s model, including a single child",
+		async (form) => {
+			for (const count of [1, 2]) {
+				const store = open();
+				const documents = Array.from(
+					{ length: count },
+					(_, i) => `${String(i).repeat(16370)}-END-${i}`,
+				);
+				for (let i = 0; i < count; i++) {
+					note(store, {
+						scope: "p:x",
+						kind: "note",
+						body: `body ${i}`,
+						longform: documents[i],
+						session: "s",
+						turn: "t",
+						preset: "p",
+						ts: `2026-01-0${i + 1}T00:00:00.000Z`,
+					});
+				}
+				const calls: string[] = [];
+				const result = await compactionPass(
+					store,
+					"p:x",
+					async (_system, task) => {
+						calls.push(task);
+						return form === "batch" ? "#0-1: summary" : "summary";
+					},
+					{ form },
+				);
+				expect(result).toMatchObject({ built: 1, failed: 0 });
+				expect(calls).toHaveLength(1);
+				for (const document of documents) expect(calls[0]).toContain(document);
+			}
+		},
+	);
+	it("sends even short longforms to the model", async () => {
+		const store = open();
+		for (let i = 0; i < 2; i++)
+			note(store, {
+				scope: "p:x",
+				kind: "note",
+				body: `body ${i}`,
+				longform: `document ${i}`,
+				session: "s",
+				turn: "t",
+				preset: "p",
+				ts: `2026-01-0${i + 1}T00:00:00.000Z`,
+			});
+		const calls: string[] = [];
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			calls.push(task);
+			return "summary";
+		});
+		expect(result).toMatchObject({ built: 1, calls: 1 });
+		expect(calls[0]).toContain("document 0");
+		expect(calls[0]).toContain("document 1");
+	});
 	it("publishes batch answers", async () => {
 		const store = open();
 		for (let i = 0; i < 4; i++) add(store, `${"long body ".repeat(40)}${i}`, i);

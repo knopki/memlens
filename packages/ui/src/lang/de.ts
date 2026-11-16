@@ -138,6 +138,7 @@ export const de: Table = {
 	kindPass: "Durchlauf",
 	kindRetry: "Wiederholung",
 	kindError: "Fehler",
+	kindCall: "Aufruf",
 	attempts: "Verdichtungsversuche",
 	activeBuilds: "Aktive Läufe",
 	backoff: "Wartezeit",

@@ -16,6 +16,7 @@ A total of zero gives no root range. Hidden and deleted records keep their posit
 A node is `built` when each non-null child names the live record or node at its exact half.
 A null child means that the half has no live record. A missing summary of a non-empty half is not an empty child.
 Two empty halves need no node event. With one non-empty half, the parent copies its text and dates without a model call.
+The current compaction rule uses a model when a leaf has a `longform`. See [Compaction](../spec/06-architecture.md#compaction).
 This rule also builds a partial root, whose other half can extend beyond `total`.
 The store builds a clean node with no invalidation, and it has clean child nodes. Its child revision must equal `input_rev`.
 An import can change the input without a change of the maximum order. The revision equality alone does not prove freshness.

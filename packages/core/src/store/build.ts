@@ -25,7 +25,7 @@ export type BuildRead = {
 	readonly aText: string | null;
 	readonly bText: string | null;
 
-	/** The longform preview of a leaf half: the first 1024 characters. */
+	/** The full longform of a leaf half. */
 	readonly aPreview: string | null;
 	readonly bPreview: string | null;
 	readonly tsFrom: string;
@@ -51,7 +51,7 @@ function half(view: View, level: number, start: number): Half {
 		return {
 			key: `${note.v_content}|${note.state}`,
 			text: note.body,
-			preview: (note.longform ?? "").slice(0, 1024),
+			preview: note.longform ?? "",
 		};
 	}
 	const node = nodeAt(view, level, start);
@@ -82,7 +82,7 @@ function snapshot(view: View, level: number, start: number): BuildRead | null {
 		bPreview: b.preview,
 		tsFrom: first.ts,
 		tsTo: last.ts,
-		fits: joinText(a.text ?? "", b.text ?? "").fits,
+		fits: !a.preview && !b.preview && joinText(a.text ?? "", b.text ?? "").fits,
 	};
 }
 

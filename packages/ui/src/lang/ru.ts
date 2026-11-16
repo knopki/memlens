@@ -136,6 +136,7 @@ export const ru: Table = {
 	kindPass: "проход",
 	kindRetry: "повтор",
 	kindError: "ошибка",
+	kindCall: "вызов",
 	attempts: "Попытки уплотнения",
 	activeBuilds: "Активные сборки",
 	backoff: "Время ожидания",

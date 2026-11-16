@@ -51,6 +51,7 @@ const actions: ConsoleActions = {
 	setLanguage() {},
 	setTheme() {},
 	clearStatus() {},
+	watchRuntime() {},
 };
 
 /** One console API of a test with the English messages. */
@@ -138,6 +139,11 @@ describe("maintenance screen", () => {
 									kind: "pass",
 									text: "compaction pass: built 2, failed 0",
 								},
+								{
+									at: "2026-11-14T10:31:30.000Z",
+									kind: "call",
+									text: "compaction call: built 1",
+								},
 							],
 						},
 					},
@@ -161,6 +167,9 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("Next run");
 		expect(markup).toContain("Dirty ranges");
 		expect(markup).toContain("Worker journal");
+		expect(markup).toContain("<td>pass</td>");
+		expect(markup).toContain("<td>call</td>");
+		expect(markup).toContain("compaction call: built 1");
 		expect(markup).toContain("compaction pass: built 2, failed 0");
 		expect(markup).not.toContain("2026-11-14T10:30:00.000Z");
 		expect(markup).not.toContain("2026-11-14T11:00:00.000Z");

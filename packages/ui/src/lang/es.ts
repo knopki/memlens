@@ -138,6 +138,7 @@ export const es: Table = {
 	kindPass: "pasada",
 	kindRetry: "reintento",
 	kindError: "error",
+	kindCall: "llamada",
 	attempts: "Intentos de compactación",
 	activeBuilds: "Ejecuciones activas",
 	backoff: "Tiempo de espera",

@@ -3,12 +3,16 @@
  * @purpose Move the console through its host calls and its state, so a shell binds a control to one
  * callback and not to the transport or the address.
  * @scope The busy guard, the generation guard, the status line, the dialog, the address write, the
- * language and theme persistence, and the reset rules. NOT: the DOM, the address read, and the
- * transport.
+ * language and theme persistence, the runtime watch, and the reset rules. NOT: the DOM, the
+ * address read, and the transport.
  * @invariants The controller reads no address. The shell gives the current route and takes the next
  * route.
  * @invariants A stale answer writes no state. A second action waits for the first action.
  * @invariants A callback reports its error in the status line and does not reject.
+ * @invariants The runtime watch reads the runtime method only, so a live read reloads no view. It
+ * writes no busy flag and no status text, so it does not block or clear an action.
+ * @invariants One running watch holds one timer. A stop clears the timer and drops each later
+ * answer of the stopped watch.
  * @dependencies USES: the store, the port, the storage, the route format, and the message table.
  * @keywords controller, action, busy, generation, status, dialog, reset
  * #endregion moduleContract
@@ -30,6 +34,7 @@ import type { Choice, RecordModel, Step } from "../types.js";
 import type {
 	ActionFields,
 	ConsoleActions,
+	ConsoleRuntime,
 	ConsoleState,
 	ConsoleStorage,
 	DialogPayload,
@@ -51,6 +56,9 @@ const SUCCESS_MS = 2500;
 
 /** The time that an error message stays on the page, in milliseconds. */
 const ERROR_MS = 8000;
+
+/** The wait between two reads of the host runtime state, in milliseconds. */
+const RUNTIME_MS = 5000;
 
 /** The note kind of a text, or an empty text. */
 function kindOf(value: string): NoteKind | "" {
@@ -137,6 +145,9 @@ export function createConsoleController(
 ): ConsoleActions {
 	const { port, storage, store, t, readRoute, writeRoute } = options;
 	let timer: ReturnType<typeof setTimeout> | undefined;
+	let runtimeTimer: ReturnType<typeof setInterval> | undefined;
+	let runtimeWatch = 0;
+	let runtimePending: number | undefined;
 
 	const get = (): ConsoleState => store.getSnapshot();
 	const set = (patch: Partial<ConsoleState>): void => store.set(patch);
@@ -260,6 +271,64 @@ export function createConsoleController(
 		message("");
 	}
 	// #endregion FUNC_loadView
+
+	// #region FUNC_refreshRuntime
+	/**
+	 * @purpose Read the host runtime state and put it on the page, without a view read.
+	 * @invariants A read without a runtime method, a failed read, and a read of an older watch write
+	 *  no state.
+	 * @invariants A read that waits keeps the earlier state. The next read starts after it ends.
+	 * @param token - The number of the watch that asks for the read.
+	 */
+	async function refreshRuntime(token: number): Promise<void> {
+		const read = port.runtime;
+		if (read === undefined || runtimePending === token) return;
+		runtimePending = token;
+		let value: ConsoleRuntime | undefined;
+		try {
+			value = await read().catch(() => undefined);
+		} finally {
+			if (runtimePending === token) runtimePending = undefined;
+		}
+		if (value === undefined || token !== runtimeWatch) return;
+		set({ runtime: value });
+		console.debug("Console runtime", {
+			event: "runtime",
+			attempts: value.compaction?.attempts,
+			dirty: value.compaction?.dirty,
+			events: value.compaction?.events.length,
+		});
+	}
+	// #endregion FUNC_refreshRuntime
+
+	// #region FUNC_watchRuntime
+	/**
+	 * @purpose Start or stop the live read of the host runtime state.
+	 * @invariants A second start keeps the running watch, so a render adds no timer.
+	 * @invariants A host without a runtime method keeps no timer, so the standalone console is idle.
+	 * @param active - True starts the watch. False stops it.
+	 */
+	function watchRuntime(active: boolean): void {
+		if (!active) {
+			runtimeWatch += 1;
+			if (runtimeTimer !== undefined) clearInterval(runtimeTimer);
+			runtimeTimer = undefined;
+			console.debug("Console runtime watch", { event: "runtime-stop" });
+			return;
+		}
+		if (runtimeTimer !== undefined || port.runtime === undefined) return;
+		runtimeWatch += 1;
+		const token = runtimeWatch;
+		runtimeTimer = setInterval(() => {
+			void refreshRuntime(token);
+		}, RUNTIME_MS);
+		console.debug("Console runtime watch", {
+			event: "runtime-start",
+			waitMs: RUNTIME_MS,
+		});
+		void refreshRuntime(token);
+	}
+	// #endregion FUNC_watchRuntime
 
 	// #region FUNC_find
 	/**
@@ -714,6 +783,13 @@ export function createConsoleController(
 		},
 		clearStatus() {
 			message("");
+		},
+		watchRuntime(active: boolean) {
+			try {
+				watchRuntime(active);
+			} catch (error) {
+				report(error);
+			}
 		},
 		copy(text: string) {
 			void (async () => {

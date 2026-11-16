@@ -102,8 +102,11 @@ export interface NudgeConfig {
 }
 
 export interface CompactionConfig {
+	/** The route has no default. An empty value means no provider is set. */
 	provider: string;
+	/** The route has no default. An empty value means no model is set. */
 	model: string;
+	/** An empty value leaves the effort to the provider. */
 	effort: string;
 	mode: CompactionMode;
 	batch: number;

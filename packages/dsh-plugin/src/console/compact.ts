@@ -8,7 +8,7 @@
  *  - NOT: the merge text rules of the core and the store transactions.
  * @usecases
  *  - Job: tab => presses compact => gets the merge inputs of one scope
- * @invariants The job publishes each copy and join with no model call. The store checks the exact
+ * @invariants The job publishes each fitting copy and join with no model call. The store checks the
  *   input under the write lock, and a changed input counts as rejected.
  * @dependencies USES API: @memlens/core, scope.ts, ../tools/shared.ts
  * @keywords console, compact, merge, answer, node, job
@@ -148,7 +148,7 @@ function publishRounds(
 					accepted += 1;
 					roundJoins += 1;
 				}
-			} else if (!left || !right) {
+			} else if ((!left || !right) && read.fits) {
 				const line = copyBuild(input);
 				if (
 					publishNode(
@@ -197,7 +197,7 @@ export function prepareCompact(
 	const found = readyInputs(memory, scope).length;
 	const { published, joined } = publishRounds(memory, scope);
 	const inputs = readyInputs(memory, scope)
-		.filter(({ input }) => input.children.filter(Boolean).length === 2)
+		.filter(({ read }) => !read.fits)
 		.map(({ input }) => input)
 		.slice(0, MAX_INPUTS);
 	const job = inputs.length

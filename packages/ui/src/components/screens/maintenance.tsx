@@ -3,17 +3,21 @@
  * @purpose Show the build state, the line budgets, the merge candidates, the compaction job, and
  *   the host runtime state of one scope.
  * @scope The count tiles, the two budgets, the candidate table, the node levels, the runtime
- *   fields, and the compaction panel. NOT: the store rules, the address, and the styles.
+ *   fields, the journal table, and the live refresh of the runtime state. NOT: the store rules,
+ *   the address, the styles, and the transport.
  * @invariants The markup holds the element and class names of the DOM console, so the standalone
  *   stylesheet keeps working.
  * @invariants The text comes from `api.t` and the intents from `api.call`.
  * @invariants A runtime field without a value renders no row.
+ * @invariants The live refresh starts on mount and stops on cleanup, so another screen holds no
+ *   timer. The refresh reads the runtime state only, so it reloads no view.
  * @dependencies USES: the primitives, the range format, the message table, and the console API.
- * @keywords maintenance, budget, candidate, level, runtime, snapshot, compaction, component
+ * @keywords maintenance, budget, candidate, level, runtime, snapshot, compaction, journal, refresh
  * #endregion moduleContract
  */
 
 import type { JSX } from "react";
+import { useEffect } from "react";
 import type { ConsoleApi, ConsoleRuntime } from "../../model/console.js";
 import { localTime, rangeAddress } from "../../model/format.js";
 import type { View } from "../../types.js";
@@ -25,9 +29,17 @@ import { CompactionPanel } from "./compaction.js";
 /**
  * @purpose Show the build state, the budgets, the compaction job, and the host runtime state.
  * @invariants The standalone host gives no runtime, so the runtime panel stays out.
+ * @invariants The runtime watch runs only while this screen is mounted.
  */
 export function Maintenance({ api }: ScreenProps): JSX.Element {
 	const { t, state } = api;
+	const { watchRuntime } = api.call;
+	useEffect(() => {
+		watchRuntime(true);
+		return () => {
+			watchRuntime(false);
+		};
+	}, [watchRuntime]);
 	const model = state.model;
 	if (!model) return <></>;
 	return (
@@ -198,4 +210,5 @@ const KIND_KEYS = {
 	pass: "kindPass",
 	retry: "kindRetry",
 	error: "kindError",
+	call: "kindCall",
 } as const;

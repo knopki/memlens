@@ -289,7 +289,7 @@ export function readCompaction(value: unknown): CompactionConfig {
 				: expectString(record.model, "compaction.model"),
 		effort:
 			record.effort === undefined
-				? "off"
+				? DEFAULT_COMPACTION.effort
 				: expectString(record.effort, "compaction.effort"),
 		mode:
 			record.mode === undefined

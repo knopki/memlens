@@ -254,6 +254,13 @@ export function fakePort(overrides: Partial<StorePort> = {}): {
 			return { ok: true };
 		},
 	};
+	if (overrides.runtime !== undefined) {
+		const runtime = overrides.runtime;
+		port.runtime = async () => {
+			calls.push({ method: "runtime", fields: {} });
+			return runtime();
+		};
+	}
 	return { port, calls };
 }
 // #endregion FUNC_fakePort

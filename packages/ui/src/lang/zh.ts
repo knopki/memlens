@@ -133,6 +133,7 @@ export const zh: Table = {
 	kindPass: "运行",
 	kindRetry: "重试",
 	kindError: "错误",
+	kindCall: "调用",
 	attempts: "压缩尝试",
 	activeBuilds: "活动构建",
 	backoff: "退避时间",

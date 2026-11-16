@@ -24,7 +24,7 @@ and a binary tree of summaries grows over them: two adjacent lines merge into on
 and so on. The agent sees recent notes one per line and older ones more per line, and can open a line back
 into the two lines it was made from.
 
-You write one step of the tree: merge two adjacent lines into one. Your line stands in for its notes for
+You write one step of the tree: summarize one or two lines into one. Your line stands in for its notes for
 weeks or years. The agent opens it only when its words show that what it needs is inside: what your line
 omits is lost for good.
 
@@ -76,7 +76,7 @@ export type LineBuild =
 // #region FUNC_childLine
 /**
  * @purpose Render one child as the model reads it.
- * @invariants A record gives its address, date, body, and preview below the body when present.
+ * @invariants A record gives its address, date, body, and full longform below the body when present.
  * A node gives its address, the date span of the period, and the summary. A catalog child gives its
  * catalog position. No child line names a time of day.
  */
@@ -103,7 +103,9 @@ export const address = (range: { start: number; level: number }): string =>
 
 /** The line text of a child: a body or a summary. */
 const textOf = (child: BuildChild): string =>
-	child.kind === "record" ? child.body : child.summary;
+	child.kind === "record"
+		? [child.body, child.preview].filter(Boolean).join("\n")
+		: child.summary;
 
 /** The non-null children of an input, in order. */
 const live = (input: BuildInput): readonly BuildChild[] =>
@@ -112,18 +114,19 @@ const live = (input: BuildInput): readonly BuildChild[] =>
 // #region FUNC_mergeTask
 /**
  * @purpose Send the merge task text with the target of the asked line.
- * @invariants The text is the Merge task section of 09-prompts.md. TARGET and TARGET/6 words fill
- * the placeholders. The input holds the two children only.
+ * @invariants The task holds one or two children and no other input.
  */
 export function mergeTask(
 	target: number,
 	a: BuildChild,
-	b: BuildChild,
+	b?: BuildChild,
 ): string {
-	return `Merge these two adjacent lines into one line of at most ${target} characters (about ${Math.round(target / 6)} words).
+	const instruction = b
+		? "Merge these two adjacent lines"
+		: "Summarize this line";
+	return `${instruction} into one line of at most ${target} characters (about ${Math.round(target / 6)} words).
 <input>
-${childLine(a)}
-${childLine(b)}
+${childLine(a)}${b ? `\n${childLine(b)}` : ""}
 </input>`;
 }
 // #endregion FUNC_mergeTask
@@ -153,7 +156,7 @@ export function batchTask(
 			.join("\n");
 		return `<input id="${address(input.range)}">\n${lines}\n</input>`;
 	});
-	return `Merge each pair of adjacent lines into one line of at most ${target} characters (about ${Math.round(target / 6)} words) each.
+	return `Summarize each input, including every line in it, as one line of at most ${target} characters (about ${Math.round(target / 6)} words) each.
 Answer one line for each input, in the form "#a-b: line".
 ${blocks.join("\n")}`;
 }
@@ -193,14 +196,19 @@ export function copyBuild(input: BuildInput): Extract<LineBuild, { ok: true }> {
  * @purpose Publish the join of two whole child texts with no model call, when no cut occurs.
  * @invariants Two children join as "first; rest" when their lengths with the separator stay at
  * or below the node limit. The line takes truncated false and the dates of the two children.
- * One null child gives null: the copy rule owns that input. A pair above the limit gives null:
- * the model merge owns that pair.
+ * One null child or a record with a longform gives null. A pair above the limit gives null.
+ * The model owns each input with a longform or a pair above the limit.
  */
 export function joinBuild(
 	input: BuildInput,
 ): Extract<LineBuild, { ok: true }> | null {
 	const [first, second] = input.children;
 	if (!first || !second) return null;
+	if (
+		(first.kind === "record" && first.preview) ||
+		(second.kind === "record" && second.preview)
+	)
+		return null;
 	const left = textOf(first);
 	const right = textOf(second);
 	if (left.length + right.length + 2 > NODE_LIMIT) return null;
@@ -291,7 +299,7 @@ async function callModel(
 	const pair = [children[0], children[1]] as const;
 	const first = pair[0];
 	const second = pair[1];
-	if (!first || !second) return "";
+	if (!first) return "";
 	try {
 		const answer = (
 			await model(MERGE_SYSTEM, mergeTask(target, first, second))
@@ -307,8 +315,8 @@ async function callModel(
 // #region FUNC_mergeLine
 /**
  * @purpose Build one line from a ready input, with retries and the shrink check.
- * @invariants The model writes the summary from the two copied children only.
- * One non-empty child copies without a model call. A model answer of at most 640
+ * @invariants The model writes the summary from the copied children only.
+ * One non-empty child without a longform copies. A model answer of at most 640
  * characters that is shorter than its source is accepted with no retry. Each retry asks for 0.75
  * times the previous target. Three attempts at most, and the shortest answer wins. A line above
  * the limit cuts at a word boundary and takes truncated. An answer never shorter than its source
@@ -319,7 +327,10 @@ export async function mergeLine(
 	model: MergeModel,
 ): Promise<LineBuild> {
 	const children = live(input);
-	if (children.length < 2) {
+	if (
+		children.length < 2 &&
+		(!children[0] || children[0].kind === "node" || !children[0].preview)
+	) {
 		const line = copyBuild(input);
 		debug("Line copied", {
 			start: input.range.start,

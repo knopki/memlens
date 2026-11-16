@@ -209,7 +209,9 @@ export interface ConsoleRuntime {
 		readonly lastError: string | null;
 		readonly events: readonly {
 			readonly at: string;
-			readonly kind: "pass" | "retry" | "error";
+
+			/** The class of the event. A `call` states one model call of a pass. */
+			readonly kind: "pass" | "retry" | "error" | "call";
 			readonly text: string;
 		}[];
 	};
@@ -293,6 +295,12 @@ export interface ConsoleActions {
 	setLanguage(code: string): void;
 	setTheme(choice: string): void;
 	clearStatus(): void;
+
+	/**
+	 * Start or stop the live read of the host runtime state.
+	 * A screen starts it on mount and stops it on cleanup.
+	 */
+	watchRuntime(active: boolean): void;
 
 	/** Put one short text into the clipboard of the page and state the result. */
 	copy(text: string): void;

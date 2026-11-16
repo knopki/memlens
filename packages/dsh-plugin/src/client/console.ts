@@ -86,7 +86,7 @@ interface MutableRuntime {
 		lastError: string | null;
 		events: {
 			at: string;
-			kind: "pass" | "retry" | "error";
+			kind: "pass" | "call" | "retry" | "error";
 			text: string;
 		}[];
 	};

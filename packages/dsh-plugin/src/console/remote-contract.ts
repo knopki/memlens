@@ -431,7 +431,7 @@ const results = {
 			events: z.array(
 				z.strictObject({
 					at: z.string(),
-					kind: z.enum(["pass", "retry", "error"]),
+					kind: z.enum(["pass", "call", "retry", "error"]),
 					text: z.string(),
 				}),
 			),

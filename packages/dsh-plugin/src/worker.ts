@@ -10,7 +10,7 @@
  * @invariants A read of the store never waits for this work. The pass writes only through the core.
  * @invariants The host replaces the inputs at run time. A pass uses the inputs of its start, and an
  *  update keeps the call times of the hour and the armed retry wait.
- * @invariants The journal holds the last ten events in local state, and the host log mirrors each
+ * @invariants The journal holds the last hundred events in local state, and the host log mirrors each
  *  entry. A restart clears the journal.
  * @dependencies node:util, @deepseek-ai/cordis, @deepseek-ai/dsh-llm, @memlens/core, @memlens/core (store helpers).
  * @keywords worker, compaction, background, timer, idle, dirty, retry, rate, llm
@@ -45,10 +45,14 @@ const debug = debuglog("memlens:plugin:worker");
 const LOG = "[dsh-memlens] ";
 
 /** The greatest count of journal events that the worker keeps. */
-const JOURNAL_LIMIT = 10;
+const JOURNAL_LIMIT = 100;
 
 /** The delay of the first check after activation, in seconds. */
 const STARTUP_DELAY = 10;
+
+/** The error for an absent compaction route. */
+const MISSING_ROUTE =
+	"The compaction model is not configured. Set provider and model.";
 
 /** The LLM surface that the worker needs. The host service satisfies this shape. */
 export interface WorkerLlm {
@@ -102,7 +106,7 @@ export interface WorkerEvent {
 	readonly at: string;
 
 	/** The class of the event. */
-	readonly kind: "pass" | "retry" | "error";
+	readonly kind: "pass" | "call" | "retry" | "error";
 
 	/** The event text in Simplified Technical English. */
 	readonly text: string;
@@ -157,6 +161,7 @@ export class MemoryWorker {
 	private disposed = false;
 	private attempts = 0;
 	private inFlight = 0;
+	private calls = 0;
 	private retryAt = 0;
 	private lastRunAt = 0;
 	private lastError: string | null = null;
@@ -170,6 +175,10 @@ export class MemoryWorker {
 	) {
 		this.inputs = inputs;
 		this.rate = new RateWindow(inputs.compaction.maxCallsPerHour);
+		if (!inputs.compaction.provider.trim() || !inputs.compaction.model.trim()) {
+			this.lastError = MISSING_ROUTE;
+			this.record("error", this.lastError);
+		}
 		ctx.effect(() => () => this.dispose());
 		this.startupTimer = setTimeout(() => {
 			this.startupTimer = null;
@@ -244,6 +253,13 @@ export class MemoryWorker {
 	updateInputs(inputs: WorkerInputs): void {
 		const idleChanged = inputs.store.idle !== this.inputs.store.idle;
 		this.inputs = inputs;
+		if (
+			(!inputs.compaction.provider.trim() || !inputs.compaction.model.trim()) &&
+			this.lastError !== MISSING_ROUTE
+		) {
+			this.lastError = MISSING_ROUTE;
+			this.record("error", this.lastError);
+		}
 		debug("Worker inputs updated", {
 			event: "inputs",
 			idle: inputs.store.idle,
@@ -307,14 +323,37 @@ export class MemoryWorker {
 		// The pass uses the call limit of its start. The window keeps the calls of the hour.
 		this.rate.setLimit(inputs.compaction.maxCallsPerHour);
 		try {
+			if (
+				!inputs.compaction.provider.trim() ||
+				!inputs.compaction.model.trim()
+			) {
+				throw new Error(MISSING_ROUTE);
+			}
 			const run = runSettings(inputs);
-			const model = this.modelFor(inputs);
+			this.record(
+				"pass",
+				`pass ${this.attempts} started: ${run.form}, batch ${run.batch}, dirty ${this.dirtyCount()}`,
+			);
 			let built = 0;
 			let failed = 0;
 			const reasons = new Map<string, number>();
 			for (const scope of liveCounts(this.store).keys()) {
-				if (candidates(this.store, scope).length === 0) continue;
-				const result = await compactionPass(this.store, scope, model, run);
+				const dirty = candidates(this.store, scope).length;
+				if (dirty === 0) continue;
+				this.record(
+					"pass",
+					`pass ${this.attempts}: scope ${scope}, dirty ${dirty}`,
+				);
+				const result = await compactionPass(
+					this.store,
+					scope,
+					this.modelFor(inputs, scope),
+					run,
+				);
+				this.record(
+					"pass",
+					`pass ${this.attempts}: scope ${scope}, built ${result.built}, rejected ${result.rejected}, failed ${result.failed}, calls ${result.calls}`,
+				);
 				built += result.built;
 				failed += result.failed;
 				count(reasons, result.failures);
@@ -324,12 +363,14 @@ export class MemoryWorker {
 				.map(([reason, count]) => `${reason} ${count}`)
 				.join(", ");
 			this.failures = failed > 0 ? this.failures + 1 : 0;
+			const callError = this.lastError;
 			if (this.lastError === null && failed > 0 && summary)
 				this.lastError = `merge answers rejected: ${summary}`;
 			this.record(
 				failed === 0 ? "pass" : "error",
 				`compaction pass: built ${built}, failed ${failed}` +
-					(summary ? ` (${summary})` : ""),
+					(summary ? ` (${summary})` : "") +
+					(failed > 0 && callError ? `; ${callError}` : ""),
 			);
 			debug("Pass complete", { event: "pass", built, failed, summary });
 			if (!this.disposed) this.paceNext(failed);
@@ -363,16 +404,25 @@ export class MemoryWorker {
 	}
 
 	/** The model call of one merge task, with one rate slot and the route of the given inputs. */
-	private modelFor(inputs: WorkerInputs): MergeModel {
+	private modelFor(inputs: WorkerInputs, scope: string): MergeModel {
 		return async (system, task) => {
+			const call = ++this.calls;
 			if (!this.rate.tryAcquire(Date.now())) {
 				const denial = "The compaction call limit of one hour is reached.";
-				this.lastError = denial;
+				this.lastError ??= denial;
+				this.record("error", `call ${call}: scope ${scope}; ${denial}`);
 				throw new Error(denial);
 			}
+			const started = Date.now();
 			this.inFlight += 1;
+			this.record(
+				"call",
+				`call ${call} started: scope ${scope}, input ${system.length + task.length} chars`,
+			);
 			try {
 				let text = "";
+				let receivedText = false;
+				let finish = "none";
 				const effort = inputs.compaction.effort;
 				const stream = this.llm.stream({
 					provider: inputs.compaction.provider,
@@ -389,11 +439,43 @@ export class MemoryWorker {
 					],
 				});
 				for await (const chunk of stream) {
-					if (chunk.type === "text-delta") text += chunk.text;
+					if (chunk.type === "text-delta") {
+						text += chunk.text;
+						if (!receivedText && chunk.text) {
+							receivedText = true;
+							this.record(
+								"call",
+								`call ${call}: first text after ${Date.now() - started} ms`,
+							);
+						}
+					}
+					if (chunk.type === "finish") {
+						finish = chunk.reason.kind;
+						this.record(
+							"call",
+							`call ${call}: finish ${finish}, output ${text.length} chars, ${Date.now() - started} ms`,
+						);
+						if (
+							chunk.reason.kind === "error" ||
+							chunk.reason.kind === "aborted"
+						) {
+							throw new Error(
+								`${chunk.reason.failure.code}: ${chunk.reason.failure.message}`,
+							);
+						}
+					}
 				}
+				this.record(
+					"call",
+					`call ${call} closed: output ${text.length} chars, finish ${finish}, ${Date.now() - started} ms`,
+				);
 				return text;
 			} catch (error) {
-				this.lastError = String(error);
+				this.lastError ??= String(error);
+				this.record(
+					"error",
+					`call ${call} failed after ${Date.now() - started} ms: ${String(error)}`,
+				);
 				throw error;
 			} finally {
 				this.inFlight -= 1;
@@ -408,7 +490,7 @@ export class MemoryWorker {
 
 	/**
 	 * @purpose Add one event to the journal, mirror it to the host log, and keep the newest entries.
-	 * @invariants The journal holds at most ten entries. The host log holds each entry.
+	 * @invariants The journal holds at most one hundred entries. The host log holds each entry.
 	 * @param kind - The class of the event.
 	 * @param text - The event text in Simplified Technical English.
 	 */

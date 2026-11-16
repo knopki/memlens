@@ -204,7 +204,9 @@ const worker = {
 		lastRunAt: null,
 		nextRunAt: null,
 		lastError: null,
-		events: [],
+		events: [
+			{ at: "2026-11-16T00:00:00.000Z", kind: "call", text: "call 1 started" },
+		],
 	}),
 } as unknown as MemoryWorker;
 

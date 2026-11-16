@@ -136,6 +136,7 @@ export const ja: Table = {
 	kindPass: "実行",
 	kindRetry: "再試行",
 	kindError: "エラー",
+	kindCall: "呼び出し",
 	attempts: "圧縮の試行",
 	activeBuilds: "実行中のビルド",
 	backoff: "待機時間",

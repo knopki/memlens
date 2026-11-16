@@ -1,14 +1,15 @@
 /**
  * #region moduleContract
  * @purpose Hold the console controller to its visible behaviour: one action at a time, the newest
- * answer, the status time, the stored choices, the dialog path, and the reset rules.
+ * answer, the status time, the stored choices, the dialog path, the runtime watch, and the reset
+ * rules.
  * @scope The controller actions and the state snapshots. NOT: the markup and the transport.
  * #endregion moduleContract
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BuildInput } from "../../../core/src/types/tree.js";
-import type { OpenedTarget } from "../../src/model/console.js";
+import type { ConsoleRuntime, OpenedTarget } from "../../src/model/console.js";
 import { DEFAULT_ROUTE } from "../../src/route.js";
 import type { View } from "../../src/types.js";
 import {
@@ -525,5 +526,129 @@ describe("console controller clipboard", () => {
 		await vi.advanceTimersByTimeAsync(0);
 		expect(h.clipboard).toEqual([]);
 		expect(h.state().status).toEqual({ text: "denied", error: true });
+	});
+});
+
+describe("console controller runtime watch", () => {
+	/** One host runtime state with the given count of dirty ranges. */
+	const runtimeOf = (dirty = 0): ConsoleRuntime => ({
+		compaction: {
+			attempts: 1,
+			active: 0,
+			backoffMs: 0,
+			failures: 0,
+			dirty,
+			provider: "test",
+			model: "merge-model",
+			lastRunAt: null,
+			nextRunAt: null,
+			lastError: null,
+			events: [
+				{
+					at: "2026-11-14T10:00:00.000Z",
+					kind: "call",
+					text: "compaction call",
+				},
+			],
+		},
+	});
+
+	it("writes the runtime state and reads no view", async () => {
+		const h = harness({ runtime: async () => runtimeOf(2) });
+		const views = callsOf(h, "view").length;
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(h.state().runtime?.compaction?.dirty).toBe(2);
+		expect(callsOf(h, "view")).toHaveLength(views);
+		h.call.watchRuntime(false);
+	});
+
+	it("reads the runtime state again after five seconds", async () => {
+		let dirty = 0;
+		const h = harness({ runtime: async () => runtimeOf(dirty) });
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(callsOf(h, "runtime")).toHaveLength(1);
+		dirty = 3;
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(callsOf(h, "runtime")).toHaveLength(2);
+		expect(h.state().runtime?.compaction?.dirty).toBe(3);
+		h.call.watchRuntime(false);
+	});
+
+	it("keeps one timer for a repeated start", async () => {
+		const h = harness({ runtime: async () => runtimeOf() });
+		h.call.watchRuntime(true);
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(callsOf(h, "runtime")).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(callsOf(h, "runtime")).toHaveLength(2);
+		h.call.watchRuntime(false);
+	});
+
+	it("stops the timer and drops a late answer", async () => {
+		const gate = deferred<ConsoleRuntime>();
+		const h = harness({ runtime: () => gate.promise });
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(0);
+		h.call.watchRuntime(false);
+		gate.resolve(runtimeOf(4));
+		await vi.advanceTimersByTimeAsync(0);
+		expect(h.state().runtime).toBeUndefined();
+		await vi.advanceTimersByTimeAsync(10000);
+		expect(callsOf(h, "runtime")).toHaveLength(1);
+	});
+
+	it("drops an old answer after the screen is reopened", async () => {
+		const older = deferred<ConsoleRuntime>();
+		let count = 0;
+		const h = harness({
+			runtime: () =>
+				count++ === 0 ? older.promise : Promise.resolve(runtimeOf(2)),
+		});
+		h.call.watchRuntime(true);
+		h.call.watchRuntime(false);
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(h.state().runtime?.compaction?.dirty).toBe(2);
+		older.resolve(runtimeOf(9));
+		await vi.advanceTimersByTimeAsync(0);
+		expect(h.state().runtime?.compaction?.dirty).toBe(2);
+		h.call.watchRuntime(false);
+	});
+
+	it("holds no timer without a runtime method", async () => {
+		const h = harness();
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(10000);
+		expect(callsOf(h, "runtime")).toHaveLength(0);
+		h.call.watchRuntime(false);
+	});
+
+	it("keeps the earlier state after a failed read", async () => {
+		let broken = false;
+		const h = harness({
+			runtime: async () => {
+				if (broken) throw new Error("down");
+				return runtimeOf(1);
+			},
+		});
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(0);
+		broken = true;
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(h.state().runtime?.compaction?.dirty).toBe(1);
+		h.call.watchRuntime(false);
+	});
+
+	it("leaves the status line and the busy flag alone", async () => {
+		const h = harness({ runtime: async () => runtimeOf(1) });
+		await h.call.action("review", { target: "project:alpha#1" });
+		h.call.watchRuntime(true);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(h.state().status).toEqual({ text: "saved", error: false });
+		expect(h.state().busy).toBe(false);
+		h.call.watchRuntime(false);
 	});
 });

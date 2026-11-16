@@ -171,6 +171,7 @@ const en = {
 	kindPass: "pass",
 	kindRetry: "retry",
 	kindError: "error",
+	kindCall: "call",
 	attempts: "Compaction attempts",
 	activeBuilds: "Active builds",
 	backoff: "Backoff time",

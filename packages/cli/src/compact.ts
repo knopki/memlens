@@ -173,9 +173,7 @@ export async function prepareCompact(
 			? { published: 0, joined: 0 }
 			: publishRounds(runtime.store, scope, ready);
 	const inputs = ready()
-		.filter(
-			({ result: { input } }) => input.children.filter(Boolean).length === 2,
-		)
+		.filter(({ result: { read } }) => !read.fits)
 		.map(({ result: { input } }) => input)
 		.slice(0, options.max ?? 50);
 	return {
@@ -221,7 +219,7 @@ function publishRounds(
 					accepted += 1;
 					roundJoins += 1;
 				}
-			} else if (!left || !right) {
+			} else if ((!left || !right) && read.fits) {
 				const line = copyBuild(input);
 				if (
 					publishNode(

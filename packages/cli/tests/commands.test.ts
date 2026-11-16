@@ -558,7 +558,7 @@ describe("@memlens/cli commands", () => {
 		await run(
 			test,
 			"note",
-			`Lone ${"detail ".repeat(80)}`,
+			`Lone ${"detail ".repeat(60)}`,
 			"--scope",
 			"project:acme/x",
 		);
@@ -641,6 +641,52 @@ describe("@memlens/cli commands", () => {
 		const after = await run(test, "compact", "--scope", "project:acme/x");
 		expect(after.code).toBe(0);
 		expect(after.out).not.toContain("#0-1");
+	});
+
+	it("gives the whole longform above 1024 chars to the compaction job", async () => {
+		const test = makeEnv();
+		const longform = `${"head ".repeat(300)}LONGFORM-TAIL`;
+		expect(longform.length).toBeGreaterThan(1024);
+		const file = join(test.home, "doc.md");
+		writeFileSync(file, longform);
+		for (const body of ["First body", "Second body"])
+			await run(
+				test,
+				"note",
+				body,
+				"--scope",
+				"project:acme/x",
+				"--longform",
+				file,
+			);
+		const job = await run(test, "compact", "--scope", "project:acme/x");
+		expect(job.code).toBe(0);
+		expect(job.out).toContain("#0-1");
+		expect(job.out.match(/LONGFORM-TAIL/g)).toHaveLength(2);
+		expect(job.out).toContain(longform);
+	});
+
+	it("gives the whole longform of a singleton input to the compaction job", async () => {
+		const test = makeEnv();
+		const longform = `${"only ".repeat(300)}SINGLETON-TAIL`;
+		expect(longform.length).toBeGreaterThan(1024);
+		const file = join(test.home, "only.md");
+		writeFileSync(file, longform);
+		await run(
+			test,
+			"note",
+			"Solo body",
+			"--scope",
+			"project:acme/x",
+			"--longform",
+			file,
+		);
+		const job = await run(test, "compact", "--scope", "project:acme/x");
+		expect(job.code).toBe(0);
+		expect(job.out).not.toContain("no merge inputs");
+		expect(job.out).toContain("#0-1");
+		expect(job.out.match(/SINGLETON-TAIL/g)).toHaveLength(1);
+		expect(job.out).toContain(longform);
 	});
 
 	it("refuses a compaction of a scope outside the profile", async () => {

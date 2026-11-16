@@ -92,8 +92,8 @@ describe("loadBaseConfig", () => {
 			rules: [],
 			default: "project:misc",
 		});
-		expect(config.compaction.provider).toBe("deepseek");
-		expect(config.compaction.model).toBe("deepseek-chat");
+		expect(config.compaction.provider).toBe("");
+		expect(config.compaction.model).toBe("");
 	});
 
 	it("fills the defaults of an incomplete file", () => {
@@ -103,7 +103,7 @@ describe("loadBaseConfig", () => {
 		expect(config.language).toBe("en");
 		expect(config.nudge.turns).toBe(10);
 		expect(config.nudge.tool_calls).toBe(5);
-		expect(config.compaction.effort).toBe("off");
+		expect(config.compaction.effort).toBe("");
 		expect(config.compaction.mode).toBe("auto");
 		expect(config.compaction.batch).toBe(6);
 		expect(config.compaction.maxCallsPerHour).toBe(120);
@@ -166,12 +166,12 @@ scopes = ["*"]
 		expect(() => loadBaseConfig(text, "/s")).toThrow(/scope key/);
 	});
 
-	it("fills the default compaction route when the section omits the provider", () => {
+	it("leaves the provider empty when the section omits it", () => {
 		const config = loadBaseConfig(
 			configToml({ compaction: 'model = "m"' }),
 			"/s",
 		);
-		expect(config.compaction.provider).toBe("deepseek");
+		expect(config.compaction.provider).toBe("");
 		expect(config.compaction.model).toBe("m");
 	});
 
@@ -261,7 +261,7 @@ describe("resolveConfig", () => {
 		expect(resolved.compaction).toEqual({
 			provider: "dsh",
 			model: "patch-model",
-			effort: "off",
+			effort: "",
 			mode: "auto",
 			batch: 2,
 			maxCallsPerHour: 120,

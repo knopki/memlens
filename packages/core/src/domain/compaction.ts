@@ -168,8 +168,8 @@ export interface CompactionRun {
 // #region FUNC_compactionPass
 /**
  * @purpose Build and publish the next batch of dirty lines of one tree.
- * @invariants A pass takes at most batch ready inputs and uses one form only. Inputs with one
- * non-empty child publish a copy with no model call, and fitting pairs publish their join.
+ * @invariants A pass takes at most batch ready inputs and uses one form only. Inputs without a
+ * longform publish a copy or fitting join with no model call.
  * The batch form makes one call, retries a broken answer once with the error text, then falls
  * back to parallel. Each result checks its captured keys under the write lock. A pass stores no state and starts no timers.
  * @returns The counts of the pass: built, rejected, failed, and calls.
@@ -209,7 +209,10 @@ export async function compactionPass(
 					id: key ?? "",
 					pos: start,
 					body: text,
-					preview: "",
+					preview:
+						start === range.start
+							? (read.aPreview ?? "")
+							: (read.bPreview ?? ""),
 					ts: start === range.start ? read.tsFrom : read.tsTo,
 				};
 			return {

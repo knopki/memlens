@@ -12,10 +12,16 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Context } from "@deepseek-ai/cordis";
-import type { GenerateOptions, StreamChunk } from "@deepseek-ai/dsh-llm";
+import {
+	type GenerateOptions,
+	LlmAdapter,
+	LlmRuntime,
+	type StreamChunk,
+} from "@deepseek-ai/dsh-llm";
 import {
 	type CompactionConfig,
 	candidates,
+	loadBaseConfig,
 	note,
 	type ScopeKey,
 	Store,
@@ -104,6 +110,26 @@ afterEach(() => {
 });
 
 describe("MemoryWorker", () => {
+	it.each([
+		{ provider: "", model: "m" },
+		{ provider: "test", model: "" },
+	])("logs a missing route and makes no model call", async (route) => {
+		vi.useFakeTimers();
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new StubLlm();
+		const worker = new MemoryWorker(root, store, inputs(route), llm);
+		expect(worker.status().lastError).toContain("not configured");
+		expect(worker.status().events[0]?.text).toContain("not configured");
+		worker.onMemoryTool("memory_note");
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(llm.log).toHaveLength(0);
+		expect(candidates(store, "user:notes")).toHaveLength(1);
+	});
+
 	it("starts a pass at the dirty threshold and uses the configured route", async () => {
 		const store = dirtyStore();
 		stores.push(store);
@@ -181,9 +207,187 @@ describe("MemoryWorker", () => {
 		await vi.advanceTimersByTimeAsync(0);
 		expect(worker.status().lastError).toBeNull();
 		const events = worker.status().events;
-		expect(events.length).toBeLessThanOrEqual(10);
+		expect(events.length).toBeLessThanOrEqual(100);
 		expect(events[events.length - 1]?.kind).toBe("pass");
 		expect(events[events.length - 1]?.text).toContain("built");
+	});
+
+	it("reports call progress before the response stream closes", async () => {
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		let release = () => {};
+		const closed = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const llm: WorkerLlm = {
+			stream: () =>
+				(async function* (): AsyncGenerator<StreamChunk> {
+					yield { type: "text-delta", index: 0, text: "summary" };
+					yield { type: "finish", reason: { kind: "stop" } };
+					await closed;
+				})(),
+		};
+		const worker = new MemoryWorker(root, store, inputs(), llm);
+		try {
+			worker.onMemoryTool("memory_note");
+			await vi.waitFor(() =>
+				expect(
+					worker
+						.status()
+						.events.some((entry) => entry.text.includes("finish stop")),
+				).toBe(true),
+			);
+			const status = worker.status();
+			expect(status.active).toBe(1);
+			expect(
+				status.events.some((entry) =>
+					entry.text.includes("call 1 started: scope user:notes"),
+				),
+			).toBe(true);
+			expect(
+				status.events.some((entry) =>
+					entry.text.includes("call 1: first text"),
+				),
+			).toBe(true);
+			expect(
+				status.events.some((entry) => entry.text.includes("call 1 closed")),
+			).toBe(false);
+			release();
+			await vi.waitFor(() => expect(worker.status().active).toBe(0));
+			expect(
+				worker
+					.status()
+					.events.some((entry) => entry.text.includes("call 1 closed")),
+			).toBe(true);
+			expect(
+				worker
+					.status()
+					.events.some((entry) =>
+						entry.text.includes("scope user:notes, built 1"),
+					),
+			).toBe(true);
+		} finally {
+			release();
+		}
+	});
+
+	it("reports a terminal model error and rejects partial text", async () => {
+		vi.useFakeTimers();
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm: WorkerLlm = {
+			stream: () =>
+				(async function* (): AsyncGenerator<StreamChunk> {
+					yield { type: "text-delta", index: 0, text: "partial summary" };
+					yield {
+						type: "finish",
+						reason: {
+							kind: "error",
+							failure: {
+								code: "PROVIDER_UNAVAILABLE",
+								message: "route missing",
+							},
+						},
+					};
+				})(),
+		};
+		const worker = new MemoryWorker(root, store, inputs(), llm);
+		worker.onMemoryTool("memory_note");
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+		const status = worker.status();
+		expect(status.lastError).toContain("PROVIDER_UNAVAILABLE: route missing");
+		expect(
+			status.events.find((entry) => entry.kind === "error")?.text,
+		).toContain("route missing");
+		expect(candidates(store, "user:notes")).toHaveLength(1);
+	});
+
+	it("dispatches the configured route through the real DSH LLM runtime", async () => {
+		vi.useFakeTimers();
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new LlmRuntime(root);
+		const calls: GenerateOptions[] = [];
+		class Adapter extends LlmAdapter {
+			async *stream(options: GenerateOptions): AsyncGenerator<StreamChunk> {
+				calls.push(options);
+				yield { type: "text-delta", index: 0, text: "one line summary" };
+				yield { type: "finish", reason: { kind: "stop" } };
+			}
+		}
+		llm.registerAdapter(["magpie"], new Adapter());
+		const worker = new MemoryWorker(
+			root,
+			store,
+			inputs({
+				...loadBaseConfig(
+					'[compaction]\nprovider = "magpie"\nmodel = "auto/deepseek-v4.1-flash"',
+					"unused",
+				).compaction,
+				batch: 1,
+				mode: "parallel",
+			}),
+			llm,
+		);
+		worker.onMemoryTool("memory_note");
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(calls).toHaveLength(1);
+		expect(calls[0]).toMatchObject({
+			provider: "magpie",
+			model: "auto/deepseek-v4.1-flash",
+		});
+		expect(calls[0]).not.toHaveProperty("reasoningEffort");
+		expect(candidates(store, "user:notes")).toHaveLength(0);
+	});
+
+	it("passes an explicitly configured effort", async () => {
+		vi.useFakeTimers();
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new StubLlm();
+		const worker = new MemoryWorker(
+			root,
+			store,
+			inputs({ effort: "off" }),
+			llm,
+		);
+		worker.onMemoryTool("memory_note");
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(llm.log[0]?.reasoningEffort).toBe("off");
+	});
+
+	it("reports an unregistered provider from the real DSH LLM runtime", async () => {
+		vi.useFakeTimers();
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new LlmRuntime(root);
+		const worker = new MemoryWorker(
+			root,
+			store,
+			inputs({ provider: "missing-route" }),
+			llm,
+		);
+		worker.onMemoryTool("memory_note");
+		await vi.advanceTimersByTimeAsync(0);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(worker.status().lastError).toContain("missing-route");
+		expect(
+			worker.status().events.find((entry) => entry.kind === "error")?.text,
+		).toContain("missing-route");
+		expect(candidates(store, "user:notes")).toHaveLength(1);
 	});
 
 	it("states the rejection reasons of failed merge answers", async () => {

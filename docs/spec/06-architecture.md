@@ -118,10 +118,10 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | `longform`       | 16 384 characters                                                         | The document does not enter the tree.                            |
 | `memory_open`    | `head` 8 192, `all` 16 384 characters                                     | The answer continues with `offset`.                              |
 | Node             | Target 512 characters, limit 640 characters, a cut with a flag            | The p90 miss is 610 characters.                                  |
-| Input of a merge | Two children, and 1 024 characters of `longform` at level 1               | The input holds no context, so a delete stays derivable.         |
+| Input of a merge | Two children. At level 1, a leaf gives its body and its complete `longform` | The input holds no context, so a delete stays derivable.         |
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
 | Fold             | Stop at the first line-budget fit. The demo orders pairs by jump, due, level, and start. | The order gives one answer. |
-| Compaction       | `parallel` 6, `batch` 6, effort `off`, 120 calls in an hour               | Thinking gives 8.8 k output tokens for a retelling.              |
+| Compaction       | `parallel` 6, `batch` 6, no default model or effort, 120 calls in an hour | The user chooses the model route and optional effort. |
 | Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
@@ -276,14 +276,21 @@ A restart derives candidates again from the tree. In-flight attempts and retry d
 A run uses `parallel`, `batch`, or `auto`. Parallel makes six concurrent calls, one line per call.
 Batch makes one call for up to six lines. A broken batch answer retries once, then uses parallel.
 Auto follows the model family. The existing retry waits are ten, sixty, then three hundred seconds.
-The model sees the two child inputs only. One non-empty child copies its text without a model call.
+The model sees the child inputs only.
+
+At level 1, each leaf child gives its body and its complete `longform`. A child above level 1 gives
+its summary. A join or a copy needs no model call. The build applies it only when no child carries a
+`longform` and the whole content fits the node limit. A `longform` gives a model call, and one
+non-empty child follows the same rule.
 
 Each attempt copies exact child inputs as `BuildInput`. The store compares both current children under the write lock before publication.
 A changed input, a hidden record, or a dirty child rejects the result. One matching key alone does not permit a result.
 The compaction starts at the accepted triggers of the plugin worker, at `memlens compact`, or at a
 console job. The worker makes its first pass ten seconds after activation when work waits.
-The worker mirrors each pass, retry, and failure to the host log and to the console
-journal. A failed merge answer states its reason: `no_answer` or `not_shorter`.
+The worker mirrors each pass, scope, model call, retry, and failure to the host log and console journal.
+A model call states its start, first text, finish, close, duration, and text size. It gives no note text.
+The journal keeps the last 100 events. A failed merge answer states `no_answer` or `not_shorter`.
+A failed model call also states the first error code and message from that pass.
 Rendering returns immediately with current clean summaries and temporary lines.
 See [0004 Tree and writer](../adr/0004-tree-writer.md) and [0020 Storage pivot](../adr/0020-storage-pivot.md).
 

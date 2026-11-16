@@ -294,11 +294,17 @@ async function failure(
 // #endregion FUNC_failure
 
 /** @purpose Insert one note in the default scope at a fixed time. */
-function insert(testCase: Case, body: string, day: number): void {
+function insert(
+	testCase: Case,
+	body: string,
+	day: number,
+	longform?: string,
+): void {
 	note(testCase.memlens.store, {
 		scope: "user:notes",
 		kind: "note",
 		body,
+		...(longform === undefined ? {} : { longform }),
 		session: "session-test",
 		turn: "turn-test",
 		preset: "default",
@@ -862,6 +868,46 @@ describe("console actions", () => {
 			}),
 		);
 		expect(missing.message).toMatch(/copied inputs/);
+	});
+
+	it("gives the whole longform above 1024 chars to the compaction job", async () => {
+		const testCase = composition();
+		const longform = `${"plugin ".repeat(200)}CONSOLE-TAIL`;
+		expect(longform.length).toBeGreaterThan(1024);
+		insert(testCase, "first body", 1, longform);
+		insert(testCase, "second body", 2, longform);
+		await registered(testCase);
+		const job = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "compact",
+			scope: "user:notes",
+		});
+		if (!("job" in job)) throw new Error("The answer holds no job.");
+		expect(job.inputs).toHaveLength(1);
+		expect(job.job.match(/CONSOLE-TAIL/g)).toHaveLength(2);
+		expect(job.job).toContain(longform);
+		const copied = JSON.stringify(job.inputs);
+		expect(copied.match(/CONSOLE-TAIL/g)).toHaveLength(2);
+		expect(copied).toContain(longform);
+	});
+
+	it("gives the whole longform of a singleton input to the compaction job", async () => {
+		const testCase = composition();
+		const longform = `${"alone ".repeat(200)}SOLO-TAIL`;
+		expect(longform.length).toBeGreaterThan(1024);
+		insert(testCase, "solo body", 1, longform);
+		await registered(testCase);
+		const job = await call(testCase, "action", {
+			session: testCase.agent.id,
+			action: "compact",
+			scope: "user:notes",
+		});
+		if (!("job" in job)) throw new Error("The answer holds no job.");
+		expect(job.inputs).toHaveLength(1);
+		expect(job.inputs[0]?.children[1]).toBeNull();
+		expect(job.job.match(/SOLO-TAIL/g)).toHaveLength(1);
+		expect(job.job).toContain(longform);
+		expect(job.copies).toBe(0);
 	});
 });
 

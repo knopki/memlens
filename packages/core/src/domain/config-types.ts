@@ -176,9 +176,9 @@ export const DEFAULT_BUDGET: Budget = { here: 20, directions: 10 };
 
 /** The default compaction route and limits of a base file that states none. */
 export const DEFAULT_COMPACTION: CompactionConfig = {
-	provider: "deepseek",
-	model: "deepseek-chat",
-	effort: "off",
+	provider: "",
+	model: "",
+	effort: "",
 	mode: "auto",
 	batch: 6,
 	maxCallsPerHour: 120,
@@ -201,9 +201,6 @@ defaultProfile = "default"
 idle = 300
 
 [compaction]
-provider = "deepseek"
-model = "deepseek-chat"
-effort = "off"
 mode = "auto"
 batch = 6
 maxCallsPerHour = 120

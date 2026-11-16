@@ -110,11 +110,12 @@ turns = 10
 tool_calls = "[memory] {n} tool calls since the last record. Anything durable?"
 turns = "[memory] {n} turns since the last record. Anything durable?"
 
-# The model route of the background compaction.
+# Set the model route to enable background compaction.
 [compaction]
-provider = "deepseek"
-model = "deepseek-chat"
-effort = "off"
+provider = "my-provider"
+model = "my-model"
+# Set effort only when the model needs a specific value.
+# effort = "low"
 # The run shape: parallel, batch, or auto.
 mode = "auto"
 # The note count of one batch run.
@@ -189,11 +190,14 @@ remote, the repository name, the workspace name, the directory name, then `proje
 
 ### The compaction section
 
+The worker needs an explicit `provider` and `model`. When either is absent, it logs an error and
+makes no model call. A model call error appears in the worker journal and the host log.
+
 | Key              | Type   | Default         | Effect                                        |
 | ---------------- | ------ | --------------- | --------------------------------------------- |
-| `provider`       | string | `"deepseek"`    | The provider of the merge model.              |
-| `model`          | string | `"deepseek-chat"` | The model of the merge.                     |
-| `effort`         | string | `"off"`         | The effort value of the model route.          |
+| `provider`       | string | `""`            | The provider of the merge model.              |
+| `model`          | string | `""`            | The model of the merge.                       |
+| `effort`         | string | `""`            | The effort value. An empty value sends no effort. |
 | `mode`           | string | `"auto"`        | The run shape: `parallel`, `batch`, or `auto`. |
 | `batch`          | number | `6`             | The note count of one batch run.              |
 | `maxCallsPerHour`| number | `120`           | The model call limit per hour.                |
