@@ -15,7 +15,6 @@ Read those contracts before a change. The archive retains the original local req
 | [01-goals-nongoals.md](01-goals-nongoals.md) | Goals, non-goals, constraints.                       | live    |
 | [02-requirements.md](02-requirements.md)     | Cross-module requirements and pending behavior.      | live    |
 | [02-superseded.md](02-superseded.md)         | Replaced, refused, and archived local requirements.  | archive |
-| [02-slices.md](02-slices.md)                 | The review order for acceptance, in slices.          | live    |
 | [03-open-questions.md](03-open-questions.md) | Open and closed questions.                           | live    |
 | [04-data.md](04-data.md)                     | Tables, field groups, versions, and merge channels.  | live    |
 | [05-glossary.md](05-glossary.md)             | Terms with one meaning each.                         | live    |
