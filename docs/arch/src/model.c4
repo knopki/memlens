@@ -1,0 +1,179 @@
+model {
+  agent = actor 'LLM Agent' {
+    description '
+      An agent session of the host. It reads and writes memory through the six tools.
+    '
+    -> memlens.tools 'calls the memory tools'
+  }
+
+  human = actor 'Operator' {
+    description '
+      The owner of the profile. The operator reviews, amends, hides, and redacts notes.
+    '
+    -> memlens.ui 'reviews notes in the console'
+    -> memlens.cli 'runs terminal commands'
+  }
+
+  memlens = system 'memlens' {
+    description '
+      The long-term memory of an agent. One SQLite row store holds the notes.
+      A summary tree stands above the notes. The agent reads one map of directions.
+    '
+
+    core = library '@memlens/core' {
+      technology 'TypeScript'
+      description '
+        The engine. It owns the row store, the configuration, the tree build,
+        and the render of the slice. It imports no CLI, plugin, or UI package.
+      '
+
+      domain = component 'Domain' {
+        description '
+          The scope grammar, the address form, the config merge of three layers,
+          and the render of the memory context.
+        '
+      }
+
+      store = component 'Row store' {
+        description '
+          Notes, slots, proposals, and metadata. Each write runs in one transaction.
+          A note keeps the rank of its time and id. A tombstone keeps its slot.
+        '
+      }
+
+      tree = component 'Tree build' {
+        description '
+          Summary rows above aligned ranges of notes. A note change deletes the
+          covering rows. Dirty ranges drive the compaction.
+        '
+      }
+
+      search = component 'Search index' {
+        description '
+          FTS5 tables inside the store. The language key selects the tokenizer.
+        '
+      }
+
+      transfer = component 'Transfer' {
+        description '
+          JSONL import and export of full note state. The Markdown format is export-only.
+        '
+      }
+    }
+
+    cli = cli-app '@memlens/cli' {
+      technology 'Node.js'
+      description '
+        The terminal and HTTP host. It implements the commands read, write, admin,
+        config, transfer, compact, and ui.
+      '
+
+      commands = component 'Terminal commands' {
+        description '
+          The command surface of the CLI, including compact, check, and repair.
+        '
+      }
+
+      uihost = component 'Console host' {
+        description '
+          Serves the built console client over HTTP. The host owns the routes.
+        '
+      }
+
+      importer = component 'Session import' {
+        #pending
+        description '
+          The import from host session logs into notes. The rule that selects
+          the note text is open. See Q-514.
+        '
+      }
+    }
+
+    ui = web-app '@memlens/ui' {
+      technology 'TypeScript, esbuild'
+      description '
+        The browser client of the console. Seven screens with native DOM controls.
+      '
+    }
+
+    plugin = host-plugin '@memlens/dsh-plugin' {
+      technology 'TypeScript, esbuild'
+      description '
+        The harness surface. It owns the entry points . and ./preset, the tools,
+        the nudge, and the background worker. One shared store serves all sessions.
+      '
+
+      tools = component 'Memory tools' {
+        description '
+          The six tools: memory_map, memory_find, memory_note, memory_open,
+          memory_forget, and memory_review.
+        '
+      }
+
+      context = component 'Memory context' {
+        description '
+          Renders the slice into the memory section of the system prompt.
+        '
+      }
+
+      nudge = component 'Nudge' {
+        description '
+          Counts tool calls and turns. It reminds the agent to write memory.
+        '
+      }
+
+      worker = component 'Compaction worker' {
+        description '
+          Runs passes when the host is idle. One batch model call for ready merge
+          inputs. It retries open ranges in half batches. No default model.
+        '
+      }
+
+      consoles = component 'Console surfaces' {
+        description '
+          Profile page, session tab, worker status, and worker journal
+          inside the host GUI.
+        '
+      }
+    }
+
+    db = database 'SQLite store' {
+      technology 'SQLite, FTS5'
+      description '
+        memlens.db. It holds note, node, proposal, and metadata rows.
+        The store path comes from --store, the patch, MEMLENS_STORE,
+        or the base config file.
+      '
+    }
+  }
+
+  dsh = external-system 'DeepSeek Harness' {
+    description '
+      The host application. It loads the plugin, runs the agent sessions,
+      and serves the plugin clients.
+    '
+  }
+
+  model-route = external-system 'Model provider' {
+    description '
+      The configured LLM route of the host. It serves the compaction merge calls.
+      The route must be set. A missing route fails the pass with a clear error.
+    '
+  }
+
+  dsh -> memlens.plugin 'loads at start'
+
+  memlens.tools -> memlens.core 'calls the engine'
+  memlens.context -> memlens.core.domain 'asks for the slice'
+  memlens.worker -> memlens.core.tree 'collects dirty ranges'
+  memlens.worker -> model-route 'sends one batch of merge inputs'
+  memlens.worker -> memlens.consoles 'reports runs, failures, and the journal'
+
+  memlens.cli.commands -> memlens.core 'calls the engine'
+  memlens.cli.importer -> memlens.core.store 'writes imported notes'
+  memlens.cli.uihost -> memlens.ui 'serves the client'
+  memlens.ui -> memlens.cli.uihost 'reads and acts over HTTP'
+
+  memlens.core.store -> memlens.db 'one transaction per write'
+  memlens.core.search -> memlens.db 'holds the FTS5 tables'
+}

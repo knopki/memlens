@@ -1,0 +1,92 @@
+specification {
+  element actor {
+    notation "Person"
+    style {
+      shape person
+      color green
+    }
+  }
+
+  element system {
+    notation "Software System"
+    style {
+      opacity 20%
+    }
+  }
+
+  element external-system {
+    notation "External System"
+    style {
+      opacity 20%
+      color muted
+    }
+  }
+
+  element library {
+    notation "Shared Library"
+    style {
+      opacity 20%
+    }
+  }
+
+  element cli-app {
+    notation "Command Line Tool"
+    style {
+      shape rectangle
+    }
+  }
+
+  element host-plugin {
+    notation "Host Plugin"
+    style {
+      opacity 20%
+    }
+  }
+
+  element web-app {
+    notation "Web Application"
+    style {
+      shape browser
+    }
+  }
+
+  element database {
+    notation "Database"
+    style {
+      shape storage
+      opacity 30%
+    }
+  }
+
+  element component {
+    notation "Component"
+    style {
+      opacity 20%
+    }
+  }
+
+  tag pending {
+    color amber
+  }
+
+  deploymentNode environment {
+    notation 'Deployment Environment'
+    style {
+      opacity 0%
+    }
+  }
+
+  deploymentNode vm {
+    notation 'Virtual Machine'
+    style {
+      opacity 5%
+    }
+  }
+
+  deploymentNode fs {
+    notation 'Filesystem'
+    style {
+      opacity 5%
+    }
+  }
+}

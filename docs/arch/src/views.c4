@@ -1,0 +1,74 @@
+views {
+  view index {
+    title 'memlens landscape'
+    description '
+      The system context. An agent and an operator use the memory.
+      The host loads the plugin. The model provider serves the compaction calls.
+    '
+    include
+      agent,
+      human,
+      memlens,
+      dsh,
+      model-route
+  }
+
+  view containers of memlens {
+    title 'Containers'
+    description '
+      The four packages and the store inside memlens.
+      The core library depends on nothing. See ADR-0007 and the isolation test.
+    '
+    include
+      *,
+      agent with {
+        size sm
+      },
+      human with {
+        size sm
+      },
+      dsh,
+      model-route
+  }
+
+  view core of memlens.core {
+    title 'Core components'
+    description '
+      The engine of the memory. The domain holds the rules,
+      the store holds the rows, the tree builds the summaries.
+    '
+    include
+      *,
+      memlens.db,
+      memlens.plugin.tools,
+      memlens.plugin.worker,
+      memlens.cli.commands
+  }
+
+  view plugin of memlens.plugin {
+    title 'Plugin components'
+    description '
+      The harness surface. The tools serve the agent,
+      the worker compacts the tree, the consoles serve the operator.
+    '
+    include
+      *,
+      agent,
+      dsh,
+      model-route,
+      memlens.core
+  }
+
+  view console of memlens.ui {
+    title 'Console'
+    description '
+      The browser client of the console. The CLI host serves it.
+      The operator reviews, amends, hides, and forgets notes.
+    '
+    include
+      *,
+      human,
+      memlens.cli.uihost,
+      memlens.cli.uihost -> memlens.ui
+  }
+}

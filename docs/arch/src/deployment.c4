@@ -1,0 +1,61 @@
+deployment {
+  laptop = environment 'Operator laptop' {
+    description '
+      One machine holds the host, the terminal, the browser, and the store.
+      All instances share one store file.
+    '
+
+    harness = vm 'DeepSeek Harness host' {
+      technology 'Node.js process'
+      instanceOf memlens.plugin
+    }
+
+    terminal = vm 'Terminal' {
+      instanceOf memlens.cli
+    }
+
+    browser = vm 'Browser' {
+      instanceOf memlens.ui
+    }
+
+    data = fs 'Filesystem' {
+      description '
+        XDG data home of the operator.
+      '
+      instanceOf memlens.db {
+        title 'memlens.db'
+      }
+    }
+
+    harness.plugin -> data.db 'reads and writes'
+    terminal.cli -> data.db 'reads and writes'
+  }
+
+  cloud = environment 'Model provider' {
+    instanceOf model-route
+  }
+}
+
+views {
+  deployment view laptop {
+    title 'Deployment: one laptop'
+    description '
+      The host and the terminal share one store file. The model provider
+      sits outside the laptop.
+    '
+    include
+      laptop,
+      laptop.**,
+      cloud.*
+
+    style laptop {
+      color muted
+    }
+    style laptop.harness._ {
+      color green
+    }
+    style laptop.data._ {
+      color amber
+    }
+  }
+}

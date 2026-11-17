@@ -10,6 +10,10 @@ The specification in `docs/spec/` owns cross-module requirements and pending beh
 Code contracts own implemented rules within one module. Read the module contract and the relevant
 entity contract before a change.
 
+The LikeC4 model in [docs/arch](docs/arch/README.md) shows the same parts as diagrams. Run
+`pnpm exec likec4 start docs/arch` for the preview. The model check runs inside
+`pnpm run lint:docs`. Update the model with each architecture change.
+
 ## New customer input
 
 1. Put the meaning of a fresh customer message about the product in the correct file:

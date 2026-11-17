@@ -1,0 +1,63 @@
+views 'Use cases' {
+
+  dynamic view session-start {
+    title 'Session start'
+    description '
+      The host starts a session. The memory context renders the slice
+      and injects it into the system prompt. A read costs no model call.
+    '
+
+    dsh -> memlens.plugin.context 'starts a session'
+    memlens.plugin.context -> memlens.core.domain 'asks for the slice'
+    memlens.core.domain -> memlens.db 'reads the map of directions and the here section'
+    memlens.plugin.context <- memlens.core.domain 'returns the memory text'
+    memlens.plugin.context -> dsh 'injects the memory section'
+  }
+
+  dynamic view note-write {
+    title 'Note write'
+    description '
+      The agent writes a note. The store ranks the note by its time and id.
+      A middle insert shifts the later slots. One transaction holds the whole write.
+    '
+
+    agent -> memlens.plugin.tools 'calls memory_note'
+    memlens.plugin.tools -> memlens.core.store 'validates the fields and the rank'
+    memlens.core.store -> memlens.db 'one transaction: note row, slot shift, node delete'
+    agent <- memlens.plugin.tools 'returns the note address'
+  }
+
+  dynamic view compaction-pass {
+    title 'Compaction pass'
+    description '
+      The worker runs one pass when the host is idle. It holds no default model:
+      a missing route fails the pass with a clear error.
+      See ADR-0023.
+    '
+
+    memlens.plugin.worker -> memlens.core.tree 'collects dirty ranges and merge inputs'
+    memlens.plugin.worker -> model-route 'sends one batch of merge inputs' {
+      notes '
+        The batch count comes from the config. The default is ten.
+        There is no upper limit.
+      '
+    }
+    model-route -> memlens.plugin.worker 'answers with one line per range'
+    parallel {
+      memlens.plugin.worker -> memlens.core.tree 'a good line publishes its range at once'
+      memlens.plugin.worker -> memlens.core.tree 'a bad line keeps its range open' {
+        notes '
+          An absent line, an empty line, and a line that fails the shrink check
+          keep their ranges open.
+        '
+      }
+    }
+    memlens.plugin.worker -> memlens.plugin.worker 'retries open ranges in half batches' {
+      notes '
+        The retry stops at one input. A range that still fails
+        stays dirty for the next pass.
+      '
+    }
+    memlens.plugin.worker -> memlens.consoles 'prints the pass result to the journal'
+  }
+}
