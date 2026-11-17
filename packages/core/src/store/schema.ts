@@ -30,54 +30,18 @@ export const SCHEMA_VERSION = BASE_SCHEMA_VERSION + MIGRATIONS.length;
 // #region FUNC_widenKindCheck
 /**
  * @purpose Widen the kind check of the notes table, so that a note takes the gotcha kind.
- * @invariants SQLite cannot change a check on a column, so the step rebuilds the notes table by the
- *   procedure of the SQLite documentation: a new table beside the old one, the rows copied, the old
- *   table dropped, and the new table renamed.
- * @invariants Each row keeps its `n`, so the content row of the search index keeps its target.
+ * @invariants SQLite cannot change a check on a column, so the step adds the column beside it, copies
+ *   the values, drops the old column, and renames the new one. The table keeps its rows and its
+ *   `n`, so the content row of the search index keeps its target.
+ * @invariants The kind then holds the default `note`, as each write path defaults it.
  */
 function widenKindCheck(db: DatabaseSync): void {
 	db.exec(`
-		CREATE TABLE notes_next (
-			n             INTEGER PRIMARY KEY,
-			id            TEXT NOT NULL UNIQUE,
-			scope         TEXT NOT NULL,
-			pos           INTEGER NOT NULL,
-			state         TEXT NOT NULL CHECK (state IN ('live','hidden','deleted')),
-			cleared       INTEGER NOT NULL DEFAULT 0 CHECK (cleared IN (0,1)),
-			kind          TEXT NOT NULL CHECK (kind IN ('decision','preference','fact','gotcha','task','note')),
-			body          TEXT NOT NULL DEFAULT '',
-			longform      TEXT,
-			refs          TEXT NOT NULL DEFAULT '[]',
-			superseded_by TEXT,
-			ts            TEXT NOT NULL,
-			created_at    TEXT NOT NULL,
-			modified_at   TEXT NOT NULL,
-			review_at     TEXT,
-			reviewed_at   TEXT,
-			session       TEXT NOT NULL DEFAULT '',
-			turn          TEXT NOT NULL DEFAULT '',
-			preset        TEXT NOT NULL DEFAULT '',
-			v             TEXT NOT NULL,
-			v_content     TEXT NOT NULL,
-			v_review      TEXT,
-			CHECK (cleared = 0 OR (state = 'deleted' AND body = '' AND longform IS NULL)),
-			UNIQUE (scope, pos)
-		);
-		INSERT INTO notes_next (
-			n, id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts,
-			created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content,
-			v_review
-		)
-		SELECT
-			n, id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts,
-			created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content,
-			v_review
-		FROM notes;
-		DROP TABLE notes;
-		ALTER TABLE notes_next RENAME TO notes;
-		CREATE INDEX notes_dedupe ON notes (scope, body) WHERE state = 'live';
-		CREATE INDEX notes_due ON notes (review_at)
-			WHERE state = 'live' AND review_at IS NOT NULL;
+		ALTER TABLE notes ADD COLUMN kind_next TEXT NOT NULL DEFAULT 'note'
+			CHECK (kind_next IN ('decision','preference','fact','gotcha','task','note'));
+		UPDATE notes SET kind_next = kind;
+		ALTER TABLE notes DROP COLUMN kind;
+		ALTER TABLE notes RENAME COLUMN kind_next TO kind;
 	`);
 }
 // #endregion FUNC_widenKindCheck

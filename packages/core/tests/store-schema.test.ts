@@ -69,6 +69,19 @@ function addNote(db: DatabaseSync, pos: number, body: string): void {
 	);
 }
 
+/** @purpose Give the schema text of each object, so two stores compare in one value. */
+function schemaOf(db: DatabaseSync): string[] {
+	return db
+		.prepare(
+			"SELECT name, type, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name, type",
+		)
+		.all()
+		.map(
+			(row) =>
+				`${String(row.type)} ${String(row.name)}: ${String(row.sql).replace(/\s+/g, " ")}`,
+		);
+}
+
 /** @purpose Match the refusal of a recorded schema version. */
 function versionRefused(error: unknown): boolean {
 	return (
@@ -299,7 +312,11 @@ describe("migration", () => {
 				.all(),
 			slots,
 		);
-		assert.equal(tables(upgraded).includes("notes_next"), false);
+		// The step leaves no extra table, and the schema matches a store of a newer build.
+		assert.deepEqual(
+			schemaOf(upgraded),
+			schemaOf(openDatabase(path + ".fresh", "en")),
+		);
 		// The open sets the journal mode before the schema work, so a rename step leaves no lock.
 		assert.equal(
 			upgraded.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get()?.busy,
