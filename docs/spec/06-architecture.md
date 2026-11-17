@@ -376,7 +376,7 @@ A write gives the time of the note, and the default is the write time. The store
 that time, so a note of a past moment lands before the notes of the later time. The order of the
 positions therefore follows the time of the note, and not the order of the writes.
 
-The tool behavior and the errors are in the [tool types](tools.d.ts) and in
+The tool behavior and the errors are in the [tool contracts](../../packages/dsh-plugin/src/tools/shared.ts) and in
 [REQ-024](02-requirements.md) to [REQ-477](02-requirements.md). The subagent modes are in
 [REQ-542](02-requirements.md) to [REQ-543](02-requirements.md), and the log keeps the content of a
 dismissed proposal in the [config contract](../../packages/core/src/domain/config.ts). The nudge is in

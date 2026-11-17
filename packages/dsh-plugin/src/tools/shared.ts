@@ -1,11 +1,10 @@
 /**
  * #region moduleContract
  * @purpose Give each tool module one copy of the tool types and one copy of the store helpers.
- * @scope The input and output types of the tool document, the profile check, the target read, the note
- *  time, and the review time.
+ * @scope The input and output types of the tools, the profile check, the target read, the note time,
+ *  and the review time.
  *  NOT: the tool schemas, the registration, and the parent report.
  * @invariants A scope field of an input is key text, and the helper normalizes it before the profile check.
- * @invariants The output types copy the tool document, because the package does not ship that file.
  * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-llm
  * @keywords memlens, tool, type, scope, profile, target, review, address
  * #endregion moduleContract
@@ -41,11 +40,6 @@ export const KINDS = [
 	"task",
 	"note",
 ] as const satisfies readonly NoteKind[];
-
-/*
- * The types below copy docs/spec/tools.d.ts, which the package does not ship. The test checks each
- * answer against the output schema of its tool.
- */
 
 /** The address of a record: `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. */
 export type Address = string;

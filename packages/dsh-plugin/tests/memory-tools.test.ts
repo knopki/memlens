@@ -41,26 +41,8 @@ import {
 	visibleScopes,
 } from "@memlens/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type {
-	MemoryDirectionLine as DocDirectionLine,
-	MemoryFindOutput as DocFindOutput,
-	MemoryForgetOutput as DocForgetOutput,
-	MemoryMapOutput as DocMapOutput,
-	MemoryNoteOutput as DocNoteOutput,
-	MemoryOpenOutput as DocOpenOutput,
-	MemoryReviewOutput as DocReviewOutput,
-} from "../../../docs/spec/tools.js";
 import { registerMemoryTools } from "../src/memory-tools.js";
 import { Memlens } from "../src/service.js";
-import type {
-	MemoryDirectionLine,
-	MemoryFindOutput,
-	MemoryForgetOutput,
-	MemoryMapOutput,
-	MemoryNoteOutput,
-	MemoryOpenOutput,
-	MemoryReviewOutput,
-} from "../src/tools/shared.js";
 
 const BASE_CONFIG = `language = "en"
 defaultProfile = "all"
@@ -179,23 +161,6 @@ afterEach(async () => {
 	process.env = { ...savedEnv };
 	rmSync(rootDir, { recursive: true, force: true });
 });
-
-/** True when two types hold the same value set. */
-type Same<A, B> =
-	(<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
-		? true
-		: false;
-
-/** The answer types of the module and the answer types of the tool document. */
-type AnswerContract = [
-	Same<MemoryNoteOutput, DocNoteOutput>,
-	Same<MemoryFindOutput, DocFindOutput>,
-	Same<MemoryOpenOutput, DocOpenOutput>,
-	Same<MemoryForgetOutput, DocForgetOutput>,
-	Same<MemoryReviewOutput, DocReviewOutput>,
-	Same<MemoryMapOutput, DocMapOutput>,
-	Same<MemoryDirectionLine, DocDirectionLine>,
-];
 
 function key(name: string): ScopeKey {
 	return { name };
@@ -849,12 +814,6 @@ describe("memory tools of one agent", () => {
 		await main.scope.dispose();
 
 		expect(root.tools.definitions(main.key)).toHaveLength(0);
-	});
-
-	it("keeps each answer inside the declared output type", () => {
-		const contract: AnswerContract = [true, true, true, true, true, true, true];
-
-		expect(contract.every(Boolean)).toBe(true);
 	});
 
 	it("names the address form and the review rule in its description", () => {
