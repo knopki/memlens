@@ -151,7 +151,7 @@ Run the commands in a shell that mise activates, or start each command with `mis
 | `pnpm run build`     | Build the four packages.                    |
 | `pnpm run typecheck` | Check the types.                            |
 | `pnpm run test`      | Run the tests.                              |
-| `pnpm run lint`      | Check the code, the regions, and the package boundaries. |
+| `pnpm run lint`      | Check the code and the format with biome.   |
 | `pnpm run format`    | Write the biome fixes and the format.       |
 | `pnpm run lint:docs` | Check the documents against the STE limits. |
 | `pnpm run verify`    | Run the build and all checks.               |

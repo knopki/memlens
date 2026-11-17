@@ -19,7 +19,7 @@ A rejected requirement stays out of the review, and it is in [02-superseded.md](
 | 8 | The summary tree and the compaction | 204, 528-529 | 3 | [build](../../packages/core/src/store/build.ts), [view](../../packages/core/src/store/view.ts), [nodes](../../packages/core/src/store/nodes.ts) |
 | 9 | The compaction host | 290, 459, 518 | 3 | [compact](../../packages/cli/src/compact.ts), [console](../../packages/core/src/domain/console.ts) |
 | 10 | The agent surface | 020, 023-024, 027-028, 030-031, 034, 039, 158-159, 188, 233, 235, 237, 241-242, 280, 285, 300, 343-344, 349, 353-357, 359-361, 371, 377, 441, 477 | 35 | [config](../../packages/core/src/domain/config.ts), [context](../../packages/core/src/domain/context.ts), [proposals](../../packages/core/src/store/proposals.ts), [tools](tools.d.ts) |
-| 11 | The console | 423 | 1 | [console](../../packages/core/src/domain/console.ts), [client](../../packages/ui/src/client.ts), [host](../../packages/cli/src/ui.ts) |
+| 11 | The console | 423 | 1 | [console](../../packages/core/src/domain/console.ts), [host](../../packages/cli/src/ui.ts) |
 | 12 | The session import | 413 | 1 | [commands](../../packages/cli/src/commands.ts) |
 | 13 | The harness contract | 427-428, 445 | 3 | [plugin](../../packages/dsh-plugin/src/index.ts) |
 

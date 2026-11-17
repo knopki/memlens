@@ -9,7 +9,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | requirement          | A testable rule about system behavior. Global requirements have REQ identifiers. Implemented local rules live in code contracts without those identifiers.                   |
 | module contract      | The contract at the start of a source file. Its invariants define rules that apply throughout the module.                                                                    |
 | entity contract      | A contract beside a function, method, class, or type. It defines the local rules of that entity.                                                                             |
-| package boundary     | The set of imports that one package uses: its own files, and the packages that it declares.                                                                                  |
 | constraint           | A limit that comes from the customer or from the environment, with an identifier `C-nnn`.                                                                                    |
 | non-goal             | An item that the project does not do, with an identifier `NG-nnn`.                                                                                                           |
 | open question        | An item without an answer, with an identifier `Q-nnn`.                                                                                                                       |

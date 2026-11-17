@@ -52,8 +52,7 @@ entity contract before a change.
 - The library imports no CLI, plugin, harness, or user interface package. The test
   `packages/core/tests/isolation.test.ts` enforces this rule.
 - A package declares each workspace package that it imports with the `workspace:*` range. A relative
-  import stays inside its package. The check `scripts/check-package-boundaries.mjs` enforces both
-  rules. See [0025](docs/adr/0025-declared-package-boundaries.md).
+  import stays inside its package.
 - The library serves a browser client through the subpath `@memlens/core/view`. The root imports
   Node.js modules, so a browser bundle must not take the root.
 - Keep client code and backend code in separate modules. Do not mix them in one file.

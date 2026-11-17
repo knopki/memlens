@@ -23,10 +23,8 @@ The agent reads one map of directions: the derived scope list in the `<direction
 
 The CLI and the plugin depend on the console. The console and the CLI depend on the library. The
 library depends on nothing.
-Each package declares each workspace package that it imports. A relative import stays inside its
-package. The test `packages/core/tests/isolation.test.ts` holds the library rule. The script
-`scripts/check-package-boundaries.mjs` holds the package rule. See [REQ-007](02-requirements.md) and
-[REQ-578](02-requirements.md).
+Each package declares each workspace package that it imports.
+The test `packages/core/tests/isolation.test.ts` holds the library rule. See [REQ-007](02-requirements.md).
 
 ## Stack
 
