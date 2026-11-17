@@ -15,21 +15,23 @@ The LikeC4 model in [docs/arch](docs/arch/README.md) shows the same parts as dia
 generated README holds every view as a Mermaid diagram. Run `pnpm run arch` for the live preview.
 The model check runs inside `pnpm run lint:docs`. Update the model with each architecture change.
 
-## New customer input
+## Documentation
 
-1. Put the meaning of a fresh customer message about the product in the correct file:
-   - Cross-module behavior goes to a new scenario in a feature file in [docs/features](docs/features/README.md).
-     Tag a scenario with no proving test `@wip`.
-   - Pending behavior goes to [docs/questions.md](docs/questions.md).
-   - Implemented local behavior goes to module invariants or an entity contract beside its implementation.
-   - Keep requirement identifiers out of code contracts.
-   - The product boundary goes to the README.
-   - A choice with consequences goes to an ADR.
-   - A new term goes to [docs/glossary.md](docs/glossary.md) before its first use.
-   - An unclear point goes to [docs/questions.md](docs/questions.md).
-2. Compare the new input with the features. If it contradicts a scenario, tag that scenario `@disputed`
-   and add an open question with two options. Do not overwrite the scenario silently.
-3. Commit with the message `spec: <change>`.
+The files [docs/features](docs/features/README.md), `docs/adr`, [docs/architecture.md](docs/architecture.md),
+and [docs/glossary.md](docs/glossary.md) state the design. They belong to the planning stage. Agree
+their text with the customer before the code that follows it. Do not write them after the
+implementation as a record of finished work. A change edits a file when the plan of the change makes
+its text wrong. A change adds no scenario, no ADR, and no glossary row without agreement.
+
+Keep requirement identifiers out of code contracts.
+
+## Decisions
+
+Name a decision before the commit that applies it. Ask the customer before a choice outside the code:
+a contract, a schema, a refusal rule, a format, or a public behavior. A choice inside the code needs no
+question, and the commit message states it.
+
+Commit with the message `<type>: <change>`. The types are `feat`, `fix`, `refactor`, `docs`, and `spec`.
 
 ## Implementation
 
@@ -99,5 +101,5 @@ Use ASD-STE100 Simplified Technical English in all documents and in all code com
 - Use "must" for an obligation. Do not use "should" or "may".
 - Do not use Latin abbreviations. Write "for example", not "e.g.".
 - Use one word for one meaning. Use the terms from the glossary.
-- Add a new term to the glossary before you use it in a document.
+- Agree a new term with the customer before you use it in a document.
 - Keep the README in the eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`.
