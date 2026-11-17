@@ -30,16 +30,14 @@ export const SCHEMA_VERSION = BASE_SCHEMA_VERSION + MIGRATIONS.length;
 // #region FUNC_widenKindCheck
 /**
  * @purpose Widen the kind check of the notes table, so that a note takes the gotcha kind.
- * @invariants SQLite cannot change a check on a column, so the step rebuilds the notes table.
- * @invariants The step copies the table and creates it again. It renames nothing, because a rename
- *   leaves a lock that blocks the truncating checkpoint at close.
+ * @invariants SQLite cannot change a check on a column, so the step rebuilds the notes table by the
+ *   procedure of the SQLite documentation: a new table beside the old one, the rows copied, the old
+ *   table dropped, and the new table renamed.
  * @invariants Each row keeps its `n`, so the content row of the search index keeps its target.
  */
 function widenKindCheck(db: DatabaseSync): void {
 	db.exec(`
-		CREATE TABLE notes_copy AS SELECT * FROM notes;
-		DROP TABLE notes;
-		CREATE TABLE notes (
+		CREATE TABLE notes_next (
 			n             INTEGER PRIMARY KEY,
 			id            TEXT NOT NULL UNIQUE,
 			scope         TEXT NOT NULL,
@@ -65,7 +63,7 @@ function widenKindCheck(db: DatabaseSync): void {
 			CHECK (cleared = 0 OR (state = 'deleted' AND body = '' AND longform IS NULL)),
 			UNIQUE (scope, pos)
 		);
-		INSERT INTO notes (
+		INSERT INTO notes_next (
 			n, id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts,
 			created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content,
 			v_review
@@ -74,8 +72,9 @@ function widenKindCheck(db: DatabaseSync): void {
 			n, id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts,
 			created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content,
 			v_review
-		FROM notes_copy;
-		DROP TABLE notes_copy;
+		FROM notes;
+		DROP TABLE notes;
+		ALTER TABLE notes_next RENAME TO notes;
 		CREATE INDEX notes_dedupe ON notes (scope, body) WHERE state = 'live';
 		CREATE INDEX notes_due ON notes (review_at)
 			WHERE state = 'live' AND review_at IS NOT NULL;
@@ -170,7 +169,10 @@ function tokenizerOf(language: string): string {
 // #region FUNC_openDatabase
 /**
  * @purpose Open one database file with the required settings and the schema.
- * @invariants The open rejects an unknown schema version before a schema change.
+ * @invariants The open rejects an unknown schema version before it changes the file.
+ * @invariants The open sets the journal mode before the schema work. A step that renames a table in
+ *   a rollback-journal transaction leaves a lock on the connection, and the truncating checkpoint
+ *   at close then fails with SQLITE_LOCKED.
  * @invariants The schema and the meta rows are ready before the caller reads.
  */
 export function openDatabase(
@@ -183,21 +185,10 @@ export function openDatabase(
 		db.exec(
 			"PRAGMA synchronous = FULL; PRAGMA secure_delete = ON; PRAGMA busy_timeout = 5000; PRAGMA temp_store = MEMORY;",
 		);
-		db.exec("BEGIN IMMEDIATE");
-		try {
-			const tables = db
-				.prepare(
-					"SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1",
-				)
-				.get();
-			if (tables === undefined) create(db, language);
-			migrate(db, migrations);
-			db.exec("COMMIT");
-		} catch (error) {
-			db.exec("ROLLBACK");
-			throw error;
-		}
+		if (empty(db)) transaction(db, () => create(db, language));
+		const version = schemaVersion(db, migrations);
 		db.exec("PRAGMA journal_mode = WAL");
+		transaction(db, () => migrate(db, migrations, version));
 		debug("Store open", {
 			event: "open",
 			version: BASE_SCHEMA_VERSION + migrations.length,
@@ -211,16 +202,42 @@ export function openDatabase(
 }
 // #endregion FUNC_openDatabase
 
-// #region FUNC_migrate
+/** @purpose Tell whether the database file holds no table of its own. */
+function empty(db: DatabaseSync): boolean {
+	const row = db
+		.prepare(
+			"SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1",
+		)
+		.get();
+	return row === undefined;
+}
+
+// #region FUNC_transaction
 /**
- * @purpose Apply each schema change in order before the store opens.
- * @invariants The caller holds a transaction for all changes and version updates.
- * @invariants An unknown version leaves the schema unchanged.
+ * @purpose Run one unit of schema work in one transaction, so a failure leaves no change.
+ * @invariants The caller runs no other transaction for the same work.
  */
-function migrate(
+function transaction(db: DatabaseSync, work: () => void): void {
+	db.exec("BEGIN IMMEDIATE");
+	try {
+		work();
+		db.exec("COMMIT");
+	} catch (error) {
+		db.exec("ROLLBACK");
+		throw error;
+	}
+}
+// #endregion FUNC_transaction
+
+// #region FUNC_schemaVersion
+/**
+ * @purpose Read and check the stored schema version, so a bad version stops the open.
+ * @invariants A store without the meta table, without a version, or with an unknown version fails.
+ */
+function schemaVersion(
 	db: DatabaseSync,
 	migrations: ReadonlyArray<(db: DatabaseSync) => void>,
-): void {
+): number {
 	const meta = db
 		.prepare(
 			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'meta'",
@@ -245,6 +262,21 @@ function migrate(
 			"Data",
 			`Unsupported store schema version: ${text}.`,
 		);
+	return version;
+}
+// #endregion FUNC_schemaVersion
+
+// #region FUNC_migrate
+/**
+ * @purpose Apply each schema change in order before the store opens.
+ * @invariants The caller holds a transaction for all changes and version updates.
+ * @invariants The step list comes from the checked version, so a later step never runs early.
+ */
+function migrate(
+	db: DatabaseSync,
+	migrations: ReadonlyArray<(db: DatabaseSync) => void>,
+	version: number,
+): void {
 	const update = db.prepare(
 		"UPDATE meta SET value = ? WHERE key = 'schema_version'",
 	);

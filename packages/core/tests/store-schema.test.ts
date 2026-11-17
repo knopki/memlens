@@ -299,8 +299,8 @@ describe("migration", () => {
 				.all(),
 			slots,
 		);
-		assert.equal(tables(upgraded).includes("notes_copy"), false);
-		// A step that renames a table leaves a lock that blocks the checkpoint at close.
+		assert.equal(tables(upgraded).includes("notes_next"), false);
+		// The open sets the journal mode before the schema work, so a rename step leaves no lock.
 		assert.equal(
 			upgraded.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get()?.busy,
 			0,
