@@ -9,11 +9,11 @@
 	},
 	"scripts": {
 		"build": "pnpm -r run build",
-		"typecheck": "pnpm -r run typecheck && pnpm -r run typecheck:docs",
+		"typecheck": "pnpm -r run typecheck",
 		"test": "pnpm -r run test",
 		"lint": "biome check . && node scripts/check-regions.mjs",
 		"format": "biome check --write .",
-		"lint:docs": "sh scripts/ste-lint.sh && node scripts/check-tables.mjs && node scripts/check-tree-model.mjs",
+		"lint:docs": "sh scripts/ste-lint.sh && node scripts/check-tables.mjs",
 		"verify": "pnpm run build && pnpm run typecheck && pnpm run test && pnpm run lint && pnpm run lint:docs"
 	},
 	"devDependencies": {

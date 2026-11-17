@@ -47,20 +47,6 @@ replaced it. The owner column in those sections names the live contract, or the 
 | REQ-358 | The report of the parent gets one line for each proposal of the child. | FR | REQ-359 |
 | REQ-274 | The catalog key is hidden from the agent. | FR | REQ-108 |
 | REQ-279 | The key `*` in `scopes` matches each scope. | FR | REQ-151 |
-| REQ-029 | The plugin config is the deep merge of the memlens config, the profile patch, and the preset patch. The patch wins over the memlens config, and the preset wins over the profile. | FR | [config.d.ts](config.d.ts) |
-| REQ-147 | The `store` section gives `backend` and `path`. | FR | [config.d.ts](config.d.ts) |
-| REQ-150 | Each profile has the section `[profile.<name>]`. | FR | [config.d.ts](config.d.ts) |
-| REQ-152 | The profile budget gives `here` and `directions` in bytes. | FR | [config.d.ts](config.d.ts) |
-| REQ-153 | The profile gives the subagent mode `propose`, `read`, or `off`. | FR | [config.d.ts](config.d.ts) |
-| REQ-230 | The `[nudge]` section gives `mode`, `tool_calls`, `turns`, `expensive`, and `text`. The patch gives `mode` and `tool_calls`, and the TOML file gives the other three. | FR | [config.d.ts](config.d.ts) |
-| REQ-231 | The `mode` of the nudge is `tools`, `turns`, `expensive`, or `off`. | FR | [config.d.ts](config.d.ts) |
-| REQ-287 | The general config and the patch give `defaultProfile`. The preset `profile` wins over it. | FR | [config.d.ts](config.d.ts) |
-| REQ-288 | The `store` key of the plugin config sets the same store as the TOML `store` section and `MEMLENS_STORE`. The plugin takes the patch first, then `MEMLENS_STORE`, then the TOML file. | FR | [config.d.ts](config.d.ts) |
-| REQ-289 | The `writer` section gives `provider`, `model`, `effort`, `mode`, `batch`, and `maxCallsPerHour`. | FR | [config.d.ts](config.d.ts) |
-| REQ-452 | The profile patch gives `customPrompt` and `customPromptAppend`. | FR | [config.d.ts](config.d.ts) |
-| REQ-456 | The `review` section of the config gives the review period of each kind in days. | FR | [config.d.ts](config.d.ts) |
-| REQ-443 | The default budget `here` is 17 KiB. | FR | [config.d.ts](config.d.ts) |
-| REQ-444 | The default budget `directions` is 3 KiB. | FR | [config.d.ts](config.d.ts) |
 | REQ-256 | The kind of a scope key is `project`, `global`, `agent`, `user`, `topic`, `task`, or `import`. | FR | REQ-255 |
 | REQ-257 | The name of a scope key starts with a lowercase letter or a digit. | FR | REQ-255 |
 | REQ-258 | The name of a scope key holds lowercase letters, digits, the period, the underscore, the slash, and the hyphen only. | FR | REQ-255 |
@@ -75,27 +61,6 @@ replaced it. The owner column in those sections names the live contract, or the 
 | REQ-234 | The nudge changes no byte of the frozen slice. | FR | REQ-233 |
 | REQ-243 | A turn with more than `expensive` steps demands a write before its end. | FR | No requirement in this version. |
 | REQ-246 | The default `text` of the nudge names no unit of the count. | FR | REQ-237 |
-| REQ-293 | The agent tools are `memory_find`, `memory_open`, `memory_note`, `memory_forget`, `memory_review`, and `memory_scope`. | FR | `tools.d.ts` |
-| REQ-294 | `memory_note` takes `body`, `longform`, `scope`, `kind`, `supersedes`, and `reviewIn`, and the last five are optional. | FR | `tools.d.ts` |
-| REQ-296 | `memory_find` takes `query`, `scopes`, `since`, `until`, `kinds`, `due`, and `limit`, and it searches by words. | FR | `tools.d.ts` |
-| REQ-302 | `memory_note` returns the `addr`, the `id`, the `state`, and the `review_at` of the record. A proposed write returns the `id` only. | FR | `tools.d.ts` |
-| REQ-304 | `memory_note` accepts the kinds `decision`, `preference`, `fact`, `task`, and `note`. | FR | `tools.d.ts` |
-| REQ-305 | Each target of `supersedes` is a `pos` or an `addr`. | FR | `tools.d.ts` |
-| REQ-308 | `reviewIn` takes a period in days or the word `never`. | FR | `tools.d.ts` |
-| REQ-317 | A hit gives the `addr`, the `pos`, and the line of the record. | FR | `tools.d.ts` |
-| REQ-318 | Each hit carries the `addr`, because a `pos` of another scope is ambiguous. | FR | `tools.d.ts` |
-| REQ-320 | The `target` of `memory_open` is an `addr`, a `pos` of the active scope, or a range `a-b`. | FR | `tools.d.ts` |
-| REQ-321 | An entry answer gives the `addr`, the `pos`, the `id`, the `ts`, the `scope`, the `body`, and the `review_at`. | FR | `tools.d.ts` |
-| REQ-322 | An entry answer gives the `longform`, the `longformBytes`, the `longformOffset`, the `longformTruncated`, and the `refs`. | FR | `tools.d.ts` |
-| REQ-323 | Each part of a block gives the `label`, the `body`, the `ts_from`, the `ts_to`, the `built`, and the `needsExpansion`. | FR | `tools.d.ts` |
-| REQ-324 | A block answer gives the `truncated`, the `next`, and the `notice`. | FR | `tools.d.ts` |
-| REQ-338 | `memory_forget` takes the `targets`, the `reason`, and the `scope` of a `pos` target. | FR | `tools.d.ts` |
-| REQ-339 | `memory_forget` returns the count of hidden records, the count of queued rebuilds, and the count of queued top nodes. | FR | `tools.d.ts` |
-| REQ-340 | `memory_review` returns the due records with the `addr`, the `scope`, the `pos`, the `ts`, the `kind`, the `body`, and the `review_at`. | FR | `tools.d.ts` |
-| REQ-341 | `memory_review` returns the count of reviewed records and the next review date. | FR | `tools.d.ts` |
-| REQ-345 | The tool `memory_scope` takes the `action` and the `scope`. | FR | `tools.d.ts` |
-| REQ-346 | The `action` of `memory_scope` is `list`. | FR | `tools.d.ts` |
-| REQ-347 | The action `list` gives each scope with the `key`, the `notes`, the `lastSeen`, and the `writable`. | FR | `tools.d.ts` |
 | REQ-440 | The direction line starts with `[<key>] `. | FR | REQ-297 |
 | REQ-455 | With both keys, the template of `customPrompt` holds the append text at `{{append}}`. | FR | REQ-454 |
 | REQ-225 | The compression of `<here>` keeps at least 60 percent of the budget. | FR | No requirement. |
@@ -154,14 +119,6 @@ live.
 | REQ-292 | The policy text names `memory_find`, `memory_open`, `memory_note`, and `memory_forget`. | FR | The customer removed the requirement. |
 | REQ-211 | `gen` grows on a `note` or op event that affects the block, and a `node` event changes no `gen`. | FR | REQ-462, REQ-465 |
 | REQ-207 | A position with no built parent shows its raw records in the view. | FR | REQ-217 |
-| REQ-073 | A `node` event carries `level`, `start`, `child_a`, `child_b`, `input_rev`, `summary`, `chars`, `truncated`, `ts_from`, and `ts_to`. | FR | [tree.d.ts](tree.d.ts) |
-| REQ-123 | A node of level `L` covers `2^L` consecutive `pos` values, for a level of 1 or more. | FR | [tree.d.ts](tree.d.ts) |
-| REQ-129 | A node is `built` when the event of each child sits at its half of the range. | FR | [tree.d.ts](tree.d.ts) |
-| REQ-462 | The `rev` of a range is the order of the latest event that touches the range. | FR | [tree.d.ts](tree.d.ts) |
-| REQ-465 | An event touches a range when the position of the event or the position of its target is in the range. | FR | [tree.d.ts](tree.d.ts) |
-| REQ-470 | The field `input_rev` holds the revision of the two children at the build. | FR | [tree.d.ts](tree.d.ts) |
-| REQ-478 | A node is `clean` when the revision of its two children equals `input_rev`. | FR | [tree.d.ts](tree.d.ts) |
-| REQ-481 | A `node` event touches its own range. | FR | [tree.d.ts](tree.d.ts) |
 | REQ-206 | At a session start a part above 1.5 times its budget because of nodes that are not built starts a build. | FR | REQ-204 |
 | REQ-215 | The deadline of the build at a session start is 10 seconds. | FR | REQ-204 |
 | REQ-201 | A worker holds a job under a lease of 120 seconds. | FR | REQ-200, REQ-210 |
@@ -230,7 +187,6 @@ The last column names the live contract. The original status is historical and g
 | REQ-058 | A note can supersede an earlier note.                                                                                                                                                 | FR   | accepted  | The newer note replaces the older note in the view.                                                                            | [notes.ts: linkSupersedes](../../packages/core/src/store/notes.ts) |
 | REQ-075 | A position is the ordinal of a real record entry into a scope in canonical event order, with no event pos field. | FR   | accepted | Creation and scope transfer allocate positions. A proposal allocates none. Leaving a scope keeps the earlier slot empty. | [slots.ts: rankFor](../../packages/core/src/store/slots.ts) |
 | REQ-076 | A `pos` is local to one scope, so one record can get another `pos` in another store.                                                                                                  | FR   | accepted  | An import of one record into two stores gives two `pos` values.                                                                | [slots.ts: moduleContract](../../packages/core/src/store/slots.ts) |
-| REQ-078 | A sanitized content event preserves its operation and metadata while clearing applicable content fields according to [events.d.ts](events.d.ts). | FR   | accepted | Check note, amend, and node forms. A scope-only amendment keeps absent content fields absent. | [0020 Storage pivot](../adr/0020-storage-pivot.md) |
 | REQ-084 | An amendment within one scope preserves the address, while a scope transfer gives a new destination address. | FR   | accepted  | A body edit keeps the address. A transfer empties the old slot and appends a new destination slot. | [notes.ts: amend](../../packages/core/src/store/notes.ts) |
 | REQ-086 | The projection makes two passes: one for the records and one for the operations.                                                                                                      | FR   | accepted  | The store makes each record before it applies the first operation.                                                             | [0020 Storage pivot](../adr/0020-storage-pivot.md) |
 | REQ-087 | The projection orders the events by `(at, id)`.                                                                                                                                       | FR   | accepted  | Two events with one `at` value follow their `id` order.                                                                        | [0020 Storage pivot](../adr/0020-storage-pivot.md) |
@@ -268,7 +224,7 @@ The last column names the live contract. The original status is historical and g
 | REQ-163 | A merge needs two neighbors of one level.                                                                                                                                             | FR   | accepted | Two ranges of different levels give no merge.                                                                                  | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
 | REQ-164 | A merge needs a `start` that is a multiple of `2^(level+1)`.                                                                                                                          | FR   | accepted  | A level-2 pair at start 4 gives no merge.                                                                                      | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
 | REQ-165 | A pair merges though the node of its range is not `built`.                                                                                                                            | FR   | accepted | A pair without a node gives two lines, and a temporary line takes their place.                                                 | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
-| REQ-166 | At equal jump penalty, the fold compares highest due, lowest level, then lowest start. | FR   | accepted  | Pairs with one penalty follow the same order as the demo. | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
+| REQ-166 | At equal jump penalty, the fold compares highest due, lowest level, then lowest start. | FR   | accepted  | Pairs with one penalty follow the same order. | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
 | REQ-167 | The fold merges only while the rendered line count exceeds the budget and stops as soon as it fits. | FR   | accepted  | A budget of ten leaves a ten-line view unchanged and reduces eleven lines only until ten remain. | [tree.ts: frontier](../../packages/core/src/domain/tree.ts) |
 | REQ-168 | A fold preserves the text of lines outside its selected pairs. | FR   | accepted | Only selected ranges change during the fold. The other line texts stay the same. | [tree.ts: slice](../../packages/core/src/domain/tree.ts) |
 | REQ-171 | The fold makes no model call. | FR   | accepted  | Fold ranges with no ready summaries. The model receives no call, and temporary lines fill the selected ranges. | [tree.ts: moduleContract](../../packages/core/src/domain/tree.ts) |
@@ -289,7 +245,7 @@ The last column names the live contract. The original status is historical and g
 | REQ-460 | The root range starts at 0 with level `max(1, ceil(log2(total)))` for positive `total`, and does not exist for zero. | FR | accepted | One assigned position gives level 1. A sole live note at position 1023 gives level 10, even after 1023 hides. | [tree.ts: topRangeOf](../../packages/core/src/domain/tree.ts) |
 | REQ-463 | The projection assigns catalog positions by the first real appearance of each profile scope in canonical event order, and keeps empty positions. | FR | accepted | Merge independent scopes that both held position 2. Both import orders derive positions 2 and 3. The common prefix and empty scope positions survive. | [0020 Storage pivot](../adr/0020-storage-pivot.md) |
 | REQ-472 | A proposed event changes no record and takes no `pos`. The projection ignores it. | FR | accepted | A proposal adds no record and no position. | [proposals.ts: propose](../../packages/core/src/store/proposals.ts) |
-| REQ-479 | The fold minimizes the demo jump penalty before comparing due, level, and start. | FR   | accepted | Use the demo pair order even when no pair can keep every neighbor level within one step. | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
+| REQ-479 | The fold minimizes the jump penalty before comparing due, level, and start. | FR   | accepted | Use that pair order even when no pair can keep every neighbor level within one step. | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
 | REQ-480 | When no pair merges and the slice is above its budget, the oldest lines leave the slice.                                                                                              | FR   | accepted | A small budget gives a slice that starts after the first positions.                                                            | [tree.ts: frontier](../../packages/core/src/domain/tree.ts) |
 | REQ-483 | A non-empty slice keeps its greatest non-empty leaf unfolded. | FR | accepted | A scope ends with its last live note. A catalog ends with its last non-empty scope leaf. Hidden tail positions do not render. | [tree.ts: selectMerge](../../packages/core/src/domain/tree.ts) |
 | REQ-485 | The projection holds the records, the current node of each range, and the count of each scope.                                                                                        | FR   | accepted | A store with three scopes holds the records, the nodes, and the three counts.                                                  | [0020 Storage pivot](../adr/0020-storage-pivot.md) |

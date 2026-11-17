@@ -22,8 +22,7 @@
 		"build": "tsc -p tsconfig.json",
 		"prepare": "pnpm run build",
 		"test": "vitest run",
-		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"typecheck:docs": "tsc -p tsconfig.docs.json"
+		"typecheck": "tsc -p tsconfig.json --noEmit"
 	},
 	"devDependencies": {
 		"@types/node": "^22.20.1",

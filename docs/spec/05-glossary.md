@@ -125,7 +125,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | build input          | The exact child values that a build copies before its model call. The store compares them again before the publish.                                                          |
 | total                | One plus the greatest assigned position, or zero when no position exists. Records in the `hidden` and `deleted` states keep their positions.                                 |
 | root range           | The aligned range that starts at zero and covers every assigned position. Empty padding completes its power-of-two width.                                                    |
-| jump                 | The sum of max(0, parent_level - 1 - neighbor_level) over the outer neighbors of a fold pair. The demo defines it.                                                           |
+| jump                 | The sum of max(0, parent_level - 1 - neighbor_level) over the outer neighbors of a fold pair.                                                           |
 | console              | The screen set that a human uses to read and maintain the memory. The command `memlens ui` hosts it, and the plugin page hosts it in the side panel.                                          |
 | side panel           | The left area of the harness window. The plugin console opens there under one menu entry.                                                                                    |
 | theme                | The page colors of the console: light, dark, or the setting of the system. The choice survives a reload.                                                                     |

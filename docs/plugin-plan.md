@@ -17,7 +17,6 @@ The package `@memlens/dsh-plugin` does all of this today:
   scope, the profile name, and the available scopes.
 - `memlens ui` and the plugin share one component layer in `packages/ui`. A component holds no
   style, no transport, and no address. Each shell supplies its own.
-- The picture [demo/plugin-tab.png](demo/plugin-tab.png) shows the tab in an isolated profile.
 
 The two surfaces read and write through the harness Remote service. A session input resolves the
 profile and the scope of that session, and a profile input resolves one profile of the base file.

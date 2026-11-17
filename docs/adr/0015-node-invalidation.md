@@ -19,7 +19,7 @@ The log is the only truth. A flag in the projection alone cannot preserve invali
 ## Decision
 
 An explicit `invalidate` event names the node ids whose summaries must stay unusable.
-The event has no model call. Its shape is in [events.d.ts](../spec/events.d.ts).
+The event has no model call. Its shape was in `events.d.ts`.
 
 ### Projection
 

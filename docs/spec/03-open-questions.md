@@ -167,7 +167,7 @@ See [0015 Node invalidation](./adr/0015-node-invalidation.md).
 | Q-091 | Does `budget.slice` return as a total budget? | No change. The budget is `here` and `directions`. The name `slice` is an example, not a config key. | 2026-11-05 |
 | Q-092 | What does the last line of `<directions>` hold, and when is a scope archived? | No archived state. The line is an example. | 2026-11-05 |
 | Q-010 | What is the form of the map of directions, and what is its size limit? | The `<memory>` block with the policy text, `<directions>`, and `<here>`. The budgets `here` and `directions` give the limits. | 2026-11-05 |
-| Q-013 | What input and what output does `memory_review` have? | The input holds `scope`, `reviewed`, and `reviewIn`. The answer gives the due records, then the count and the next date. See REQ-340 to REQ-344. | 2026-11-05 |
+| Q-013 | What input and what output does `memory_review` have? | The input holds `scope`, `reviewed`, and `reviewIn`. The answer gives the due records, then the count and the next date. | 2026-11-05 |
 | Q-017 | Who sets `review_at`, and what is the review queue? | The write sets `review_at` from `reviewIn`, and the `review` event sets it too. The queue is the due answer of `memory_review`. | 2026-11-05 |
 | Q-022 | What is the form of the line about a subagent write in the parent report? | One line for each proposal: the tag `[memory proposals from <session id>]`, the `addr`, and the `body`. See REQ-359. | 2026-11-05 |
 | Q-023 | Is `longform` available by address, in the slice, or in both? | The tool `memory_open` gives the `longform` with `head` or `all`. The slice holds no `longform`. | 2026-11-05 |

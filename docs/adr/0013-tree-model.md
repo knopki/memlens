@@ -24,13 +24,13 @@ An import can change the input without a change of the maximum order. The revisi
 
 The slice is the frontier. The fold merges the minimum number of pairs. It runs only while the
 rendered line count exceeds the budget, and it stops at once when the count fits. It merges one pair
-at a time. The choice minimizes the demo jump penalty, then compares due, level, and start.
+at a time. The choice minimizes the jump penalty, then compares due, level, and start.
 A pair merges though its node is missing or dirty, and a temporary line takes the place of the two
 lines. The render calls no model. Empty ranges do not render or count against the budget.
 
 A temporary line holds the period from its first live record to its last live record, and no text.
 A non-empty slice ends with the greatest live position as a record. No merge covers that position. When no pair merges and the slice is above its budget, the
-oldest lines leave the slice. See [tree.d.ts](../spec/tree.d.ts).
+oldest lines leave the slice. See the tree types in `packages/core/src/types/tree.ts`.
 
 ## Alternatives
 

@@ -16,7 +16,7 @@ A `redact` is final. A sanitized event keeps its operation, id, time, scope, and
 A note has `body: ""` and `longform: null`. An amendment clears present content fields and keeps absent content fields absent.
 A node has `summary: ""` and `chars: 0`. Sanitization adds `redacted: true`.
 The event keeps targets, child ids, source fields, dates, and proposal fields.
-[events.d.ts](../spec/events.d.ts) defines these three forms. Other operations keep their existing shape.
+`events.d.ts` defines these three forms. Other operations keep their existing shape.
 
 ### Historical content
 

@@ -91,7 +91,6 @@ the base file, the profile patch, and the preset. The table below gives the sour
 | Patch  | the row `memlens` of `cordis.patch.yml`    |
 | Preset | the agent preset                           |
 
-[config.d.ts](config.d.ts) gives the type of each layer, and the type holds the keys of that layer.
 The [config contract](../../packages/core/src/domain/config.ts) owns the strict load, the XDG
 directories, the store path order, and the cache TTL lookup.
 The [active scope contract](../../packages/core/src/domain/active-scope.ts) owns the ordered rules
@@ -123,7 +122,7 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Node             | Target 512 characters, limit 640 characters, a cut with a flag            | The p90 miss is 610 characters.                                  |
 | Input of a merge | Two children. At level 1, a leaf gives its body and its complete `longform` | The input holds no context, so a delete stays derivable.         |
 | Budget           | The profile gives `here` and `directions` in lines                        | The user sets the size of the context.                           |
-| Fold             | Stop at the first line-budget fit. The demo orders pairs by jump, due, level, and start. | The order gives one answer. |
+| Fold             | Stop at the first line-budget fit. The pairs take the order of jump, due, level, and start. | The order gives one answer. |
 | Compaction       | `batch` 10, a whole number above zero with no upper limit, no default model or effort, 120 calls in an hour | The user chooses the model route and optional effort. |
 | Nudge            | `tool_calls` and `turns` 10                                               | The counters run at the same time.                               |
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
@@ -185,7 +184,7 @@ The tree of the active scope gives the `<here>` part. The derived scope list giv
 
 A part above its budget merges one pair at a time, and it stops as soon as the count of lines fits the
 budget. The line of the parent takes the place of the two lines of the pair. Among the pairs, a merge
-minimizes the demo jump penalty before comparing due, level, and start. No pair that covers the greatest live position merges.
+minimizes the jump penalty before comparing due, level, and start. No pair that covers the greatest live position merges.
 A scope slice therefore ends with its last live record, even when later assigned slots are empty.
 
 
@@ -264,7 +263,6 @@ messages stay unchanged.
 ## Fold
 
 The [fold and slice contracts](../../packages/core/src/domain/tree.ts) own pair selection, line budgets, temporary lines, and last-leaf preservation.
-The demo supplies the comparison cases for the existing tree tests.
 The context epoch is the hash of the store clock value.
 See [0013 The tree model](../adr/0013-tree-model.md) for the design rationale.
 
