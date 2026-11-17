@@ -231,8 +231,6 @@ the patch file of your profile. A row with the id `memlens` overrides the row of
         defaultProfile: work
         budget:
           here: 40
-        cacheTtl:
-          "deepseek/*": "2h"
         customPromptAppend: "Answer with the memory of the team."
 ```
 
@@ -248,15 +246,8 @@ session.
 | `budget.directions`   | number  | The line limit of the directions list.                    |
 | `compaction.<key>`    | see above | One key of the compaction section.                       |
 | `nudge.<key>`         | see above | One key of the nudge section. The `text` table replaces its value as a whole. |
-| `cacheTtl`            | table   | The life time of the memory context per model. See below. |
 | `customPrompt`        | string  | Replaces the policy text of the slice.                    |
 | `customPromptAppend`  | string  | Appends text to the policy of the slice.                  |
-
-### The cacheTtl table
-
-Each key of `cacheTtl` is a glob over the model name, for example `deepseek/deepseek-chat`. The
-most specific glob wins. The built-in values are `"deepseek/*": "2h"`, `"anthropic/*": "5m"`, and
-`"*": "1h"`.
 
 ## The preset layer
 
@@ -282,7 +273,7 @@ over the patch.
 | `customPrompt`       | string  | Replaces the policy text of the slice.                |
 | `customPromptAppend` | string  | Appends text to the policy of the slice.              |
 
-The preset holds no compaction key, no store key, and no cacheTtl key.
+The preset holds no compaction key and no store key.
 
 ## How the values resolve
 

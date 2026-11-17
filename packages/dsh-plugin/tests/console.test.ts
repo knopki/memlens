@@ -30,7 +30,6 @@ import {
 	propose,
 	type StoreConfig,
 	toIso,
-	ttlSeconds,
 } from "@memlens/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerConsoleRemote } from "../src/console/remote.js";
@@ -74,8 +73,6 @@ function snapshotOf(answer: {
 				readonly saved: boolean;
 				readonly chars: number;
 				readonly materializedAt: string | null;
-				readonly nextTrigger: string;
-				readonly nextRefreshAt: string | null;
 		  }
 		| undefined;
 }): NonNullable<typeof answer.snapshot> {
@@ -973,12 +970,6 @@ describe("console status", () => {
 		expect(answer.scope).toBe("user:notes");
 		expect(snapshotOf(answer).saved).toBe(false);
 		expect(snapshotOf(answer).materializedAt).toBe(toIso(1_000));
-		expect(snapshotOf(answer).nextTrigger).toBe("idle");
-		const ttl = ttlSeconds(
-			testCase.memlens.forAgent(testCase.agent).config.cacheTtl,
-			"test/large",
-		);
-		expect(snapshotOf(answer).nextRefreshAt).toBe(toIso(1_000 + ttl * 1000));
 		expect(answer.compaction).toMatchObject({
 			attempts: 0,
 			active: 0,
@@ -1013,7 +1004,6 @@ describe("console status", () => {
 		expect(snapshotOf(answer).saved).toBe(true);
 		expect(snapshotOf(answer).chars).toBe("memory slice".length);
 		expect(snapshotOf(answer).materializedAt).toBe(null);
-		expect(snapshotOf(answer).nextRefreshAt).toBe(null);
 	});
 
 	it("states the local compaction counts of the worker", async () => {

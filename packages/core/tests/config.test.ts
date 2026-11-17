@@ -11,13 +11,10 @@ import {
 	loadBaseConfig,
 	loadPatchConfig,
 	loadPresetConfig,
-	parseDuration,
 	resolveConfig,
 	storePath,
-	ttlSeconds,
 	xdgDirs,
 } from "../src/domain/config.js";
-import { DEFAULT_CACHE_TTL } from "../src/domain/config-types.js";
 
 const BASE_TOML = `
 defaultProfile = "default"
@@ -269,7 +266,6 @@ describe("resolveConfig", () => {
 		expect(resolved.defaultProfile).toBe("default");
 		expect(resolved.profile.subagents).toBe("read");
 		expect(resolved.budget).toEqual({ here: 40, directions: 8 });
-		expect(resolved.cacheTtl).toEqual(DEFAULT_CACHE_TTL);
 		expect(resolved.customPrompt).toBeNull();
 	});
 
@@ -312,16 +308,6 @@ describe("resolveConfig", () => {
 		expect(resolved.customPrompt).toBe("preset");
 	});
 
-	it("merges the cache TTL map", () => {
-		const resolved = resolveConfig(
-			base(),
-			{ cacheTtl: { "deepseek/*": "5m" } },
-			null,
-		);
-		expect(resolved.cacheTtl["deepseek/*"]).toBe("5m");
-		expect(resolved.cacheTtl["anthropic/*"]).toBe("5m");
-	});
-
 	it("resolves an unknown profile name to the default profile values", () => {
 		const resolved = resolveConfig(
 			base(),
@@ -350,19 +336,6 @@ describe("storePath", () => {
 	});
 });
 
-describe("parseDuration", () => {
-	it("parses each unit", () => {
-		expect(parseDuration("120s")).toBe(120);
-		expect(parseDuration("5m")).toBe(300);
-		expect(parseDuration("2h")).toBe(7200);
-	});
-
-	it("rejects a value without a unit", () => {
-		expect(() => parseDuration("2")).toThrow();
-		expect(() => parseDuration("2x")).toThrow();
-	});
-});
-
 describe("globMatches", () => {
 	it("matches a star over any text", () => {
 		expect(globMatches("project:dsh/*", "project:dsh/optmem")).toBe(true);
@@ -374,23 +347,6 @@ describe("globMatches", () => {
 	it("matches an exact value", () => {
 		expect(globMatches("deepseek/chat", "deepseek/chat")).toBe(true);
 		expect(globMatches("deepseek/chat", "deepseek/v3")).toBe(false);
-	});
-});
-
-describe("ttlSeconds", () => {
-	it("takes the family glob before the star", () => {
-		expect(ttlSeconds(DEFAULT_CACHE_TTL, "deepseek/deepseek-chat")).toBe(7200);
-		expect(ttlSeconds(DEFAULT_CACHE_TTL, "anthropic/claude")).toBe(300);
-		expect(ttlSeconds(DEFAULT_CACHE_TTL, "openai/gpt")).toBe(3600);
-	});
-
-	it("takes the most specific glob", () => {
-		const map = {
-			...DEFAULT_CACHE_TTL,
-			"deepseek/chat": "30m",
-		} satisfies Record<string, string>;
-		expect(ttlSeconds(map, "deepseek/chat")).toBe(1800);
-		expect(ttlSeconds(map, "deepseek/v3")).toBe(7200);
 	});
 });
 

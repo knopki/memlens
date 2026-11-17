@@ -1,6 +1,6 @@
 # 0007. Slice and context
 
-Status: accepted
+Status: accepted. [0025 Context refresh](0025-context-refresh.md) replaces the refresh triggers.
 
 ## Context
 

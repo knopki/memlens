@@ -118,7 +118,6 @@ export const zh: Table = {
 	// The host runtime state.
 	runtime: "宿主运行时",
 	materializedAt: "快照构建时间",
-	nextTrigger: "下次刷新",
 	snapshotSaved: "快照已保存",
 	savedState: "已保存",
 	unsavedState: "未保存",

@@ -150,8 +150,6 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 	if (runtime.session !== undefined) rows.push([t("session"), runtime.session]);
 	if (runtime.materializedAt !== undefined)
 		rows.push([t("materializedAt"), localTime(runtime.materializedAt)]);
-	if (runtime.nextTrigger !== undefined)
-		rows.push([t("nextTrigger"), localTime(runtime.nextTrigger)]);
 	if (runtime.snapshotSaved !== undefined)
 		rows.push([
 			t("snapshotSaved"),

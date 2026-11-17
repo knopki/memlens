@@ -156,7 +156,6 @@ const en = {
 	// The host runtime state.
 	runtime: "Host runtime",
 	materializedAt: "Snapshot build time",
-	nextTrigger: "Next refresh",
 	snapshotSaved: "Snapshot saved",
 	savedState: "saved",
 	unsavedState: "not saved",

@@ -195,7 +195,6 @@ export type ActionFields = Readonly<Record<string, unknown>>;
 export interface ConsoleRuntime {
 	readonly session?: string;
 	readonly materializedAt?: string;
-	readonly nextTrigger?: string;
 	readonly snapshotSaved?: boolean;
 	readonly compaction?: {
 		readonly attempts: number;

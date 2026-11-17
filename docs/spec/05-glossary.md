@@ -84,7 +84,6 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | due                  | The priority of a pair: `(total - (start + 2^(level+1) - 1)) / 2^level`. The fold and the rebuild use it.                                                                    |
 | due filter           | The filter of `memory_find` that gives the records with a review time of now or earlier. It is no priority.                                                                  |
 | epoch                | The clock value of the store. A long-lived reader refetches when it changes.                                                                                                 |
-| cacheTtl             | The idle time after which a new snapshot replaces the text. The map gives a duration for a model glob.                                                                       |
 | reason               | The cause of a `hide`, `redact`, `dismiss`, or `forget` event.                                                                                                               |
 | `job`                | One computed dirty range that a compaction attempts. It has no persistent queue row or lease.                                                                                |
 | `backoff`            | The local retry wait after a failed attempt: ten, sixty, then three hundred seconds. A restart clears it.                                                                    |

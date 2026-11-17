@@ -413,8 +413,6 @@ const results = {
 				saved: z.boolean(),
 				chars: z.number(),
 				materializedAt: z.string().nullable(),
-				nextTrigger: z.literal("idle"),
-				nextRefreshAt: z.string().nullable(),
 			})
 			.optional(),
 		compaction: z.strictObject({

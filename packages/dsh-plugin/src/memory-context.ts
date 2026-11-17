@@ -4,17 +4,16 @@
  * @purpose Give each agent its memory slice as required runtime context, and hold one text
  * until an accepted trigger asks for a new render.
  * @scope
- *  - The context registration, the restore from the session history, the refresh triggers,
- *    and the idle timer.
+ *  - The context registration, the restore from the session history, and the refresh trigger.
  *  - NOT: the render of the slice, the snapshot publication, the tools, and the nudge.
  * @invariants
  *  - The provider answers the current text. The provider reads no row.
  *  - A render reads rows only, calls no model, and waits for no summary build.
- *  - The text changes at a fresh session, a successful compaction, and an idle time above the TTL.
+ *  - The text changes at a fresh session and at a successful compaction.
  *  - An `off` subagent gets no registration.
- *  - The registration and the timer end with the agent context.
+ *  - The registration ends with the agent context.
  * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-system-prompt, @memlens/core.
- * @keywords context, snapshot, runtime-context, restore, compaction, idle, ttl, subagent
+ * @keywords context, snapshot, runtime-context, restore, compaction, subagent
  * #endregion moduleContract
  */
 
@@ -32,7 +31,6 @@ import {
 	type ScopeKey,
 	textOfLine,
 	topLineOf,
-	ttlSeconds,
 	visibleScopes,
 } from "@memlens/core";
 import type { AgentMemory } from "./service.js";
@@ -45,18 +43,15 @@ const CONTEXT_NAME = "memlens";
 /** The context order. It comes after the last built-in runtime context. */
 const CONTEXT_ORDER = 220;
 
-/** The greatest delay one timer accepts, in milliseconds. */
-const MAX_TIMER_MS = 2 ** 31 - 1;
-
 // #region FUNC_registerMemoryContext
 /**
  * @purpose Give one agent its memory slice as required runtime context, and refresh the text
- * at the accepted triggers.
+ * at the accepted trigger.
  * @invariants The registration takes no snapshot table and writes no row.
  * @invariants A refresh with the same text keeps the old text.
  * @param agent - The live agent that owns the context scope.
  * @param memory - The store, the resolved configuration, and the active scope of the agent.
- * @returns The function that removes the context and its listeners.
+ * @returns The function that removes the context and its listener.
  */
 export function registerMemoryContext(
 	agent: Agent,
@@ -71,13 +66,9 @@ export function registerMemoryContext(
 	}
 	return agent.ctx.effect(() => {
 		let text = snapshotText(agent.session) ?? renderSlice(memory);
-		let live = true;
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		let lastActivity = Date.now();
 
 		/** @purpose Install a new text, or keep the old text when the render gives the same text. */
 		const refresh = (trigger: string): void => {
-			if (!live) return;
 			const next = renderSlice(memory);
 			const changed = next !== text;
 			if (changed) text = next;
@@ -88,18 +79,6 @@ export function registerMemoryContext(
 				chars: text.length,
 			});
 		};
-		const arm = (): ReturnType<typeof setTimeout> =>
-			setTimeout(
-				() => {
-					refresh("idle");
-					lastActivity = Date.now();
-					timer = arm();
-				},
-				Math.max(
-					0,
-					lastActivity + idleDelay(agent, memory.config.cacheTtl) - Date.now(),
-				),
-			);
 		const removeContext = agent.ctx.systemPrompt.context({
 			name: CONTEXT_NAME,
 			order: CONTEXT_ORDER,
@@ -107,20 +86,9 @@ export function registerMemoryContext(
 			interpolate: false,
 			text: () => text,
 		});
-		timer = arm();
-		const unsubscribe = agent.ctx.get("memlens")?.onConfigChange(() => {
-			clearTimeout(timer);
-			timer = arm();
-		});
 		const removeListener = agent.ctx.on("session/event", (session, event) => {
 			if (session !== agent.session) return;
-			if (compactionSucceeded(event)) {
-				refresh("compaction");
-				return;
-			}
-			lastActivity = Date.now();
-			clearTimeout(timer);
-			timer = arm();
+			if (compactionSucceeded(event)) refresh("compaction");
 		});
 		debug("Context registered", {
 			event: "register",
@@ -129,11 +97,8 @@ export function registerMemoryContext(
 			chars: text.length,
 		});
 		return () => {
-			live = false;
-			unsubscribe?.();
 			removeContext();
 			removeListener();
-			clearTimeout(timer);
 		};
 	}, "memlens.context");
 }
@@ -248,14 +213,3 @@ function compactionSucceeded(event: {
 	);
 }
 // #endregion FUNC_compactionSucceeded
-
-/** @purpose Give the idle delay of one agent: the cache TTL of its model route, clamped for a timer. */
-function idleDelay(
-	agent: Agent,
-	cacheTtl: AgentMemory["config"]["cacheTtl"],
-): number {
-	const selection = agent.model.current();
-	const route =
-		selection === undefined ? "" : `${selection.provider}/${selection.model}`;
-	return Math.min(ttlSeconds(cacheTtl, route) * 1000, MAX_TIMER_MS);
-}

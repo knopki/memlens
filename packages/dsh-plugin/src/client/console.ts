@@ -73,7 +73,6 @@ let current: Mount = { settled: Promise.resolve(), settle: () => {} };
 interface MutableRuntime {
 	session?: string;
 	materializedAt?: string;
-	nextTrigger?: string;
 	snapshotSaved?: boolean;
 	compaction?: {
 		attempts: number;
@@ -281,8 +280,6 @@ async function statusOf(
 	if (snapshot !== undefined) {
 		if (snapshot.materializedAt)
 			runtime.materializedAt = snapshot.materializedAt;
-		const next = snapshot.nextRefreshAt ?? snapshot.nextTrigger;
-		if (next) runtime.nextTrigger = next;
 		runtime.snapshotSaved = snapshot.saved;
 	}
 	runtime.compaction = {

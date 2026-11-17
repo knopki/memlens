@@ -121,7 +121,6 @@ export const ru: Table = {
 	// The host runtime state.
 	runtime: "Среда хоста",
 	materializedAt: "Время сборки снимка",
-	nextTrigger: "Следующее обновление",
 	snapshotSaved: "Снимок сохранён",
 	savedState: "сохранён",
 	unsavedState: "не сохранён",

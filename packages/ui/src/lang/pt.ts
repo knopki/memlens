@@ -123,7 +123,6 @@ export const pt: Table = {
 	// The host runtime state.
 	runtime: "Runtime do host",
 	materializedAt: "Hora de construção do resumo",
-	nextTrigger: "Próxima atualização",
 	snapshotSaved: "Resumo guardado",
 	savedState: "guardado",
 	unsavedState: "não guardado",

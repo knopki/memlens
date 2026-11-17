@@ -121,7 +121,6 @@ export const ja: Table = {
 	// The host runtime state.
 	runtime: "ホスト実行時",
 	materializedAt: "スナップショット作成時刻",
-	nextTrigger: "次回更新",
 	snapshotSaved: "スナップショット保存済み",
 	savedState: "保存済み",
 	unsavedState: "未保存",

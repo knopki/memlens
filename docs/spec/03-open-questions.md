@@ -90,6 +90,24 @@ The customer selected option A: an explicit `invalidate` event with node ids as 
 Option B was a marker inside a `node` event. The log has eight ops.
 See [0015 Node invalidation](./adr/0015-node-invalidation.md).
 
+### Q-526
+
+What does the idle interval of the context refresh control?
+
+The customer showed the harness behavior on 2026-11-17: a changed runtime context enters the
+session as a new user message at the end. The session prefix stays unchanged, so the prompt cache
+stays intact. The premise of [0007 Slice and context](./adr/0007-slice-context.md), a stable text
+protects the prompt cache, is wrong. A changed snapshot costs one more slice copy in the history,
+nothing else. This fact disputes [REQ-300](02-requirements.md).
+
+- Option A: Keep the idle trigger. The interval limits how often a new snapshot copy enters the
+  history. Fresh notes reach the agent with no compaction. The key `cacheTtl` takes a new name and
+  one default.
+- Option B: Remove the idle trigger and the key `cacheTtl`. The text changes at a session start
+  and at a successful compaction only. Fresh notes wait for the compaction.
+
+The customer selected option B on 2026-11-17. See [0025 Context refresh](./adr/0025-context-refresh.md).
+
 | ID | Question | Answer | Date |
 | ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | Q-001 | Which stack and language does the project use? | TypeScript on Node.js with pnpm workspaces. See [0010 Process and stack](./adr/0010-process-stack.md). | 2026-11-04 |
@@ -124,7 +142,7 @@ See [0015 Node invalidation](./adr/0015-node-invalidation.md).
 | Q-056 | What gives one text at each assembly between the triggers? | The last snapshot of the session history. The plugin gives that text again. | 2026-11-04 |
 | Q-057 | Does a `redact` reach the copy of the slice in the session history? | No, and that stays. The model saw the text, and the log belongs to the harness. | 2026-11-04 |
 | Q-011 | Which fields does a snapshot hold? | The store keeps no snapshot. The runtime context carries the text only. See Q-055. | 2026-11-04 |
-| Q-018 | Where does the model cache TTL come from? | `cacheTtl`: 2 hours for `deepseek/*`, 5 minutes for `anthropic/*`, 1 hour for another model. | 2026-11-04 |
+| Q-018 | Where does the model cache TTL come from? | The answer of 2026-11-04 named the key `cacheTtl`. [0025 Context refresh](./adr/0025-context-refresh.md) removed the key: the prompt cache needs no protection. | 2026-11-04 |
 | Q-047 | What does the `here` budget cover, and is `slice` the sum? | `here` limits the tree of the active scope, and `directions` limits the catalog tree. See Q-112. | 2026-11-04 |
 | Q-048 | What does each subagent mode allow? | `propose` writes and reports, `read` reads only, `off` gives no tool and no slice. | 2026-11-04 |
 | Q-041 | What makes a pair of nodes overdue? | No measure. A node is dirty when a source changes, and the compaction works on dirty nodes. | 2026-11-04 |

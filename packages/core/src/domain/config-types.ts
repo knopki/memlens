@@ -5,9 +5,8 @@
  * @scope The layer types, the rule types, the resolved shape, and the default texts and periods.
  *  NOT: reading a layer and merging the layers.
  * @invariants The review period is a count of days for each note kind.
- * @invariants The cache TTL is a duration for each model glob.
  * @dependencies types/primitives.ts, types/tree.ts.
- * @keywords config, type, layer, rule, budget, cacheTtl, review, nudge, defaults
+ * @keywords config, type, layer, rule, budget, review, nudge, defaults
  * #endregion moduleContract
  */
 
@@ -19,9 +18,6 @@ export type Days = number;
 
 /** A path on the machine. A leading tilde is the home directory. */
 export type Path = string;
-
-/** A duration with a unit, for example `120s`, `5m`, or `2h`. */
-export type Duration = `${number}${"s" | "m" | "h"}`;
 
 /** A glob over the whole key. The part `*` matches any text. */
 export type Glob = string;
@@ -103,9 +99,6 @@ export interface CompactionConfig {
 /** The review period of each kind of a note, in days. */
 export type ReviewConfig = Record<NoteKind, Days>;
 
-/** The idle time of one model glob. The most specific glob wins. */
-export type CacheTtl = Record<Glob, Duration>;
-
 /** The base file, `$XDG_CONFIG_HOME/memlens/config.toml`. */
 export interface BaseConfig {
 	/** One value for the store. It selects the tokenizer of the index. */
@@ -126,7 +119,6 @@ export interface PatchConfig {
 	budget?: Partial<Budget>;
 	compaction?: Partial<CompactionConfig>;
 	nudge?: Partial<NudgeConfig>;
-	cacheTtl?: CacheTtl;
 	customPrompt?: string;
 	customPromptAppend?: string;
 }
@@ -147,7 +139,6 @@ export interface PresetConfig {
 export interface ResolvedConfig extends Omit<BaseConfig, "profile"> {
 	profile: ProfileConfig;
 	budget: Budget;
-	cacheTtl: CacheTtl;
 	customPrompt: string | null;
 	customPromptAppend: string | null;
 }
@@ -190,9 +181,6 @@ export const DEFAULT_SCOPE_DEFAULT: ScopeDefault = {
 	default: "project:misc",
 };
 
-/** The default cache TTL of any model. */
-export const DEFAULT_TTL: Duration = "1h";
-
 /** The fallback base file for a machine without a configuration file. */
 export const DEFAULT_CONFIG_TOML = `language = "en"
 defaultProfile = "default"
@@ -215,10 +203,3 @@ directions = 10
 rules = []
 default = "project:misc"
 `;
-
-/** The default cache TTL map. */
-export const DEFAULT_CACHE_TTL: CacheTtl = {
-	"deepseek/*": "2h",
-	"anthropic/*": "5m",
-	"*": DEFAULT_TTL,
-};

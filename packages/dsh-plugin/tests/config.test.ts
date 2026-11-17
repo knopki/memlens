@@ -40,7 +40,6 @@ const fullPatch = {
 		turns: 7,
 		text: { tool_calls: "A {n}", turns: "B {n}" },
 	},
-	cacheTtl: { "deepseek/*": "2h", "*": "30m" },
 	customPrompt: "text",
 	customPromptAppend: "append",
 };
@@ -95,7 +94,6 @@ describe("PatchConfigSchema", () => {
 		],
 		["the budget value", { budget: { here: "ten" } }],
 		["the store idle", { store: { idle: 0 } }],
-		["the cache TTL", { cacheTtl: { "*": "soon" } }],
 		["the profile", { defaultProfile: 4 }],
 	])("states no error after an invalid value of %s", (_label, value) => {
 		expect(() => readPatch(value)).not.toThrow();
@@ -109,7 +107,6 @@ describe("PatchConfigSchema", () => {
 			"budget",
 			"compaction",
 			"nudge",
-			"cacheTtl",
 			"customPrompt",
 			"customPromptAppend",
 		]) {

@@ -123,7 +123,6 @@ export const fr: Table = {
 	// The host runtime state.
 	runtime: "Exécution hôte",
 	materializedAt: "Heure de construction de l'instantané",
-	nextTrigger: "Prochaine actualisation",
 	snapshotSaved: "Instantané enregistré",
 	savedState: "enregistré",
 	unsavedState: "non enregistré",

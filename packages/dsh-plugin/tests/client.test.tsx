@@ -193,8 +193,6 @@ function answerOf(method: string): unknown {
 				saved: true,
 				chars: 12,
 				materializedAt: "2026-11-01T00:00:00Z",
-				nextTrigger: "2026-11-02T00:00:00Z",
-				nextRefreshAt: null,
 			},
 			compaction: {
 				attempts: 1,

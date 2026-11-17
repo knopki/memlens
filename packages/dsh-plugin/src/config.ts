@@ -105,7 +105,6 @@ export const PatchConfigSchema: z<PatchConfig> = z.intersect([
 		budget: budgetFields,
 		compaction: compactionFields,
 		nudge: nudgeFields,
-		cacheTtl: withoutEmptyDefault(z.dict(z.any())),
 		customPrompt: z.any(),
 		customPromptAppend: z.any(),
 	}),

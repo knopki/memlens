@@ -5,7 +5,7 @@
  * and one preset see the same resolved values.
  * @scope
  *  - The public load of the base, patch, and preset layers, the deep merge, the store path order,
- *    the XDG directories, the duration, the glob match, and the cache TTL lookup.
+ *    the XDG directories, and the glob match.
  *  - NOT: reading files or the environment, and the rules of the active scope.
  * @invariants
  *  - A later layer wins over an earlier layer: the base, then the patch, then the preset.
@@ -19,21 +19,18 @@
  * @rationale
  *  - Q: Why do the readers fill the defaults?
  *    A: Each layer leaves the reader complete, so the merge works on plain spreads.
- * @keywords config, toml, layer, patch, preset, merge, budget, cacheTtl, duration
+ * @keywords config, toml, layer, patch, preset, merge, budget
  * #endregion moduleContract
  */
 
 import { join } from "node:path";
 import { debuglog } from "node:util";
 import { parse as parseToml } from "smol-toml";
-import { MemlensError } from "../types/errors.js";
 import {
-	DURATION_RE,
 	expectKeys,
 	expectRecord,
 	expectString,
 	readBudget,
-	readCacheTtl,
 	readCompaction,
 	readNudge,
 	readPartialCompaction,
@@ -47,10 +44,7 @@ import {
 import {
 	type BaseConfig,
 	type Budget,
-	type CacheTtl,
 	DEFAULT_BUDGET,
-	DEFAULT_CACHE_TTL,
-	DEFAULT_TTL,
 	type Glob,
 	type PatchConfig,
 	type Path,
@@ -135,7 +129,6 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 			"budget",
 			"compaction",
 			"nudge",
-			"cacheTtl",
 			"customPrompt",
 			"customPromptAppend",
 		],
@@ -157,7 +150,6 @@ export function loadPatchConfig(value: unknown): PatchConfig {
 		);
 	if (row.nudge !== undefined)
 		patch.nudge = readPartialNudge(row.nudge, "patch.nudge");
-	if (row.cacheTtl !== undefined) patch.cacheTtl = readCacheTtl(row.cacheTtl);
 	if (row.customPrompt !== undefined)
 		patch.customPrompt = expectString(row.customPrompt, "patch.customPrompt");
 	if (row.customPromptAppend !== undefined) {
@@ -256,7 +248,6 @@ export function resolveConfig(
 		nudge: { ...base.nudge, ...(patch.nudge ?? {}), ...(preset?.nudge ?? {}) },
 		compaction: { ...base.compaction, ...(patch.compaction ?? {}) },
 		review: base.review,
-		cacheTtl: { ...DEFAULT_CACHE_TTL, ...(patch.cacheTtl ?? {}) },
 		customPrompt: preset?.customPrompt ?? patch.customPrompt ?? null,
 		customPromptAppend:
 			preset?.customPromptAppend ?? patch.customPromptAppend ?? null,
@@ -343,16 +334,6 @@ export function xdgDirs(env: Record<string, string | undefined>): {
 	};
 }
 
-/** Parse a duration into seconds. */
-export function parseDuration(value: string): number {
-	if (!DURATION_RE.test(value)) {
-		throw new MemlensError("Data", `duration ${value} is not <number><s|m|h>`);
-	}
-	const n = Number(value.slice(0, -1));
-	const unit = value.at(-1);
-	return n * (unit === "h" ? 3600 : unit === "m" ? 60 : 1);
-}
-
 // #region FUNC_globMatches
 /**
  * @purpose Match one glob, so scope lists, rules, and model globs share one rule.
@@ -365,44 +346,6 @@ export function globMatches(glob: Glob, value: string): boolean {
 	return re.test(value);
 }
 // #endregion FUNC_globMatches
-
-// #region FUNC_ttlSeconds
-/**
- * @purpose Give the cache TTL of one model in seconds, so the plugin knows when a new text is due.
- * @param cacheTtl - The glob to duration map.
- * @param model - The model name, for example `deepseek/deepseek-chat`.
- * @returns The seconds of the most specific matching glob. The built-in `*` entry matches any name.
- */
-export function ttlSeconds(cacheTtl: CacheTtl, model: string): number {
-	let best: { glob: string; literal: number } | null = null;
-	for (const glob of Object.keys(cacheTtl)) {
-		if (!globMatches(glob, model)) continue;
-		const literal = glob.length - countStars(glob);
-		if (
-			best === null ||
-			literal > best.literal ||
-			(literal === best.literal && glob.length < best.glob.length)
-		) {
-			best = { glob, literal };
-		}
-	}
-	const chosen = best?.glob ?? "*";
-	const raw = cacheTtl[chosen] ?? DEFAULT_TTL;
-	debug("Cache TTL picked", {
-		event: "ttl",
-		model,
-		seconds: parseDuration(raw),
-		glob: chosen,
-	});
-	return parseDuration(raw);
-}
-// #endregion FUNC_ttlSeconds
-
-function countStars(glob: string): number {
-	let n = 0;
-	for (const ch of glob) if (ch === "*") n++;
-	return n;
-}
 
 function escapeRegExp(text: string): string {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -17,8 +17,8 @@
 import { debuglog } from "node:util";
 import type { Context } from "@deepseek-ai/cordis";
 import type { Agent } from "@deepseek-ai/dsh-agent";
-import type { CacheTtl, ScopeKey } from "@memlens/core";
-import { toIso, ttlSeconds } from "@memlens/core";
+import type { ScopeKey } from "@memlens/core";
+import { toIso } from "@memlens/core";
 import type { MemoryWorker, WorkerStatus } from "../worker.js";
 import type { ConsoleRequest } from "./scope.js";
 
@@ -30,14 +30,8 @@ const SOURCE = "runtime-context";
 /** The context name of the Memlens snapshot section. */
 const SECTION = "memlens";
 
-/** The greatest delay one timer accepts, in milliseconds. */
-const MAX_TIMER_MS = 2 ** 31 - 1;
-
 /** The session facts that the tracker holds between requests. */
 interface SnapshotState {
-	/** Epoch milliseconds of the last session event. */
-	lastEventAt: number;
-
 	/** Epoch milliseconds of the last Memlens snapshot message, or zero. */
 	snapshotAt: number;
 }
@@ -62,12 +56,6 @@ export interface SnapshotAnswer {
 
 	/** The time of the last snapshot message, or null. */
 	readonly materializedAt: string | null;
-
-	/** The trigger that refreshes the snapshot next. */
-	readonly nextTrigger: "idle";
-
-	/** The time of the next idle refresh, or null. */
-	readonly nextRefreshAt: string | null;
 }
 
 /**
@@ -110,13 +98,10 @@ function snapshotChars(source: unknown): number | null {
 export function trackSnapshots(ctx: Context): () => void {
 	debug("Snapshot tracker start", { event: "track" });
 	return ctx.on("session/event", (session, event) => {
-		const state = states.get(session) ?? { lastEventAt: 0, snapshotAt: 0 };
-		state.lastEventAt = event.time;
-		if (event.type === "user/message") {
-			const source = (event.data as { readonly source?: unknown }).source;
-			if (snapshotChars(source) !== null) state.snapshotAt = event.time;
-		}
-		states.set(session, state);
+		if (event.type !== "user/message") return;
+		const source = (event.data as { readonly source?: unknown }).source;
+		if (snapshotChars(source) === null) return;
+		states.set(session, { snapshotAt: event.time });
 	});
 }
 // #endregion FUNC_trackSnapshots
@@ -136,21 +121,6 @@ function savedSnapshot(agent: Agent): { saved: boolean; chars: number } {
 	return { saved: false, chars: 0 };
 }
 // #endregion FUNC_savedSnapshot
-
-// #region FUNC_idleDelay
-/**
- * @purpose Give the idle delay of one agent: the cache TTL of its model route, clamped for a
- *   timer.
- * @param agent - The live agent of the request.
- * @param cacheTtl - The configured TTL of each model glob.
- */
-function idleDelay(agent: Agent, cacheTtl: CacheTtl): number {
-	const selection = agent.model.current();
-	const route =
-		selection === undefined ? "" : `${selection.provider}/${selection.model}`;
-	return Math.min(ttlSeconds(cacheTtl, route) * 1000, MAX_TIMER_MS);
-}
-// #endregion FUNC_idleDelay
 
 // #region FUNC_statusAnswer
 /**
@@ -176,7 +146,6 @@ export function statusAnswer(
 	}
 	const saved = savedSnapshot(agent);
 	const state = states.get(agent.session);
-	const idle = idleDelay(agent, memory.config.cacheTtl);
 	const answer: StatusAnswer = {
 		session: agent.id,
 		scope,
@@ -184,10 +153,6 @@ export function statusAnswer(
 			saved: saved.saved,
 			chars: saved.chars,
 			materializedAt: state?.snapshotAt ? toIso(state.snapshotAt) : null,
-			nextTrigger: "idle",
-			nextRefreshAt: state?.lastEventAt
-				? toIso(state.lastEventAt + idle)
-				: null,
 		},
 		compaction,
 	};

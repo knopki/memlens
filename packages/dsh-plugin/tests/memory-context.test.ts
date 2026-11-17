@@ -4,12 +4,12 @@
  * @purpose Prove the memory context holds one snapshot for each agent and refreshes it only at
  * the accepted triggers.
  * @scope The real Cordis context, the real system-prompt service, the real store, the restore from
- * the session history, the compaction trigger, the idle timer, and the subagent mode.
+ * the session history, the compaction trigger, and the subagent mode.
  * @invariants The fixtures write rows through the core write path.
  * @invariants The fake session supplies the derived history only. The harness owns the real log.
  * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @deepseek-ai/dsh-system-prompt,
  * @memlens/core, ../src/memory-context.ts, ../src/service.ts
- * @keywords test, context, snapshot, restore, compaction, idle, ttl, subagent
+ * @keywords test, context, snapshot, restore, compaction, subagent
  * #endregion moduleContract
  */
 
@@ -71,9 +71,6 @@ glob = "*/beta"
 key = "project:beta"
 `;
 
-/** The TTL of each test route, in seconds. The glob `*` matches the test route `test/route`. */
-const TTL_SECONDS = 1;
-
 const savedEnv = { ...process.env };
 
 let rootDir: string;
@@ -98,7 +95,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-	vi.useRealTimers();
 	process.env = { ...savedEnv };
 	rmSync(rootDir, { recursive: true, force: true });
 });
@@ -113,7 +109,7 @@ interface Harness {
 function newHarness(includeRuntimeContext = true): Harness {
 	const root = new Context();
 	new SystemPrompt(root, { includeRuntimeContext });
-	const host = new Memlens(root, { cacheTtl: { "*": `${TTL_SECONDS}s` } });
+	const host = new Memlens(root, {});
 	return { root, host };
 }
 
@@ -338,8 +334,7 @@ describe("memory context", () => {
 		await harness.root.fiber.dispose();
 	});
 
-	it("refreshes the text when the session is idle above the TTL", async () => {
-		vi.useFakeTimers();
+	it("keeps the text after a write with no compaction", async () => {
 		const harness = newHarness();
 		const mounted = mount(harness, { name: "idle" });
 		write(harness.host.store, "project:alpha", "alpha fact");
@@ -348,11 +343,6 @@ describe("memory context", () => {
 		write(harness.host.store, "project:alpha", "later fact");
 
 		expect(await sectionOf(harness, mounted.key)).toBe(before);
-		vi.advanceTimersByTime(TTL_SECONDS * 1000);
-
-		const after = await sectionOf(harness, mounted.key);
-		expect(after).not.toBe(before);
-		expect(after).toContain("later fact");
 		await harness.root.fiber.dispose();
 	});
 
@@ -407,8 +397,7 @@ describe("memory context", () => {
 		await harness.root.fiber.dispose();
 	});
 
-	it("stops the timer with the agent context", async () => {
-		vi.useFakeTimers();
+	it("removes the context with the agent context", async () => {
 		const harness = newHarness();
 		const mounted = mount(harness, { name: "dispose" });
 		register(harness, mounted);
@@ -416,7 +405,6 @@ describe("memory context", () => {
 
 		await mounted.agent.ctx.fiber.dispose();
 		handle.mockClear();
-		vi.advanceTimersByTime(TTL_SECONDS * 1000);
 
 		expect(handle).not.toHaveBeenCalled();
 		expect(await sectionOf(harness, mounted.key)).toBeUndefined();

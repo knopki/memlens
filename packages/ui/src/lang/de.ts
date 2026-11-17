@@ -123,7 +123,6 @@ export const de: Table = {
 	// The host runtime state.
 	runtime: "Host-Laufzeit",
 	materializedAt: "Bauzeit des Schnappschusses",
-	nextTrigger: "Nächste Aktualisierung",
 	snapshotSaved: "Schnappschuss gespeichert",
 	savedState: "gespeichert",
 	unsavedState: "nicht gespeichert",

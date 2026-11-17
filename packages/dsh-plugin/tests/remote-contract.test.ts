@@ -424,6 +424,6 @@ describe("console Remote result schemas", () => {
 			composition().request,
 			worker,
 		);
-		expect(sample.snapshot?.nextTrigger).toBe("idle");
+		expect(sample.scope).toBeTypeOf("string");
 	});
 });

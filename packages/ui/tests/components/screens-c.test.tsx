@@ -115,7 +115,6 @@ describe("maintenance screen", () => {
 					runtime: {
 						session: "sess-7",
 						materializedAt: "2026-11-14T10:00:00.000Z",
-						nextTrigger: "2026-11-14T11:00:00.000Z",
 						snapshotSaved: false,
 						compaction: {
 							attempts: 3,
@@ -153,7 +152,6 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("Host runtime");
 		expect(markup).toContain("sess-7");
 		expect(markup).toContain("Snapshot build time");
-		expect(markup).toContain("Next refresh");
 		expect(markup).toContain("Snapshot saved");
 		expect(markup).toContain("not saved");
 		expect(markup).toContain("Compaction attempts");

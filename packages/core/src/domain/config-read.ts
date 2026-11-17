@@ -17,13 +17,11 @@ import { MemlensError } from "../types/errors.js";
 import { NOTE_KINDS, type ScopeKey } from "../types/primitives.js";
 import {
 	type Budget,
-	type CacheTtl,
 	type CompactionConfig,
 	DEFAULT_BUDGET,
 	DEFAULT_COMPACTION,
 	DEFAULT_REVIEW_DAYS,
 	DEFAULT_SCOPE_DEFAULT,
-	type Duration,
 	type Glob,
 	NUDGE_TEXTS,
 	type NudgeConfig,
@@ -35,8 +33,6 @@ import {
 	type StoreConfig,
 } from "./config-types.js";
 import { validateScopeKey } from "./scope.js";
-
-export const DURATION_RE = /^\d+[smh]$/;
 
 export function expectRecord(
 	value: unknown,
@@ -342,19 +338,6 @@ export function readReview(value: unknown): ReviewConfig {
 		if (record[kind] !== undefined) {
 			result[kind] = expectCount(record[kind], `review.${kind}`);
 		}
-	}
-	return result;
-}
-
-export function readCacheTtl(value: unknown): CacheTtl {
-	const record = expectRecord(value, "cacheTtl");
-	const result: CacheTtl = {};
-	for (const [glob, duration] of Object.entries(record)) {
-		const text = expectString(duration, `cacheTtl.${glob}`);
-		if (!DURATION_RE.test(text)) {
-			throw new MemlensError("Data", `cacheTtl.${glob} is not a duration`);
-		}
-		result[glob] = text as Duration;
 	}
 	return result;
 }

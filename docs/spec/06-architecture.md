@@ -92,7 +92,7 @@ the base file, the profile patch, and the preset. The table below gives the sour
 | Preset | the agent preset                           |
 
 The [config contract](../../packages/core/src/domain/config.ts) owns the strict load, the XDG
-directories, the store path order, and the cache TTL lookup.
+directories, the store path order, and the glob match.
 The [active scope contract](../../packages/core/src/domain/active-scope.ts) owns the ordered rules
 and the visible scope list of a profile.
 A key outside the type is an error at load. A scope key outside the shape `segment:segment` is an
@@ -128,7 +128,6 @@ The `customPrompt` key replaces the whole template of the slice, and the placeho
 | Review           | 365 days for `decision`, `preference`, and `note`. 180 days for `fact`. 7 days for `task` | A finite default. A write can ask for `never`. |
 | GC of `proposed` | 30 days                                                                   | The proposals collect without it.                                |
 | `find`           | 10, and 50 for each scope                                                 | The limit gives about 50 records of 500 characters.                   |
-| `cacheTtl`       | `deepseek/*` 2 hours, `anthropic/*` 5 minutes, another model 1 hour        | An idle time above the TTL gives a new snapshot.                 |
 
 ## Store
 
@@ -332,11 +331,13 @@ The [nudge contract](../../packages/dsh-plugin/src/nudge.ts) owns the two counte
 The [worker contract](../../packages/dsh-plugin/src/worker.ts) owns the background compaction.
 See [0022 Plugin configuration](../adr/0022-plugin-configuration.md).
 
-The plugin registers the slice as `systemPrompt.context`. It does not use a system prompt section: a
-change of the section invalidates the whole cached prefix. See [0007 Slice and context](../adr/0007-slice-context.md).
+The plugin registers the slice as `systemPrompt.context`. It uses no system prompt section: a
+change of a section rewrites the prompt node. The harness appends a changed context as a new user
+message at the session end, so the session prefix stays unchanged. See [0007 Slice and
+context](../adr/0007-slice-context.md) and [0025 Context refresh](../adr/0025-context-refresh.md).
 
-The text stays the same until a trigger: a fresh session, a compaction after success, and an idle
-time above the TTL. A process restart gives the same text. See [REQ-300](02-requirements.md) and
+The text stays the same until a trigger: a fresh session and a compaction after success. A process
+restart gives the same text. See [REQ-300](02-requirements.md) and
 [REQ-188](02-requirements.md).
 
 The plugin registers one context for each agent at `agent/created`. The event gives the agent scope,
