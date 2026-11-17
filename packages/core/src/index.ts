@@ -227,12 +227,12 @@ export {
 	type View,
 } from "./store/view.js";
 export { type ErrorCode, MemlensError } from "./types/errors.js";
-
-export type {
-	IsoTime,
-	NoteKind,
-	ScopeKey,
-	Ulid,
+export {
+	type IsoTime,
+	NOTE_KINDS,
+	type NoteKind,
+	type ScopeKey,
+	type Ulid,
 } from "./types/primitives.js";
 
 export type {

@@ -17,7 +17,12 @@
  * #endregion moduleContract
  */
 
-import { MemlensError, normalizeScopeKey, type ScopeKey } from "@memlens/core";
+import {
+	MemlensError,
+	NOTE_KINDS,
+	normalizeScopeKey,
+	type ScopeKey,
+} from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import { openRuntime, type Runtime } from "./runtime.js";
 
@@ -36,14 +41,8 @@ export interface CommandAnswer {
 	readonly code: number;
 }
 
-/** The five note kinds, in the order of the configuration. */
-export const KINDS = [
-	"decision",
-	"preference",
-	"fact",
-	"task",
-	"note",
-] as const;
+/** The note kinds, in the order of the configuration. */
+export const KINDS = NOTE_KINDS;
 
 // #region FUNC_flagValue
 /**

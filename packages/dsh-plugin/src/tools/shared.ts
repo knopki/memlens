@@ -19,6 +19,7 @@ import {
 	isCatalogKey,
 	liveCounts,
 	MemlensError,
+	NOTE_KINDS,
 	type Note,
 	type NoteKind,
 	normalizeScopeKey,
@@ -32,14 +33,8 @@ import type { AgentMemory } from "../service.js";
 
 export const debug = debuglog("memlens:plugin:tools");
 
-/** Each kind of a note, in the order of the configuration. */
-export const KINDS = [
-	"decision",
-	"preference",
-	"fact",
-	"task",
-	"note",
-] as const satisfies readonly NoteKind[];
+/** Each kind of a note, in the order of the configuration. A copy, so a tool schema takes a list. */
+export const KINDS = [...NOTE_KINDS];
 
 /** The address of a record: `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`. */
 export type Address = string;

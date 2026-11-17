@@ -2,7 +2,7 @@
  * #region moduleContract
  * @purpose Keep the place of a human in the address of the console page, so a reload and the
  * browser buttons return to the same screen, scope, and note.
- * @scope The seven screen names, the five note kinds, and the read and write of the ten address
+ * @scope The seven screen names, the note kinds, and the read and write of the ten address
  * fields. NOT: the history calls, the screen controls, and the store reads.
  * @rationale
  *  - Q: Why does this module write no log message? A: The client logs the read and the write of the
@@ -12,6 +12,7 @@
  */
 
 import type { NoteKind } from "@memlens/core";
+import { NOTE_KINDS } from "@memlens/core/view";
 
 /** The seven screens of the console. The order matches the number keys and the rail. */
 export const SCREENS = [
@@ -27,14 +28,8 @@ export const SCREENS = [
 /** The name of one console screen. */
 export type Screen = (typeof SCREENS)[number];
 
-/** The five note kinds of the console. A new kind of the core type fails the check here. */
-export const KINDS = [
-	"decision",
-	"preference",
-	"fact",
-	"task",
-	"note",
-] as const satisfies readonly NoteKind[];
+/** The note kinds of the console, in the order of the configuration. */
+export const KINDS = NOTE_KINDS;
 
 // #region TYPE_route
 /**
