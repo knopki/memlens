@@ -1,4 +1,3 @@
-# Requirements: REQ-524, REQ-525, REQ-526, REQ-531, REQ-532, REQ-535
 # Proven by packages/core/tests/store-transfer.test.ts,
 # packages/core/tests/store-schema.test.ts,
 # packages/core/tests/store-reads.test.ts,

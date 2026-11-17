@@ -1,4 +1,3 @@
-# Requirements: REQ-009, REQ-160, REQ-236, REQ-270, REQ-375, REQ-521, REQ-522, REQ-523, REQ-527, REQ-528, REQ-529, REQ-530, REQ-534, REQ-537
 # Proven by packages/core/tests/store-schema.test.ts,
 # packages/core/tests/store-proposals-repair.test.ts,
 # packages/core/tests/store-notes.test.ts,
@@ -20,11 +19,6 @@ Feature: The row store
     Given one open store
     And one profile over the scopes of the store
 
-  Scenario: The store holds one database
-    When the store opens
-    Then the database holds the tables `meta`, `notes`, `nodes`, `proposals`, and `journal`
-    And the library holds no storage directory
-    And an old event-store database fails to open
 
   Scenario: A note takes the rank of its key as its slot
     Given notes of January, March, and April in one scope
@@ -87,19 +81,7 @@ Feature: The row store
     Then each profile gives one entry for that scope
     And the scope key is the same in both lists
 
-  # No proving test found
-  @wip
-  Scenario: Each scope of a profile accepts a write
-    Given a profile with two visible scopes
-    When the agent writes a note in each scope
-    Then the store gives one record in each scope
 
-  # No proving test found
-  @wip
-  Scenario: The store sets no limit on the number of notes
-    Given a store with 1000 notes
-    When the agent writes one more note
-    Then the store holds 1001 note rows
 
   # No proving test found
   @wip
@@ -115,8 +97,3 @@ Feature: The row store
     And the marker text is absent from the database file
     And the marker text is absent from the write-ahead log
 
-  Scenario: The journal holds no content
-    When a write makes a journal row
-    Then the journal row holds no content and no hash
-    And no state path reads the journal
-    And a check prunes the journal to its row limit

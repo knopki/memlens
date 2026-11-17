@@ -1,4 +1,3 @@
-# Requirements: REQ-019, REQ-188, REQ-189, REQ-280, REQ-285, REQ-300, REQ-377, REQ-570
 # Proven by packages/dsh-plugin/tests/memory-context.test.ts,
 # packages/dsh-plugin/tests/service.test.ts,
 # packages/core/tests/context.test.ts

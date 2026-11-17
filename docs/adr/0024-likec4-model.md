@@ -20,9 +20,10 @@ requirement identifier. ADRs stay the decision log. Module contracts stay the
 local rules. The command `likec4 validate docs/arch` runs inside `pnpm run lint:docs`.
 
 The customer accepted the format on 2026-11-17 and ordered the split. The
-requirement lists retired into [docs/spec/archive](../spec/archive/README.md).
-The behavior rows became scenarios in [docs/features](../features/README.md).
-The architecture prose keeps the invariants and points to the model.
+requirement lists left the repository: the behavior rows became scenarios in
+[docs/features](../features/README.md), and the structure rows moved to the
+manifests and the model. The architecture prose now lives in
+[docs/architecture.md](../architecture.md).
 
 ## Alternatives
 
@@ -39,5 +40,4 @@ The repository carries one dev dependency more. Each architecture change must
 update the model, or `pnpm run lint:docs` still passes with a stale map: the
 command validates references, not truth. The architecture prose no longer
 repeats the map, so a structural change updates the model alone. A behavior
-change updates the scenario and its proving test. The scenario headers cite
-the retired REQ ids for traceability, and the citation is historical.
+change updates the scenario and its proving test.

@@ -1,4 +1,3 @@
-# Requirements: REQ-020, REQ-023, REQ-030, REQ-039, REQ-344, REQ-477, REQ-538, REQ-539, REQ-540, REQ-541, REQ-543, REQ-563, REQ-569.
 # Proven by packages/dsh-plugin/tests/memory-tools.test.ts and
 # packages/dsh-plugin/tests/memory-context.test.ts.
 # Decisions: ADR-0007, ADR-0009, ADR-0021.

@@ -59,4 +59,16 @@ views {
       model-route,
       memlens.core
   }
+
+  view schema of memlens.db {
+    title 'Store schema'
+    description '
+      The tables of memlens.db. The schema contract owns the fields.
+      The index is a cache over the note rows.
+    '
+    include
+      *,
+      memlens.core.store,
+      memlens.core.search
+  }
 }

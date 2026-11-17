@@ -6,14 +6,11 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | Term                 | Meaning                                                                                                                                                                      |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | memlens              | The project in this repository: a headless library, a CLI frontend, and a DSH plugin.                                                                                        |
-| requirement          | A testable rule about system behavior. The REQ lists retired into docs/spec/archive. Implemented local rules live in code contracts without those identifiers. |
 | behavior feature     | A Gherkin file in docs/features. It states one capability across modules as scenarios. |
 | scenario             | One user-visible property of a behavior feature in the Given, When, Then form. A tag marks its state, for example `@wip` or `@disputed`. |
 | module contract      | The contract at the start of a source file. Its invariants define rules that apply throughout the module.                                                                    |
 | entity contract      | A contract beside a function, method, class, or type. It defines the local rules of that entity.                                                                             |
-| constraint           | A limit that comes from the customer or from the environment, with an identifier `C-nnn`.                                                                                    |
-| non-goal             | An item that the project does not do, with an identifier `NG-nnn`.                                                                                                           |
-| open question        | An item without an answer, with an identifier `Q-nnn`.                                                                                                                       |
+| open question        | An item without an answer, with an identifier `Q-nnn`. The file docs/questions.md holds them.               |
 | headless             | Without a user interface. Other programs start the function.                                                                                                                 |
 | library              | The package with the main function. It has no terminal interface and no plugin interface.                                                                                    |
 | frontend             | The part that gives access to the library for a user or for a program. The project has a CLI frontend and a plugin frontend.                                                 |

@@ -80,7 +80,8 @@ or the parent agent applies the real change.
 ## What it is not
 
 A replacement for compaction, an infinite chat, a vector search, an entity graph, or a live
-synchronization between machines. See [01-goals-nongoals.md](docs/spec/01-goals-nongoals.md).
+synchronization between machines. The search stays lexical (FTS5), and a note is a curated fact,
+not a chat message.
 
 ## Parts
 
@@ -101,15 +102,14 @@ synchronization between machines. See [01-goals-nongoals.md](docs/spec/01-goals-
 
 ## Documents
 
-| File                                                             | Content                                   |
-| ---------------------------------------------------------------- | ----------------------------------------- |
-| [docs/spec/00-overview.md](docs/spec/00-overview.md)             | The product boundary.                     |
-| [docs/configuration.md](docs/configuration.md)                   | The configuration format and examples.    |
-| [docs/spec/README.md](docs/spec/README.md)                       | Specification index and rules.            |
-| [docs/spec/archive/02-requirements.md](docs/spec/archive/02-requirements.md)     | Requirements with identifiers and status. |
-| [docs/spec/04-data.md](docs/spec/04-data.md)                     | Tables, field groups, and merge channels. |
-| [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Open questions that block work.           |
-| [AGENTS.md](AGENTS.md)                                           | Work rules for agents.                    |
+| File                                             | Content                                |
+| ------------------------------------------------- | -------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)      | How the system works.                  |
+| [docs/configuration.md](docs/configuration.md)   | The configuration format and examples.  |
+| [docs/arch/README.md](docs/arch/README.md)       | The architecture model as diagrams.     |
+| [docs/features](docs/features/README.md)         | Cross-module behavior as scenarios.     |
+| [docs/questions.md](docs/questions.md)           | Open questions that block decisions.    |
+| [AGENTS.md](AGENTS.md)                           | Work rules for agents.                 |
 
 ## Configuration
 

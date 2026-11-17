@@ -1,4 +1,3 @@
-# Requirements: REQ-204, REQ-290, REQ-459, REQ-518, REQ-571, REQ-572,
 # REQ-573, REQ-574, REQ-575, REQ-576, REQ-577
 # Proven by packages/core/tests/compaction.test.ts,
 # packages/core/tests/console.test.ts,
@@ -17,27 +16,9 @@ Feature: Batch compaction
     Then the worker sends one batch of merge inputs to the model route
     And the batch holds the configured count of inputs
 
-  Scenario: The batch count defaults to ten
-    Given no batch key in the base file
-    When the worker runs a pass
-    Then each call carries ten inputs
 
-  Scenario: The batch count sets no upper limit
-    Given the batch key with the value 500 in the base file
-    When the load runs
-    Then the load accepts the value
-    And one call carries 500 inputs
 
-  Scenario: The batch count accepts whole numbers above zero only
-    Given the batch key with the value 0 in the base file
-    When the load runs
-    Then the load rejects the value
-    And the plugin starts on the default base
 
-  Scenario: The compaction section rejects the mode key
-    Given the mode key in the compaction section
-    When the load runs
-    Then the load rejects the file as an unknown key
 
   Scenario: A good line publishes its range at once
     When the model answers one line for each range of the batch

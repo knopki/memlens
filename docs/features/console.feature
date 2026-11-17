@@ -1,4 +1,3 @@
-# Requirements: REQ-423, REQ-549, REQ-550, REQ-551, REQ-552, REQ-553, REQ-554, REQ-565,
 # REQ-566
 # Proven by packages/dsh-plugin/tests/client.test.tsx,
 # packages/dsh-plugin/tests/console.test.ts,

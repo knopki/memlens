@@ -1,4 +1,3 @@
-# Requirements: REQ-233, REQ-235, REQ-237, REQ-241, REQ-242
 # Proven by packages/dsh-plugin/tests/nudge.test.ts,
 # packages/dsh-plugin/tests/memory-context.test.ts
 # Decisions: ADR-0007

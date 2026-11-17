@@ -58,6 +58,14 @@ specification {
     }
   }
 
+  element table {
+    notation "Table"
+    style {
+      shape storage
+      opacity 30%
+    }
+  }
+
   element component {
     notation "Component"
     style {

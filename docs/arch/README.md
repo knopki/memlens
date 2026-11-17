@@ -196,6 +196,36 @@ on the shared client`" .-> MemlensUi
   linkStyle 0,1,2,3,4,5,6,7,8 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 
+### Store schema
+
+The tables of memlens.db. The schema contract owns the fields.
+The index is a cache over the note rows.
+
+```mermaid
+---
+title: "Store schema"
+---
+graph TB
+  subgraph MemlensDb["`SQLite store`"]
+    MemlensDb.Meta@{ shape: disk, label: "meta" }
+    MemlensDb.Journal@{ shape: disk, label: "journal" }
+    MemlensDb.Nodes@{ shape: disk, label: "nodes" }
+    MemlensDb.Proposals@{ shape: disk, label: "proposals" }
+    MemlensDb.Search@{ shape: disk, label: "FTS5 index" }
+    MemlensDb.NoteRows@{ shape: disk, label: "notes" }
+  end
+  MemlensCoreStore@{ shape: rectangle, label: "Row store" }
+  MemlensCoreSearch@{ shape: rectangle, label: "Search index" }
+  MemlensDb.Nodes -. "`covers aligned slot ranges`" .-> MemlensDb.NoteRows
+  MemlensDb.Proposals -. "`names a target`" .-> MemlensDb.NoteRows
+  MemlensDb.Search -. "`indexes the bodies`" .-> MemlensDb.NoteRows
+  MemlensCoreStore -. "`one transaction per write`" .-> MemlensDb
+  MemlensCoreSearch -. "`holds the FTS5 tables`" .-> MemlensDb
+  classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
+  class MemlensDb.Meta,MemlensDb.Journal,MemlensCoreStore,MemlensCoreSearch,MemlensDb.Nodes,MemlensDb.Proposals,MemlensDb.Search,MemlensDb.NoteRows primary
+  linkStyle 0,1,2,3,4 stroke:#8D8D8D,stroke-dasharray:8 4
+```
+
 ### Session start
 
 The host starts a session. The memory context renders the slice

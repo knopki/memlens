@@ -1,4 +1,3 @@
-# Requirements: REQ-260, REQ-261, REQ-310, REQ-343
 # Proven by packages/core/tests/address.test.ts,
 # packages/core/tests/store-reads.test.ts,
 # packages/dsh-plugin/tests/memory-tools.test.ts,

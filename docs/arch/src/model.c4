@@ -145,6 +145,48 @@ model {
         The store path comes from --store, the patch, MEMLENS_STORE,
         or the base config file.
       '
+
+      noteRows = table 'notes' {
+        description '
+          One row per note: the id, the scope, the slot, the body, the longform,
+          the state, and the version. Current rows are the truth.
+        '
+      }
+
+      nodes = table 'nodes' {
+        description '
+          One summary row per aligned range. The schema contract owns the truth.
+        '
+      }
+
+      proposals = table 'proposals' {
+        description '
+          One row per proposal, with a payload and an expiry.
+        '
+      }
+
+      meta = table 'meta' {
+        description '
+          The store identity, the schema version, and the tokenizer.
+        '
+      }
+
+      journal = table 'journal' {
+        description '
+          The audit events. No content, no hash, and no state path reads it.
+        '
+      }
+
+      search = table 'FTS5 index' {
+        description '
+          The lexical index over the note bodies. The language key selects
+          the tokenizer.
+        '
+      }
+
+      nodes -> noteRows 'covers aligned slot ranges'
+      proposals -> noteRows 'names a target'
+      search -> noteRows 'indexes the bodies'
     }
   }
 

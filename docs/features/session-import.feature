@@ -1,6 +1,5 @@
-# Requirements: REQ-413
 # Pending. The selection rule of the note text is open. See Q-514
-# in docs/spec/03-open-questions.md.
+# in docs/questions.md.
 # No proving test: the import is pending.
 Feature: Session import
   The CLI writes new notes of each host session into the store.

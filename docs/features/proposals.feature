@@ -1,4 +1,3 @@
-# Requirements: REQ-024, REQ-027, REQ-034, REQ-158, REQ-159, REQ-349, REQ-350, REQ-352, REQ-354, REQ-355, REQ-357, REQ-359, REQ-360, REQ-361, REQ-371, REQ-441, REQ-542.
 # Proven by packages/dsh-plugin/tests/memory-tools.test.ts,
 # packages/dsh-plugin/tests/memory-context.test.ts,
 # packages/dsh-plugin/tests/console.test.ts and
@@ -94,11 +93,12 @@ Feature: Memory proposals
     When the agent calls `memory_forget` on a record of its profile
     Then the answer is `{}`
 
-  # No proving test found
+  # No proving test found. The preset registers no subagent prompt. See Q-518
+  # in docs/questions.md.
   @wip
   Scenario: A subagent gets the subagent prompt
     Given a subagent session
-    Then the child prompt holds the subagent text of docs/spec/09-prompts.md
+    Then the child prompt holds the subagent prompt
 
   Scenario: A propose subagent gets four tools and the scope list
     Given a subagent of the mode `propose`
