@@ -4,7 +4,7 @@ Status: accepted.
 
 ## Context
 
-The specification holds 13 files with 115 live requirements. The architecture
+The specification holds 12 files with 115 live requirements. The architecture
 document states the parts in 497 lines of prose. The customer wants broad
 strokes at the top and detail only in places. ADRs already record the
 decisions. Module contracts already hold the implemented local rules. The

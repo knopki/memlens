@@ -192,9 +192,9 @@ on the shared client`" .-> MemlensUi
 
 ### Console client
 
-The shared browser code of the console. The CLI serves it standalone.
-The plugin builds its host GUI surfaces on the same sources.
-The operator reviews, amends, hides, and forgets notes.
+The browser client of the console. The CLI serves it standalone.
+The plugin embeds it in the host GUI. The operator reviews, amends,
+hides, and forgets notes.
 
 ```mermaid
 ---
