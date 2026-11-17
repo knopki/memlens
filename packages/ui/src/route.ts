@@ -28,9 +28,6 @@ export const SCREENS = [
 /** The name of one console screen. */
 export type Screen = (typeof SCREENS)[number];
 
-/** The note kinds of the console, in the order of the configuration. */
-export const KINDS = NOTE_KINDS;
-
 // #region TYPE_route
 /**
  * @purpose Hold one place of the console as plain text, so the address and the screen state share
@@ -97,7 +94,7 @@ export function routeOf(route: Route): string {
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const kindOf = (raw: string): NoteKind | "" =>
-	(KINDS as readonly string[]).includes(raw) ? (raw as NoteKind) : "";
+	(NOTE_KINDS as readonly string[]).includes(raw) ? (raw as NoteKind) : "";
 
 // #region FUNC_readRoute
 /**

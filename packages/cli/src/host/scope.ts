@@ -21,11 +21,11 @@ import type { Note, NoteKind, ScopeKey } from "@memlens/core";
 import {
 	byAddress,
 	MemlensError,
+	NOTE_KINDS,
 	newestScope,
 	parseAddress,
 	validateScopeKey,
 } from "@memlens/core";
-import { KINDS } from "../commands.js";
 import { cliActiveScope, profileLists, type Runtime } from "../runtime.js";
 import { type Fields, type HostOptions, text } from "./http.js";
 
@@ -76,7 +76,7 @@ export function resolveScope(
 
 /** @purpose Give the note kind of one field, or a Usage error. */
 export function noteKind(raw: string): NoteKind {
-	if (!(KINDS as readonly string[]).includes(raw))
+	if (!(NOTE_KINDS as readonly string[]).includes(raw))
 		throw new MemlensError("Usage", "The kind is unknown.");
 	return raw as NoteKind;
 }

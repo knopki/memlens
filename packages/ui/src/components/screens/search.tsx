@@ -14,6 +14,7 @@
  */
 
 import type { IndexHit, NoteKind } from "@memlens/core";
+import { NOTE_KINDS } from "@memlens/core/view";
 import {
 	type JSX,
 	type ReactNode,
@@ -22,7 +23,6 @@ import {
 } from "react";
 import type { ConsoleApi, ConsoleState } from "../../model/console.js";
 import { kindName } from "../../model/format.js";
-import { KINDS } from "../../route.js";
 import { Inspector } from "../inspector.js";
 import { Button, FilterBar, Panel, Select, TextInput } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
@@ -87,7 +87,7 @@ function SearchScreen({ api }: ScreenProps): JSX.Element {
 	];
 	const kindOptions = [
 		{ value: "", label: t("allKinds") },
-		...KINDS.map((item) => ({ value: item, label: kindName(t, item) })),
+		...NOTE_KINDS.map((item) => ({ value: item, label: kindName(t, item) })),
 	];
 	return (
 		<>

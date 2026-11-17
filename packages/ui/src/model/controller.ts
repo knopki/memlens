@@ -19,15 +19,10 @@
  */
 
 import type { BuildInput, NoteKind, OpenEntry, Range } from "@memlens/core";
+import { NOTE_KINDS } from "@memlens/core/view";
 import { address, rangeId, rangeOf } from "../format.js";
 import { LANGS, type Lang } from "../i18n.js";
-import {
-	DEFAULT_ROUTE,
-	KINDS,
-	type Route,
-	routeOf,
-	type Screen,
-} from "../route.js";
+import { DEFAULT_ROUTE, type Route, routeOf, type Screen } from "../route.js";
 import type { Choice, RecordModel, Step } from "../types.js";
 import type {
 	ActionFields,
@@ -60,7 +55,7 @@ const RUNTIME_MS = 5000;
 
 /** The note kind of a text, or an empty text. */
 function kindOf(value: string): NoteKind | "" {
-	return (KINDS as readonly string[]).includes(value)
+	return (NOTE_KINDS as readonly string[]).includes(value)
 		? (value as NoteKind)
 		: "";
 }

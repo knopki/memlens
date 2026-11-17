@@ -28,6 +28,7 @@ import {
 	dueRecords,
 	hide,
 	MemlensError,
+	NOTE_KINDS,
 	normalizeScopeKey,
 	note,
 	nowIso,
@@ -43,7 +44,6 @@ import {
 	flagList,
 	flagValue,
 	isJson,
-	KINDS,
 	openCommandRuntime,
 	print,
 	scopeList,
@@ -65,9 +65,9 @@ export async function noteCommand(
 	io: CommandIo,
 ): Promise<string> {
 	const kindRaw = flagValue(args.flags, "kind") ?? "note";
-	if (!(KINDS as readonly string[]).includes(kindRaw))
+	if (!(NOTE_KINDS as readonly string[]).includes(kindRaw))
 		throw new MemlensError("Usage", `The kind ${kindRaw} is unknown.`);
-	const kind = kindRaw as (typeof KINDS)[number];
+	const kind = kindRaw as NoteKind;
 	const runtime = await openCommandRuntime(args, io);
 	try {
 		const scope = normalizeScopeKey(
@@ -294,7 +294,10 @@ export async function amendCommand(
 		const body = flagValue(args.flags, "body");
 		const longformFile = flagValue(args.flags, "longform");
 		const kindRaw = flagValue(args.flags, "kind");
-		if (kindRaw !== null && !(KINDS as readonly string[]).includes(kindRaw))
+		if (
+			kindRaw !== null &&
+			!(NOTE_KINDS as readonly string[]).includes(kindRaw)
+		)
 			throw new MemlensError("Usage", `The kind ${kindRaw} is unknown.`);
 		const target =
 			destination === null

@@ -18,6 +18,7 @@
  */
 
 import type { NoteKind } from "@memlens/core";
+import { NOTE_KINDS } from "@memlens/core/view";
 import type { JSX } from "react";
 import { useState } from "react";
 import type {
@@ -26,7 +27,6 @@ import type {
 	DialogState,
 } from "../model/console.js";
 import { kindName } from "../model/format.js";
-import { KINDS } from "../route.js";
 import {
 	Button,
 	Dialog,
@@ -128,7 +128,7 @@ function NoteForm({ api, dialog }: NoteFormProps): JSX.Element {
 				<Field label={t("kindField")}>
 					<Select
 						value={draft.kind}
-						options={KINDS.map((kind) => ({
+						options={NOTE_KINDS.map((kind) => ({
 							value: kind,
 							label: kindName(t, kind),
 						}))}

@@ -14,10 +14,10 @@
  */
 
 import type { DueRecord, NoteKind } from "@memlens/core";
+import { NOTE_KINDS } from "@memlens/core/view";
 import { type JSX, useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
 import { kindName } from "../../model/format.js";
-import { KINDS } from "../../route.js";
 import { RecordActions } from "../inspector.js";
 import {
 	Button,
@@ -100,7 +100,7 @@ export function Review({ api }: ScreenProps): JSX.Element {
 	const t = api.t;
 	const kinds = [
 		{ value: "", label: t("allKinds") },
-		...KINDS.map((kind) => ({ value: kind, label: kindName(t, kind) })),
+		...NOTE_KINDS.map((kind) => ({ value: kind, label: kindName(t, kind) })),
 	];
 	const periods = Object.entries(model.reviewPolicy).map(
 		([name, days]) =>

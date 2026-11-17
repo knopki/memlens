@@ -15,6 +15,7 @@ import type { Agent } from "@deepseek-ai/dsh-agent";
 import { defineTool, type ToolDefinition } from "@deepseek-ai/dsh-tools";
 import {
 	MemlensError,
+	NOTE_KINDS,
 	normalizeScopeKey,
 	note,
 	propose,
@@ -25,7 +26,6 @@ import type { AgentMemory } from "../service.js";
 import {
 	blocks,
 	debug,
-	KINDS,
 	listedInProfile,
 	type MemoryNoteInput,
 	type MemoryNoteOutput,
@@ -149,7 +149,7 @@ export function noteTool(
 			},
 			kind: {
 				type: "string",
-				enum: KINDS,
+				enum: [...NOTE_KINDS],
 				description: "The kind of the note. The default is note.",
 			},
 			supersedes: {

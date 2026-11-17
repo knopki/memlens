@@ -10,13 +10,18 @@
  */
 
 import { defineTool, type ToolDefinition } from "@deepseek-ai/dsh-tools";
-import { FIND_MAX_PER_SCOPE, filterHits, nowIso, search } from "@memlens/core";
+import {
+	FIND_MAX_PER_SCOPE,
+	filterHits,
+	NOTE_KINDS,
+	nowIso,
+	search,
+} from "@memlens/core";
 import type { AgentMemory } from "../service.js";
 import {
 	blocks,
 	checkedScope,
 	debug,
-	KINDS,
 	type MemoryFindInput,
 	type MemoryFindOutput,
 	visibleScopeList,
@@ -81,7 +86,7 @@ export function findTool(memory: AgentMemory): ToolDefinition {
 			},
 			kinds: {
 				type: "array",
-				items: { type: "string", enum: KINDS },
+				items: { type: "string", enum: [...NOTE_KINDS] },
 				description: "The kinds of the notes.",
 			},
 			due: {

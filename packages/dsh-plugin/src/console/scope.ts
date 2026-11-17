@@ -20,6 +20,7 @@ import type { Agent } from "@deepseek-ai/dsh-agent";
 import {
 	byAddress,
 	MemlensError,
+	NOTE_KINDS,
 	type Note,
 	type NoteKind,
 	newestScope,
@@ -28,7 +29,7 @@ import {
 	validateScopeKey,
 } from "@memlens/core";
 import type { AgentMemory } from "../service.js";
-import { KINDS, listedInProfile, visibleScopeList } from "../tools/shared.js";
+import { listedInProfile, visibleScopeList } from "../tools/shared.js";
 
 const debug = debuglog("memlens:plugin:console");
 
@@ -76,7 +77,7 @@ export function text(fields: Fields, key: string): string {
  * @returns The note kind.
  */
 export function noteKind(raw: string): NoteKind {
-	if (!(KINDS as readonly string[]).includes(raw))
+	if (!(NOTE_KINDS as readonly string[]).includes(raw))
 		throw new MemlensError("Usage", "The kind is unknown.");
 	return raw as NoteKind;
 }
