@@ -15,7 +15,13 @@ deployment {
     }
 
     browser = vm 'Browser' {
-      instanceOf memlens.ui
+      description '
+        The browser holds the standalone console and the host GUI.
+        Both build on the shared console client.
+      '
+      instanceOf memlens.ui {
+        title 'Console clients'
+      }
     }
 
     data = fs 'Filesystem' {

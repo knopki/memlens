@@ -89,10 +89,12 @@ model {
       }
     }
 
-    ui = web-app '@memlens/ui' {
-      technology 'TypeScript, esbuild'
+    ui = web-app 'Console client' {
+      technology '@memlens/ui, esbuild'
       description '
-        The browser client of the console. Seven screens with native DOM controls.
+        The shared browser code of the console: the model, the store, the
+        screens, and the translations. The CLI serves it as the standalone
+        console. The plugin builds its GUI surfaces on the same sources.
       '
     }
 
@@ -131,8 +133,9 @@ model {
 
       consoles = component 'Console surfaces' {
         description '
-          Profile page, session tab, worker status, and worker journal
-          inside the host GUI.
+          Profile page, session tab, worker status, and worker journal inside
+          the host GUI. The surfaces build on the shared console client
+          through relative source imports.
         '
       }
     }
@@ -168,6 +171,8 @@ model {
   memlens.worker -> memlens.core.tree 'collects dirty ranges'
   memlens.worker -> model-route 'sends one batch of merge inputs'
   memlens.worker -> memlens.consoles 'reports runs, failures, and the journal'
+
+  memlens.plugin.consoles -> memlens.ui 'builds the surfaces on the shared client'
 
   memlens.cli.commands -> memlens.core 'calls the engine'
   memlens.cli.importer -> memlens.core.store 'writes imported notes'

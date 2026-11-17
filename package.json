@@ -13,7 +13,8 @@
 		"test": "pnpm -r run test",
 		"lint": "biome check . && node scripts/check-regions.mjs",
 		"format": "biome check --write .",
-		"lint:docs": "sh scripts/ste-lint.sh && node scripts/check-tables.mjs && likec4 validate docs/arch",
+		"arch": "likec4 start docs/arch",
+		"lint:docs": "sh scripts/ste-lint.sh && node scripts/check-tables.mjs && likec4 validate docs/arch && likec4 export markdown --force docs/arch",
 		"verify": "pnpm run build && pnpm run typecheck && pnpm run test && pnpm run lint && pnpm run lint:docs"
 	},
 	"devDependencies": {
