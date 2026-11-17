@@ -16,10 +16,6 @@ Feature: Batch compaction
     Then the worker sends one batch of merge inputs to the model route
     And the batch holds the configured count of inputs
 
-
-
-
-
   Scenario: A good line publishes its range at once
     When the model answers one line for each range of the batch
     Then the worker writes the node row of each good line

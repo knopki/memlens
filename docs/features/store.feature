@@ -19,7 +19,6 @@ Feature: The row store
     Given one open store
     And one profile over the scopes of the store
 
-
   Scenario: A note takes the rank of its key as its slot
     Given notes of January, March, and April in one scope
     When a note of February arrives
@@ -81,14 +80,12 @@ Feature: The row store
     Then each profile gives one entry for that scope
     And the scope key is the same in both lists
 
-
-
   # No proving test found
   @wip
-  Scenario: Two sessions write to one scope
-    Given two sessions of one profile
-    When each session writes a note to `user:notes`
-    Then the store holds both records
+  Scenario: Two sessions write at the same time
+    Given two sessions with one open store
+    When each session writes one note at the same time
+    Then the store holds both notes
     And the store reports no error
 
   Scenario: A redact is one transaction and clears the raw bytes
@@ -96,4 +93,3 @@ Feature: The row store
     Then the redact runs in one transaction
     And the marker text is absent from the database file
     And the marker text is absent from the write-ahead log
-
