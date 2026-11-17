@@ -66,13 +66,15 @@ graph TB
   Model_route@{ shape: rectangle, label: "Model provider" }
   Agent -. "`calls the memory tools`" .-> Memlens
   Human -. "`[...]`" .-> Memlens
+  Memlens -. "`reminds the agent
+to write memory`" .-> Agent
   Dsh -. "`loads at start`" .-> Memlens
   Memlens -. "`sends one batch of merge inputs`" .-> Model_route
   classDef muted fill:#64748b,stroke:#475569,color:#f8fafc
   class Dsh,Model_route muted
   classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
   class Memlens primary
-  linkStyle 0,1,2,3 stroke:#8D8D8D,stroke-dasharray:8 4
+  linkStyle 0,1,2,3,4 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 
 ### Containers
@@ -108,12 +110,14 @@ graph TB
   Memlens.Ui -. "`reads and acts over HTTP`" .-> Memlens.Cli
   Memlens.Plugin -. "`builds the surfaces
 on the shared client`" .-> Memlens.Ui
+  Memlens.Plugin -. "`reminds the agent
+to write memory`" .-> Agent
   Memlens.Plugin -. "`sends one batch of merge inputs`" .-> Model_route
   classDef muted fill:#64748b,stroke:#475569,color:#f8fafc
   class Dsh,Model_route muted
   classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
   class Memlens.Plugin,Memlens.Cli,Memlens.Core,Memlens.Ui,Memlens.Db primary
-  linkStyle 0,1,2,3,4,5,6,7,8,9,10 stroke:#8D8D8D,stroke-dasharray:8 4
+  linkStyle 0,1,2,3,4,5,6,7,8,9,10,11 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 
 ### Core components
@@ -161,7 +165,6 @@ the worker compacts the tree, the consoles serve the operator.
 title: "Plugin components"
 ---
 graph TB
-  Agent@{ icon: "fa:user", shape: rounded, label: "LLM Agent" }
   subgraph MemlensPlugin["`@memlens/dsh-plugin`"]
     MemlensPlugin.Nudge@{ shape: rectangle, label: "Nudge" }
     MemlensPlugin.Tools@{ shape: rectangle, label: "Memory tools" }
@@ -170,6 +173,7 @@ graph TB
     MemlensPlugin.Consoles@{ shape: rectangle, label: "Console surfaces" }
   end
   Dsh@{ shape: rectangle, label: "DeepSeek Harness" }
+  Agent@{ icon: "fa:user", shape: rounded, label: "LLM Agent" }
   Model_route@{ shape: rectangle, label: "Model provider" }
   MemlensCore@{ shape: rectangle, label: "@memlens/core" }
   MemlensUi@{ shape: rounded, label: "Console client" }
@@ -178,6 +182,8 @@ graph TB
 and the journal`" .-> MemlensPlugin.Consoles
   MemlensPlugin.Tools -. "`calls the engine`" .-> MemlensCore
   MemlensPlugin.Context -. "`asks for the slice`" .-> MemlensCore
+  MemlensPlugin.Nudge -. "`reminds the agent
+to write memory`" .-> Agent
   MemlensPlugin.Worker -. "`sends one batch of merge inputs`" .-> Model_route
   MemlensPlugin.Worker -. "`collects dirty ranges`" .-> MemlensCore
   MemlensPlugin.Consoles -. "`builds the surfaces
@@ -187,35 +193,7 @@ on the shared client`" .-> MemlensUi
   class MemlensPlugin.Nudge,MemlensPlugin.Tools,MemlensPlugin.Worker,MemlensPlugin.Context,MemlensPlugin.Consoles,MemlensCore,MemlensUi primary
   classDef muted fill:#64748b,stroke:#475569,color:#f8fafc
   class Dsh,Model_route muted
-  linkStyle 0,1,2,3,4,5,6,7 stroke:#8D8D8D,stroke-dasharray:8 4
-```
-
-### Console client
-
-The browser client of the console. The CLI serves it standalone.
-The plugin embeds it in the host GUI. The operator reviews, amends,
-hides, and forgets notes.
-
-```mermaid
----
-title: "Console client"
----
-graph TB
-  Human@{ icon: "fa:user", shape: rounded, label: "Operator" }
-  MemlensPlugin@{ shape: rectangle, label: "@memlens/dsh-plugin" }
-  MemlensUi@{ shape: rounded, label: "Console client" }
-  subgraph MemlensCli["`@memlens/cli`"]
-    MemlensCli.Uihost@{ shape: rectangle, label: "Console host" }
-  end
-  Human -. "`reviews notes in the console`" .-> MemlensUi
-  MemlensPlugin -. "`builds the surfaces
-on the shared client`" .-> MemlensUi
-  MemlensUi -. "`reads and acts over HTTP`" .-> MemlensCli.Uihost
-  MemlensCli.Uihost -. "`serves the client`" .-> MemlensUi
-  Human -. "`runs terminal commands`" .-> MemlensCli
-  classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
-  class MemlensPlugin,MemlensUi,MemlensCli.Uihost primary
-  linkStyle 0,1,2,3,4 stroke:#8D8D8D,stroke-dasharray:8 4
+  linkStyle 0,1,2,3,4,5,6,7,8 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 
 ### Session start

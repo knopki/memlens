@@ -59,18 +59,4 @@ views {
       model-route,
       memlens.core
   }
-
-  view console of memlens.ui {
-    title 'Console client'
-    description '
-      The browser client of the console. The CLI serves it standalone.
-      The plugin embeds it in the host GUI. The operator reviews, amends,
-      hides, and forgets notes.
-    '
-    include
-      *,
-      human,
-      memlens.cli.uihost,
-      memlens.cli.uihost -> memlens.ui
-  }
 }

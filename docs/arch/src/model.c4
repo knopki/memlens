@@ -164,6 +164,8 @@ model {
 
   dsh -> memlens.plugin 'loads at start'
 
+  memlens.nudge -> agent 'reminds the agent to write memory'
+
   memlens.tools -> memlens.core 'calls the engine'
   memlens.context -> memlens.core.domain 'asks for the slice'
   memlens.worker -> memlens.core.tree 'collects dirty ranges'
