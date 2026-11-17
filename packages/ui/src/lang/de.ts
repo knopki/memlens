@@ -181,6 +181,7 @@ export const de: Table = {
 	kindDecision: "Entscheidung",
 	kindPreference: "Präferenz",
 	kindFact: "Fakt",
+	kindGotcha: "Stolperfalle",
 	kindTask: "Aufgabe",
 	kindNote: "Notiz",
 };

@@ -181,6 +181,7 @@ export const pt: Table = {
 	kindDecision: "decisão",
 	kindPreference: "preferência",
 	kindFact: "fato",
+	kindGotcha: "armadilha",
 	kindTask: "tarefa",
 	kindNote: "nota",
 };

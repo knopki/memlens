@@ -156,6 +156,7 @@ export const DEFAULT_REVIEW_DAYS: ReviewConfig = {
 	decision: 365,
 	preference: 365,
 	fact: 180,
+	gotcha: 180,
 	task: 7,
 	note: 365,
 };

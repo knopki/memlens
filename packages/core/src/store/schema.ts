@@ -22,10 +22,66 @@ const debug = debuglog("memlens:schema");
 const BASE_SCHEMA_VERSION = 2;
 
 /** Keep the base schema fixed. Add each later schema change to this list in order. */
-const MIGRATIONS: ReadonlyArray<(db: DatabaseSync) => void> = [];
+const MIGRATIONS: ReadonlyArray<(db: DatabaseSync) => void> = [widenKindCheck];
 
 /** The schema version of this build. */
 export const SCHEMA_VERSION = BASE_SCHEMA_VERSION + MIGRATIONS.length;
+
+// #region FUNC_widenKindCheck
+/**
+ * @purpose Widen the kind check of the notes table, so that a note takes the gotcha kind.
+ * @invariants SQLite cannot change a check on a column, so the step rebuilds the notes table.
+ * @invariants The step copies the table and creates it again. It renames nothing, because a rename
+ *   leaves a lock that blocks the truncating checkpoint at close.
+ * @invariants Each row keeps its `n`, so the content row of the search index keeps its target.
+ */
+function widenKindCheck(db: DatabaseSync): void {
+	db.exec(`
+		CREATE TABLE notes_copy AS SELECT * FROM notes;
+		DROP TABLE notes;
+		CREATE TABLE notes (
+			n             INTEGER PRIMARY KEY,
+			id            TEXT NOT NULL UNIQUE,
+			scope         TEXT NOT NULL,
+			pos           INTEGER NOT NULL,
+			state         TEXT NOT NULL CHECK (state IN ('live','hidden','deleted')),
+			cleared       INTEGER NOT NULL DEFAULT 0 CHECK (cleared IN (0,1)),
+			kind          TEXT NOT NULL CHECK (kind IN ('decision','preference','fact','gotcha','task','note')),
+			body          TEXT NOT NULL DEFAULT '',
+			longform      TEXT,
+			refs          TEXT NOT NULL DEFAULT '[]',
+			superseded_by TEXT,
+			ts            TEXT NOT NULL,
+			created_at    TEXT NOT NULL,
+			modified_at   TEXT NOT NULL,
+			review_at     TEXT,
+			reviewed_at   TEXT,
+			session       TEXT NOT NULL DEFAULT '',
+			turn          TEXT NOT NULL DEFAULT '',
+			preset        TEXT NOT NULL DEFAULT '',
+			v             TEXT NOT NULL,
+			v_content     TEXT NOT NULL,
+			v_review      TEXT,
+			CHECK (cleared = 0 OR (state = 'deleted' AND body = '' AND longform IS NULL)),
+			UNIQUE (scope, pos)
+		);
+		INSERT INTO notes (
+			n, id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts,
+			created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content,
+			v_review
+		)
+		SELECT
+			n, id, scope, pos, state, cleared, kind, body, longform, refs, superseded_by, ts,
+			created_at, modified_at, review_at, reviewed_at, session, turn, preset, v, v_content,
+			v_review
+		FROM notes_copy;
+		DROP TABLE notes_copy;
+		CREATE INDEX notes_dedupe ON notes (scope, body) WHERE state = 'live';
+		CREATE INDEX notes_due ON notes (review_at)
+			WHERE state = 'live' AND review_at IS NOT NULL;
+	`);
+}
+// #endregion FUNC_widenKindCheck
 
 const TOKENIZERS: Record<string, string> = {
 	zh: "trigram",

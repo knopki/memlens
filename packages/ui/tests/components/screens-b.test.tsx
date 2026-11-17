@@ -10,13 +10,14 @@
  */
 
 import type { DueRecord, IndexHit, Proposal } from "@memlens/core";
+import { NOTE_KINDS } from "@memlens/core/view";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { NoteDialog } from "../../src/components/note-dialog.js";
 import { Proposals } from "../../src/components/screens/proposals.js";
 import { Review } from "../../src/components/screens/review.js";
 import { Search } from "../../src/components/screens/search.js";
-import { fill, messages } from "../../src/i18n.js";
+import { fill, KIND_KEYS, messages } from "../../src/i18n.js";
 import type {
 	ConsoleActions,
 	ConsoleApi,
@@ -188,6 +189,15 @@ function apiOf(state: ConsoleState): ConsoleApi {
 // #endregion FUNC_apiOf
 
 describe("search screen", () => {
+	it("offers each kind of the store in the kind filter", () => {
+		const markup = renderToStaticMarkup(<Search api={apiOf(stateOf())} />);
+		const en = messages("en");
+		for (const kind of NOTE_KINDS) {
+			const label = en[KIND_KEYS[kind]];
+			expect(markup).toContain(`<option value="${kind}">${label}</option>`);
+		}
+	});
+
 	it("shows the words, the filters, and the hit row", () => {
 		const markup = renderToStaticMarkup(
 			<Search

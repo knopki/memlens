@@ -179,6 +179,7 @@ export const ru: Table = {
 	kindDecision: "решение",
 	kindPreference: "предпочтение",
 	kindFact: "факт",
+	kindGotcha: "грабли",
 	kindTask: "задача",
 	kindNote: "заметка",
 };

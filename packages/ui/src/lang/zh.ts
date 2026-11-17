@@ -174,6 +174,7 @@ export const zh: Table = {
 	kindDecision: "决策",
 	kindPreference: "偏好",
 	kindFact: "事实",
+	kindGotcha: "陷阱",
 	kindTask: "任务",
 	kindNote: "笔记",
 };

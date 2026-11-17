@@ -16,13 +16,20 @@ export type IsoTime = string;
 export type ScopeKey = `${string}:${string}`;
 
 /** The kind of a note. */
-export type NoteKind = "decision" | "preference" | "fact" | "task" | "note";
+export type NoteKind =
+	| "decision"
+	| "preference"
+	| "fact"
+	| "gotcha"
+	| "task"
+	| "note";
 
 /** Each note kind, in the order of the configuration and the transfer text. */
-export const NOTE_KINDS: readonly NoteKind[] = [
+export const NOTE_KINDS = [
 	"decision",
 	"preference",
 	"fact",
+	"gotcha",
 	"task",
 	"note",
-];
+] as const satisfies readonly NoteKind[];

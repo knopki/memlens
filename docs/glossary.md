@@ -57,7 +57,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | ULID                 | The identifier format of a note. It is unique, and it sorts by time.                                                                                                         |
 | pos                  | The slot of a note: the rank of its `(ts, id)` key over the note rows of its scope. A hidden note keeps its slot.                                                            |
 | target               | The field of an op that names the record or the proposal for a change.                                                                                                       |
-| kind                 | The class of a note: `decision`, `preference`, `fact`, `task`, or `note`.                                                                                                    |
+| kind                 | The class of a note: `decision`, `preference`, `fact`, `gotcha`, `task`, or `note`.                                                                                          |
 | `live`               | The state of a record after a write with no proposal.                                                                                                                        |
 | `deleted`            | The state after redaction, including evidence from a sanitized note or amendment.                                                                                            |
 | ts                   | The content date of a note. An amend never changes it.                                                                                                                       |

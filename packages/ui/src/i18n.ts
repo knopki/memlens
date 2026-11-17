@@ -215,6 +215,7 @@ const en = {
 	kindDecision: "decision",
 	kindPreference: "preference",
 	kindFact: "fact",
+	kindGotcha: "gotcha",
 	kindTask: "task",
 	kindNote: "note",
 };
@@ -273,6 +274,7 @@ export const KIND_KEYS = {
 	decision: "kindDecision",
 	preference: "kindPreference",
 	fact: "kindFact",
+	gotcha: "kindGotcha",
 	task: "kindTask",
 	note: "kindNote",
 } as const satisfies Record<string, keyof typeof en>;

@@ -49,14 +49,15 @@ Find a note before you write one. Save a note with \`memory_note\` when the user
 decision, a correction, or a preference, when a fact changes later work, and when a task fails and the
 cause matters. Do not save greetings, routine tool output, work in progress, or a duplicate.
 
-One note holds one kind: decision, preference, fact, task, or note. Copy names, numbers, paths, dates,
-and errors exactly. Give the moment of a past event in \`ts\`, as ISO 8601. A write with no \`ts\`
-takes the write time. When a note replaces an older one, give the older one in \`supersedes\`. Never
-record secrets, credentials, or keys.
+One note holds one kind: decision, preference, fact, gotcha, task, or note. A gotcha is a failure
+and its cause: what broke, and why. Copy names, numbers, paths, dates, and errors exactly. Give the
+moment of a past event in \`ts\`, as ISO 8601. A write with no \`ts\` takes the write time. When a
+note replaces an older one, give the older one in \`supersedes\`. Never record secrets, credentials,
+or keys.
 
 \`memory_forget\` takes an obsolete note out of the view: a fact that changed, or a note that was wrong.`;
 
-/** The context template. A copy of 09-prompts.md; a change of a word is a change of the product. */
+/** The context template. A change of a word is a change of the product. */
 export const CONTEXT_TEMPLATE = `<memory>
 <how-to>
 {{policy}}

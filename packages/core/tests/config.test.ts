@@ -107,6 +107,7 @@ describe("loadBaseConfig", () => {
 			decision: 365,
 			preference: 365,
 			fact: 90,
+			gotcha: 180,
 			task: 7,
 			note: 365,
 		});

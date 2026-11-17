@@ -25,6 +25,7 @@ import type {
 	TypertCodec,
 	TypertRemoteContribution,
 } from "@deepseek-ai/dsh-typert-protocol";
+import { NOTE_KINDS } from "@memlens/core/view";
 import { z } from "zod";
 
 /** The npm package that owns the console methods. */
@@ -40,7 +41,7 @@ export const CONSOLE_NAMESPACE = "memlens";
 const INPUT = "input";
 
 /** The note kinds of the store. */
-const noteKind = z.enum(["decision", "preference", "fact", "task", "note"]);
+const noteKind = z.enum(NOTE_KINDS);
 
 /** A note kind or the empty text that the console sends when no kind narrows the read. */
 const anyKind = z.union([noteKind, z.literal("")]);

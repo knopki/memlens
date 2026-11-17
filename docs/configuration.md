@@ -126,6 +126,7 @@ maxCallsPerHour = 120
 decision = 365
 preference = 365
 fact = 180
+gotcha = 180
 task = 7
 note = 365
 ```
@@ -215,6 +216,7 @@ The `[review]` section holds the review period of each note kind, in days.
 | `decision`  | `365`   |
 | `preference`| `365`   |
 | `fact`      | `180`   |
+| `gotcha`    | `180`   |
 | `task`      | `7`     |
 | `note`      | `365`   |
 

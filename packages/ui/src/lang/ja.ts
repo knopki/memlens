@@ -178,6 +178,7 @@ export const ja: Table = {
 	kindDecision: "決定",
 	kindPreference: "好み",
 	kindFact: "事実",
+	kindGotcha: "落とし穴",
 	kindTask: "タスク",
 	kindNote: "ノート",
 };

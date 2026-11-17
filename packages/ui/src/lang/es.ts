@@ -181,6 +181,7 @@ export const es: Table = {
 	kindDecision: "decisión",
 	kindPreference: "preferencia",
 	kindFact: "hecho",
+	kindGotcha: "trampa",
 	kindTask: "tarea",
 	kindNote: "nota",
 };

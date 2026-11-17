@@ -224,7 +224,7 @@ An error carries a code and a message, and the exit code follows the kind.
 | Budget           | The profile gives `here` and `directions` in lines                                    |
 | Compaction       | `batch` 10, a whole number above zero, no upper limit, 120 calls in an hour           |
 | Nudge            | `tool_calls` and `turns` 10                                                           |
-| Review           | 365 days for `decision`, `preference`, `note`. 180 days for `fact`. 7 for `task`.      |
+| Review           | 365 days for `decision`, `preference`, `note`. 180 days for `fact` and `gotcha`. 7 for `task`. |
 | GC of proposals  | 30 days                                                                               |
 | `find`           | 10 records, and 50 for each scope                                                     |
 | `cacheTtl`       | `deepseek/*` 2 hours, `anthropic/*` 5 minutes, another model 1 hour                    |

@@ -4,8 +4,8 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Prove the clock order, the schema invariants, and the migration steps under the real SQLite engine.
- * @scope The clock rules, the open, the meta rows, the index flavor, the migration steps, and the redaction bytes.
- * @keywords test, clock, schema, migration, version, redaction, bytes
+ * @scope The clock rules, the open, the meta rows, the index flavor, the migration steps, the kind check, and the redaction bytes.
+ * @keywords test, clock, schema, migration, version, kind, redaction, bytes
  * #endregion moduleContract
  */
 
@@ -278,6 +278,55 @@ describe("migration", () => {
 		assert.equal(version(retried), "3");
 		assert.equal(tables(retried).includes("first_step"), true);
 		retried.close();
+	});
+
+	it("widens the kind check and keeps each row with its index row", () => {
+		const path = storePath();
+		const db = openDatabase(path, "en", []);
+		assert.equal(version(db), "2");
+		addNote(db, 0, "the first fact");
+		addNote(db, 1, "the second fact");
+		const slots = db
+			.prepare("SELECT n, id, pos, kind, body FROM notes ORDER BY pos")
+			.all();
+		db.close();
+
+		const upgraded = openDatabase(path, "en");
+		assert.equal(version(upgraded), String(SCHEMA_VERSION));
+		assert.deepEqual(
+			upgraded
+				.prepare("SELECT n, id, pos, kind, body FROM notes ORDER BY pos")
+				.all(),
+			slots,
+		);
+		assert.equal(tables(upgraded).includes("notes_copy"), false);
+		// A step that renames a table leaves a lock that blocks the checkpoint at close.
+		assert.equal(
+			upgraded.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get()?.busy,
+			0,
+		);
+
+		// The search index still points at the row, because the step keeps `n`.
+		const second = Number(slots[1]?.n);
+		assert.deepEqual(
+			upgraded
+				.prepare("SELECT rowid FROM fts WHERE fts MATCH 'second'")
+				.all()
+				.map((row) => Number(row.rowid)),
+			[second],
+		);
+
+		const write = upgraded.prepare(
+			"INSERT INTO notes (id, scope, pos, state, kind, body, ts, created_at, modified_at, v, v_content) VALUES (?, 'p:x', ?, 'live', ?, 'a body', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'a', 'a')",
+		);
+		write.run("note-gotcha", 2, "gotcha");
+		assert.equal(
+			upgraded.prepare("SELECT kind FROM notes WHERE id = 'note-gotcha'").get()
+				?.kind,
+			"gotcha",
+		);
+		assert.throws(() => write.run("note-unknown", 3, "rumour"), /constraint/i);
+		upgraded.close();
 	});
 
 	it("refuses a newer and a malformed version at open before the schema work", () => {
