@@ -11,7 +11,7 @@ The owner called the event model overcomplex for fork, merge, import, and export
 ## Decision
 
 - One SQLite database is the only backend. The JSONL backend dies. JSONL stays as the transfer format.
-- Normalized mutable rows are the truth. No event log, no projection, no replay cursor, no migration.
+- Normalized mutable rows are the truth. No event log, no projection, and no replay cursor. A later change of the table shape migrates the store at open, in one transaction.
 - Notes order by an immutable `(ts, id)` key. The slot is the rank in that order. Hidden and deleted notes keep their slots. The next allocation reuses a freed tail slot.
 - Changes carry versions from one hybrid logical clock with the store identity as the tie-break. A local write after an import outranks the imported state.
 - Sync merges five channels: content and review by version, lifecycle by maximum, cleared by latch, and the supersede link by first write.

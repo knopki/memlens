@@ -34,6 +34,7 @@ the decisions.
 | memory-context.feature | The memory snapshot              | 8         |
 | nudge.feature         | The nudge counters                | 5         |
 | proposals.feature     | Subagent modes and proposals      | 17        |
+| schema.feature        | The store schema and its version  | 2         |
 | session-import.feature | Session import (pending)          | 1         |
 | store.feature         | The row store and the tree        | 10        |
 | transfer.feature      | JSONL transfer and store merge    | 6         |

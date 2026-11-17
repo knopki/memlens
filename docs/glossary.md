@@ -134,6 +134,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | node row             | One row of the nodes table. It holds the summary of one aligned range and the validity keys of its halves.                                                                   |
 | slot                 | The integer position of a note inside its scope. It equals the rank of the `(ts, id)` key over all note rows.                                                                |
 | version              | One text `physical\|counter\|store_id` of the hybrid logical clock. Text order gives the total order.                                                                          |
+| schema version       | The integer `schema_version` in `meta`. It names the shape of the tables of one store.                                                                                       |
+| migration            | The change of the tables from an older schema version to the current one. The store runs it at open, in one transaction.                                                     |
 | store id             | The one identity in `meta` that breaks each version tie. A copied file keeps it until a caller writes a new one.                                                                   |
 | merge channel        | One mergeable field group of a note row. Five exist: content, lifecycle, cleared, review, and the supersede link.                                                            |
 | tombstone            | A deleted note row. It keeps the id, the date, the state, and the versions, and it holds no content.                                                                         |

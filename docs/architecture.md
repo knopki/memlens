@@ -24,6 +24,11 @@ One database file `memlens.db` holds the tables `notes`, `nodes`, `proposals`, `
 `journal`, and the FTS5 search index. Current rows are the truth. There is no event log and no
 replay.
 
+An open reads the schema version from `meta`. A store behind the build migrates the tables in one
+transaction, and it keeps each note row and each slot. A failed migration keeps the earlier schema
+and the earlier data. The open refuses a version above the build, a version below the earliest
+schema, an absent version, and an invalid version.
+
 Each write runs in one transaction and keeps the note rows, the index rows, the node rows, and the
 journal row in step. The node cache is valid only while the keys of its children match the current
 rows. A change deletes each node row over the changed slot in the same transaction, so a stale

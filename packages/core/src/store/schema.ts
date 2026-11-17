@@ -6,6 +6,7 @@
  * @invariants Every connection sets secure_delete, busy_timeout, and temp_store.
  * @invariants The index carries the FTS5 secure-delete option, so a delete removes its tokens.
  * @invariants The meta rows hold schema_version, store_id, clock, and fts_tokenizer.
+ * @invariants Schema changes and their version updates commit in one transaction.
  * @dependencies store/clock.ts for the store identity.
  * @keywords schema, open, pragma, database, migration, version
  * #endregion moduleContract
@@ -18,8 +19,13 @@ import { storeId } from "./clock.js";
 
 const debug = debuglog("memlens:schema");
 
+const BASE_SCHEMA_VERSION = 2;
+
+/** Keep the base schema fixed. Add each later schema change to this list in order. */
+const MIGRATIONS: ReadonlyArray<(db: DatabaseSync) => void> = [];
+
 /** The schema version of this build. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = BASE_SCHEMA_VERSION + MIGRATIONS.length;
 
 const TOKENIZERS: Record<string, string> = {
 	zh: "trigram",
@@ -108,28 +114,30 @@ function tokenizerOf(language: string): string {
 // #region FUNC_openDatabase
 /**
  * @purpose Open one database file with the required settings and the schema.
- * @invariants The open refuses an old event-store database and names the action.
+ * @invariants The open rejects an unknown schema version before a schema change.
  * @invariants The schema and the meta rows are ready before the caller reads.
  */
 export function openDatabase(path: string, language: string): DatabaseSync {
 	const db = new DatabaseSync(path);
 	try {
 		db.exec(
-			"PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON; PRAGMA busy_timeout = 5000; PRAGMA temp_store = MEMORY;",
+			"PRAGMA synchronous = FULL; PRAGMA secure_delete = ON; PRAGMA busy_timeout = 5000; PRAGMA temp_store = MEMORY;",
 		);
-		if (legacy(db))
-			throw new MemlensError(
-				"Data",
-				"This store holds an event log. Move the store directory away and start a new store.",
-			);
 		db.exec("BEGIN IMMEDIATE");
 		try {
-			create(db, language);
+			const tables = db
+				.prepare(
+					"SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1",
+				)
+				.get();
+			if (tables === undefined) create(db, language);
+			migrate(db, MIGRATIONS);
 			db.exec("COMMIT");
 		} catch (error) {
 			db.exec("ROLLBACK");
 			throw error;
 		}
+		db.exec("PRAGMA journal_mode = WAL");
 		debug("Store open", {
 			event: "open",
 			version: SCHEMA_VERSION,
@@ -143,20 +151,68 @@ export function openDatabase(path: string, language: string): DatabaseSync {
 }
 // #endregion FUNC_openDatabase
 
-/** @purpose Refuse a database that holds the event store of the earlier schema. */
-function legacy(db: DatabaseSync): boolean {
-	const row = db
+// #region FUNC_migrate
+/**
+ * @purpose Apply each schema change in order before the store opens.
+ * @invariants The caller holds a transaction for all changes and version updates.
+ * @invariants An unknown version leaves the schema unchanged.
+ */
+export function migrate(
+	db: DatabaseSync,
+	migrations: ReadonlyArray<(db: DatabaseSync) => void>,
+): void {
+	const meta = db
 		.prepare(
-			"SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('events', 'state')",
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'meta'",
 		)
 		.get();
-	return row !== undefined;
+	if (meta === undefined)
+		throw new MemlensError("Data", "The store has no schema version.");
+	const row = db
+		.prepare("SELECT value FROM meta WHERE key = 'schema_version'")
+		.get();
+	const text = row?.value;
+	if (typeof text !== "string" || !/^[1-9][0-9]*$/.test(text))
+		throw new MemlensError("Data", "The store has an invalid schema version.");
+	const version = Number(text);
+	const current = BASE_SCHEMA_VERSION + migrations.length;
+	if (
+		!Number.isSafeInteger(version) ||
+		version < BASE_SCHEMA_VERSION ||
+		version > current
+	)
+		throw new MemlensError(
+			"Data",
+			`Unsupported store schema version: ${text}.`,
+		);
+	const update = db.prepare(
+		"UPDATE meta SET value = ? WHERE key = 'schema_version'",
+	);
+	for (
+		let index = version - BASE_SCHEMA_VERSION;
+		index < migrations.length;
+		index++
+	) {
+		debug("Migrate schema", {
+			event: "migrate",
+			from: BASE_SCHEMA_VERSION + index,
+			to: BASE_SCHEMA_VERSION + index + 1,
+		});
+		const migration = migrations[index];
+		if (migration === undefined)
+			throw new Error(
+				`Missing schema migration: ${BASE_SCHEMA_VERSION + index + 1}.`,
+			);
+		migration(db);
+		update.run(String(BASE_SCHEMA_VERSION + index + 1));
+	}
 }
+// #endregion FUNC_migrate
 
 // #region FUNC_create
 /**
- * @purpose Create each table and seed the meta rows of a new or an open database.
- * @invariants The call is idempotent, so a later open keeps each stored value.
+ * @purpose Create the base schema and its meta rows for a new database.
+ * @invariants The call is idempotent for the base schema.
  */
 export function create(db: DatabaseSync, language: string): void {
 	const tokenizer = tokenizerOf(language);
@@ -171,7 +227,7 @@ function seedMeta(db: DatabaseSync, tokenizer: string): void {
 	const meta = db.prepare(
 		"INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)",
 	);
-	meta.run("schema_version", String(SCHEMA_VERSION));
+	meta.run("schema_version", String(BASE_SCHEMA_VERSION));
 	meta.run("store_id", storeId());
 	const row = db
 		.prepare("SELECT value FROM meta WHERE key = 'fts_tokenizer'")
