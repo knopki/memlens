@@ -13,10 +13,13 @@
  * #endregion moduleContract
  */
 
-import type { JSX, ReactNode } from "react";
-import { useState, useSyncExternalStore } from "react";
-import type { IndexHit } from "../../../../core/src/store/types.js";
-import type { NoteKind } from "../../../../core/src/types/primitives.js";
+import type { IndexHit, NoteKind } from "@memlens/core";
+import {
+	type JSX,
+	type ReactNode,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import type { ConsoleApi, ConsoleState } from "../../model/console.js";
 import { kindName } from "../../model/format.js";
 import { KINDS } from "../../route.js";

@@ -10,7 +10,7 @@
  * #endregion moduleContract
  */
 
-import type { Range, SliceLine } from "../../core/src/types/tree.js";
+import type { Range, SliceLine } from "@memlens/core";
 
 export const address = (record: { scope: string; pos: number }) =>
 	`${record.scope}#${record.pos}`;

@@ -9,11 +9,15 @@
  * #endregion moduleContract
  */
 
-import type { ConsoleModel } from "../../core/src/domain/console.js";
-import type { OpenChildren, OpenEntry } from "../../core/src/domain/reads.js";
-import type { Proposal } from "../../core/src/store/types.js";
-import type { NoteKind } from "../../core/src/types/primitives.js";
-import type { BuildInput, SliceLine } from "../../core/src/types/tree.js";
+import type {
+	BuildInput,
+	ConsoleModel,
+	NoteKind,
+	OpenChildren,
+	OpenEntry,
+	Proposal,
+	SliceLine,
+} from "@memlens/core";
 
 /** The view of one profile at one scope, as the host gives it. */
 export type View = ConsoleModel & {

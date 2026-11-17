@@ -73,7 +73,7 @@ prek install
 | `pnpm run build`     | Собрать четыре пакета.                       |
 | `pnpm run typecheck` | Проверить типы.                              |
 | `pnpm run test`      | Запустить тесты.                             |
-| `pnpm run lint`      | Проверить код и форматирование через biome.  |
+| `pnpm run lint`      | Проверить код, регионы и границы пакетов.    |
 | `pnpm run format`    | Записать исправления biome и форматирование. |
 | `pnpm run lint:docs` | Проверить документы по лимитам STE.          |
 | `pnpm run verify`    | Собрать всё и прогнать все проверки.         |

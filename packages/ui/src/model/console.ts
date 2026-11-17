@@ -11,12 +11,13 @@
  */
 
 import type {
+	IndexHit,
+	NoteKind,
 	OpenChildren,
 	OpenEntry,
-} from "../../../core/src/domain/reads.js";
-import type { IndexHit } from "../../../core/src/store/types.js";
-import type { NoteKind } from "../../../core/src/types/primitives.js";
-import type { Range, SliceLine } from "../../../core/src/types/tree.js";
+	Range,
+	SliceLine,
+} from "@memlens/core";
 import type { Lang, Table } from "../i18n.js";
 import type { Route, Screen } from "../route.js";
 import type { Choice, Job, Selection, View } from "../types.js";

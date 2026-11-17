@@ -15,7 +15,7 @@
  * #endregion moduleContract
  */
 
-import type { Translate } from "../../../ui/src/model/console.js";
+import type { Translate } from "@memlens/ui";
 import { mountConsole } from "./console.js";
 import type { ClientContext } from "./context.js";
 import { MemoryPanelIcon } from "./icon.js";

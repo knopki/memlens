@@ -143,9 +143,10 @@ describe("plugin manifest", () => {
 		expect(rows[0]?.name).toBe(manifest.name);
 	});
 
-	it("bundles the workspace library and the schema package", () => {
+	it("bundles the workspace library, the console, and the schema package", () => {
 		expect(manifest.dependencies ?? {}).toEqual({});
 		expect(manifest.devDependencies?.["@memlens/core"]).toBe("workspace:*");
+		expect(manifest.devDependencies?.["@memlens/ui"]).toBe("workspace:*");
 		expect(manifest.devDependencies?.["@deepseek-ai/schemastery"]).toBe(
 			"^3.18.2",
 		);

@@ -9,7 +9,7 @@
  * #endregion moduleContract
  */
 
-import type { OpenEntry } from "../../../core/src/domain/reads.js";
+import type { OpenEntry } from "@memlens/core";
 import type {
 	ConsoleActions,
 	ConsoleState,

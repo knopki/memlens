@@ -15,13 +15,15 @@
  * #endregion moduleContract
  */
 
+import type { Table, Translate } from "@memlens/ui";
+import {
+	DEFAULT_ROUTE,
+	NoteDialog,
+	SCREEN_COMPONENTS,
+	SCREENS,
+} from "@memlens/ui";
 import type { JSX } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { NoteDialog } from "../../../ui/src/components/note-dialog.js";
-import { SCREEN_COMPONENTS } from "../../../ui/src/components/screens/index.js";
-import type { Table } from "../../../ui/src/i18n.js";
-import type { Translate } from "../../../ui/src/model/console.js";
-import { DEFAULT_ROUTE, SCREENS } from "../../../ui/src/route.js";
 import { createProfileConsole } from "./console.js";
 import { CONSOLE_CSS } from "./styles.js";
 

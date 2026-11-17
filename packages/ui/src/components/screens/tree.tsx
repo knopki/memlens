@@ -12,11 +12,9 @@
  * #endregion moduleContract
  */
 
-import type { JSX } from "react";
-import { useSyncExternalStore } from "react";
-import { dateSpan } from "../../../../core/src/domain/date-span.js";
-import type { OpenLine } from "../../../../core/src/domain/reads.js";
-import type { SliceLine } from "../../../../core/src/types/tree.js";
+import type { OpenLine, SliceLine } from "@memlens/core";
+import { dateSpan } from "@memlens/core/view";
+import { type JSX, useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
 import { lineAddress, lineText, rangeAddress } from "../../model/format.js";
 import { Inspector } from "../inspector.js";

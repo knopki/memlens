@@ -21,8 +21,12 @@ The agent reads one map of directions: the derived scope list in the `<direction
 | `packages/ui`         | `@memlens/ui`         | The browser client: seven screens with native DOM controls. |
 | `packages/dsh-plugin` | `@memlens/dsh-plugin` | The harness surface: the entry points `.` and `./preset`, the tools. |
 
-The CLI depends on the library. The plugin depends on the library. The library depends on nothing.
-The test `packages/core/tests/isolation.test.ts` holds this rule. See [REQ-007](02-requirements.md).
+The CLI and the plugin depend on the console. The console and the CLI depend on the library. The
+library depends on nothing.
+Each package declares each workspace package that it imports. A relative import stays inside its
+package. The test `packages/core/tests/isolation.test.ts` holds the library rule. The script
+`scripts/check-package-boundaries.mjs` holds the package rule. See [REQ-007](02-requirements.md) and
+[REQ-578](02-requirements.md).
 
 ## Stack
 
@@ -32,16 +36,17 @@ makes the bundles. prek runs the git hooks. See [0010 Process and stack](../adr/
 
 ## Build
 
-| Package | Tool    | Output                                     |
-| ------- | ------- | ------------------------------------------ |
-| core    | `tsc`   | `dist/index.js` and `dist/index.d.ts`      |
-| cli     | esbuild | `dist/cli.js`, one bundle with a shebang   |
-| ui      | CLI esbuild | `packages/cli/dist/ui/client.js`, with HTML and CSS assets |
-| plugin  | esbuild | `lib/index.js`, one bundle                 |
-| plugin  | `tsc`   | `lib/index.d.ts` in a declaration-only run |
+| Package | Tool    | Output                                                            |
+| ------- | ------- | ----------------------------------------------------------------- |
+| core    | `tsc`   | `dist/index.js`, `dist/index.d.ts`, and the subpath `dist/view.js` |
+| ui      | `tsc`   | `dist/index.js`, its types, and the standalone console in `dist/standalone/` |
+| cli     | esbuild | `dist/cli.js` with a shebang, and `dist/ui/` from the console package |
+| plugin  | esbuild | `lib/index.js`, one bundle                                        |
+| plugin  | `tsc`   | `lib/index.d.ts` in a declaration-only run                        |
 
 `pnpm build` runs the builds in the dependency order of the workspace. The plugin keeps the packages
-external, because the harness gives them at run time.
+external, because the harness gives them at run time. The install runs the `prepare` script of each
+built package, in that same order.
 
 ## Write path
 

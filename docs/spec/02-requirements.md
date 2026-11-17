@@ -130,6 +130,7 @@ Its context and tools, and the session import, are pending. See [06-architecture
 | REQ-575 | The compaction section accepts no key `mode`, and the load rejects a file that holds it. | FR | draft | Put `mode = "batch"` in the compaction section. The load rejects the file, and the plugin starts on the default base. |
 | REQ-576 | The key `batch` accepts each whole number above zero, and it sets no upper limit. | FR | draft | Set `batch = 500` in the base file. The load accepts the value, and one call carries 500 inputs. |
 | REQ-577 | The load rejects a `batch` value that is not a whole number above zero. | FR | draft | Set `batch = 0` in the base file. The load rejects the value, and the plugin starts on the default base. |
+| REQ-578 | Each package declares each workspace package that it imports, and no relative import leaves its package. | NFR | accepted | The check `scripts/check-package-boundaries.mjs` reads each source file and each test file of each package, and it reports no violation. |
 
 ## Rules for new requirements
 

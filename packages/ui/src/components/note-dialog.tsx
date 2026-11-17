@@ -17,9 +17,9 @@
  * #endregion moduleContract
  */
 
+import type { NoteKind } from "@memlens/core";
 import type { JSX } from "react";
 import { useState } from "react";
-import type { NoteKind } from "../../../core/src/types/primitives.js";
 import type {
 	ConsoleApi,
 	DialogPayload,

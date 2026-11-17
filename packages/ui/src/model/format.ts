@@ -11,7 +11,7 @@
  * #endregion moduleContract
  */
 
-import type { NoteKind } from "../../../core/src/types/primitives.js";
+import type { NoteKind } from "@memlens/core";
 import { KIND_KEYS, type Table } from "../i18n.js";
 import type { Translate } from "./console.js";
 

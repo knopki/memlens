@@ -8,9 +8,9 @@
  * #endregion moduleContract
  */
 
+import type { SliceLine } from "@memlens/core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { SliceLine } from "../../../core/src/types/tree.js";
 import { Catalog } from "../../src/components/screens/catalog.js";
 import { Overview } from "../../src/components/screens/overview.js";
 import { TreeView } from "../../src/components/screens/tree.js";

@@ -16,18 +16,22 @@
  */
 
 import { createRequire } from "node:module";
-import type { ComponentType, ReactNode } from "react";
-import { describe, expect, it } from "vitest";
-import { SCREEN_COMPONENTS } from "../../ui/src/components/screens/index.js";
-import { fill, messages } from "../../ui/src/i18n.js";
 import type {
 	ConsoleActions,
 	ConsoleApi,
 	ConsoleState,
 	Translate,
-} from "../../ui/src/model/console.js";
-import { DEFAULT_ROUTE, SCREENS } from "../../ui/src/route.js";
-import type { View } from "../../ui/src/types.js";
+	View,
+} from "@memlens/ui";
+import {
+	DEFAULT_ROUTE,
+	fill,
+	messages,
+	SCREEN_COMPONENTS,
+	SCREENS,
+} from "@memlens/ui";
+import type { ComponentType, ReactNode } from "react";
+import { describe, expect, it } from "vitest";
 import {
 	createProfileConsole,
 	createSessionConsole,

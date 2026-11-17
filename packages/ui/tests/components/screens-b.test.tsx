@@ -9,10 +9,9 @@
  * #endregion moduleContract
  */
 
+import type { DueRecord, IndexHit, Proposal } from "@memlens/core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { DueRecord } from "../../../core/src/domain/reads.js";
-import type { IndexHit, Proposal } from "../../../core/src/store/types.js";
 import { NoteDialog } from "../../src/components/note-dialog.js";
 import { Proposals } from "../../src/components/screens/proposals.js";
 import { Review } from "../../src/components/screens/review.js";

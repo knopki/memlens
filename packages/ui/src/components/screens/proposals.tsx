@@ -14,9 +14,9 @@
  * #endregion moduleContract
  */
 
+import type { Proposal } from "@memlens/core";
 import type { JSX } from "react";
 import { useSyncExternalStore } from "react";
-import type { Proposal } from "../../../../core/src/store/types.js";
 import type { ConsoleApi } from "../../model/console.js";
 import { Button, Panel, Table } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";

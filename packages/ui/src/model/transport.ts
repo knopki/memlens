@@ -12,8 +12,7 @@
  * #endregion moduleContract
  */
 
-import type { IndexHit } from "../../../core/src/store/types.js";
-import type { SliceLine } from "../../../core/src/types/tree.js";
+import type { IndexHit, SliceLine } from "@memlens/core";
 import { fill, messages } from "../i18n.js";
 import type { View } from "../types.js";
 import type { OpenedTarget, StorePort, Translate } from "./console.js";

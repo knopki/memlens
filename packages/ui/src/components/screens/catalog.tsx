@@ -12,10 +12,10 @@
  * #endregion moduleContract
  */
 
+import type { Range, SliceLine } from "@memlens/core";
+import { dateSpan } from "@memlens/core/view";
 import type { JSX } from "react";
 import { useSyncExternalStore } from "react";
-import { dateSpan } from "../../../../core/src/domain/date-span.js";
-import type { Range, SliceLine } from "../../../../core/src/types/tree.js";
 import type { ConsoleApi } from "../../model/console.js";
 import { lineText, rangeId, rangeOf } from "../../model/format.js";
 import type { View } from "../../types.js";

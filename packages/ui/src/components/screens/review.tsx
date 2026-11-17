@@ -13,10 +13,8 @@
  * #endregion moduleContract
  */
 
-import type { JSX } from "react";
-import { useSyncExternalStore } from "react";
-import type { DueRecord } from "../../../../core/src/domain/reads.js";
-import type { NoteKind } from "../../../../core/src/types/primitives.js";
+import type { DueRecord, NoteKind } from "@memlens/core";
+import { type JSX, useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
 import { kindName } from "../../model/format.js";
 import { KINDS } from "../../route.js";

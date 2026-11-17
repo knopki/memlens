@@ -18,21 +18,23 @@
  * #endregion moduleContract
  */
 
-import type { IndexHit } from "../../../core/src/store/types.js";
-import type { SliceLine } from "../../../core/src/types/tree.js";
+import type { IndexHit, SliceLine } from "@memlens/core";
 import type {
 	ConsoleApi,
 	ConsoleRuntime,
 	ConsoleState,
 	ConsoleStorage,
 	OpenedTarget,
+	Route,
 	StorePort,
 	Translate,
-} from "../../../ui/src/model/console.js";
-import { createConsoleController } from "../../../ui/src/model/controller.js";
-import { createConsoleStore } from "../../../ui/src/model/store.js";
-import { DEFAULT_ROUTE, type Route } from "../../../ui/src/route.js";
-import type { View } from "../../../ui/src/types.js";
+	View,
+} from "@memlens/ui";
+import {
+	createConsoleController,
+	createConsoleStore,
+	DEFAULT_ROUTE,
+} from "@memlens/ui";
 import {
 	CONSOLE_NAMESPACE,
 	type ConsoleInputs,

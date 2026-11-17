@@ -21,7 +21,7 @@ import {
 	MESSAGES,
 	messages,
 	type Table,
-} from "../../../ui/src/i18n.js";
+} from "@memlens/ui";
 import type { ClientContext, Message } from "./context.js";
 
 /** The locale namespace of the tab. */

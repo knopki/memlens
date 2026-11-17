@@ -9,6 +9,10 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"default": "./dist/index.js"
+		},
+		"./view": {
+			"types": "./dist/view.d.ts",
+			"default": "./dist/view.js"
 		}
 	},
 	"files": [
@@ -16,9 +20,10 @@
 	],
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
+		"prepare": "pnpm run build",
+		"test": "vitest run",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"typecheck:docs": "tsc -p tsconfig.docs.json",
-		"test": "vitest run"
+		"typecheck:docs": "tsc -p tsconfig.docs.json"
 	},
 	"devDependencies": {
 		"@types/node": "^22.20.1",

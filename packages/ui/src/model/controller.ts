@@ -18,9 +18,7 @@
  * #endregion moduleContract
  */
 
-import type { OpenEntry } from "../../../core/src/domain/reads.js";
-import type { NoteKind } from "../../../core/src/types/primitives.js";
-import type { BuildInput, Range } from "../../../core/src/types/tree.js";
+import type { BuildInput, NoteKind, OpenEntry, Range } from "@memlens/core";
 import { address, rangeId, rangeOf } from "../format.js";
 import { LANGS, type Lang } from "../i18n.js";
 import {

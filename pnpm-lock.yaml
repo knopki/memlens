@@ -179,6 +179,9 @@ importers:
         specifier: ^1.9.1
         version: 1.9.1
     devDependencies:
+      '@memlens/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.5
@@ -255,6 +258,9 @@ importers:
       '@memlens/core':
         specifier: workspace:*
         version: link:../core
+      '@memlens/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.5
@@ -281,6 +287,10 @@ importers:
         version: 4.6.6
 
   packages/ui:
+    dependencies:
+      '@memlens/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@types/react':
         specifier: ^19.2.0

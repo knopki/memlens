@@ -12,9 +12,9 @@
  * #endregion moduleContract
  */
 
+import type { BuildInput } from "@memlens/core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { BuildInput } from "../../../core/src/types/tree.js";
 import { Inspector } from "../../src/components/inspector.js";
 import { CompactionPanel } from "../../src/components/screens/compaction.js";
 import { Maintenance } from "../../src/components/screens/maintenance.js";

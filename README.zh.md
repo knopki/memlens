@@ -72,7 +72,7 @@ prek install
 | `pnpm run build`     | 构建四个包。                  |
 | `pnpm run typecheck` | 检查类型。                    |
 | `pnpm run test`      | 运行测试。                    |
-| `pnpm run lint`      | 用 biome 检查代码与格式。     |
+| `pnpm run lint`      | 检查代码、区域与包边界。      |
 | `pnpm run format`    | 写入 biome 修复与格式化结果。 |
 | `pnpm run lint:docs` | 按 STE 限制检查文档。         |
 | `pnpm run verify`    | 运行构建和全部检查。          |

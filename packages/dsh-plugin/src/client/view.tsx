@@ -14,10 +14,10 @@
  * #endregion moduleContract
  */
 
+import type { Translate } from "@memlens/ui";
+import { DEFAULT_ROUTE } from "@memlens/ui";
 import type { JSX } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import type { Translate } from "../../../ui/src/model/console.js";
-import { DEFAULT_ROUTE } from "../../../ui/src/route.js";
 import { createSessionConsole } from "./console.js";
 import { CONSOLE_CSS } from "./styles.js";
 

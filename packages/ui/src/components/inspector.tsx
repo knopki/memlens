@@ -12,9 +12,9 @@
  * #endregion moduleContract
  */
 
+import type { OpenEntry } from "@memlens/core";
 import type { JSX } from "react";
 import { useState } from "react";
-import type { OpenEntry } from "../../../core/src/domain/reads.js";
 import type { ConsoleApi } from "../model/console.js";
 import { kindName } from "../model/format.js";
 import type { RecordModel } from "../types.js";

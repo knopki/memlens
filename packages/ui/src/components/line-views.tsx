@@ -10,8 +10,8 @@
  * #endregion moduleContract
  */
 
+import type { SliceLine } from "@memlens/core";
 import type { JSX, ReactNode } from "react";
-import type { SliceLine } from "../../../core/src/types/tree.js";
 import type { Table } from "../i18n.js";
 import type { ConsoleApi } from "../model/console.js";
 import { Panel } from "./primitives.js";

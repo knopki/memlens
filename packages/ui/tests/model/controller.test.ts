@@ -7,8 +7,8 @@
  * #endregion moduleContract
  */
 
+import type { BuildInput } from "@memlens/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BuildInput } from "../../../core/src/types/tree.js";
 import type { ConsoleRuntime, OpenedTarget } from "../../src/model/console.js";
 import { DEFAULT_ROUTE } from "../../src/route.js";
 import type { View } from "../../src/types.js";
