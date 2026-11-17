@@ -1,50 +1,11 @@
 # Architecture
 
 Status: the storage pivot uses one SQLite row store. The core and CLI have implementations. The standalone console uses the store. The plugin implements host and preset configuration with one shared store.
-The global requirements define cross-module behavior. Code contracts define implemented local behavior.
+The behavior features in [docs/features](../features/README.md) define cross-module behavior. Code contracts define implemented local behavior.
 
-## Shape
+## Map
 
-One SQLite database holds normalized note and summary rows. Current rows are the truth. Reads and writes do not replay history. A tree of summary rows stands above notes:
-
-- The notes of a scope make the leaves.
-- Summary node rows stand above the notes, one row per aligned range.
-
-The agent reads one map of directions: the derived scope list in the `<directions>` section.
-
-## Parts
-
-| Path                  | Package               | Role                                                                 |
-| --------------------- | --------------------- | -------------------------------------------------------------------- |
-| `packages/core`       | `@memlens/core`       | The engine: one row store, configuration, reads, tree build, and slice. |
-| `packages/cli`        | `@memlens/cli`        | The terminal and HTTP host: the console command, redact, amend, import, export. |
-| `packages/ui`         | `@memlens/ui`         | The browser client: seven screens with native DOM controls. |
-| `packages/dsh-plugin` | `@memlens/dsh-plugin` | The harness surface: the entry points `.` and `./preset`, the tools. |
-
-The CLI and the plugin depend on the console. The console and the CLI depend on the library. The
-library depends on nothing.
-Each package declares each workspace package that it imports.
-The test `packages/core/tests/isolation.test.ts` holds the library rule. See [REQ-007](02-requirements.md).
-
-## Stack
-
-TypeScript 7 on Node.js with pnpm workspaces. biome lints and formats. vitest runs the tests. esbuild
-makes the bundles. prek runs the git hooks. See [0010 Process and stack](../adr/0010-process-stack.md). The tool versions come from
-`mise.toml`. See [0010 Process and stack](../adr/0010-process-stack.md).
-
-## Build
-
-| Package | Tool    | Output                                                            |
-| ------- | ------- | ----------------------------------------------------------------- |
-| core    | `tsc`   | `dist/index.js`, `dist/index.d.ts`, and the subpath `dist/view.js` |
-| ui      | `tsc`   | `dist/index.js`, its types, and the standalone console in `dist/standalone/` |
-| cli     | esbuild | `dist/cli.js` with a shebang, and `dist/ui/` from the console package |
-| plugin  | esbuild | `lib/index.js`, one bundle                                        |
-| plugin  | `tsc`   | `lib/index.d.ts` in a declaration-only run                        |
-
-`pnpm build` runs the builds in the dependency order of the workspace. The plugin keeps the packages
-external, because the harness gives them at run time. The install runs the `prepare` script of each
-built package, in that same order.
+The LikeC4 model in [docs/arch](../arch/README.md) owns the map. It holds the context, the containers, the parts of the core and the plugin, the use cases, and the deployment. The sources are in `docs/arch/src`. The tool chain and the build outputs live in the package manifests. See [0010 Process and stack](../adr/0010-process-stack.md). The library imports no CLI, plugin, harness, or user interface package, and the test `packages/core/tests/isolation.test.ts` holds this rule.
 
 ## Write path
 
@@ -74,7 +35,7 @@ The store derives the catalog. No catalog scope, no catalog position, and no cat
 directions block lists the newest scopes of the profile within its budget, from the oldest to the
 newest. Each line uses the current top summary of its scope. Every older scope forms one comma list
 of keys with no description. A scope with no live note gives no line. See the
-[context contract](../../packages/core/src/domain/context.ts) and [REQ-530](02-requirements.md).
+[context contract](../../packages/core/src/domain/context.ts) and [REQ-530](archive/02-requirements.md).
 
 A note change deletes each covering node row in the same transaction. Compaction rebuilds the node from its two children. The [node contract](../../packages/core/src/store/nodes.ts) and the [build contract](../../packages/core/src/store/build.ts) own the build rules.
 
@@ -225,7 +186,7 @@ The [address contract](../../packages/core/src/domain/address.ts) owns parsing a
 The store assigns note positions by the immutable `(ts, id)` order.
 A saved textual address is not a permanent record identifier.
 The read models resolve record addresses and validate scope visibility.
-An address with no scope waits for the tool input rules in [REQ-260](02-requirements.md) and [REQ-261](02-requirements.md).
+An address with no scope waits for the tool input rules in [REQ-260](archive/02-requirements.md) and [REQ-261](archive/02-requirements.md).
 
 ## Tree
 
@@ -253,7 +214,7 @@ A redact clears the note row, its index row, and the covering node rows. It dele
 that carry the target. No historical amendment and no historical node row exists, so the clearing
 stays within current rows. The write runs in one transaction, and a truncating checkpoint runs after
 the commit. One byte test proves the claim: after a redact, the marker text is absent from the
-database file and the write-ahead log. See [REQ-527](02-requirements.md) and
+database file and the write-ahead log. See [REQ-527](archive/02-requirements.md) and
 [0020 Storage pivot](../adr/0020-storage-pivot.md).
 
 A late compaction answer does not match the captured validity keys. Already delivered session
@@ -308,7 +269,7 @@ repeated import changes no row.
 A local change uses the same rule: the write deletes the covering node rows of the changed slot in
 the same transaction. The read compares the validity keys of each rendered node. A missed path
 degrades to a dirty range, never to stale text. See the
-[row validity rules](../../packages/core/src/store/view.ts) and [REQ-528](02-requirements.md).
+[row validity rules](../../packages/core/src/store/view.ts) and [REQ-528](archive/02-requirements.md).
 
 ## Session and store
 
@@ -316,7 +277,7 @@ A session writes the store. The export and the import move the rows between stor
 the five merge channels by `id`. Content and review merge by version, lifecycle by maximum, cleared
 by latch, and the supersede link by first write. A note can supersede an earlier note. The index is a
 cache over the note rows. The store rebuilds it after a loss. See
-[REQ-375](02-requirements.md), [REQ-377](02-requirements.md), and [REQ-524](02-requirements.md).
+[REQ-375](archive/02-requirements.md), [REQ-377](archive/02-requirements.md), and [REQ-524](archive/02-requirements.md).
 
 ## Harness surface
 
@@ -337,8 +298,8 @@ message at the session end, so the session prefix stays unchanged. See [0007 Sli
 context](../adr/0007-slice-context.md) and [0025 Context refresh](../adr/0025-context-refresh.md).
 
 The text stays the same until a trigger: a fresh session and a compaction after success. A process
-restart gives the same text. See [REQ-300](02-requirements.md) and
-[REQ-188](02-requirements.md).
+restart gives the same text. See [REQ-300](archive/02-requirements.md) and
+[REQ-188](archive/02-requirements.md).
 
 The plugin registers one context for each agent at `agent/created`. The event gives the agent scope,
 and the context is bound to it: another agent does not receive the context.
@@ -350,7 +311,7 @@ the cwd selects the active scope.
 The harness writes the context as a user-role message after the saved history. The message survives a
 restart. The harness writes a new message only when the text changes. A compaction deletes the
 message, and the plugin renders a new snapshot after the compaction succeeds. See
-[REQ-280](02-requirements.md) to [REQ-285](02-requirements.md).
+[REQ-280](archive/02-requirements.md) to [REQ-285](archive/02-requirements.md).
 
 Each runtime context has a unique name, including a plugin context. The harness combines named sections in one snapshot. The built-in
 values are `WORKING_DIRECTORY` 100, `SANDBOX_POLICY` 110, `APPROVAL_POLICY` 115,
@@ -376,16 +337,16 @@ that time, so a note of a past moment lands before the notes of the later time. 
 positions therefore follows the time of the note, and not the order of the writes.
 
 The tool behavior and the errors are in the [tool contracts](../../packages/dsh-plugin/src/tools/shared.ts) and in
-[REQ-024](02-requirements.md) to [REQ-477](02-requirements.md). The subagent modes are in
-[REQ-542](02-requirements.md) to [REQ-543](02-requirements.md), and the log keeps the content of a
+[REQ-024](archive/02-requirements.md) to [REQ-477](archive/02-requirements.md). The subagent modes are in
+[REQ-542](archive/02-requirements.md) to [REQ-543](archive/02-requirements.md), and the log keeps the content of a
 dismissed proposal in the [config contract](../../packages/core/src/domain/config.ts). The nudge is in
-[REQ-233](02-requirements.md) to [REQ-242](02-requirements.md). See
+[REQ-233](archive/02-requirements.md) to [REQ-242](archive/02-requirements.md). See
 [0009 Agent surface](../adr/0009-agent-surface.md).
 
 ## Human surface
 
 Only the CLI or the GUI can redact and amend. Review sets the next review time and stays out of the
-slice. See [0020 Storage pivot](../adr/0020-storage-pivot.md) and [REQ-024](02-requirements.md).
+slice. See [0020 Storage pivot](../adr/0020-storage-pivot.md) and [REQ-024](archive/02-requirements.md).
 
 The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui`, and the [core entry
 contract](../../packages/core/src/index.ts) exports the console models. The console
@@ -492,7 +453,7 @@ customer words as given.
 The following items are not in the code. The other slices of this document describe the current code.
 
 - The CLI owes the import from harness sessions. The CLI accepts no `--from` flag, and no reader of a
-  session exists. See [REQ-413](02-requirements.md) and [Q-514](03-open-questions.md#q-514).
+  session exists. See [REQ-413](archive/02-requirements.md) and [Q-514](03-open-questions.md#q-514).
 - The plugin worker calls `compactionPass` and `sweep` at the accepted triggers. The CLI starts a
   build only at `memlens compact` and at the console job.
 - The standalone console gives a manual compaction job. It holds no background compaction state and

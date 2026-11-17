@@ -50,7 +50,7 @@ costs only its own retry, and the good lines of the same answer stay. The retrie
 and a range that still fails waits for the next pass.
 A file that holds `mode` fails the check, and the user removes the key. The plugin starts on the
 built-in defaults after a rejected base file, and a reload keeps the last valid configuration. The
-requirements [REQ-571](../spec/02-requirements.md) to [REQ-577](../spec/02-requirements.md) state
+requirements [REQ-571](../spec/archive/02-requirements.md) to [REQ-577](../spec/archive/02-requirements.md) state
 these rules.
 
 The closed answers Q-063, Q-069, Q-078, and Q-079 describe the earlier design. This decision closes

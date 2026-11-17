@@ -8,7 +8,7 @@ A blocking question stops the current portion of the specification until the cus
 
 Which rule turns a harness session into notes at the pending session import?
 
-The requirement [REQ-413](02-requirements.md) says that the import writes new notes of each
+The requirement [REQ-413](archive/02-requirements.md) says that the import writes new notes of each
 session. The rule that selects the note text is open.
 
 - Option A: The import gives the session text to the model with the compaction prompt. The answer
@@ -57,7 +57,7 @@ the same rows, and the command has no such filter. See the
 The answers below keep the words of their date. The storage pivot replaced the event log, the
 projection, the replay cursor, and the two backends. A closed answer that names one of them describes
 the earlier design. See [0020 Storage pivot](./adr/0020-storage-pivot.md).
-The customer removed the `memory_forget` counters on 2026-11-14. The revised [REQ-371](02-requirements.md) replaces the field in Q-097.
+The customer removed the `memory_forget` counters on 2026-11-14. The revised [REQ-371](archive/02-requirements.md) replaces the field in Q-097.
 The customer removed the retry with the error text and the run forms on 2026-11-16.
 [0023 Batch compaction](./adr/0023-batch-compaction.md) replaces Q-063, Q-069, Q-078, and Q-079.
 
@@ -98,7 +98,7 @@ The customer showed the harness behavior on 2026-11-17: a changed runtime contex
 session as a new user message at the end. The session prefix stays unchanged, so the prompt cache
 stays intact. The premise of [0007 Slice and context](./adr/0007-slice-context.md), a stable text
 protects the prompt cache, is wrong. A changed snapshot costs one more slice copy in the history,
-nothing else. This fact disputes [REQ-300](02-requirements.md).
+nothing else. This fact disputes [REQ-300](archive/02-requirements.md).
 
 - Option A: Keep the idle trigger. The interval limits how often a new snapshot copy enters the
   history. Fresh notes reach the agent with no compaction. The key `cacheTtl` takes a new name and
@@ -227,19 +227,19 @@ The customer selected option B on 2026-11-17. See [0025 Context refresh](./adr/0
 | Q-117 | Where does the store keep the `title` and the `description` of a scope? | None. A scope has a name only. The first node of the scope gives the text. See Q-044. | 2026-11-05 |
 | Q-118 | Does a `redact` rewrite the target `note` event, or does it keep the event and remove the old bytes? | Closed by the storage pivot: no event exists. A redact is one transaction, and the row takes `deleted` with an empty body. See the [notes contract](././packages/core/src/store/notes.ts). | 2026-11-05 |
 | Q-115 | Does the card render in `<directions>` or in `<here>`? | The card is the direction line. `<here>` holds no card line. | 2026-11-05 |
-| Q-456 | What does the policy text of the slice hold? | The research of the prior art gives the text. The first form was the block of . See [REQ-509](02-requirements.md). | 2026-11-06 |
+| Q-456 | What does the policy text of the slice hold? | The research of the prior art gives the text. The first form was the block of . See [REQ-509](archive/02-requirements.md). | 2026-11-06 |
 | Q-457 | How does a proposal change an existing record? | An ordinary write operation can carry proposed true. Approval applies the ordinary operation and closes the proposal with dismiss. | 2026-11-06 |
 | Q-458 | What happens to one `id` with two payloads at one `at`? | Closed by the storage pivot: no payload hash exists. A merge compares five channels by version, by lifecycle rank, and by the cleared latch. See the [transfer contract](././packages/core/src/store/transfer.ts). | 2026-11-06 |
 | Q-459 | When does the index show a note that a write just added? | The index row changes in the same transaction as the note row. A read after the commit sees the note. See the [notes contract](././packages/core/src/store/notes.ts). | 2026-11-06 |
-| Q-460 | Which tokenizer does the index take for each language? | One value of `language` for the installation. `porter unicode61 remove_diacritics 1` for `en`, `unicode61 remove_diacritics 1` for the other languages with spaces, and `trigram` for `zh` and `ja`. See [REQ-450](02-requirements.md). | 2026-11-06 |
-| Q-510 | Does a range with one non-empty child build a node? | Yes. A child without a longform copies without a model call. A leaf with a longform gives the full text to the model. The console shows the range line only. See [REQ-516](02-requirements.md). | 2026-11-11 |
-| Q-511 | Does a direction line of an unready scope hold its period? | No period of timestamps. The range renders a temporary line with the keys and the age, and it needs no model call. The summary replaces that text when the node is ready. See [REQ-451](02-superseded.md). | 2026-11-11 |
-| Q-512 | What does a direction line hold? | The keys, the idle time, and the summary. A line above one scope joins its keys and gives the range of the idle times. The line holds no count, no active marker, and no profile name. An unready range gives a temporary line with the keys and the age. The earlier form gave the count and the `active` marker. See [REQ-451](02-superseded.md). | 2026-11-11 |
-| Q-513 | What text does a line of a dirty range hold? | The text of its two children, joined with a semicolon and a space, and cut at the line limit at a word boundary. A record gives its body and then its longform. The render assembles the text and stores nothing. The earlier form held no text and the period only. See [REQ-337](02-superseded.md). | 2026-11-11 |
-| Q-518 | Which form keeps the scope menu usable with many scopes? | One flat list. No tree and no search field. The plugin menu holds three scopes today, so the list must serve a large count. See [REQ-565](02-requirements.md), and [REQ-566](02-requirements.md). | 2026-11-15 |
-| Q-519 | Does the configuration keep the scope rules of `[scope_default]`? | The source list gives the default behavior. A rule of the user config comes before it. See [REQ-555](02-requirements.md), and [REQ-564](02-requirements.md). | 2026-11-15 |
-| Q-520 | When does a change of the base file apply? | A file watch. A change of the base file applies with no harness restart. See [REQ-548](02-requirements.md). | 2026-11-15 |
-| Q-521 | Does the preset keep the mandatory `profile` key? | The default value of the key `profile` is `default`. See [REQ-547](02-requirements.md). | 2026-11-15 |
-| Q-522 | What happens when the active scope is not a scope of the profile? | The customer selected option A: the active scope joins the scopes of that session. The join adds the literal key at each configuration read and writes no configuration file. See [REQ-563](02-requirements.md). | 2026-11-15 |
-| Q-524 | Does the key `batch` stay now that one call carries one batch? | The customer selected option A with the corrected count. The key stays, the default is ten, and the key sets no upper limit. See [REQ-572](02-requirements.md), [REQ-576](02-requirements.md), and [0023 Batch compaction](./adr/0023-batch-compaction.md). | 2026-11-16 |
-| Q-525 | Which status does the removed key `compaction.mode` have? | The customer selected option B. The plugin keeps no compatibility form, and the load rejects the key `mode` as an unknown key. See [REQ-575](02-requirements.md) and [0023 Batch compaction](./adr/0023-batch-compaction.md). | 2026-11-16 |
+| Q-460 | Which tokenizer does the index take for each language? | One value of `language` for the installation. `porter unicode61 remove_diacritics 1` for `en`, `unicode61 remove_diacritics 1` for the other languages with spaces, and `trigram` for `zh` and `ja`. See [REQ-450](archive/02-requirements.md). | 2026-11-06 |
+| Q-510 | Does a range with one non-empty child build a node? | Yes. A child without a longform copies without a model call. A leaf with a longform gives the full text to the model. The console shows the range line only. See [REQ-516](archive/02-requirements.md). | 2026-11-11 |
+| Q-511 | Does a direction line of an unready scope hold its period? | No period of timestamps. The range renders a temporary line with the keys and the age, and it needs no model call. The summary replaces that text when the node is ready. See [REQ-451](archive/02-superseded.md). | 2026-11-11 |
+| Q-512 | What does a direction line hold? | The keys, the idle time, and the summary. A line above one scope joins its keys and gives the range of the idle times. The line holds no count, no active marker, and no profile name. An unready range gives a temporary line with the keys and the age. The earlier form gave the count and the `active` marker. See [REQ-451](archive/02-superseded.md). | 2026-11-11 |
+| Q-513 | What text does a line of a dirty range hold? | The text of its two children, joined with a semicolon and a space, and cut at the line limit at a word boundary. A record gives its body and then its longform. The render assembles the text and stores nothing. The earlier form held no text and the period only. See [REQ-337](archive/02-superseded.md). | 2026-11-11 |
+| Q-518 | Which form keeps the scope menu usable with many scopes? | One flat list. No tree and no search field. The plugin menu holds three scopes today, so the list must serve a large count. See [REQ-565](archive/02-requirements.md), and [REQ-566](archive/02-requirements.md). | 2026-11-15 |
+| Q-519 | Does the configuration keep the scope rules of `[scope_default]`? | The source list gives the default behavior. A rule of the user config comes before it. See [REQ-555](archive/02-requirements.md), and [REQ-564](archive/02-requirements.md). | 2026-11-15 |
+| Q-520 | When does a change of the base file apply? | A file watch. A change of the base file applies with no harness restart. See [REQ-548](archive/02-requirements.md). | 2026-11-15 |
+| Q-521 | Does the preset keep the mandatory `profile` key? | The default value of the key `profile` is `default`. See [REQ-547](archive/02-requirements.md). | 2026-11-15 |
+| Q-522 | What happens when the active scope is not a scope of the profile? | The customer selected option A: the active scope joins the scopes of that session. The join adds the literal key at each configuration read and writes no configuration file. See [REQ-563](archive/02-requirements.md). | 2026-11-15 |
+| Q-524 | Does the key `batch` stay now that one call carries one batch? | The customer selected option A with the corrected count. The key stays, the default is ten, and the key sets no upper limit. See [REQ-572](archive/02-requirements.md), [REQ-576](archive/02-requirements.md), and [0023 Batch compaction](./adr/0023-batch-compaction.md). | 2026-11-16 |
+| Q-525 | Which status does the removed key `compaction.mode` have? | The customer selected option B. The plugin keeps no compatibility form, and the load rejects the key `mode` as an unknown key. See [REQ-575](archive/02-requirements.md) and [0023 Batch compaction](./adr/0023-batch-compaction.md). | 2026-11-16 |

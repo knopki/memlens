@@ -6,7 +6,8 @@ import is pending. The plugin implements host and preset configuration, one shar
 context, the six tools, the nudge, and the background compaction worker. The console surfaces are
 the profile page, the session tab, the worker status, and the worker journal.
 See [06-architecture.md](docs/spec/06-architecture.md) for the current state.
-The specification in `docs/spec/` owns cross-module requirements and pending behavior.
+The behavior features in `docs/features/` own cross-module behavior. The specification in `docs/spec/` owns
+the open questions and the reference pages.
 Code contracts own implemented rules within one module. Read the module contract and the relevant
 entity contract before a change.
 
@@ -17,17 +18,19 @@ The model check runs inside `pnpm run lint:docs`. Update the model with each arc
 ## New customer input
 
 1. Put the meaning of a fresh customer message about the product in the correct file:
-   - Cross-module behavior and pending behavior go to [02-requirements.md](docs/spec/02-requirements.md) with status `draft`.
+   - Cross-module behavior goes to a new scenario in a feature file in [docs/features](docs/features/README.md).
+     Tag a scenario with no proving test `@wip`.
+   - Pending behavior goes to [03-open-questions.md](docs/spec/03-open-questions.md).
    - Implemented local behavior goes to module invariants or an entity contract beside its implementation.
-   - Keep requirement identifiers out of code contracts. Archive original requirements in [02-superseded.md](docs/spec/02-superseded.md).
+   - Keep requirement identifiers out of code contracts. The retired requirement lists stay in
+     [docs/spec/archive](docs/spec/archive/README.md).
    - The product boundary goes to [00-overview.md](docs/spec/00-overview.md) or to
      [01-goals-nongoals.md](docs/spec/01-goals-nongoals.md).
    - A choice with consequences goes to an ADR.
    - A new term goes to [05-glossary.md](docs/spec/05-glossary.md) before its first use.
    - An unclear point goes to [03-open-questions.md](docs/spec/03-open-questions.md).
-2. Compare the new input with the specification. If it contradicts a requirement, set that
-   requirement to `disputed` and add an open question with two options. Do not overwrite the
-   requirement silently.
+2. Compare the new input with the features. If it contradicts a scenario, tag that scenario `@disputed`
+   and add an open question with two options. Do not overwrite the scenario silently.
 3. Commit with the message `spec: <change>`.
 
 ## Implementation

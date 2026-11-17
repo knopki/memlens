@@ -6,7 +6,7 @@ set -eu
 # Preserve historical vocabulary in the archive. Check its other language rules.
 python3 scripts/vendor/ste-lint.py \
   --disable synonym-rotation \
-  docs/spec/02-superseded.md \
+  docs/spec/archive/02-superseded.md \
   "$@"
 
 # Include new documents. The journal retains the customer words and stays outside this check.

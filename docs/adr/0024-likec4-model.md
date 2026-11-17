@@ -17,8 +17,12 @@ Describe the system in a LikeC4 model in [docs/arch](../arch/README.md). The
 model owns the map: the context, the containers, the parts of the core and the
 plugin, the main use cases, and the deployment. The model names no file and no
 requirement identifier. ADRs stay the decision log. Module contracts stay the
-local rules. The requirement list stays until the customer accepts the model.
-The command `likec4 validate docs/arch` runs inside `pnpm run lint:docs`.
+local rules. The command `likec4 validate docs/arch` runs inside `pnpm run lint:docs`.
+
+The customer accepted the format on 2026-11-17 and ordered the split. The
+requirement lists retired into [docs/spec/archive](../spec/archive/README.md).
+The behavior rows became scenarios in [docs/features](../features/README.md).
+The architecture prose keeps the invariants and points to the model.
 
 ## Alternatives
 
@@ -33,7 +37,7 @@ Use Draw.io: the files are not text, and the diffs are unreadable.
 
 The repository carries one dev dependency more. Each architecture change must
 update the model, or `pnpm run lint:docs` still passes with a stale map: the
-command validates references, not truth. The model and the prose
-architecture overlap until the split, so a change must update both. After the
-acceptance, a later change moves the cross-module behavior into behavior
-features and the local rules into module contracts.
+command validates references, not truth. The architecture prose no longer
+repeats the map, so a structural change updates the model alone. A behavior
+change updates the scenario and its proving test. The scenario headers cite
+the retired REQ ids for traceability, and the citation is historical.
