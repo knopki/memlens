@@ -31,17 +31,16 @@ Read those contracts before a change. The archive retains the original local req
 
 ## Rules
 
-1. Record each statement in [../statements.md](../statements.md) with an identifier.
-2. Give each global requirement one identifier, a source, and a status. Local code contracts use no requirement identifier.
-3. A requirement must have a test method. If there is no test method, the item is an open
+1. Give each global requirement one identifier and a status. Local code contracts use no requirement identifier.
+2. A requirement must have a test method. If there is no test method, the item is an open
    question, not a requirement.
-4. A contradiction becomes an open question with two options. Do not overwrite silently.
-5. Record each non-goal. A non-goal must not become a hidden requirement.
-6. Record each decision in an ADR.
-7. Do not start the code while the requirement is `draft`, unless the customer asks for it.
-8. Keep implemented local rules beside the code. Archive their original requirements with links to the owning contracts.
-9. Keep cross-module guarantees and pending behavior in the global list.
-10. Change the specification with small commits.
+3. A contradiction becomes an open question with two options. Do not overwrite silently.
+4. Record each non-goal. A non-goal must not become a hidden requirement.
+5. Record each decision in an ADR.
+6. Do not start the code while the requirement is `draft`, unless the customer asks for it.
+7. Keep implemented local rules beside the code. Archive their original requirements with links to the owning contracts.
+8. Keep cross-module guarantees and pending behavior in the global list.
+9. Change the specification with small commits.
 
 ## Status values
 
@@ -49,7 +48,7 @@ Read those contracts before a change. The archive retains the original local req
 | ------------ | ------------------------------------------------------------------------------------- |
 | `draft`      | Written as understood. Not confirmed.                                                 |
 | `accepted`   | Confirmed. The requirement is testable.                                               |
-| `disputed`   | Contradicts another statement. See the open question.                                 |
+| `disputed`   | Contradicts another requirement. See the open question.                                |
 | `deferred`   | Postponed on purpose.                                                                 |
 | `superseded` | Replaced by another requirement. The item is in [02-superseded.md](02-superseded.md). |
 | `rejected`   | Refused on purpose. The item is in [02-superseded.md](02-superseded.md).              |

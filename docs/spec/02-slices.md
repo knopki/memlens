@@ -27,4 +27,3 @@ A rejected requirement stays out of the review, and it is in [02-superseded.md](
 
 1. The customer accepts a slice. The status of each requirement in the slice becomes `accepted`.
 2. A requirement with an objection becomes `disputed`. An open question holds the objection.
-3. A change of a slice is a new statement in [../statements.md](../statements.md).

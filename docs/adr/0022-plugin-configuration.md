@@ -1,6 +1,6 @@
 # 0022. Plugin configuration
 
-Status: accepted. The preset key `profile` is optional, and its default is `default`. See [S-166](../statements.md#s-166).
+Status: accepted. The preset key `profile` is optional, and its default is `default`.
 
 ## Context
 

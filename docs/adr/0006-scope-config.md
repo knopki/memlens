@@ -13,7 +13,7 @@ A scope is a key `kind:name`, and the store holds no record for it. The active s
 A content amendment within one scope keeps its address. A transfer empties the old slot and allocates a fresh destination slot.
 The projection treats this as leaving one scope and entering another. It keeps the original note id and amendment links.
 Returning to the original scope allocates another new slot. Old empty slots never make the remaining records shift during a local transfer.
-Cleared content stays cleared after a transfer. See [S-142](../statements.md#s-142).
+Cleared content stays cleared after a transfer.
 
 ## Alternatives
 

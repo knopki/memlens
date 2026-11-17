@@ -29,8 +29,7 @@ The frontier of the active scope: one line for each range, from the oldest to th
 ## Policy text
 
 The policy text holds no XML tag and no tool signature. It names a section in backticks. The text
-below is the result of the research of the prior art, and the first form was the block of
-[S-067](../statements.md#s-067). See [S-130](../statements.md#s-130) and
+below is the result of the research of the prior art. See
 [06-architecture.md](06-architecture.md).
 
 The text names five tools. It names no review tool, because the agent reads a memory and does not
@@ -179,7 +178,7 @@ same rule. See the [compaction contract](../../packages/core/src/domain/compacti
 
 A child line holds no time of day. A record gives `#<pos> <YYYY-MM-DD>` and its body, with its
 `longform` below the body when present. A node gives `#<a>-<b> <start>..<end>` and its summary. The span
-writes the shared year and month once, as `2026-10-30..11-01`. See [S-067](../statements.md#s-067).
+writes the shared year and month once, as `2026-10-30..11-01`.
 
 ## Sizes and retries
 

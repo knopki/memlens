@@ -389,7 +389,7 @@ The [console host contract](../../packages/cli/src/ui.ts) owns the command `ui`,
 contract](../../packages/core/src/index.ts) exports the console models. The console
 gives its own styles. Both hosts share one component layer, and the plugin supplies the harness
 surfaces. The plugin mounts the tab `Memory` on the session page and narrows it to one profile. See
-[08-ui.md](08-ui.md) and [S-162](../statements.md#s-162).
+[08-ui.md](08-ui.md).
 
 ## CLI
 

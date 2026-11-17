@@ -31,7 +31,6 @@ memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | 带标识符和状态的需求。 |
 | [docs/spec/04-data.md](docs/spec/04-data.md)                     | 表、字段组与合并通道。 |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | 阻塞工作的未决问题。   |
-| [docs/statements.md](docs/statements.md)                         | 客户的原始陈述。       |
 | [AGENTS.md](AGENTS.md)                                           | 代理工作规则。         |
 
 ## 配置

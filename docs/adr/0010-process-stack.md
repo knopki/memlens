@@ -4,12 +4,12 @@ Status: accepted
 
 ## Context
 
-The specification is a set of markdown files, and the journal keeps the customer words. The tools come
+The specification is a set of markdown files. The tools come
 from mise and from npm.
 
 ## Decision
 
-The specification lives in `docs/spec/` with a statement journal. The documents use ASD-STE100. The
+The specification lives in `docs/spec/`. The documents use ASD-STE100. The
 specification stays draft until the customer accepts an item. The stack is TypeScript 7 on Node.js
 with pnpm workspaces. The packages are core, cli, and plugin. Tool versions come from `mise.toml`,
 and the tools that the packages run are dev dependencies.

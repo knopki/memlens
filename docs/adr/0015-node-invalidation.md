@@ -1,6 +1,6 @@
 # 0015. Node invalidation
 
-Status: replaced by [0020 Storage pivot](0020-storage-pivot.md). See [S-135](../statements.md#s-135) and [Q-461](../spec/03-open-questions.md#q-461).
+Status: replaced by [0020 Storage pivot](0020-storage-pivot.md). See [Q-461](../spec/03-open-questions.md#q-461).
 
 This decision replaces the freshness and writer checks of ADR 0013, ADR 0011, and ADR 0004.
 Their other decisions stay in effect.
@@ -8,7 +8,7 @@ Their other decisions stay in effect.
 ## Context
 
 An import usually joins two tails after a common prefix. The unaffected branches must stay usable.
-The store does not need to reuse a new imported summary. See [S-133](../statements.md#s-133).
+The store does not need to reuse a new imported summary.
 
 The latest event order does not describe all the input of a summary. Consider notes at times 100 and 200.
 A node takes the input revision 200. An imported amend at time 150 changes the first note.

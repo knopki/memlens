@@ -12,12 +12,7 @@ entity contract before a change.
 
 ## New customer input
 
-1. Record a fresh customer message about the product in [docs/statements.md](docs/statements.md)
-   only at the direct instruction of the customer. Use the next identifier `S-nnn` and add the date.
-   Do not change the words. Never record a note about an agent error or a process remark.
-2. Never record a repeated instruction, a process reply, or a journal correction. These are not
-   statements.
-3. Put the meaning in the correct file:
+1. Put the meaning of a fresh customer message about the product in the correct file:
    - Cross-module behavior and pending behavior go to [02-requirements.md](docs/spec/02-requirements.md) with status `draft`.
    - Implemented local behavior goes to module invariants or an entity contract beside its implementation.
    - Keep requirement identifiers out of code contracts. Archive original requirements in [02-superseded.md](docs/spec/02-superseded.md).
@@ -26,11 +21,10 @@ entity contract before a change.
    - A choice with consequences goes to an ADR.
    - A new term goes to [05-glossary.md](docs/spec/05-glossary.md) before its first use.
    - An unclear point goes to [03-open-questions.md](docs/spec/03-open-questions.md).
-4. Compare the statement with the specification. If it contradicts a requirement, set that
+2. Compare the new input with the specification. If it contradicts a requirement, set that
    requirement to `disputed` and add an open question with two options. Do not overwrite the
    requirement silently.
-5. Commit with the message `spec: <change>`. Never edit an old statement. Never reuse the
-   identifier of a deleted entry.
+3. Commit with the message `spec: <change>`.
 
 ## Implementation
 
@@ -98,4 +92,3 @@ Use ASD-STE100 Simplified Technical English in all documents and in all code com
 - Use one word for one meaning. Use the terms from the glossary.
 - Add a new term to the glossary before you use it in a document.
 - Keep the README in the eight languages of the DSH set: `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`.
-- Quotes in the statement journal stay in the source language.

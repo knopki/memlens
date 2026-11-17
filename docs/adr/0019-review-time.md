@@ -6,7 +6,7 @@ Status: accepted
 
 `review_at` held a date, while every other time in the model is a full UTC time.
 The date form gave an accidental same-day repeat rule, and the record held no date of its last change.
-The customer names the mixed granularity a defect of the specification. See S-158.
+The customer names the mixed granularity a defect of the specification.
 
 ## Decision
 
@@ -20,4 +20,4 @@ The log keeps older date values, and the text order of the two forms gives one c
 ## Consequences
 
 The projection schema version grows to 2. A store rebuilds its snapshot from the log on the first read.
-The queue can grow inside a day. The display of lists stays date only per S-157.
+The queue can grow inside a day. The display of lists stays date only.

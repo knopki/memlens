@@ -30,8 +30,7 @@ lines. The render calls no model. Empty ranges do not render or count against th
 
 A temporary line holds the period from its first live record to its last live record, and no text.
 A non-empty slice ends with the greatest live position as a record. No merge covers that position. When no pair merges and the slice is above its budget, the
-oldest lines leave the slice. [S-142](../statements.md#s-142) gives the minimal fold and the
-temporary line. See [tree.d.ts](../spec/tree.d.ts).
+oldest lines leave the slice. See [tree.d.ts](../spec/tree.d.ts).
 
 ## Alternatives
 

@@ -7,7 +7,6 @@ Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the event
 Content can remain in historical amendments, node events, catalog ancestors, the projection, and the index.
 A current position does not identify every earlier dependency after an import or a scope transfer.
 The customer keeps the existing rule: clear body, longform, and all engine derivatives. Session history stays unchanged.
-See [S-140](../statements.md#s-140) and [S-141](../statements.md#s-141).
 
 ## Decision
 

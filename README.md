@@ -109,7 +109,6 @@ synchronization between machines. See [01-goals-nongoals.md](docs/spec/01-goals-
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | Requirements with identifiers and status. |
 | [docs/spec/04-data.md](docs/spec/04-data.md)                     | Tables, field groups, and merge channels. |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Open questions that block work.           |
-| [docs/statements.md](docs/statements.md)                         | Customer statements, word for word.       |
 | [AGENTS.md](AGENTS.md)                                           | Work rules for agents.                    |
 
 ## Configuration

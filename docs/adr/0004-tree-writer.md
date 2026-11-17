@@ -5,7 +5,7 @@ Status: accepted. [0020 Storage pivot](0020-storage-pivot.md) replaces the proje
 ## Context
 
 The view must fit a line budget. A retelling costs a model call. The writer must not block the agent
-loop. The log is durable, but a derived work list is not. [S-142](../statements.md#s-142) replaces
+loop. The log is durable, but a derived work list is not. A later correction replaces
 the earlier rules for the half-budget fold, the blocking render, and persisted work.
 
 ## Decision

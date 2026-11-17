@@ -18,7 +18,7 @@ Its child revision must equal `input_rev`, but that equality alone does not prov
 writer computes dirty range candidates and stores no queue. The catalog is a tree of the same nodes in the scope
 `__catalog__:<profile>`. One position holds one scope, and the content of the position is the top node
 of the tree of that scope. The leaves of the catalog are these top nodes. The direction line is the
-line of that top node. See [S-104](../statements.md#s-104).
+line of that top node.
 
 Catalog positions derive from the resolved log and the scope filter of the profile.
 The projection traverses source events in `(at, id)` order and increments its counter at the first real appearance of each scope.
@@ -34,7 +34,7 @@ An unaffected prefix survives. The scope trees keep their own coordinates.
 At a catalog leaf, the child id resolves through the scope assigned to that catalog position.
 It names the current top node of that scope tree. The top node's own range does not determine its catalog position.
 A scope with live records but no clean top node remains non-empty, and the catalog writer waits for that node.
-No synthetic leaf event is necessary. See [S-138](../statements.md#s-138) and [S-139](../statements.md#s-139).
+No synthetic leaf event is necessary.
 
 ## Alternatives
 

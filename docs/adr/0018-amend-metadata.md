@@ -1,6 +1,6 @@
 # 0018. Amend metadata
 
-Status: accepted. The customer gives the rule in [S-145](../statements.md#s-145).
+Status: accepted. The customer gives the rule.
 
 ## Context
 

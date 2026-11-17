@@ -9,7 +9,7 @@ hundred thousand rows of the tree. A read that derives the view from the events 
 and a render happens on each turn.
 
 An import can append an event whose `(at, id)` precedes the events that the projection already applied.
-The event order cannot mark the end of a physical read. See [S-136](../statements.md#s-136).
+The event order cannot mark the end of a physical read.
 
 ## Decision
 

@@ -9,7 +9,7 @@ other scopes have keys only. A range of another scope is not in the slice, so th
 address for `memory_open`. The tool lists the keys, and a key alone gives no next step. A subagent
 had no tool for the scopes, and its slice is a snapshot. A scope above the `directions` budget holds
 a comma list of keys and no summary. The name was `memory_scopes`, and
-[S-161](../statements.md#s-161) gives `memory_map`.
+this decision gives `memory_map`.
 
 ## Decision
 

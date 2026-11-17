@@ -31,7 +31,6 @@ memlens — долговременная память агента: набор �
 | [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | Требования с идентификаторами и статусами. |
 | [docs/spec/04-data.md](docs/spec/04-data.md)                     | Таблицы, группы полей и каналы слияния.    |
 | [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Открытые вопросы, блокирующие работу.      |
-| [docs/statements.md](docs/statements.md)                         | Утверждения заказчика дословно.            |
 | [AGENTS.md](AGENTS.md)                                           | Правила работы для агентов.                |
 
 ## Конфигурация
