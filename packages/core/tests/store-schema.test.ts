@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, it } from "vitest";
 import { formatVersion, parseVersion, tick } from "../src/store/clock.js";
-import { migrate, openDatabase, SCHEMA_VERSION } from "../src/store/schema.js";
+import { openDatabase, SCHEMA_VERSION } from "../src/store/schema.js";
 import { MemlensError } from "../src/types/errors.js";
 
 const dirs: string[] = [];
@@ -67,21 +67,6 @@ function addNote(db: DatabaseSync, pos: number, body: string): void {
 		n,
 		body,
 	);
-}
-
-/** @purpose Run one migration the way the store does: the caller owns one transaction. */
-function migrateInTransaction(
-	db: DatabaseSync,
-	migrations: Array<(db: DatabaseSync) => void>,
-): void {
-	db.exec("BEGIN IMMEDIATE");
-	try {
-		migrate(db, migrations);
-		db.exec("COMMIT");
-	} catch (error) {
-		db.exec("ROLLBACK");
-		throw error;
-	}
 }
 
 /** @purpose Match the refusal of a recorded schema version. */
@@ -193,14 +178,27 @@ describe("schema", () => {
  * @invariants A step sees the version that the step before it wrote. A failed step leaves no change.
  */
 describe("migration", () => {
+	it("applies the steps when it creates a new store", () => {
+		const db = openDatabase(storePath(), "en", [
+			(step: DatabaseSync) => step.exec("CREATE TABLE test_change (id TEXT)"),
+		]);
+		assert.equal(version(db), "3");
+		assert.equal(tables(db).includes("test_change"), true);
+		db.close();
+	});
+
 	it("applies each step in order and keeps the rows", () => {
 		const path = storePath();
-		const db = openDatabase(path, "en");
+		const db = openDatabase(path, "en", []);
 		addNote(db, 0, "first fact");
 		addNote(db, 1, "second fact");
 		const store = db
 			.prepare("SELECT value FROM meta WHERE key = 'store_id'")
 			.get()?.value;
+		const notes = db
+			.prepare("SELECT id, scope, pos, body FROM notes ORDER BY pos")
+			.all();
+		db.close();
 		const seen: Array<string | undefined> = [];
 		const migrations = [
 			(step: DatabaseSync) => {
@@ -213,22 +211,26 @@ describe("migration", () => {
 				step.exec("CREATE TABLE tags (name TEXT PRIMARY KEY)");
 			},
 		];
-		migrateInTransaction(db, migrations);
+		const upgraded = openDatabase(path, "en", migrations);
 		assert.deepEqual(seen, ["2", "3"]);
-		assert.equal(version(db), "4");
-		assert.deepEqual(bodies(db), ["first fact", "second fact"]);
+		assert.equal(version(upgraded), "4");
 		assert.deepEqual(
-			db
+			upgraded
+				.prepare("SELECT id, scope, pos, body FROM notes ORDER BY pos")
+				.all(),
+			notes,
+		);
+		assert.deepEqual(
+			upgraded
 				.prepare("SELECT tag FROM notes ORDER BY n")
 				.all()
 				.map((row) => String(row.tag)),
 			["kept", "kept"],
 		);
-		assert.equal(tables(db).includes("tags"), true);
-		db.close();
+		assert.equal(tables(upgraded).includes("tags"), true);
+		upgraded.close();
 
-		// The steps persist, and a second run applies no step.
-		const reopened = new DatabaseSync(path);
+		const reopened = openDatabase(path, "en", migrations);
 		assert.equal(version(reopened), "4");
 		assert.deepEqual(bodies(reopened), ["first fact", "second fact"]);
 		assert.equal(
@@ -236,20 +238,15 @@ describe("migration", () => {
 				?.value,
 			store,
 		);
-		let ran = 0;
-		const counting = migrations.map((step) => (inner: DatabaseSync) => {
-			ran += 1;
-			step(inner);
-		});
-		migrateInTransaction(reopened, counting);
-		assert.equal(ran, 0);
-		assert.equal(version(reopened), "4");
+		assert.deepEqual(seen, ["2", "3"]);
 		reopened.close();
 	});
 
 	it("rolls back every applied step when a step fails", () => {
-		const db = openDatabase(storePath(), "en");
+		const path = storePath();
+		const db = openDatabase(path, "en", []);
 		addNote(db, 0, "keep me");
+		db.close();
 		const boom = new Error("step two failed");
 		const migrations = [
 			(step: DatabaseSync) => {
@@ -261,31 +258,35 @@ describe("migration", () => {
 			},
 		];
 		assert.throws(
-			() => migrateInTransaction(db, migrations),
+			() => openDatabase(path, "en", migrations),
 			(error: unknown) => error === boom,
 		);
-		assert.equal(version(db), "2");
-		assert.equal(tables(db).includes("first_step"), false);
+		const restored = openDatabase(path, "en", []);
+		assert.equal(version(restored), "2");
+		assert.equal(tables(restored).includes("first_step"), false);
 		assert.throws(
-			() => db.prepare("SELECT tag FROM notes").get(),
+			() => restored.prepare("SELECT tag FROM notes").get(),
 			/no such column/i,
 		);
-		assert.deepEqual(bodies(db), ["keep me"]);
+		assert.deepEqual(bodies(restored), ["keep me"]);
+		restored.close();
 
-		// The store accepts a corrected run after the rollback.
-		migrateInTransaction(db, [
+		const retried = openDatabase(path, "en", [
 			(step: DatabaseSync) =>
 				step.exec("CREATE TABLE first_step (k TEXT PRIMARY KEY)"),
 		]);
-		assert.equal(version(db), "3");
-		assert.equal(tables(db).includes("first_step"), true);
-		db.close();
+		assert.equal(version(retried), "3");
+		assert.equal(tables(retried).includes("first_step"), true);
+		retried.close();
 	});
 
-	it("refuses a newer, a malformed, a missing, and an old version before any step", () => {
-		for (const stored of ["1", "99", "abc", "missing"]) {
-			const db = openDatabase(storePath(), "en");
-			addNote(db, 0, "written before the change");
+	it("refuses a newer and a malformed version at open before the schema work", () => {
+		for (const stored of ["1", "99", "two", "missing"]) {
+			const path = storePath();
+			const db = openDatabase(path, "en", []);
+			addNote(db, 0, "written by the older build");
+			db.exec("DROP TABLE proposals");
+			db.exec("PRAGMA journal_mode = DELETE");
 			if (stored === "missing") {
 				db.prepare("DELETE FROM meta WHERE key = 'schema_version'").run();
 			} else {
@@ -293,57 +294,27 @@ describe("migration", () => {
 					"UPDATE meta SET value = ? WHERE key = 'schema_version'",
 				).run(stored);
 			}
-			let ran = 0;
+			db.close();
+			let ran = false;
 			assert.throws(
 				() =>
-					migrateInTransaction(db, [
-						(step: DatabaseSync) => {
-							ran += 1;
-							step.exec("CREATE TABLE late (k TEXT PRIMARY KEY)");
+					openDatabase(path, "en", [
+						() => {
+							ran = true;
 						},
 					]),
 				versionRefused,
 				`version ${stored}`,
 			);
-			assert.equal(ran, 0, `step ran with version ${stored}`);
-			assert.equal(
-				tables(db).includes("late"),
-				false,
-				`late table at ${stored}`,
-			);
-			assert.equal(
-				version(db),
-				stored === "missing" ? undefined : stored,
-				`version after the refusal of ${stored}`,
-			);
-			assert.deepEqual(bodies(db), ["written before the change"]);
-			db.close();
-		}
-	});
-
-	it("refuses a newer and a malformed version at open before the schema work", () => {
-		for (const stored of ["99", "two", "missing"]) {
-			const path = storePath();
-			const db = openDatabase(path, "en");
-			addNote(db, 0, "written by the older build");
-			db.exec("DROP TABLE proposals");
-			if (stored === "missing") {
-				db.prepare("DELETE FROM meta WHERE key = 'schema_version'").run();
-			} else {
-				db.prepare(
-					"UPDATE meta SET value = ? WHERE key = 'schema_version'",
-				).run(stored);
-			}
-			db.close();
-			assert.throws(
-				() => openDatabase(path, "en"),
-				versionRefused,
-				`version ${stored}`,
-			);
+			assert.equal(ran, false);
 
 			// The refused open creates no table and loses no row.
 			const reopened = new DatabaseSync(path);
 			assert.equal(tables(reopened).includes("proposals"), false);
+			assert.equal(
+				reopened.prepare("PRAGMA journal_mode").get()?.journal_mode,
+				"delete",
+			);
 			assert.equal(
 				version(reopened),
 				stored === "missing" ? undefined : stored,

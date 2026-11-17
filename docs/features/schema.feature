@@ -7,8 +7,6 @@ Feature: The store schema
   Background:
     Given one store file
 
-  # No proving test found: no migration ships, and the list of steps is empty.
-  @wip
   Scenario: A store behind the build migrates at open
     Given a store file of a schema version behind the build, with note rows
     When the store opens the file
@@ -16,8 +14,6 @@ Feature: The store schema
     And the store keeps each note row and each slot
     And the migration runs in one transaction
 
-  # No proving test found: no migration ships, and the list of steps is empty.
-  @wip
   Scenario: A failed migration keeps the earlier schema and data
     Given a store file of a schema version behind the build
     And one step of the migration fails

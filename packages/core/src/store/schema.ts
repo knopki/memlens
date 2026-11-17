@@ -117,7 +117,11 @@ function tokenizerOf(language: string): string {
  * @invariants The open rejects an unknown schema version before a schema change.
  * @invariants The schema and the meta rows are ready before the caller reads.
  */
-export function openDatabase(path: string, language: string): DatabaseSync {
+export function openDatabase(
+	path: string,
+	language: string,
+	migrations: ReadonlyArray<(db: DatabaseSync) => void> = MIGRATIONS,
+): DatabaseSync {
 	const db = new DatabaseSync(path);
 	try {
 		db.exec(
@@ -131,7 +135,7 @@ export function openDatabase(path: string, language: string): DatabaseSync {
 				)
 				.get();
 			if (tables === undefined) create(db, language);
-			migrate(db, MIGRATIONS);
+			migrate(db, migrations);
 			db.exec("COMMIT");
 		} catch (error) {
 			db.exec("ROLLBACK");
@@ -140,7 +144,7 @@ export function openDatabase(path: string, language: string): DatabaseSync {
 		db.exec("PRAGMA journal_mode = WAL");
 		debug("Store open", {
 			event: "open",
-			version: SCHEMA_VERSION,
+			version: BASE_SCHEMA_VERSION + migrations.length,
 			language,
 		});
 		return db;
@@ -157,7 +161,7 @@ export function openDatabase(path: string, language: string): DatabaseSync {
  * @invariants The caller holds a transaction for all changes and version updates.
  * @invariants An unknown version leaves the schema unchanged.
  */
-export function migrate(
+function migrate(
 	db: DatabaseSync,
 	migrations: ReadonlyArray<(db: DatabaseSync) => void>,
 ): void {
