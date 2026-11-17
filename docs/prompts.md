@@ -8,7 +8,7 @@ is a change of the product.
 | ----------------- | -------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Slice template    | [context contract](../packages/core/src/domain/context.ts)     | The `<memory>` section with the placeholders `policy`, `append`, `directions`, `here`, and `scope`. |
 | Policy text       | [context contract](../packages/core/src/domain/context.ts)     | The `<how-to>` part: the rules of a write, a read, and a review.      |
-| Merge prompt      | [merge-line contract](../packages/core/src/domain/merge-line.ts) | The system prompt of a merge call, its batch form, and the task line. A map of the children, not a join. |
+| Merge prompt      | [merge-line contract](../packages/core/src/domain/merge-line.ts) | The system prompt of a merge call, its batch form, and the task line. A map of the children, not a join: a signpost to the threads, not an archive of the facts. |
 | Nudge texts       | [config types](../packages/core/src/domain/config-types.ts)    | One line of each counter, with `{n}` in place of the count. The section `[nudge]` overrides each text. |
 
 ## Templates
