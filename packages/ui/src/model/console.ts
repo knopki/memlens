@@ -196,6 +196,12 @@ export interface ConsoleRuntime {
 	readonly session?: string;
 	readonly materializedAt?: string;
 	readonly snapshotSaved?: boolean;
+
+	/** True when the host store is open. A surface states the error of a store that is not open. */
+	readonly store?: {
+		readonly ready: boolean;
+		readonly error: string | null;
+	};
 	readonly compaction?: {
 		readonly attempts: number;
 		readonly active: number;
@@ -283,6 +289,12 @@ export interface ConsoleActions {
 	openScopeTree(key: string): Promise<void>;
 	search(filters: SearchFilters): Promise<void>;
 	reload(reviewKind?: NoteKind | ""): Promise<void>;
+
+	/**
+	 * Probe the host state without a status change. The call loads the view only when the store
+	 * reports that it is open, so a surface replaces a stated store error with the memory.
+	 */
+	refresh(): Promise<void>;
 	reset(scope: string): Promise<void>;
 	setProfile(profile: string): Promise<void>;
 	action(name: string, extra?: ActionFields): Promise<unknown>;

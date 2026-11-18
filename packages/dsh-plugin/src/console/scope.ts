@@ -10,6 +10,7 @@
  *   NotAllowed.
  * @invariants The session supplies the active scope and the profile of a session request. A profile
  *   request names its profile, and the host file gives its fallback scope.
+ * @invariants A request whose store is not open resolves its scope from no row.
  * @dependencies USES API: @memlens/core, ../service.ts, ../tools/shared.ts
  * @keywords console, scope, profile, target, kind, request, field
  * #endregion moduleContract
@@ -107,9 +108,10 @@ export function allowedScope(memory: AgentMemory, raw: string): ScopeKey {
  * @invariants A requested scope wins. With no request, the newest listed scope applies when the
  *   caller asks for it, else the active scope of the session applies when the profile lists it, and
  *   the first visible scope applies otherwise.
- * @param memory - The store, the profile, and the active scope of the session.
- * @param requested - The scope text of the request, or an empty text.
- * @returns The checked scope key of the request.
+ * @invariants A store that is not open reads no row, so the profile scopes and the active scope
+ *   give the answer. That answer needs no listed scope, because the store serves no read. The
+ *   fallback takes no scope pattern, so the answer names one concrete scope.
+ *   A surface then reports the store state and no failed scope.
  */
 export function requestScope(
 	memory: AgentMemory,
@@ -117,12 +119,16 @@ export function requestScope(
 	newest = false,
 ): ScopeKey {
 	if (requested) return allowedScope(memory, requested);
-	const visible = visibleScopeList(memory);
+	const visible = memory.storeState.ready ? visibleScopeList(memory) : [];
 	const active = memory.scope;
 	const fresh =
 		newest && visible.length > 0 ? newestScope(memory.store, visible) : null;
 	const first =
-		visible[0] ?? memory.config.profile.scopes.find(validateScopeKey) ?? active;
+		visible[0] ??
+		memory.config.profile.scopes.find(
+			(key): key is ScopeKey => validateScopeKey(key) && !key.includes("*"),
+		) ??
+		active;
 	const scope = fresh ?? (listedInProfile(memory, active) ? active : first);
 	debug("Scope resolved", {
 		event: "scope",
@@ -130,7 +136,11 @@ export function requestScope(
 		active,
 		requested: requested !== "",
 	});
-	return allowedScope(memory, scope);
+	// A store that is not open serves no read, so the answer states the fallback without the profile
+	// check. A requested scope still passes the check, because the request names it.
+	return requested === "" && !memory.storeState.ready
+		? scope
+		: allowedScope(memory, scope);
 }
 // #endregion FUNC_requestScope
 

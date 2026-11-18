@@ -9,6 +9,8 @@
  * @invariants The tab renders the stylesheet in a `style` element, so the CSS leaves with the tab.
  * @invariants A session change mounts a new console, so no state of the old session stays.
  * @invariants The tab shows no screen control. The page holds the screens of the console.
+ * @invariants A store that is not open gives the stated error in place of the slice. The tab probes
+ *   the host at each retry, and the view load replaces that error when the store opens.
  * @dependencies USES: the session console, the console stylesheet, and the message table.
  * @keywords client, tab, view, memory, session, slice, profile, scope, status
  * #endregion moduleContract
@@ -18,7 +20,7 @@ import type { Translate } from "@memlens/ui";
 import { DEFAULT_ROUTE } from "@memlens/ui";
 import type { JSX } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { createSessionConsole } from "./console.js";
+import { createSessionConsole, RETRY_MS, retryNeeded } from "./console.js";
 import { CONSOLE_CSS } from "./styles.js";
 
 // #region TYPE_MemoryViewProps
@@ -56,8 +58,8 @@ export function MemoryView({
  * @purpose Hold one session console and draw its state.
  * @invariants The console starts once per mount. The first restore reads the state of the session.
  * @invariants The head names the profile of the session.
- * @invariants The status line is the only place for a failed call.
- */
+ * @invariants The status line states a failed call. A store that is not open also holds one stated
+ *   line, which stays until the store opens. */
 function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 	const [api] = useState(() => createSessionConsole(sessionId, t));
 	const state = useSyncExternalStore(
@@ -65,9 +67,18 @@ function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 		() => api.state,
 		() => api.state,
 	);
+	const unavailable = state.runtime?.store?.ready === false;
+	const retry = retryNeeded(state);
 	useEffect(() => {
 		void api.call.restore(DEFAULT_ROUTE);
 	}, [api]);
+	useEffect(() => {
+		if (!retry) return;
+		const timer = setInterval(() => {
+			void api.call.refresh();
+		}, RETRY_MS);
+		return () => clearInterval(timer);
+	}, [api, retry]);
 	const model = state.model;
 	const profile = model?.profile || state.profile;
 	const scopes = model?.scopes ?? [];
@@ -116,6 +127,10 @@ function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 					</div>
 					<pre className="ml-slice">{model.text}</pre>
 				</>
+			) : unavailable ? (
+				<div className="status error" role="status" aria-live="polite">
+					{`${t("store")}: ${state.runtime?.store?.error ?? ""}`}
+				</div>
 			) : (
 				<p className="ml-muted">{t("loading")}</p>
 			)}

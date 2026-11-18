@@ -16,6 +16,7 @@
  */
 
 import { createRequire } from "node:module";
+import type { ScopeKey } from "@memlens/core";
 import type {
 	ConsoleActions,
 	ConsoleApi,
@@ -31,11 +32,12 @@ import {
 	SCREENS,
 } from "@memlens/ui";
 import type { ComponentType, ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	createProfileConsole,
 	createSessionConsole,
 	mountConsole,
+	retryNeeded,
 } from "../src/client/console.js";
 import type {
 	ClientContext,
@@ -347,7 +349,9 @@ describe("surface registration", () => {
 	it("registers a row of the left side panel for the memory page", () => {
 		const { ctx, options } = fakeContext();
 		apply(ctx);
-		const row = options.find((entry) => entry.name === "sidebar.panellist");
+		const rows = options.filter((entry) => entry.name === "sidebar.panellist");
+		expect(rows).toHaveLength(1);
+		const row = rows[0];
 		expect(row?.id).toBe("memlens");
 		expect(row?.order).toBe(15);
 		expect(row?.locale).toBe(NS);
@@ -762,6 +766,103 @@ describe("page body", () => {
 			<MemoryPage t={english} title="Memory" />,
 		);
 		expect(markup).not.toContain('class="ml-field ml-scope-field"');
+	});
+});
+
+// The scope menu of the page, read from the rendered page.
+//
+// The static renderer runs no effect, so the page never starts its own read here. The test seeds
+// the console factory of the page with a console that holds the view. The markup is the loaded
+// page, not the source of the page.
+
+// #region VAR_seededConsole
+/** The console that the seeded factory gives the page. */
+const seeded = vi.hoisted(() => ({ api: undefined as ConsoleApi | undefined }));
+// #endregion VAR_seededConsole
+
+vi.mock("../src/client/console.js", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("../src/client/console.js")>();
+	return {
+		...actual,
+		createProfileConsole: (t: Translate) =>
+			seeded.api ?? actual.createProfileConsole(t),
+	};
+});
+
+// #region FUNC_scopeValuesOf
+/**
+ * @purpose Give the value of each option of the scope select, in order.
+ * @param markup - The markup of one rendered page.
+ * @invariants The scope field holds one select and no other control.
+ */
+function scopeValuesOf(markup: string): string[] {
+	const at = markup.indexOf('class="ml-field ml-scope-field"');
+	const close = markup.indexOf("</label>", at);
+	const field = markup.slice(at, close < 0 ? undefined : close);
+	return [...field.matchAll(/<option[^>]*value="([^"]*)"/g)].map(
+		(match) => match[1] ?? "",
+	);
+}
+// #endregion FUNC_scopeValuesOf
+
+describe("surface retry", () => {
+	it("probes while the host states a store that does not open, and stops otherwise", () => {
+		expect(
+			retryNeeded(
+				stateOf({
+					model: undefined,
+					runtime: {
+						store: { ready: false, error: "EACCES: permission denied" },
+					},
+				}),
+			),
+		).toBe(true);
+		expect(
+			retryNeeded(
+				stateOf({
+					model: undefined,
+					runtime: { store: { ready: true, error: null } },
+				}),
+			),
+		).toBe(false);
+		expect(
+			retryNeeded(
+				stateOf({ runtime: { store: { ready: true, error: null } } }),
+			),
+		).toBe(false);
+		expect(retryNeeded(stateOf({ model: undefined }))).toBe(false);
+	});
+});
+
+describe("page scope menu", () => {
+	it("draws the fifty scopes of the loaded view as one flat list", () => {
+		const scopes = Array.from({ length: 50 }, (_, index) => {
+			const key = `project:s${index}` as ScopeKey;
+			return { key, total: 1, live: 1, hidden: 0, deleted: 0, frontier: key };
+		});
+		const view: View = { ...viewOf(), scope: "project:s0", scopes };
+		seeded.api = apiOf(
+			stateOf({ model: view, profile: "default", scope: "project:s0" }),
+		);
+		try {
+			const markup = renderToStaticMarkup(
+				<MemoryPage t={english} title="Memory" />,
+			);
+			expect(markup).not.toContain(english("loading"));
+			expect(markup).toContain(">Scopes</span>");
+			expect(scopeValuesOf(markup)).toEqual(scopes.map((item) => item.key));
+			expect(scopeValuesOf(markup)).toHaveLength(50);
+			const field = markup.slice(
+				markup.indexOf('class="ml-field ml-scope-field"'),
+			);
+			const chosen = /<option[^>]*selected=""[^>]*>/.exec(field)?.[0] ?? "";
+			expect(chosen).toContain('value="project:s0"');
+			expect(markup).not.toMatch(/<optgroup\b|<ul\b/);
+			expect(markup).not.toMatch(/<(input|textarea)\b/);
+		} finally {
+			seeded.api = undefined;
+		}
 	});
 });
 

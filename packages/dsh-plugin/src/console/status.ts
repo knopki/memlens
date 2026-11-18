@@ -19,6 +19,7 @@ import type { Context } from "@deepseek-ai/cordis";
 import type { Agent } from "@deepseek-ai/dsh-agent";
 import type { ScopeKey } from "@memlens/core";
 import { toIso } from "@memlens/core";
+import type { StoreState } from "../service.js";
 import type { MemoryWorker, WorkerStatus } from "../worker.js";
 import type { ConsoleRequest } from "./scope.js";
 
@@ -60,13 +61,15 @@ export interface SnapshotAnswer {
 
 /**
  * One status answer of the plugin host.
- * A profile surface holds the compaction state only, because it has no session.
+ * A profile surface holds the store state and the compaction state. It has no session.
+ * A store that is not open gives its error, and no compaction state.
  */
 export interface StatusAnswer {
 	readonly session?: string;
 	readonly scope: ScopeKey;
 	readonly snapshot?: SnapshotAnswer;
-	readonly compaction: WorkerStatus;
+	readonly store: StoreState;
+	readonly compaction?: WorkerStatus;
 }
 
 /** The session facts of each live session. The map releases a session with its object. */
@@ -127,40 +130,46 @@ function savedSnapshot(agent: Agent): { saved: boolean; chars: number } {
  * @purpose Answer the snapshot and compaction state of one session.
  * @invariants The answer names the session of the request and the scope that the transport
  *   resolved. The compaction state reads the local worker only.
+ * @invariants An absent worker gives no compaction state, so the answer claims no build of a store
+ *   that is not open. The store state is always present.
  * @param request - The resolved console request.
- * @param worker - The background compaction worker of the host.
+ * @param worker - The background compaction worker of the host, or undefined while the store is
+ *   not open.
  */
 export function statusAnswer(
 	request: ConsoleRequest,
-	worker: MemoryWorker,
+	worker: MemoryWorker | undefined,
 ): StatusAnswer {
 	const { agent, memory, scope } = request;
-	const compaction = worker.status();
+	const store = memory.storeState;
+	const compaction = worker?.status();
+	const builds = compaction === undefined ? {} : { compaction };
 	if (agent === undefined) {
 		debug("Status answered for a profile", {
 			event: "status",
 			profile: memory.config.defaultProfile,
-			dirty: compaction.dirty,
+			ready: store.ready,
 		});
-		return { scope, compaction };
+		return { scope, store, ...builds };
 	}
 	const saved = savedSnapshot(agent);
 	const state = states.get(agent.session);
 	const answer: StatusAnswer = {
 		session: agent.id,
 		scope,
+		store,
+		...builds,
 		snapshot: {
 			saved: saved.saved,
 			chars: saved.chars,
 			materializedAt: state?.snapshotAt ? toIso(state.snapshotAt) : null,
 		},
-		compaction,
 	};
 	debug("Status answered", {
 		event: "status",
 		session: agent.id,
 		saved: saved.saved,
-		dirty: compaction.dirty,
+		ready: store.ready,
 	});
 	return answer;
 }

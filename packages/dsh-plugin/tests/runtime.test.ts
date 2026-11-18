@@ -16,9 +16,9 @@ import { join } from "node:path";
 import type { PatchConfig } from "@memlens/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	loadPluginBase,
 	pluginActiveScope,
 	pluginStorePath,
+	readPluginBase,
 } from "../src/runtime.js";
 
 const BASE_CONFIG = `language = "en"
@@ -102,22 +102,37 @@ function git(cwd: string, ...args: string[]): void {
 	execFileSync("git", args, { cwd, stdio: "ignore" });
 }
 
-describe("loadPluginBase", () => {
+describe("readPluginBase", () => {
 	it("reads the base file from the XDG configuration directory", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(base.defaultProfile).toBe("a");
 		expect(base.profile.a).toBeDefined();
 	});
 
 	it("uses the shared default when the base file is absent", () => {
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(base.defaultProfile).toBe("default");
 	});
 
 	it("propagates a read error that is not ENOENT", () => {
 		mkdirSync(join(configDir, "memlens", "config.toml"), { recursive: true });
-		expect(() => loadPluginBase(env())).toThrow();
+		expect(() => readPluginBase(env())).toThrow();
+	});
+
+	it("states the file of the same read, so no later absence changes the claim", () => {
+		writeBase(BASE_CONFIG);
+		const found = readPluginBase(env(), true);
+		expect(found.present).toBe(true);
+		expect(found.base.defaultProfile).toBe("a");
+		rmSync(join(configDir, "memlens", "config.toml"));
+		// The claim belongs to the read that found the file. A later check cannot take it back.
+		expect(found.present).toBe(true);
+		const absent = readPluginBase(env(), true);
+		expect(absent.present).toBe(false);
+		expect(absent.base.defaultProfile).toBe("default");
+		expect(readPluginBase(env(), true).base).toEqual(absent.base);
+		expect(() => readPluginBase(env(), true, true)).toThrow();
 	});
 });
 
@@ -126,7 +141,7 @@ describe("pluginStorePath", () => {
 		"rejects an empty %s store path",
 		(source) => {
 			writeBase(BASE_CONFIG);
-			const base = loadPluginBase(env());
+			const base = readPluginBase(env()).base;
 			const patch: PatchConfig =
 				source === "patch" ? { store: { path: "" } } : {};
 			if (source === "base") base.store.path = "";
@@ -141,7 +156,7 @@ describe("pluginStorePath", () => {
 	);
 	it("expands the patch path and lets it win over the environment", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		const patch: PatchConfig = { store: { path: "~/patch-store" } };
 		expect(
 			pluginStorePath(
@@ -154,7 +169,7 @@ describe("pluginStorePath", () => {
 
 	it("uses MEMLENS_STORE when the patch has no path", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(
 			pluginStorePath(
 				base,
@@ -166,7 +181,7 @@ describe("pluginStorePath", () => {
 
 	it("uses the base data directory when no override exists", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(pluginStorePath(base, {}, env())).toBe(base.store.path);
 	});
 });
@@ -174,7 +189,7 @@ describe("pluginStorePath", () => {
 describe("pluginActiveScope", () => {
 	it("uses the directory when no rule or workspace matches", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(pluginActiveScope(base, join(rootDir, "plain"))).toBe(
 			"project:plain",
 		);
@@ -182,7 +197,7 @@ describe("pluginActiveScope", () => {
 
 	it("uses the workspace title before the directory", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(
 			pluginActiveScope(base, join(rootDir, "plain"), "ws-1", "My-Workspace"),
 		).toBe("project:My-Workspace");
@@ -190,7 +205,7 @@ describe("pluginActiveScope", () => {
 
 	it.skipIf(!hasGit)("uses the remote before the workspace title", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		const repo = join(rootDir, "local");
 		mkdirSync(repo, { recursive: true });
 		git(repo, "init");
@@ -202,13 +217,13 @@ describe("pluginActiveScope", () => {
 
 	it("uses a matching path rule", () => {
 		writeBase(RULE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(pluginActiveScope(base, "/work/repo")).toBe("project:work");
 	});
 
 	it("uses a matching workspace rule", () => {
 		writeBase(RULE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(pluginActiveScope(base, join(rootDir, "plain"), "ws-1")).toBe(
 			"project:ws",
 		);
@@ -216,7 +231,7 @@ describe("pluginActiveScope", () => {
 
 	it.skipIf(!hasGit)("uses the repository name from the remote", () => {
 		writeBase(RULE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		const repo = join(rootDir, "demo");
 		mkdirSync(repo, { recursive: true });
 		git(repo, "init");
@@ -226,7 +241,7 @@ describe("pluginActiveScope", () => {
 
 	it("uses a directory name with a leading period", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(pluginActiveScope(base, join(rootDir, ".hidden"))).toBe(
 			"project:.hidden",
 		);
@@ -234,7 +249,7 @@ describe("pluginActiveScope", () => {
 
 	it("uses a workspace title with a leading period", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(
 			pluginActiveScope(base, join(rootDir, "plain"), "ws-1", ".My-Workspace"),
 		).toBe("project:.My-Workspace");
@@ -242,7 +257,7 @@ describe("pluginActiveScope", () => {
 
 	it("replaces each forbidden sign of a directory name", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(pluginActiveScope(base, join(rootDir, "my notes"))).toBe(
 			"project:my_notes",
 		);
@@ -250,7 +265,7 @@ describe("pluginActiveScope", () => {
 
 	it("uses the configured default at the file system root", () => {
 		writeBase(BASE_CONFIG);
-		const base = loadPluginBase(env());
+		const base = readPluginBase(env()).base;
 		expect(pluginActiveScope(base, "/")).toBe("user:notes");
 	});
 
@@ -258,7 +273,7 @@ describe("pluginActiveScope", () => {
 		"falls back to the repository name after an unmatched rule",
 		() => {
 			writeBase(BASE_CONFIG);
-			const base = loadPluginBase(env());
+			const base = readPluginBase(env()).base;
 			const repo = join(rootDir, "fallback-repo");
 			mkdirSync(repo, { recursive: true });
 			git(repo, "init");

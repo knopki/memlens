@@ -29,26 +29,47 @@ import {
 
 const debug = debuglog("memlens:plugin:runtime");
 
-// #region FUNC_loadPluginBase
+// #region INTERFACE_BaseRead
+/** The result of one read of the shared base file. */
+export interface BaseRead {
+	/** The base layer: the file layer, or the default layer after a rejection. */
+	readonly base: BaseConfig;
+
+	/** True when the same read took its text from the file. */
+	readonly present: boolean;
+}
+// #endregion INTERFACE_BaseRead
+
+// #region FUNC_readPluginBase
 /**
- * @purpose Load the shared base file. A rejected file gives the default base, so no user file
- * blocks a session.
+ * @purpose Load the shared base file and state whether the same read found it.
+ * @invariants The presence comes from the read outcome, so no second check of the path runs beside
+ *   the read and no absence can hide behind a check.
+ * @invariants An absent file gives the default layer, so the host starts with no file.
+ * @invariants A required file gives the error when it is absent, because a store that the file once
+ *   named must not move to the default path.
+ * @invariants An unreadable file gives the error. The default layer would select another store, so
+ *   the caller must not open a store from it.
  * @param env - The environment that supplies the XDG roots.
  * @param strict - Reject an invalid file instead of selecting the default layer.
- * @returns The base layer: the file layer, or the default layer after a rejection.
+ * @param required - Reject an absent file instead of selecting the default layer.
  */
-export function loadPluginBase(
+export function readPluginBase(
 	env: Record<string, string | undefined>,
 	strict = false,
-): BaseConfig {
+	required = false,
+): BaseRead {
 	const { configDir, dataDir } = xdgDirs(env);
 	const path = join(configDir, "config.toml");
 	let text: string;
+	let present = true;
 	try {
 		text = readFileSync(path, "utf8");
 	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+		if ((error as NodeJS.ErrnoException).code !== "ENOENT" || required)
+			throw error;
 		text = DEFAULT_CONFIG_TOML;
+		present = false;
 	}
 	let base: BaseConfig;
 	try {
@@ -62,10 +83,10 @@ export function loadPluginBase(
 		});
 		base = loadBaseConfig(DEFAULT_CONFIG_TOML, dataDir);
 	}
-	debug("Base loaded", { event: "base", path });
-	return base;
+	debug("Base loaded", { event: "base", path, present });
+	return { base, present };
 }
-// #endregion FUNC_loadPluginBase
+// #endregion FUNC_readPluginBase
 
 // #region FUNC_pluginStorePath
 /**

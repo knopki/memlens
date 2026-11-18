@@ -416,25 +416,33 @@ const results = {
 				materializedAt: z.string().nullable(),
 			})
 			.optional(),
-		compaction: z.strictObject({
-			attempts: z.number(),
-			active: z.number(),
-			backoff: z.number(),
-			failures: z.number(),
-			dirty: z.number(),
-			provider: z.string(),
-			model: z.string(),
-			lastRunAt: z.string().nullable(),
-			nextRunAt: z.string().nullable(),
-			lastError: z.string().nullable(),
-			events: z.array(
-				z.strictObject({
-					at: z.string(),
-					kind: z.enum(["pass", "call", "retry", "error"]),
-					text: z.string(),
-				}),
-			),
-		}),
+		store: z
+			.strictObject({
+				ready: z.boolean(),
+				error: z.string().nullable(),
+			})
+			.optional(),
+		compaction: z
+			.strictObject({
+				attempts: z.number(),
+				active: z.number(),
+				backoff: z.number(),
+				failures: z.number(),
+				dirty: z.number(),
+				provider: z.string(),
+				model: z.string(),
+				lastRunAt: z.string().nullable(),
+				nextRunAt: z.string().nullable(),
+				lastError: z.string().nullable(),
+				events: z.array(
+					z.strictObject({
+						at: z.string(),
+						kind: z.enum(["pass", "call", "retry", "error"]),
+						text: z.string(),
+					}),
+				),
+			})
+			.optional(),
 	}),
 	action: actionResult,
 } as const;

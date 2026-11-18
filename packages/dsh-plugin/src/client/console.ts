@@ -2,7 +2,8 @@
  * #region moduleContract
  * @purpose Wire one console to the plugin host over the Remote, so a surface holds a store, a
  *   controller, and a port with the identity of that surface.
- * @scope The first state, the local storage, the in-memory address, the Remote mount, and the port.
+ * @scope The first state, the local storage, the in-memory address, the Remote mount, the port, and
+ *   the probe loop of a store that does not open.
  * NOT: the surface markup, the styles, and the host service.
  * @invariants The port of a session surface sends the session id in the input of each method.
  * @invariants The port of a profile surface sends the profile of the request in the input of each
@@ -51,6 +52,12 @@ import type {
 /** The text of a call that has no Remote to reach. */
 const NO_REMOTE = "The memory transport is not ready.";
 
+/**
+ * The delay between two probes of a surface whose store is not open, in milliseconds. The probe
+ * reads the host state quietly, and the view load replaces the stated error when the store opens.
+ */
+export const RETRY_MS = 5_000;
+
 // #region INTERFACE_Mount
 /**
  * @purpose Hold the namespace state of one mount and the wait that its calls hold.
@@ -74,6 +81,7 @@ interface MutableRuntime {
 	session?: string;
 	materializedAt?: string;
 	snapshotSaved?: boolean;
+	store?: { ready: boolean; error: string | null };
 	compaction?: {
 		attempts: number;
 		active: number;
@@ -92,6 +100,17 @@ interface MutableRuntime {
 		}[];
 	};
 }
+
+// #region FUNC_retryNeeded
+/**
+ * @purpose State whether a surface probes the host again: only while the host states a store that
+ *   does not open and no model stands.
+ */
+export function retryNeeded(state: ConsoleState): boolean {
+	if (state.model !== undefined) return false;
+	return state.runtime?.store?.ready === false;
+}
+// #endregion FUNC_retryNeeded
 
 // #region FUNC_initialState
 /**
@@ -282,19 +301,22 @@ async function statusOf(
 			runtime.materializedAt = snapshot.materializedAt;
 		runtime.snapshotSaved = snapshot.saved;
 	}
-	runtime.compaction = {
-		attempts: value.compaction.attempts,
-		active: value.compaction.active,
-		backoffMs: value.compaction.backoff * 1000,
-		failures: value.compaction.failures,
-		dirty: value.compaction.dirty,
-		provider: value.compaction.provider,
-		model: value.compaction.model,
-		lastRunAt: value.compaction.lastRunAt,
-		nextRunAt: value.compaction.nextRunAt,
-		lastError: value.compaction.lastError,
-		events: value.compaction.events,
-	};
+	if (value.store !== undefined)
+		runtime.store = { ready: value.store.ready, error: value.store.error };
+	if (value.compaction !== undefined)
+		runtime.compaction = {
+			attempts: value.compaction.attempts,
+			active: value.compaction.active,
+			backoffMs: value.compaction.backoff * 1000,
+			failures: value.compaction.failures,
+			dirty: value.compaction.dirty,
+			provider: value.compaction.provider,
+			model: value.compaction.model,
+			lastRunAt: value.compaction.lastRunAt,
+			nextRunAt: value.compaction.nextRunAt,
+			lastError: value.compaction.lastError,
+			events: value.compaction.events,
+		};
 	return runtime;
 }
 // #endregion FUNC_statusOf

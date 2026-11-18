@@ -652,3 +652,39 @@ describe("console controller runtime watch", () => {
 		h.call.watchRuntime(false);
 	});
 });
+
+describe("console controller refresh probe", () => {
+	/** One runtime answer of a store that does not open. */
+	const closed = (): ConsoleRuntime => ({
+		store: { ready: false, error: "EACCES: permission denied" },
+	});
+
+	/** One runtime answer of an open store. */
+	const opened = (): ConsoleRuntime => ({
+		store: { ready: true, error: null },
+	});
+
+	it("reads the runtime quietly and loads no view while the store stays closed", async () => {
+		const h = harness({
+			runtime: async () => closed(),
+			view: async () => {
+				throw new Error("The store is not open.");
+			},
+		});
+		await h.call.refresh();
+		expect(callsOf(h, "runtime")).toHaveLength(1);
+		expect(callsOf(h, "view")).toHaveLength(0);
+		expect(h.state().status).toEqual({ text: "", error: false });
+		expect(h.state().model).toBeUndefined();
+	});
+
+	it("loads the view when the probe finds the store open", async () => {
+		const h = harness({ runtime: async () => opened() });
+		await h.call.refresh();
+		// The probe reads the runtime, and the view load reads it again with the view.
+		expect(callsOf(h, "runtime")).toHaveLength(2);
+		expect(callsOf(h, "view")).toHaveLength(1);
+		expect(h.state().runtime?.store?.ready).toBe(true);
+		expect(h.state().model).toBeDefined();
+	});
+});

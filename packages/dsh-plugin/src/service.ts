@@ -6,6 +6,14 @@
  * @invariants A preset cannot change the store path or expose its settings to another preset.
  * @invariants A valid base or host change affects the next configuration read of a live agent.
  * @invariants A base change keeps the open store, its language, and each agent scope.
+ * @invariants The service starts once. A store that does not open keeps the service and each
+ *   surface in place, with a stated error, and a bounded retry opens the store later.
+ * @invariants Each retry reads the base file again. A file that once named the store must stay
+ *   present and valid, so no retry opens another store from the default layer.
+ * @invariants An existing base file must be valid. A malformed file starts the service in the
+ *   unavailable state, and the first valid read replaces the fallback scopes.
+ * @invariants Each store read goes through one accessor. An unavailable store throws a Data error
+ *   and never gives an empty store.
  * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @memlens/core, runtime.ts.
  * @keywords memlens, service, preset, configuration, agent, lifecycle
  * #endregion moduleContract
@@ -24,6 +32,8 @@ import {
 import {
 	activeScope,
 	type BaseConfig,
+	DEFAULT_CONFIG_TOML,
+	loadBaseConfig,
 	loadPatchConfig,
 	loadPresetConfig,
 	MemlensError,
@@ -38,9 +48,10 @@ import {
 	xdgDirs,
 } from "@memlens/core";
 import {
-	loadPluginBase,
+	type BaseRead,
 	pluginActiveScope,
 	pluginStorePath,
+	readPluginBase,
 } from "./runtime.js";
 
 const debug = debuglog("memlens:plugin");
@@ -86,13 +97,59 @@ function safeStorePath(base: BaseConfig, patch: PatchConfig): string {
 }
 // #endregion FUNC_safeStorePath
 
+/** The delay of the first retry after a failure that is not lock contention, in milliseconds. */
+const RETRY_FIRST_MS = 1_000;
+
+/** The greatest delay between two retries of a failure that is not lock contention, in milliseconds. */
+const RETRY_LIMIT_MS = 60_000;
+
+/**
+ * The delay of the first retry after the store reports the lock of another writer, in milliseconds.
+ * Brief contention thus heals in seconds, and each later attempt waits longer.
+ */
+const RETRY_LOCK_MS = 5_000;
+
+// #region FUNC_locked
+/**
+ * @purpose Tell a lost lock from a failure that another attempt cannot change.
+ * @invariants The read uses the error text of the driver, because the store raises no error code.
+ * @param error - The caught failure of one open attempt.
+ * @returns True when a writer holds the store or the driver reports a busy file.
+ */
+function locked(error: unknown): boolean {
+	const text = (
+		error instanceof Error ? error.message : String(error)
+	).toLowerCase();
+	return text.includes("locked") || text.includes("busy");
+}
+// #endregion FUNC_locked
+
+// #region INTERFACE_StoreState
+/**
+ * @purpose State whether the one store is open and why the last open failed.
+ * @invariants The state is a read. It writes no field and starts no attempt.
+ */
+export interface StoreState {
+	/** True when the store is open and each memory call can read it. */
+	readonly ready: boolean;
+
+	/** The text of the last failed open, or null when the store is open. */
+	readonly error: string | null;
+}
+// #endregion INTERFACE_StoreState
+
 /**
  * The memory inputs shared by the context provider, the tools, and the console of one surface.
  * An agent surface takes its configuration from the preset of that agent, and a profile surface
  * takes it from the name of a profile.
  */
 export interface AgentMemory {
+	/** The open store. A read throws while the store is unavailable. */
 	readonly store: Store;
+
+	/** The open state of the store, so a surface states it without a store read. */
+	readonly storeState: StoreState;
+
 	readonly config: ResolvedConfig;
 	readonly scope: ScopeKey;
 }
@@ -133,8 +190,22 @@ declare module "@deepseek-ai/cordis" {
 export class Memlens extends Service {
 	base: BaseConfig;
 	patch: PatchConfig;
-	readonly path: string;
-	readonly store: Store;
+
+	/** The store directory of the next attempt. A base or host change can move it. */
+	path: string;
+
+	private handle: Store | null = null;
+	private openError: string | null = null;
+	private retryWait = RETRY_FIRST_MS;
+	private retryTimer: ReturnType<typeof setTimeout> | null = null;
+	private unwatch: (() => void) | null = null;
+
+	/** True when a base file supplied the configuration, so each later read must find it again. */
+	private fileBacked = false;
+
+	/** True while the base layer stands in for a file that no read supplied. */
+	private fallbackBase = false;
+	private readonly storeListeners = new Set<() => void>();
 
 	/** The host-level resolution, with no preset layer. */
 	get resolved(): ResolvedConfig {
@@ -152,25 +223,272 @@ export class Memlens extends Service {
 	constructor(ctx: Context, patch: PatchConfig) {
 		super(ctx, "memlens");
 		this.patch = safePatch(patch);
-		this.base = loadPluginBase(process.env);
-		this.path = safeStorePath(this.base, this.patch);
-		this.store = new Store(this.path, this.base.language);
-		const configPath = join(xdgDirs(process.env).configDir, "config.toml");
-		const reload = () => this.reloadBase();
-		watchFile(configPath, { interval: 1000, persistent: false }, reload);
+		this.base = this.initialBase();
+		this.path = this.startPath();
+		this.watchBase();
 		ctx.effect(() => async () => {
-			unwatchFile(configPath, reload);
+			this.unwatchBase();
+			this.closed = true;
+			this.clearRetry();
 			await Promise.all([...this.memoryDisposers].map((dispose) => dispose()));
 			this.memoryDisposers.clear();
 			this.listeners.clear();
 			this.presetListeners.clear();
-			this.closed = true;
+			this.storeListeners.clear();
 			this.memories = new WeakMap();
 			this.presets.clear();
-			this.store.close();
+			this.handle?.close();
+			this.handle = null;
 			debug("Host disposed", { event: "dispose", path: this.path });
 		});
-		debug("Host opened", { event: "start", path: this.path });
+		this.open();
+		debug("Host started", {
+			event: "start",
+			path: this.path,
+			ready: this.handle !== null,
+		});
+	}
+
+	// #region METHOD_store
+	/**
+	 * @purpose Give the open store, so each consumer reads one handle.
+	 * @invariants An unavailable store throws a Data error that names the last failure. The read
+	 *   never gives an empty store.
+	 */
+	get store(): Store {
+		if (this.handle === null)
+			throw new MemlensError(
+				"Data",
+				`The memory store is not open. ${this.openError ?? "The open has not run."}`,
+			);
+		return this.handle;
+	}
+	// #endregion METHOD_store
+
+	// #region METHOD_storeState
+	/**
+	 * @purpose State whether the store is open and why the last attempt failed.
+	 * @invariants The read writes no field and starts no attempt.
+	 */
+	storeState(): StoreState {
+		return { ready: this.handle !== null, error: this.openError };
+	}
+	// #endregion METHOD_storeState
+
+	// #region METHOD_onStoreChange
+	/**
+	 * @purpose Notify a consumer when an open succeeds, so the consumer starts its store work.
+	 * @invariants A listener runs after the handle is set, so it reads the store.
+	 * @param listener - The callback that builds the work of the open store.
+	 * @returns A function that removes the callback.
+	 */
+	onStoreChange(listener: () => void): () => void {
+		this.storeListeners.add(listener);
+		return () => this.storeListeners.delete(listener);
+	}
+	// #endregion METHOD_onStoreChange
+
+	// #region METHOD_retry
+	/**
+	 * @purpose Attempt the open now, so a repaired path opens without the timer.
+	 * @invariants A disposed host and an open store make no attempt. A base or host change calls this,
+	 *   so a correction of the path or the configuration applies at once.
+	 */
+	retry(): void {
+		if (this.closed || this.handle !== null) return;
+		this.retryWait = RETRY_FIRST_MS;
+		this.open();
+	}
+	// #endregion METHOD_retry
+
+	// #region METHOD_open
+	/**
+	 * @purpose Open the store, or record the failure and arm the next attempt.
+	 * @invariants The open runs in one step, so a disposer cannot overlap it and leave a handle.
+	 * @invariants A success clears the error, resets the wait, and notifies each store listener.
+	 * @invariants A failure keeps the service and every surface, so no session stops.
+	 */
+	private open(): void {
+		if (this.closed || this.handle !== null) return;
+		this.clearRetry();
+		let read: BaseRead;
+		let handle: Store;
+		try {
+			// The default layer selects another store. A file that once named the store must stay
+			// present and valid, so a rewritten or absent file keeps the store of the last read.
+			read = readPluginBase(process.env, true, this.fileBacked);
+			this.fileBacked ||= read.present;
+			const path = safeStorePath(read.base, this.patch);
+			this.path = path;
+			handle = new Store(path, read.base.language);
+		} catch (error) {
+			this.fail(error);
+			return;
+		}
+		this.adoptBase(read.base, read.present);
+		this.handle = handle;
+		const recovered = this.openError !== null;
+		this.openError = null;
+		this.retryWait = RETRY_FIRST_MS;
+		debug("Store open", { event: "open", path: this.path, recovered });
+		for (const listener of this.storeListeners) {
+			try {
+				listener();
+			} catch (error) {
+				debug("Store listener failed", {
+					event: "listener-error",
+					error: String(error),
+				});
+			}
+		}
+	}
+	// #endregion METHOD_open
+
+	// #region METHOD_fail
+	/**
+	 * @purpose Record one failed attempt and arm the next one.
+	 * @invariants A lost lock starts at five seconds, because a brief lock must not look broken.
+	 *   Each later attempt waits longer, to the limit. Each other failure starts at one second.
+	 * @invariants The wait never declines, so no attempt runs in a busy loop.
+	 * @param error - The caught failure of the attempt.
+	 */
+	private fail(error: unknown): void {
+		this.openError = error instanceof Error ? error.message : String(error);
+		const contention = locked(error);
+		// The wait holds its growth across failures. A success and an explicit retry reset it.
+		this.retryWait = contention
+			? Math.max(this.retryWait, RETRY_LOCK_MS)
+			: Math.min(this.retryWait, RETRY_LIMIT_MS);
+		this.arm(this.retryWait);
+		debug("Store open failed", {
+			event: "open-error",
+			path: this.path,
+			contention,
+			waitMs: this.retryWait,
+			error: this.openError,
+		});
+	}
+	// #endregion METHOD_fail
+
+	// #region METHOD_arm
+	/**
+	 * @purpose Arm the one retry timer.
+	 * @invariants One timer waits at any time, and each arm doubles the wait to the limit.
+	 * @invariants The timer holds no process open, so a host that exits stops with no wait.
+	 * @param wait - The delay in milliseconds.
+	 */
+	private arm(wait: number): void {
+		if (this.closed) return;
+		this.clearRetry();
+		const timer = setTimeout(() => {
+			this.retryTimer = null;
+			this.open();
+		}, wait);
+		timer.unref?.();
+		this.retryTimer = timer;
+		this.retryWait = Math.min(wait * 2, RETRY_LIMIT_MS);
+		debug("Store retry armed", { event: "retry", waitMs: wait });
+	}
+	// #endregion METHOD_arm
+
+	private clearRetry(): void {
+		if (this.retryTimer === null) return;
+		clearTimeout(this.retryTimer);
+		this.retryTimer = null;
+	}
+
+	// #region METHOD_adoptBase
+	/**
+	 * @purpose Apply a base layer that one read gave, so the store and each scope follow it.
+	 * @invariants The first read after the fallback drops the cached agent inputs, because the
+	 *   fallback computed their scope from another configuration. An ordinary live edit keeps them.
+	 * @param base - The base layer of the read.
+	 * @param present - True when the same read took its text from the file.
+	 */
+	private adoptBase(base: BaseConfig, present: boolean): void {
+		if (this.fallbackBase) {
+			this.memories = new WeakMap();
+			this.fallbackBase = false;
+			debug("First base read after the fallback; the agent scopes reset", {
+				event: "base-adopt",
+			});
+		}
+		this.base = base;
+		// The flag never declines: a read that found the file keeps its claim, and the claim comes
+		// from that read, not from a second check of the path.
+		this.fileBacked = this.fileBacked || present;
+	}
+	// #endregion METHOD_adoptBase
+
+	// #region METHOD_initialBase
+	/**
+	 * @purpose Give the base layer of the start, so an unreadable file stops no session.
+	 * @invariants The read failure enters the unavailable state and keeps the default layer as the
+	 *   shape of the configuration. The open then reads the file again, so no store opens from the
+	 *   default layer.
+	 */
+	private initialBase(): BaseConfig {
+		try {
+			// A file that exists must be valid, and an absent file is the zero-config start. One read
+			// decides both, so no check of the path runs beside it.
+			const read = readPluginBase(process.env, true);
+			this.fileBacked = read.present;
+			return read.base;
+		} catch (error) {
+			this.openError = error instanceof Error ? error.message : String(error);
+			this.fallbackBase = true;
+			// A read that fails on any other cause still means a file stands behind the store, so
+			// each later attempt must find it again. An absent path can hide behind that failure.
+			this.fileBacked = true;
+			debug("Base file unreadable; the host waits", {
+				event: "base-error",
+				error: this.openError,
+			});
+			return loadBaseConfig(DEFAULT_CONFIG_TOML, xdgDirs(process.env).dataDir);
+		}
+	}
+	// #endregion METHOD_initialBase
+
+	// #region METHOD_startPath
+	/**
+	 * @purpose Give the store path of the first attempt, or the empty text when the layers give no
+	 * usable path.
+	 * @invariants The call throws no error, so the service starts from a broken configuration.
+	 */
+	private startPath(): string {
+		try {
+			return safeStorePath(this.base, this.patch);
+		} catch (error) {
+			debug("Store path absent at the start", {
+				event: "path-start",
+				error: String(error),
+			});
+			return "";
+		}
+	}
+	// #endregion METHOD_startPath
+
+	// #region METHOD_watchBase
+	/**
+	 * @purpose Watch the base file, so a corrected file applies with no restart.
+	 * @invariants A broken root or a refused watch keeps the service and starts no timer.
+	 */
+	private watchBase(): void {
+		try {
+			const configPath = join(xdgDirs(process.env).configDir, "config.toml");
+			const reload = () => this.reloadBase();
+			watchFile(configPath, { interval: 1000, persistent: false }, reload);
+			this.unwatch = () => unwatchFile(configPath, reload);
+		} catch (error) {
+			debug("Base watch skipped", { event: "watch", error: String(error) });
+		}
+	}
+	// #endregion METHOD_watchBase
+
+	/** Stop the base watch, when one runs. */
+	private unwatchBase(): void {
+		this.unwatch?.();
+		this.unwatch = null;
 	}
 
 	// #region METHOD_reloadBase
@@ -180,10 +498,14 @@ export class Memlens extends Service {
 	 */
 	reloadBase(): void {
 		try {
-			const base = loadPluginBase(process.env, true);
-			this.base = { ...base, language: this.base.language };
+			const read = readPluginBase(process.env, true, this.fileBacked);
+			this.adoptBase(
+				{ ...read.base, language: this.base.language },
+				read.present,
+			);
 			debug("Base reloaded", { event: "reload" });
 			this.notify();
+			this.retry();
 		} catch (error) {
 			debug("Base reload rejected", {
 				event: "reload-reject",
@@ -201,6 +523,7 @@ export class Memlens extends Service {
 	updatePatch(patch: PatchConfig): void {
 		this.patch = safePatch(patch);
 		this.notify();
+		this.retry();
 		debug("Host layer reloaded", { event: "patch-reload" });
 	}
 	// #endregion METHOD_updatePatch
@@ -326,8 +649,14 @@ export class Memlens extends Service {
 		const scope = activeScope(this.base.scope_default, {
 			workspace: null,
 		}).key;
+		const host = this;
 		return {
-			store: this.store,
+			get store() {
+				return host.store;
+			},
+			get storeState() {
+				return host.storeState();
+			},
 			config: withSessionScope(
 				resolveConfig(this.base, this.patch, { profile: name }),
 				scope,
@@ -364,7 +693,12 @@ export class Memlens extends Service {
 		);
 		const host = this;
 		const memory: AgentMemory = {
-			store: this.store,
+			get store() {
+				return host.store;
+			},
+			get storeState() {
+				return host.storeState();
+			},
 			get config() {
 				return withSessionScope(host.configFor(agent), scope);
 			},

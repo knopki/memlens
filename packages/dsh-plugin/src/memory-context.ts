@@ -10,6 +10,8 @@
  *  - The provider answers the current text. The provider reads no row.
  *  - A render reads rows only, calls no model, and waits for no summary build.
  *  - The text changes at a fresh session and at a successful compaction.
+ *  - A store that is not open registers the context only when the history holds a saved section.
+ *    The model learns the state from the tool errors, and the surface shows the state.
  *  - An `off` subagent gets no registration.
  *  - The registration ends with the agent context.
  * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-system-prompt, @memlens/core.
@@ -49,6 +51,8 @@ const CONTEXT_ORDER = 220;
  * at the accepted trigger.
  * @invariants The registration takes no snapshot table and writes no row.
  * @invariants A refresh with the same text keeps the old text.
+ * @invariants A store that is not open and a history without a saved section give no
+ *   registration. The respawn at the open adds it.
  * @param agent - The live agent that owns the context scope.
  * @param memory - The store, the resolved configuration, and the active scope of the agent.
  * @returns The function that removes the context and its listener.
@@ -65,7 +69,15 @@ export function registerMemoryContext(
 		return () => {};
 	}
 	return agent.ctx.effect(() => {
-		let text = snapshotText(agent.session) ?? renderSlice(memory);
+		const saved = snapshotText(agent.session);
+		if (!memory.storeState.ready && saved === null) {
+			debug("Context skipped; the store is not open", {
+				event: "off-store",
+				session: agent.id,
+			});
+			return () => {};
+		}
+		let text = saved ?? renderSlice(memory);
 
 		/** @purpose Install a new text, or keep the old text when the render gives the same text. */
 		const refresh = (trigger: string): void => {
@@ -161,10 +173,9 @@ function snapshotText(session: Agent["session"]): string | null {
 	const messages = session.deriveMessages();
 	for (const message of messages.toReversed()) {
 		const text = sectionText(message.source);
-		if (text !== null) {
-			debug("Snapshot restored", { event: "restore", chars: text.length });
-			return text;
-		}
+		if (text === null) continue;
+		debug("Snapshot restored", { event: "restore", chars: text.length });
+		return text;
 	}
 	debug("Snapshot absent", { event: "restore", messages: messages.length });
 	return null;

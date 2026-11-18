@@ -19,7 +19,7 @@
  * #endregion moduleContract
  */
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { debuglog } from "node:util";
@@ -38,6 +38,7 @@ import {
 	CONSOLE_NAMESPACE,
 	CONSOLE_SERVICE,
 } from "../src/console/remote-contract.js";
+import type { StatusAnswer } from "../src/console/status.js";
 import { Memlens } from "../src/service.js";
 import { MemoryWorker, type WorkerLlm } from "../src/worker.js";
 
@@ -83,10 +84,31 @@ class StubLlm implements WorkerLlm {
 interface Case {
 	readonly root: Context;
 	readonly memlens: Memlens;
-	readonly worker: MemoryWorker;
+	readonly worker?: MemoryWorker | undefined;
 	readonly agent: Agent;
 }
 // #endregion INTERFACE_Case
+
+/** The base file of a profile whose scopes match no active scope. */
+const GLOB_ONLY_BASE = `defaultProfile = "glob"
+
+[profile.glob]
+scopes = ["project:*"]
+
+[profile.glob.budget]
+here = 20
+directions = 10
+
+[store]
+idle = 300
+
+[compaction]
+provider = "test"
+model = "merge-model"
+
+[scope_default]
+default = "user:notes"
+`;
 
 // #region FUNC_subject
 /** @purpose Create one agent subject with a real scoped context and a controlled route. */
@@ -129,12 +151,16 @@ function workerInputs(): {
  *   configuration root.
  * @invariants The Gateway starts after the two services that it injects.
  */
-function composition(): Case {
+function composition(options: { store?: string; base?: string } = {}): Case {
 	const directory = mkdtempSync(join(tmpdir(), "memlens-gateway-"));
 	directories.push(directory);
+	if (options.base !== undefined) {
+		mkdirSync(join(directory, "memlens"), { recursive: true });
+		writeFileSync(join(directory, "memlens", "config.toml"), options.base);
+	}
 	vi.stubEnv("XDG_CONFIG_HOME", directory);
 	vi.stubEnv("XDG_DATA_HOME", directory);
-	vi.stubEnv("MEMLENS_STORE", undefined);
+	vi.stubEnv("MEMLENS_STORE", options.store);
 	const root = new Context();
 	roots.push(root);
 	const memlens = new Memlens(root, {});
@@ -149,12 +175,9 @@ function composition(): Case {
 		streamInboxBytes: 262_144,
 		websocketCompression: "none",
 	});
-	const worker = new MemoryWorker(
-		root,
-		memlens.store,
-		workerInputs(),
-		new StubLlm(),
-	);
+	const worker = memlens.storeState().ready
+		? new MemoryWorker(root, memlens.store, workerInputs(), new StubLlm())
+		: undefined;
 	debug("Case start", { event: "start", directory, session: agent.id });
 	return { root, memlens, worker, agent };
 }
@@ -169,7 +192,7 @@ async function registered(testCase: Case): Promise<() => Promise<void>> {
 	const dispose = registerConsoleRemote(
 		testCase.root,
 		testCase.memlens,
-		testCase.worker,
+		() => testCase.worker,
 	);
 	await new Promise((resolve) => setImmediate(resolve));
 	return dispose;
@@ -255,6 +278,50 @@ describe("console Remote over the real gateway", () => {
 		expect(answer.records).toEqual([]);
 	});
 
+	it("answers the store state of a session and a profile with no scope requested", async () => {
+		const directory = mkdtempSync(join(tmpdir(), "memlens-gateway-blocked-"));
+		directories.push(directory);
+		const blocker = join(directory, "blocker");
+		writeFileSync(blocker, "not a directory");
+		const testCase = composition({ store: join(blocker, "store") });
+		await registered(testCase);
+		const session = (await call(testCase, "status", {
+			input: { session: testCase.agent.id },
+		})) as StatusAnswer;
+		expect(session.store?.ready).toBe(false);
+		expect(session.store?.error).toMatch(/not a directory|ENOTDIR/);
+		expect(session.compaction).toBeUndefined();
+		const profile = (await call(testCase, "status", {
+			input: {},
+		})) as StatusAnswer;
+		expect(profile.store?.ready).toBe(false);
+		expect(profile.compaction).toBeUndefined();
+		const failed = await failure(call(testCase, "view", { input: {} }));
+		expect(failed.code).toBe("gateway/bad-request");
+		expect(failed.message).toMatch(/not open/);
+	});
+
+	it("states the store of a profile whose scopes match no active scope", async () => {
+		const directory = mkdtempSync(join(tmpdir(), "memlens-gateway-glob-"));
+		directories.push(directory);
+		const blocker = join(directory, "blocker");
+		writeFileSync(blocker, "not a directory");
+		const testCase = composition({
+			base: GLOB_ONLY_BASE,
+			store: join(blocker, "store"),
+		});
+		await registered(testCase);
+		const profile = (await call(testCase, "status", {
+			input: {},
+		})) as StatusAnswer;
+		expect(profile.store?.ready).toBe(false);
+		expect(profile.scope).toBeTypeOf("string");
+		const session = (await call(testCase, "status", {
+			input: { session: testCase.agent.id },
+		})) as StatusAnswer;
+		expect(session.store?.ready).toBe(false);
+		expect(session.scope).toBeTypeOf("string");
+	});
 	it("applies a valid action and reads its record through the gateway", async () => {
 		const testCase = composition();
 		await registered(testCase);

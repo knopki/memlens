@@ -9,6 +9,8 @@
  *   on the default profile.
  * @invariants The page reads and writes no page address and no history. The address stays in memory.
  * @invariants The page renders the stylesheet in a `style` element, so the CSS leaves with the page.
+ * @invariants A store that is not open gives the stated error in the body. The page probes the host
+ *   at each retry, and the view load replaces that error when the store opens.
  * @dependencies USES: the profile console, the screen registry, the record dialog, and the console
  *   stylesheet.
  * @keywords client, page, panel, memory, profile, screen, scope, dialog, status
@@ -24,7 +26,7 @@ import {
 } from "@memlens/ui";
 import type { JSX } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { createProfileConsole } from "./console.js";
+import { createProfileConsole, RETRY_MS, retryNeeded } from "./console.js";
 import { CONSOLE_CSS } from "./styles.js";
 
 // #region TYPE_MemoryPageProps
@@ -46,7 +48,8 @@ export type MemoryPageProps = {
  * @invariants The profile control follows the resolved profile of the view.
  * @invariants The scope control follows the resolved scope of the view, and a choice of it opens
  *   that scope.
- * @invariants The status line is the only place for a failed call.
+ * @invariants The status line states a failed call. A store that is not open also holds one stated
+ *   line, which stays until the store opens.
  */
 export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 	const [api] = useState(() => createProfileConsole(t));
@@ -55,9 +58,18 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 		() => api.state,
 		() => api.state,
 	);
+	const unavailable = state.runtime?.store?.ready === false;
+	const retry = retryNeeded(state);
 	useEffect(() => {
 		void api.call.restore(DEFAULT_ROUTE);
 	}, [api]);
+	useEffect(() => {
+		if (!retry) return;
+		const timer = setInterval(() => {
+			void api.call.refresh();
+		}, RETRY_MS);
+		return () => clearInterval(timer);
+	}, [api, retry]);
 	const model = state.model;
 	const Screen = SCREEN_COMPONENTS[state.screen];
 	const scopes = model?.scopes ?? [];
@@ -133,6 +145,11 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 				))}
 			</nav>
 			<div className="ml-body">
+				{unavailable ? (
+					<div className="status error" role="status" aria-live="polite">
+						{`${t("store")}: ${state.runtime?.store?.error ?? ""}`}
+					</div>
+				) : null}
 				<Screen api={api} />
 			</div>
 			<div

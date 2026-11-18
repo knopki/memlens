@@ -6,7 +6,13 @@
  * #endregion moduleContract
  */
 
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Context, Service } from "@deepseek-ai/cordis";
@@ -17,19 +23,25 @@ import {
 	SystemPrompt,
 } from "@deepseek-ai/dsh-system-prompt";
 import { ToolsService } from "@deepseek-ai/dsh-tools";
-import { DEFAULT_CONFIG_TOML, Store } from "@memlens/core";
+import { DEFAULT_CONFIG_TOML, liveCounts, Store } from "@memlens/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as host from "../src/index.js";
 import * as preset from "../src/preset.js";
 
 const roots: Context[] = [];
 
+/** The temporary directories of the running case. */
+const directories: string[] = [];
+
 let nextSession = 0;
 
 afterEach(async () => {
 	for (const root of roots.splice(0)) await root.fiber.dispose();
+	for (const directory of directories.splice(0))
+		rmSync(directory, { recursive: true, force: true });
 	vi.unstubAllEnvs();
 	vi.restoreAllMocks();
+	vi.useRealTimers();
 });
 
 // #region CLASS_WorkerLlm
@@ -43,15 +55,16 @@ class WorkerLlm extends Service {
 
 // #region FUNC_composition
 /** @purpose Start the real host plugin under temporary configuration roots. */
-async function composition(baseText?: string) {
+async function composition(baseText?: string, store?: string) {
 	const directory = mkdtempSync(join(tmpdir(), "memlens-plugin-service-"));
+	directories.push(directory);
 	if (baseText !== undefined) {
 		mkdirSync(join(directory, "memlens"));
 		writeFileSync(join(directory, "memlens", "config.toml"), baseText);
 	}
 	vi.stubEnv("XDG_CONFIG_HOME", directory);
 	vi.stubEnv("XDG_DATA_HOME", directory);
-	vi.stubEnv("MEMLENS_STORE", undefined);
+	vi.stubEnv("MEMLENS_STORE", store);
 	const root = new Context();
 	roots.push(root);
 	new SystemPrompt(root, {});
@@ -62,6 +75,20 @@ async function composition(baseText?: string) {
 	return { root, directory, hostFiber };
 }
 // #endregion FUNC_composition
+
+// #region FUNC_blockedStore
+/**
+ * @purpose Block one store directory, so the open of the store fails and no store exists.
+ * @invariants The blocker is one file, so the parent of the store path is not a directory.
+ */
+function blockedStore(): { path: string; free: () => void } {
+	const directory = mkdtempSync(join(tmpdir(), "memlens-blocked-"));
+	directories.push(directory);
+	const blocker = join(directory, "blocker");
+	writeFileSync(blocker, "not a directory");
+	return { path: join(blocker, "store"), free: () => rmSync(blocker) };
+}
+// #endregion FUNC_blockedStore
 
 // #region FUNC_subject
 /** @purpose Create an agent subject with a real scoped context and a controlled route. */
@@ -340,5 +367,257 @@ describe("Memlens host service", () => {
 			source: "startup",
 		});
 		expect(lookup).not.toHaveBeenCalled();
+	});
+});
+
+describe("Memlens store that does not open", () => {
+	it("keeps the host and the live agent, then opens the store on retry", async () => {
+		const probe = blockedStore();
+		const { root } = await composition(undefined, probe.path);
+		expect(root.memlens.storeState().ready).toBe(false);
+		expect(root.memlens.storeState().error).toMatch(/not a directory|ENOTDIR/);
+		expect(() => root.memlens.store).toThrow(/not open/);
+		const agent = subject(root);
+		root.provide("agents", { list: () => [agent] } as Context["agents"]);
+		await agentEvents(root, agent).serial("agent/created", {
+			source: "startup",
+		});
+		const key = scopeOf(agent.ctx);
+		if (!key) throw new Error("The agent scope is absent.");
+		const before = root.tools.get("memory_note", key);
+		if (!before) throw new Error("The note tool of the agent is absent.");
+		await expect(
+			before.execute(
+				{ body: "A note with no store." },
+				{} as Parameters<typeof before.execute>[1],
+			),
+		).rejects.toThrow(/not open/);
+		probe.free();
+		root.memlens.retry();
+		expect(root.memlens.storeState()).toEqual({ ready: true, error: null });
+		await vi.waitFor(() => {
+			expect(root.tools.get("memory_note", key)).not.toBe(before);
+		});
+		const after = root.tools.get("memory_note", key);
+		if (!after)
+			throw new Error("The note tool of the recovered agent is absent.");
+		const result = await after.execute(
+			{ body: "A note after the open." },
+			{} as Parameters<typeof after.execute>[1],
+		);
+		expect(result).toMatchObject({ state: "live" });
+	});
+});
+
+describe("Memlens configuration that cannot be read", () => {
+	it("keeps the host with no store from the default layer, then opens after the repair", async () => {
+		const directory = mkdtempSync(join(tmpdir(), "memlens-plugin-config-"));
+		directories.push(directory);
+		// A directory at the file path makes the read fail with EISDIR, as an unreadable file does.
+		mkdirSync(join(directory, "memlens", "config.toml"), { recursive: true });
+		vi.stubEnv("XDG_CONFIG_HOME", directory);
+		vi.stubEnv("XDG_DATA_HOME", join(directory, "data"));
+		vi.stubEnv("MEMLENS_STORE", undefined);
+		const root = new Context();
+		roots.push(root);
+		new SystemPrompt(root, {});
+		root.plugin(ToolsService, {});
+		await root.plugin(WorkerLlm);
+		const hostFiber = root.plugin(host, {});
+		await hostFiber;
+		expect(root.memlens.storeState().ready).toBe(false);
+		expect(root.memlens.storeState().error).toMatch(/EISDIR|directory/);
+		expect(() => root.memlens.store).toThrow(/not open/);
+		expect(root.memlens.profiles().length).toBeGreaterThan(0);
+		const configPath = join(directory, "memlens", "config.toml");
+		rmSync(configPath, { recursive: true, force: true });
+		writeFileSync(configPath, DEFAULT_CONFIG_TOML);
+		root.memlens.retry();
+		expect(root.memlens.storeState()).toEqual({ ready: true, error: null });
+		expect(root.memlens.store.rev()).toBe("");
+	});
+});
+
+/** @purpose Give one base file that names its store, so a default fallback would move the store. */
+function baseWithStore(store: string): string {
+	return DEFAULT_CONFIG_TOML.replace(
+		"[store]\nidle = 300",
+		`[store]\nidle = 300\npath = "${store}"`,
+	);
+}
+
+/** @purpose Give one base file with a path rule, so the agent scope follows the real config. */
+function baseWithScope(store: string): string {
+	return `${baseWithStore(store).replace("rules = []\n", "")}
+[[scope_default.rules]]
+match = "path"
+glob = "*/alpha"
+key = "project:real"
+`;
+}
+
+// #region FUNC_startHost
+/**
+ * @purpose Start the host under temporary configuration roots, with the base file of the test.
+ * @param directory - The temporary root of the test.
+ * @param config - The exact text of the base file, or a directory that stands in for it.
+ */
+async function startHost(
+	directory: string,
+	config: "directory" | "parent-file" | string,
+) {
+	const configDir = join(directory, "config");
+	const configPath = join(configDir, "memlens", "config.toml");
+	if (config === "parent-file") {
+		// A file at the parent path makes the read fail, and no file is visible at the child path.
+		mkdirSync(configDir, { recursive: true });
+		writeFileSync(join(configDir, "memlens"), "not a directory");
+	} else {
+		mkdirSync(join(configDir, "memlens"), { recursive: true });
+		if (config === "directory") mkdirSync(configPath);
+		else writeFileSync(configPath, config);
+	}
+	vi.stubEnv("XDG_CONFIG_HOME", configDir);
+	vi.stubEnv("XDG_DATA_HOME", join(directory, "data"));
+	vi.stubEnv("MEMLENS_STORE", undefined);
+	const root = new Context();
+	roots.push(root);
+	new SystemPrompt(root, {});
+	root.plugin(ToolsService, {});
+	await root.plugin(WorkerLlm);
+	const hostFiber = root.plugin(host, {});
+	await hostFiber;
+	return { root, configPath };
+}
+// #endregion FUNC_startHost
+
+describe("Memlens store identity", () => {
+	it("keeps the store of the last read while the config is broken or absent", async () => {
+		const directory = mkdtempSync(join(tmpdir(), "memlens-plugin-identity-"));
+		directories.push(directory);
+		const blocker = join(directory, "blocker");
+		writeFileSync(blocker, "not a directory");
+		const store = join(blocker, "store");
+		const { root, configPath } = await startHost(
+			directory,
+			baseWithStore(store),
+		);
+		expect(root.memlens.storeState().ready).toBe(false);
+		expect(root.memlens.path).toBe(store);
+		writeFileSync(configPath, "this is not a configuration [");
+		root.memlens.retry();
+		expect(root.memlens.storeState().ready).toBe(false);
+		expect(root.memlens.path).toBe(store);
+		rmSync(configPath);
+		root.memlens.retry();
+		expect(root.memlens.storeState().ready).toBe(false);
+		expect(root.memlens.storeState().error).toMatch(/ENOENT|no such file/);
+		expect(root.memlens.path).toBe(store);
+		writeFileSync(configPath, baseWithStore(store));
+		rmSync(blocker);
+		root.memlens.retry();
+		expect(root.memlens.storeState()).toEqual({ ready: true, error: null });
+		expect(root.memlens.path).toBe(store);
+		expect(existsSync(join(store, "memlens.db"))).toBe(true);
+	});
+
+	it("keeps a newly read config when its store open fails", async () => {
+		const directory = mkdtempSync(
+			join(tmpdir(), "memlens-plugin-late-config-"),
+		);
+		directories.push(directory);
+		const { root, configPath } = await startHost(directory, "directory");
+		const blocker = join(directory, "blocker");
+		writeFileSync(blocker, "not a directory");
+		const store = join(blocker, "store");
+		rmSync(configPath, { recursive: true, force: true });
+		writeFileSync(configPath, baseWithStore(store));
+		root.memlens.retry();
+		expect(root.memlens.storeState().ready).toBe(false);
+		rmSync(configPath);
+		root.memlens.retry();
+		expect(root.memlens.storeState().ready).toBe(false);
+		expect(root.memlens.storeState().error).toMatch(/ENOENT|no such file/);
+	});
+
+	it("requires the config after a read failure even when no file is visible", async () => {
+		const directory = mkdtempSync(join(tmpdir(), "memlens-plugin-hidden-"));
+		directories.push(directory);
+		const store = join(directory, "store");
+		const { root, configPath } = await startHost(directory, "parent-file");
+		expect(root.memlens.storeState().ready).toBe(false);
+		// The parent becomes a directory with no config file, so a lenient read would give the
+		// default layer and open the default store.
+		rmSync(join(directory, "config", "memlens"));
+		mkdirSync(join(directory, "config", "memlens"), { recursive: true });
+		root.memlens.retry();
+		expect(root.memlens.storeState().ready).toBe(false);
+		expect(root.memlens.storeState().error).toMatch(/ENOENT|no such file/);
+		writeFileSync(configPath, baseWithStore(store));
+		root.memlens.retry();
+		expect(root.memlens.storeState()).toEqual({ ready: true, error: null });
+		expect(root.memlens.path).toBe(store);
+	});
+
+	it("takes the scope of an agent from the real config after a malformed start", async () => {
+		const directory = mkdtempSync(join(tmpdir(), "memlens-plugin-malformed-"));
+		directories.push(directory);
+		const store = join(directory, "store");
+		const cwd = join(directory, "alpha");
+		mkdirSync(cwd, { recursive: true });
+		const { root, configPath } = await startHost(directory, "not a config [");
+		expect(root.memlens.storeState().ready).toBe(false);
+		const agent = subject(root);
+		Object.assign(agent.session.header, { cwd });
+		root.provide("agents", { list: () => [agent] } as Context["agents"]);
+		await agentEvents(root, agent).serial("agent/created", {
+			source: "startup",
+		});
+		expect(root.memlens.forAgent(agent).scope).not.toBe("project:real");
+		writeFileSync(configPath, baseWithScope(store));
+		root.memlens.retry();
+		expect(root.memlens.storeState()).toEqual({ ready: true, error: null });
+		expect(root.memlens.forAgent(agent).scope).toBe("project:real");
+	});
+
+	it("resolves the scope of a live agent from the real config after the fallback", async () => {
+		const directory = mkdtempSync(join(tmpdir(), "memlens-plugin-scope-"));
+		directories.push(directory);
+		const store = join(directory, "store");
+		const cwd = join(directory, "alpha");
+		mkdirSync(cwd, { recursive: true });
+		const { root, configPath } = await startHost(directory, "directory");
+		expect(root.memlens.storeState().ready).toBe(false);
+		const agent = subject(root);
+		Object.assign(agent.session.header, { cwd });
+		root.provide("agents", { list: () => [agent] } as Context["agents"]);
+		await agentEvents(root, agent).serial("agent/created", {
+			source: "startup",
+		});
+		expect(root.memlens.forAgent(agent).scope).not.toBe("project:real");
+		rmSync(configPath, { recursive: true, force: true });
+		writeFileSync(configPath, baseWithScope(store));
+		root.memlens.retry();
+		expect(root.memlens.storeState().ready).toBe(true);
+		expect(root.memlens.forAgent(agent).scope).toBe("project:real");
+		const key = scopeOf(agent.ctx);
+		if (!key) throw new Error("The agent scope is absent.");
+		const before = root.tools.get("memory_note", key);
+		if (!before)
+			throw new Error("The note tool of the offline agent is absent.");
+		await vi.waitFor(() => {
+			expect(root.tools.get("memory_note", key)).not.toBe(before);
+		});
+		const tool = root.tools.get("memory_note", key);
+		if (!tool)
+			throw new Error("The note tool of the recovered agent is absent.");
+		const result = await tool.execute(
+			{ body: "A note of the real scope." },
+			{} as Parameters<typeof tool.execute>[1],
+		);
+		expect(result).toMatchObject({ state: "live" });
+		expect([...liveCounts(root.memlens.store).keys()]).toContain(
+			"project:real",
+		);
 	});
 });

@@ -23,7 +23,7 @@ import { NOTE_KINDS } from "@memlens/core/view";
 import { address, rangeId, rangeOf } from "../format.js";
 import { LANGS, type Lang } from "../i18n.js";
 import { DEFAULT_ROUTE, type Route, routeOf, type Screen } from "../route.js";
-import type { Choice, RecordModel, Step } from "../types.js";
+import type { Choice, RecordModel, Step, View } from "../types.js";
 import type {
 	ActionFields,
 	ConsoleActions,
@@ -234,24 +234,33 @@ export function createConsoleController(
 	 * @purpose Refresh the console after a profile, scope, or store change.
 	 * @invariants The host resolves the profile and the scope, so the state takes the resolved values.
 	 * @invariants The call keeps a generation token. An older answer returns before it writes state.
+	 * @invariants A failed view read still states the runtime of the host, so a surface reports a
+	 *  store that does not open.
 	 */
 	async function loadView(step: Step = "replace"): Promise<void> {
 		const token = get().generation + 1;
 		set({ generation: token });
 		message(t("loading"));
-		const view = await port.view({
-			profile: get().profile,
-			scope: get().scope,
-			kind: get().reviewKind,
-		});
+		let view: View | undefined;
+		let failed: unknown;
+		try {
+			view = await port.view({
+				profile: get().profile,
+				scope: get().scope,
+				kind: get().reviewKind,
+			});
+		} catch (error) {
+			failed = error;
+		}
 		const runtime = port.runtime
 			? await port.runtime().catch(() => undefined)
 			: undefined;
 		if (token !== get().generation) return;
+		if (runtime !== undefined) set({ runtime });
+		if (failed !== undefined) throw failed;
 		if (!view || !Array.isArray(view.scopes) || !Array.isArray(view.records))
 			throw new Error(t("badView"));
 		set({ model: view, profile: view.profile, scope: view.scope });
-		if (runtime !== undefined) set({ runtime });
 		console.debug("Console loaded", {
 			event: "view",
 			profile: view.profile,
@@ -723,6 +732,16 @@ export function createConsoleController(
 			return guard(async () => {
 				if (reviewKind !== undefined) set({ reviewKind });
 				await loadView("push");
+			});
+		},
+		refresh() {
+			return guard(async () => {
+				const read = port.runtime;
+				if (read === undefined) return;
+				const runtime = await read().catch(() => undefined);
+				if (runtime?.store?.ready !== true) return;
+				set({ runtime });
+				await loadView("none");
 			});
 		},
 		reset(scope: string) {

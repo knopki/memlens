@@ -13,6 +13,8 @@
  *   belong to that profile.
  * @invariants The transport checks each input and each answer with the strict contract schemas.
  * @invariants A Memlens error keeps its message and becomes one Remote error of the request.
+ * @invariants The status answer states the store, so a surface that cannot read the store reports
+ *   the cause and no build of a store that is not open.
  * @usecases
  *  - View: tab => calls memlens.view => gets the console model
  *  - Action: user => calls memlens.action => gets the changed note
@@ -92,22 +94,27 @@ function hostContribution(): TypertContribution {
  */
 export class ConsoleRemote extends TypertRemoteService {
 	private readonly memlens: Memlens;
+	private readonly worker: () => MemoryWorker | undefined;
 	private readonly methods: Readonly<Record<ConsoleMethod, Handler>>;
 
 	/**
-	 * @param ctx - The host context that owns the service.
-	 * @param memlens - The service with the store and the session memory.
-	 * @param worker - The background compaction worker of the host.
+	 * @param worker - Gives the background compaction worker of the host, or undefined while the
+	 *   store is not open.
 	 */
-	constructor(ctx: Context, memlens: Memlens, worker: MemoryWorker) {
+	constructor(
+		ctx: Context,
+		memlens: Memlens,
+		worker: () => MemoryWorker | undefined,
+	) {
 		super(ctx, CONSOLE_SERVICE, { namespace: CONSOLE_NAMESPACE });
 		this.memlens = memlens;
+		this.worker = worker;
 		this.methods = {
 			view: viewAnswer,
 			search: searchAnswer,
 			open: openAnswer,
 			catalog: catalogAnswer,
-			status: (request) => statusAnswer(request, worker),
+			status: (request) => statusAnswer(request, this.worker()),
 			action: actionRoute,
 		};
 	}
@@ -249,15 +256,14 @@ export class ConsoleRemote extends TypertRemoteService {
  *   tab.
  * @invariants A host without the Typert service registers nothing and throws no error.
  * @invariants The disposer ends the descriptors, the service, and the snapshot tracker.
- * @param ctx - The host context that owns the registration.
- * @param memlens - The service with the store, the profiles, and the session memory.
- * @param worker - The background compaction worker of the host.
+ * @param worker - Gives the background compaction worker of the host, or undefined while the
+ *   store is not open.
  * @returns The disposer that ends the console namespace.
  */
 export function registerConsoleRemote(
 	ctx: Context,
 	memlens: Memlens,
-	worker: MemoryWorker,
+	worker: () => MemoryWorker | undefined,
 ): () => Promise<void> {
 	const fiber = ctx.inject(["typert"], (remoteCtx) => {
 		new ConsoleRemote(remoteCtx, memlens, worker);

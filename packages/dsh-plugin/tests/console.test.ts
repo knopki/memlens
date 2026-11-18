@@ -205,7 +205,7 @@ async function registered(testCase: Case): Promise<() => Promise<void>> {
 	const dispose = registerConsoleRemote(
 		testCase.root,
 		testCase.memlens,
-		testCase.worker,
+		() => testCase.worker,
 	);
 	await new Promise((resolve) => setImmediate(resolve));
 	return dispose;
