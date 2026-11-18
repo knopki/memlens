@@ -1,28 +1,34 @@
 # Architecture
 
 memlens is the long-term memory of an agent. One SQLite database holds the memory as rows. A tree
-of summary rows stands above the notes, and the agent reads a slice of that tree at the start of a
+of summary rows stands above the notes, and the agent reads the memory text at the start of a
 session. The LikeC4 model in [docs/arch](arch/README.md) shows the parts, the use cases, and the
 deployment as diagrams.
 
 ## The objects
 
 A **profile** is a set of scopes with a line budget. A **scope** is a key of the form `kind:name`,
-lowercase, for example `project:knopki/memlens`. The store lowercases the key before a write.
+for example `project:knopki/memlens`. The kind takes lowercase letters, digits, periods, underscores,
+slashes, and hyphens, and it starts with a letter or a digit. The name takes any text without
+whitespace, control or format characters, `#`, commas, and brackets. The store lowercases the kind
+before a write, and it keeps the case of the name. A key holds no fixed count of segments: the first
+colon separates the kind from the name, and the name may hold a colon.
 
-A **note** is one curated fact: a `body` of 384 characters, and a `longform` document of up to
+A **note** is one record of the memory: a `body` of 384 characters, and a `longform` document of up to
 16 384 characters. The body becomes a leaf of the tree. The longform stays out of the tree and
 arrives only through `memory_open`.
 
-A **slot** is the position of a note in its scope. A **node** is one summary row over an aligned
-range of slots. A **slice** is the rendered view of the tree: the `<memory>` section of the agent
-prompt. The glossary holds the terms.
+A **slot** is the position of a note in its scope, and a hidden or deleted note keeps its slot. A
+**node** is one summary row over an aligned range of slots. A **slice** is the set of lines of the
+tree. The **context text** is the rendered `<memory>` section of the agent prompt. The glossary
+holds the terms.
 
 ## Storage
 
 One database file `memlens.db` holds the tables `notes`, `nodes`, `proposals`, `meta`, and
-`journal`, and the FTS5 search index. Current rows are the truth. There is no event log and no
-replay.
+`journal`, and the FTS5 search index. The rows are the truth, and the tree and the index are caches.
+An open builds the index with the tokenizer of the `language` key when the stored tokenizer
+differs.
 
 An open reads the schema version from `meta`. A store behind the build migrates the tables in one
 transaction, and it keeps each note row and each slot. A failed migration keeps the earlier schema
@@ -32,13 +38,13 @@ schema, an absent version, and an invalid version.
 Each write runs in one transaction and keeps the note rows, the index rows, the node rows, and the
 journal row in step. The node cache is valid only while the keys of its children match the current
 rows. A change deletes each node row over the changed slot in the same transaction, so a stale
-summary cannot survive a write. The index is a cache: the store rebuilds it after a loss, and
-`memlens repair` rebuilds damaged cache rows.
+summary cannot survive a write. The command `memlens repair` drops the invalid node rows, rebuilds
+the index on a drift, and prunes the journal.
 
-The journal holds no content and no hash. No state path reads it.
+The journal is an audit trail for a human. It holds no content, and no state path reads it.
 
 The store path comes from `--store`, then the plugin patch, then `MEMLENS_STORE`, then the base
-config file. See [configuration.md](configuration.md).
+config file, then the built-in defaults. See [configuration.md](configuration.md).
 
 ## Order and addresses
 
@@ -52,8 +58,9 @@ An address is `pos` or `scope#pos`. An `addr` from a tool answer holds the scope
 not remember one.
 
 A hidden note keeps its slot and its content, and it leaves the view. A redacted note keeps its
-row as a tombstone with no content. The redact clears the body, the longform, the index row, the
-covering node rows, and the proposals that name the note in one transaction.
+row as a tombstone with no content. The redaction clears the body, the longform, the index row, the
+covering node rows, and the proposals that name the note in one transaction. The write-ahead log
+keeps the earlier frames until the close truncates it.
 
 ## The tree
 
@@ -63,7 +70,7 @@ The frontier lists the lines from the oldest to the newest, the coarse lines fir
 notes last.
 
 A range without a valid node renders a temporary line assembled from its two children. That line
-appears at once, calls no model, and waits for no compaction. The directions line of an unready
+appears at once, and it needs no model call and no compaction. The directions line of an unready
 scope uses the same rule.
 
 ## Compaction
@@ -92,7 +99,8 @@ events.
 
 ## The memory context
 
-The slice is one `<memory>` section with three parts: `<how-to>`, `<directions>`, and `<here>`. The
+The context text is one `<memory>` section with three parts: `<how-to>`, `<directions>`, and
+`<here>`. The
 `<how-to>` part holds the policy text and the value of `customPromptAppend`. The `customPrompt` key
 replaces the whole template, and the placeholders apply in it.
 
@@ -107,7 +115,7 @@ with the shared year and month written once.
 
 A part above its budget merges one pair at a time and stops as soon as the count of lines fits. The
 parent line takes the place of the two lines of the pair. Among the pairs, the merge minimizes the
-jump penalty first, then the review date, the level, and the start. The pair that covers the
+jump penalty first, then `due`, the level, and the start. The pair that covers the
 greatest live position never merges, so a slice ends with its last live record. A pair merges even
 when the node of its range is not built, and the temporary line takes the place of the two lines.
 When no pair merges and the part is still above its budget, the oldest lines leave the part.
@@ -118,9 +126,10 @@ it writes a new message only when the text changes. The text stays the same thro
 session and through the writes of that session. A session start and a successful compaction give a
 new snapshot, and a process restart gives the same text.
 
-When the store cannot open, the session continues and the console reports that memory is unavailable.
-A session without a saved section gets no memory context until the store opens. The memory tools
-answer errors. The plugin retries the open and connects the live sessions when the store becomes available.
+When the store cannot open, the session continues, and the console reports that the memory is
+unavailable. A session without a saved section gets no memory text until the store opens. The tools
+answer errors. The plugin retries the open and connects the live sessions when the store becomes
+available.
 
 ## The tools
 
@@ -148,9 +157,10 @@ dismisses an expired proposal with no human.
 
 ## Proposals
 
-A subagent writes with `proposed: true`. The store holds one proposal row with a payload and an
-expiry of 30 days. The answer names the proposal id under the session of the child. The parent
-report lists the proposals of its children with their ids and bodies. The parent applies a
+A subagent writes one proposal row with a payload and an expiry of 30 days. The answer names the
+proposal id under the session of the child. The parent
+report lists the proposals of its children with their ids and bodies. A human accepts or dismisses a
+proposal in the console. The parent applies a
 suggestion through an ordinary write, and the console applies the stored operation and dismisses the
 proposal in one transaction.
 
@@ -188,7 +198,7 @@ memlens check [--json]
 memlens repair [--dry-run]
 memlens export --format md|jsonl --out dir [--scope key]
 memlens import --in path [--as key] [--dry-run]
-memlens config get|set key [value]
+memlens config show [--profile name] [--json]
 memlens ui [--port 7788] [--allow-delete]
 ```
 
@@ -198,9 +208,10 @@ name, then the configured default.
 The command `compact` gives the merge inputs of one scope as one job, and the flag `--answer`
 applies one answer file after the store rechecks each input. The command `export` writes JSONL of
 full note rows with a header and a trailer. Proposals, summaries, and slots never travel. The
-command `import` merges by `id` with five channels. Content and review merge by version.
+command `import` merges by `id`, by channel. Content and review merge by version.
 Lifecycle merges by maximum. Cleared merges by latch. The supersede link merges by the first
-write. A repeated import changes no row.
+write. A repeated import changes no
+row.
 
 ## Errors
 
@@ -219,13 +230,11 @@ An error carries a code and a message, and the exit code follows the kind.
 | ---------------- | ------------------------------------------------------------------------------------ |
 | `body`           | 384 characters required, 512 characters accepted                                     |
 | `longform`       | 16 384 characters                                                                    |
-| `memory_open`    | `head` 8 192, `all` 16 384 characters, and the answer continues with `offset`         |
+| `memory_open`    | The longform: 8 192 characters for `head`, 16 384 for `all`, and the answer continues with `offset` |
 | Node             | Target 512 characters, limit 640 characters, a cut with a flag                        |
 | Input of a merge | Two children. At level 1 a leaf gives its body and its longform.                   |
 | Budget           | The profile gives `here` and `directions` in lines                                    |
 | Compaction       | `batch` 10, a whole number above zero, no upper limit, 120 calls in an hour           |
 | Nudge            | `tool_calls` and `turns` 10                                                           |
-| Review           | 365 days for `decision`, `preference`, `note`. 180 days for `fact` and `gotcha`. 7 for `task`. |
 | GC of proposals  | 30 days                                                                               |
 | `find`           | 10 records, and 50 for each scope                                                     |
-| `cacheTtl`       | `deepseek/*` 2 hours, `anthropic/*` 5 minutes, another model 1 hour                    |

@@ -36,17 +36,18 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | scope                | The unit of visibility and of write permission. A scope is a key of the note rows, and the store holds no record for it. A scope has a name only.                            |
 | profile              | The unit that ties a set of scopes to one configuration section and one preset. The preset key `profile` names it.                                                           |
 | preset               | The plugin entry `@memlens/dsh-plugin/preset`, with name `memlens/preset`. It gives the config of an agent preset. The key `profile` has the default `default`.              |
-| slice                | The text that the agent gets: one `<memory>` section with the policy text, `<directions>`, and `<here>`.                                                                     |
+| slice                | The set of lines of the tree, from the oldest range to the newest record, at most the budget in count. The `<here>` part and `memory_map` hold one slice.                     |
+| context text         | The rendered `<memory>` section with the policy text, `<directions>`, and `<here>`. The harness keeps its text as a runtime context message.                                |
 | snapshot             | One render of the slice from the store. The harness session history keeps its text as a runtime context message.                                                             |
 | store                | The memory storage: one SQLite database with note, node, proposal, and journal rows. It has one store identity.                                                              |
 | hide                 | The op that takes a note out of the view. The agent can hide a note.                                                                                                         |
 | redact               | The op that clears the content of a note for good. Only the CLI or the GUI can redact.                                                                                      |
 | amend                | The op that changes the content, the scope, the kind, or the supersedes of a note. Only the CLI or the GUI can amend.                                                        |
-| proposed             | The state of a note that waits for a human decision. A subagent write and a write outside the profile give it.                                                               |
+| proposal status      | The value of one proposal row: `open`, `accepted`, `dismissed`, or `expired`. An open row waits for a human decision.                                                        |
 | nudge                | The reminder that the harness gives the agent to write a note. The `[nudge]` section gives the counts and the text.                                                          |
-| review               | The check of a note by a human. The `review` event records it, and `review_at` gives the time of the next check.                                                             |
+| review               | The check of a note by a human. The `review` op records it, and `review_at` gives the time of the next check.                                                                |
 | review period        | The number of days after a write when the record is due for review. The `review` section of the config gives it.                                                             |
-| modified_at          | The `at` of the latest event that affects the record. It moves on a write, an amend, a hide, a redact, a review, and a supersedes of the record.                             |
+| modified_at          | The time of the latest write that affects the record. It moves on a write, an amend, a hide, a redact, a review, and a supersedes of the record.                             |
 | «Линза»              | The Russian name of the project. `memlens` joins memory and lens, and the lens gives the zoom into the tree.                                                                 |
 | frontier             | The visible lines of the tree from the oldest level to the newest record. It tiles its range.                                                                                |
 | level                | One row of the tree. A level has a fixed width, and one level covers 2^k leaves.                                                                                             |
@@ -63,7 +64,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | ts                   | The content date of a note. An amend never changes it.                                                                                                                       |
 | record               | One note as a reader sees it: the row with its content, its state, and its times.                                                                                            |
 | `record state`       | The lifecycle value of a note row, in the order `live`, `hidden`, `deleted`.                                                                                                 |
-| hidden               | The state of a record after a `hide` event. The content stays.                                                                                                               |
+| hidden               | The state of a record after a `hide` op. The content stays.                                                                                                               |
 | cleared              | The flag of a redacted note row. A cleared row keeps no content, and no merge restores it.                                                                                   |
 | superseded_by        | The field of a record that names the note that superseded it.                                                                                                                |
 | dirty                | The state of a range with no valid node. The render gives the text of its children.                                                                                          |
@@ -75,7 +76,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | budget               | The line limits of one profile: `here` and `directions`. The two are independent.                                                                                            |
 | subagent mode        | The access of a subagent: `propose` writes and reports, `read` reads only, `off` has no tool and no slice.                                                                   |
 | here                 | The tree slice of the active scope. The budget `here` limits this part.                                                                                                      |
-| directions           | The tree slice of the catalog. The budget `directions` limits this part.                                                                                                     |
+| directions           | The list of the visible scopes with their direction lines. The budget `directions` limits this part.                                                                         |
 | view                 | The tiling of the frontier that the agent reads. The store derives it from rows, and it holds no projection.                                                                 |
 | fold                 | The pass that merges only until rendered lines fit the budget. Unready summaries give temporary lines, with no model call.                                                   |
 | line                 | One item of the view: a record, a node, or a temporary line.                                                                                                                 |
@@ -102,7 +103,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `customPrompt`       | The template that replaces the slice template. The placeholders apply in it. The profile patch gives it.                                                                     |
 | `customPromptAppend` | The text that takes the place of `{{append}}` in the template. The profile patch gives it.                                                                                   |
 | defaultProfile       | The profile of the general config. The preset `profile` wins over it.                                                                                                        |
-| language             | The language that the prompt recommends to the agent for the notes. The default is `en`, because the FTS support is better.                                                  |
+| language             | The language that the prompt recommends to the agent for the notes. The default is `en`, because the FTS support is better. The value selects the tokenizer of the index.    |
 | eight languages      | The set `de`, `en`, `es`, `fr`, `ja`, `pt`, `ru`, and `zh`. The product, the README files, and the user documents hold the set, and English is the default and the fallback. |
 | agent preset         | The harness composition that selects the child plugins and the config of one agent.                                                                                          |
 | profile patch        | The plugin row in `cordis.patch.yml` of a harness profile. It gives the config for the agents of that profile.                                                               |

@@ -1,28 +1,33 @@
 # Configuration
 
-memlens reads three configuration layers. Each layer is optional. A fresh machine needs no
-configuration file, and the built-in defaults apply.
+memlens resolves the configuration from the built-in defaults and three optional layers. Each
+layer is optional, so a fresh machine needs no configuration file.
 
 This page holds the complete format and one example of each layer.
 
 ## The three layers
 
-| Layer  | Place                                        | Writer          |
-| ------ | -------------------------------------------- | --------------- |
-| Base   | `config.toml` in the XDG config directory    | You, by hand    |
-| Patch  | The `config` table of the plugin row         | The host profile |
-| Preset | The `config` table of the preset row         | The agent preset |
+| Layer    | Place                                      | Writer           |
+| -------- | ------------------------------------------ | ---------------- |
+| Defaults | The code                                   | No caller        |
+| Base     | `config.toml` in the XDG config directory  | The user, by hand |
+| Patch    | The `config` table of the plugin row       | The host profile |
+| Preset   | The `config` table of the preset row       | The agent preset |
 
-The layers merge in a fixed order: the base, then the patch, then the preset. A later value wins
-over an earlier value. A table merges key by key. A scalar or a list replaces its earlier value.
+The layers merge in a fixed order: the defaults, then the base file, then the patch, then the
+preset. A later value wins over an earlier value. A table merges key by key. A scalar or a list
+replaces its earlier value. The CLI reads the defaults and the base file, and it holds no patch and
+no preset.
 
 ## Value formats
 
-- A scope key holds two segments and one colon, for example `project:dsh/memlens`. A segment
-  starts with a lowercase letter or a digit. Then it holds lowercase letters, digits, periods,
-  underscores, slashes, and hyphens.
-- A glob matches the whole value. The part `*` matches any text. For example, `project:*` matches
-  each key of the kind `project`.
+- A scope key holds a kind and a name, separated by the first colon, for example
+  `project:dsh/memlens`. The kind takes lowercase letters, digits, periods, underscores, slashes,
+  and hyphens, and it starts with a letter or a digit. The name takes any text without whitespace,
+  control or format characters, `#`, commas, and brackets. The store lowercases the kind before a
+  write, and it keeps the case of the name.
+- A glob matches the whole key. The part `*` matches any text. For example, `project:*` matches each
+  key that starts with `project:`. The kind is free text, so the glob does not split the key.
 - A duration is one number with one unit: `30s`, `5m`, or `2h`.
 
 ## The base file
@@ -30,11 +35,12 @@ over an earlier value. A table merges key by key. A scalar or a list replaces it
 The base file is `config.toml` in `$XDG_CONFIG_HOME/memlens`. Without `XDG_CONFIG_HOME`, the path
 is `~/.config/memlens/config.toml`. The data lives in `$XDG_DATA_HOME/memlens`.
 
-The plugin does not write this file. The command `memlens config set` writes one key.
+The plugin does not write this file. The command `memlens config show` prints the resolved values,
+and it writes no file.
 
-An absent key gives its default. An absent file uses the built-in defaults.
-If the file is invalid or unreadable, the session continues without an open store.
-The plugin reports the failure and retries. The CLI reports an invalid file as an error.
+An absent key gives its default. An absent file uses the built-in defaults. If the file is invalid
+or unreadable, the session continues without an open store. The plugin reports the failure and
+retries. The CLI reports an invalid file as an error.
 
 ### The complete example
 
@@ -288,11 +294,13 @@ The preset holds no compaction key and no store key.
   `MEMLENS_STORE`, then the base file. The CLI gives no patch layer, so its order is the flag,
   then the environment, then the file.
 
-## Read and set one key from the terminal
+## Read the resolved configuration
 
 ```sh
-memlens config get profile.default.budget.here
-memlens config set nudge.turns 5
+memlens config show
+memlens config show --json
+memlens config show --profile work
 ```
 
-The `set` command writes the file only after the complete result passes the validation.
+The command prints each resolved value of this machine. The flag `--profile` selects the profile,
+and the default profile applies without the flag.
