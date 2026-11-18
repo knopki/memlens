@@ -12,6 +12,8 @@
  *   second, so a caller resumes fast.
  * @invariants A lock that the engine reports at once repeats within the same one-second deadline.
  * @invariants A retry repeats the lock acquisition only. The work of a transaction runs once.
+ * @invariants The open builds the index with the tokenizer of the language key when the stored
+ *   tokenizer differs, so a language change needs no command.
  * @dependencies store/clock.ts for the store identity.
  * @keywords schema, open, pragma, database, migration, version
  * #endregion moduleContract
@@ -61,6 +63,16 @@ const TOKENIZERS: Record<string, string> = {
 	zh: "trigram",
 	ja: "trigram",
 };
+
+/** The search index text. The tokenizer placeholder is replaced at each build. */
+const FTS_SQL = `
+		CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(
+			body, longform,
+			content = 'notes', content_rowid = 'n',
+			tokenize = '{tokenizer}'
+		);
+		INSERT INTO fts(fts, rank) VALUES ('secure-delete', 1);
+	`;
 
 /** The schema text. The tokenizer placeholder is replaced at open. */
 const SCHEMA_SQL = `
@@ -126,12 +138,7 @@ const SCHEMA_SQL = `
 			scope  TEXT,
 			reason TEXT CHECK (reason IS NULL OR length(reason) <= 200)
 		);
-		CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(
-			body, longform,
-			content = 'notes', content_rowid = 'n',
-			tokenize = '{tokenizer}'
-		);
-		INSERT INTO fts(fts, rank) VALUES ('secure-delete', 1);
+		${FTS_SQL}
 	`;
 
 // #region FUNC_tokenizerOf
@@ -140,6 +147,36 @@ function tokenizerOf(language: string): string {
 	return TOKENIZERS[language] ?? "porter unicode61 remove_diacritics 1";
 }
 // #endregion FUNC_tokenizerOf
+
+// #region FUNC_indexTokenizer
+/** @purpose Read the tokenizer of the built index. A store without the row gives null. */
+function indexTokenizer(db: DatabaseSync): string | null {
+	const row = db
+		.prepare("SELECT value FROM meta WHERE key = 'fts_tokenizer'")
+		.get();
+	return typeof row?.value === "string" ? row.value : null;
+}
+// #endregion FUNC_indexTokenizer
+
+// #region FUNC_rebuildIndex
+/**
+ * @purpose Build the search index with the tokenizer of the language key.
+ * @invariants The caller compares the stored tokenizer before it opens a write transaction, so an
+ *   open of a current store takes no write lock.
+ * @invariants The rebuild reads the note rows of the store and calls no model.
+ */
+function rebuildIndex(db: DatabaseSync, language: string): void {
+	const tokenizer = tokenizerOf(language);
+	const stored = indexTokenizer(db);
+	db.exec("DROP TABLE IF EXISTS fts");
+	db.exec(FTS_SQL.replace("{tokenizer}", tokenizer));
+	db.exec("INSERT INTO fts(fts) VALUES ('rebuild')");
+	db.prepare("UPDATE meta SET value = ? WHERE key = 'fts_tokenizer'").run(
+		tokenizer,
+	);
+	debug("Index rebuild", { event: "index", from: stored, to: tokenizer });
+}
+// #endregion FUNC_rebuildIndex
 
 // #region FUNC_openDatabase
 /**
@@ -151,6 +188,7 @@ function tokenizerOf(language: string): string {
  * @invariants The schema work waits for a lock of another process. Each check runs again after the
  *   wait, because the other process may have created or migrated the store meanwhile.
  * @invariants The schema and the meta rows are ready before the caller reads.
+ * @invariants The index holds the tokenizer of the language key after the open.
  */
 export function openDatabase(
 	path: string,
@@ -173,6 +211,8 @@ export function openDatabase(
 			transaction(db, () =>
 				migrate(db, migrations, schemaVersion(db, migrations)),
 			);
+		if (indexTokenizer(db) !== tokenizerOf(language))
+			transaction(db, () => rebuildIndex(db, language));
 		debug("Store open", {
 			event: "open",
 			version: BASE_SCHEMA_VERSION + migrations.length,

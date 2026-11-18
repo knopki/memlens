@@ -156,6 +156,23 @@ describe("schema", () => {
 		);
 		second.close();
 	});
+
+	it("rebuilds the index when the language key names another tokenizer", () => {
+		const path = storePath();
+		const first = openDatabase(path, "en");
+		addNote(first, 0, "東京の会議");
+		first.close();
+		const second = openDatabase(path, "zh");
+		const tokenizer = second
+			.prepare("SELECT value FROM meta WHERE key = 'fts_tokenizer'")
+			.get()?.value;
+		assert.match(String(tokenizer), /trigram/);
+		const hits = second
+			.prepare("SELECT rowid FROM fts WHERE fts MATCH ?")
+			.all("東京の");
+		assert.equal(hits.length, 1, "the rebuilt index holds the stored note");
+		second.close();
+	});
 });
 // #endregion FUNC_test_schema
 
