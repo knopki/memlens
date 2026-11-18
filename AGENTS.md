@@ -4,6 +4,8 @@ The long-term memory of an agent. One SQLite store holds the notes and a tree of
 them. The agent reads a slice of that tree in its context. The CLI, the DSH plugin, and one browser
 console read and write the same store.
 
+This codebase is yours: what it's for and how it's built are your call, and you'll keep building on it.
+
 ## Packages
 
 | Package               | Role                                                                                             |
