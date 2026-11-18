@@ -11,10 +11,11 @@ of durable records, not a transcript. A vector search and an entity graph are ou
 
 The memory is a set of notes. One note holds a body and a longform document. The body is the leaf of
 a tree, and the longform reaches the agent only through `memory_open`.
-A scope is a key on each note, and the store holds no row for a scope.
+A scope exists only as a value on its notes, and the store holds no row for it.
 The slot of a note is the rank of its key over the notes of its scope.
 A node is one summary row over an aligned range of slots, and the tree is the set of nodes over one
-scope. The store keeps one SQLite database, and it holds no log. See 0020.
+scope. The store keeps one SQLite database. The rows are the truth, and the tree is a cache. See
+0020.
 
 ## Alternatives
 

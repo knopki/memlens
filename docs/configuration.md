@@ -35,8 +35,7 @@ no preset.
 The base file is `config.toml` in `$XDG_CONFIG_HOME/memlens`. Without `XDG_CONFIG_HOME`, the path
 is `~/.config/memlens/config.toml`. The data lives in `$XDG_DATA_HOME/memlens`.
 
-The plugin does not write this file. The command `memlens config show` prints the resolved values,
-and it writes no file.
+The command `memlens config show` prints the resolved values, and it writes no file.
 
 An absent key gives its default. An absent file uses the built-in defaults. If the file is invalid
 or unreadable, the session continues without an open store. The plugin reports the failure and

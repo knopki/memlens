@@ -60,9 +60,3 @@ Feature: Console surfaces
     When a human opens the scope menu
     Then the menu holds fifty entries
 
-  # No proving test found.
-  @wip
-  Scenario: Each button keeps a contrast ratio of 4.5 to 1
-    Given the console in the light theme and in the dark theme
-    When a human measures each button
-    Then the ratio between its text and its background is 4.5 to 1 or more

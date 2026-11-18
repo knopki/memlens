@@ -8,6 +8,8 @@
  * palette.
  * A result line holds four fixed tracks, so each row starts its columns at one place. A long
  * address cuts the scope prefix and keeps the position.
+ * Each button keeps a contrast ratio of 4.5 to 1 or more between its text and its background, in
+ * both palettes.
  * #endregion moduleContract
  */
 :root {
