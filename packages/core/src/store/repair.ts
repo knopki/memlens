@@ -14,7 +14,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { debuglog } from "node:util";
 import type { ScopeKey } from "../types/primitives.js";
-import { validNode, widthOf } from "./nodes.js";
+import { liveInStore, validNode, widthOf } from "./nodes.js";
 import { nodeFromRow } from "./rows.js";
 import type { Store } from "./store.js";
 import type { Node } from "./types.js";
@@ -130,9 +130,11 @@ export function check(
 }
 // #endregion FUNC_check
 
+// #region FUNC_plannedActions
 /**
- * @purpose Read the damage of one store in one read transaction.
- * @invariants The node row set is one snapshot, so each decision agrees.
+ * @purpose Name each action of a check without a write, so a dry run reports the same text.
+ * @invariants The plan holds one snapshot of the rows, so each decision agrees.
+ * @invariants The actions follow the order: the index, the invalid rows, the empty rows, the journal.
  */
 function plannedActions(plan: Plan): readonly string[] {
 	const actions: string[] = [];
@@ -147,6 +149,7 @@ function plannedActions(plan: Plan): readonly string[] {
 	if (plan.journal > 0) actions.push(`prune ${plan.journal} journal rows`);
 	return actions;
 }
+// #endregion FUNC_plannedActions
 
 function scan(db: DatabaseSync, cutoff: string, max: number): Plan {
 	const problems = quickCheck(db);
@@ -168,7 +171,10 @@ function scan(db: DatabaseSync, cutoff: string, max: number): Plan {
 			invalid.push(keyOf(node));
 			continue;
 		}
-		if (!holdsLiveNote(db, node)) empty.push(keyOf(node));
+		if (
+			!liveInStore(db, node.scope, node.start, node.start + widthOf(node.level))
+		)
+			empty.push(keyOf(node));
 	}
 	const journal = journalPlan(db, cutoff, max);
 	debug("Scan done", {
@@ -219,16 +225,6 @@ function journalPlan(db: DatabaseSync, cutoff: string, max: number): number {
 /** @purpose Give the primary key of one node row. */
 function keyOf(node: Node): NodeKey {
 	return { scope: node.scope, level: node.level, start: node.start };
-}
-
-/** @purpose Report whether a live note occupies any slot of the node range. */
-function holdsLiveNote(db: DatabaseSync, node: Node): boolean {
-	const row = db
-		.prepare(
-			"SELECT 1 FROM notes WHERE scope = ? AND state = 'live' AND pos >= ? AND pos < ? LIMIT 1",
-		)
-		.get(node.scope, node.start, node.start + widthOf(node.level));
-	return row !== undefined;
 }
 
 /**

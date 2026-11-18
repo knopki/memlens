@@ -156,8 +156,13 @@ function halfValidInStore(
 	return nodeKeyOf(db, scope, halfLevel, halfStart) === key;
 }
 
-/** @purpose Report whether a live note occupies any slot of one range. */
-function liveInStore(
+// #region FUNC_liveInStore
+/**
+ * @purpose Report whether a live note occupies any slot of one range, so the validity rules and a
+ * repair share one read.
+ * @invariants The range is half open: the first slot counts, and the end slot does not.
+ */
+export function liveInStore(
 	db: DatabaseSync,
 	scope: ScopeKey,
 	from: number,
@@ -170,3 +175,4 @@ function liveInStore(
 		.get(scope, from, to);
 	return row !== undefined;
 }
+// #endregion FUNC_liveInStore
