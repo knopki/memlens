@@ -45,11 +45,11 @@ export class NudgeCounters {
 
 	constructor(public config: NudgeSettings) {}
 
-	/** @returns The counts of both counters, for a check or a test. */
 	current(): { readonly toolCalls: number; readonly turns: number } {
 		return { toolCalls: this.toolCalls, turns: this.turns };
 	}
 
+	// #region METHOD_onToolResult
 	/**
 	 * @purpose Count one tool result and reset both counts after a successful note write.
 	 * @param name - The name of the tool that the model called.
@@ -65,7 +65,9 @@ export class NudgeCounters {
 		this.toolCalls += 1;
 		return this.lines();
 	}
+	// #endregion METHOD_onToolResult
 
+	// #region METHOD_onTurnEnd
 	/**
 	 * @purpose Count one ended turn and give the lines of each reached limit.
 	 * @returns The nudge lines of each counter that reached its limit, in order.
@@ -74,8 +76,8 @@ export class NudgeCounters {
 		this.turns += 1;
 		return this.lines();
 	}
+	// #endregion METHOD_onTurnEnd
 
-	/** Give the line of each reached limit, then reset both counts. */
 	private lines(): readonly string[] {
 		const lines: string[] = [];
 		if (this.reached(this.config.tool_calls, this.toolCalls))
@@ -89,12 +91,10 @@ export class NudgeCounters {
 		return lines;
 	}
 
-	/** A limit of zero or less never fires. */
 	private reached(limit: number, count: number): boolean {
 		return limit > 0 && count >= limit;
 	}
 
-	/** Replace `{n}` with the count of one counter. */
 	private line(counter: "tool_calls" | "turns", count: number): string {
 		return this.config.text[counter].replaceAll("{n}", String(count));
 	}

@@ -17,8 +17,6 @@ import type { Step } from "../types.js";
 // #region FUNC_readAddress
 /**
  * @purpose Read the console place of one page query text.
- * @invariants Keep each value inside the closed set of its field, as the route module does.
- * @param search - The query text of the page address.
  */
 export function readAddress(search: string): Route {
 	return readRoute(search);

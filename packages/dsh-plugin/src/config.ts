@@ -30,10 +30,10 @@ import {
 
 const debug = debuglog("memlens:plugin:config");
 
+// #region FUNC_withoutEmptyDefault
 /**
  * @purpose Give the field no value when the row omits it, so the layer keeps the field absent.
- * @param schema - A field schema that sets an empty value by default.
- * @returns The same schema without that default.
+ * @invariants The call edits the schema that it receives, and gives the same object.
  */
 function withoutEmptyDefault<T extends { meta: { default?: unknown } }>(
 	schema: T,
@@ -41,6 +41,7 @@ function withoutEmptyDefault<T extends { meta: { default?: unknown } }>(
 	delete schema.meta.default;
 	return schema;
 }
+// #endregion FUNC_withoutEmptyDefault
 
 const budgetFields = withoutEmptyDefault(
 	z.object({ here: z.any(), directions: z.any() }),

@@ -70,8 +70,6 @@ function payloadOf(proposal: Proposal): Record<string, unknown> {
  * @purpose Send the open proposals of one child to its parent, so the parent decides each next write.
  * @invariants Each line holds the session tag, the proposal id, and the body.
  * @invariants An absent parent, a closed store, or a proposal with no body gives no error.
- * @param agent - The child agent that ends.
- * @param memory - The store that holds the proposals of the child.
  * @param child - True for a subagent. A main agent sends no report.
  */
 function reportProposals(
@@ -140,9 +138,6 @@ function toolNames(child: boolean, mode: SubagentMode): readonly ToolName[] {
 // #region FUNC_toolOf
 /**
  * @purpose Build one tool definition with its schema, its answer, and its renderer.
- * @param name - The tool name of the set of the agent.
- * @param agent - The agent that owns the tool and its session.
- * @param memory - The store, the profile, and the active scope of the agent.
  * @param child - True for a subagent, whose write is a proposal.
  * @returns The definition to register in the scope of the agent.
  */
@@ -175,8 +170,6 @@ function toolOf(
  * @requires The agent context holds the tools service.
  * @ensures Each registration unwinds with the agent context.
  * @ensures A child subagent sends its open proposals to its parent when it ends.
- * @param agent - The agent that receives the tools.
- * @param memory - The store, the profile, and the active scope of the agent.
  * @param report - True when tool removal must report child proposals.
  * @returns The function that removes the tools and reports child proposals.
  */

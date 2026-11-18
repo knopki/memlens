@@ -204,6 +204,7 @@ export class MemoryWorker {
 		});
 	}
 
+	// #region METHOD_onMemoryTool
 	/**
 	 * @purpose Record one memory tool call of any agent, then check the dirty threshold.
 	 * @param name - The tool name. A call of any memory tool marks activity.
@@ -213,6 +214,7 @@ export class MemoryWorker {
 		this.lastActivity = Date.now();
 		this.sweepAndCheck();
 	}
+	// #endregion METHOD_onMemoryTool
 
 	// #region METHOD_status
 	/**
@@ -269,6 +271,7 @@ export class MemoryWorker {
 	}
 	// #endregion METHOD_updateInputs
 
+	// #region METHOD_sweepAndCheck
 	/**
 	 * @purpose Close each expired proposal, then check the dirty threshold.
 	 * @invariants An armed retry keeps its wait. A running pass keeps its own pacing.
@@ -279,7 +282,9 @@ export class MemoryWorker {
 		if (this.dirtyCount() >= this.inputs.compaction.batch) void this.run();
 		else this.scheduleIdle();
 	}
+	// #endregion METHOD_sweepAndCheck
 
+	// #region METHOD_scheduleIdle
 	/**
 	 * @purpose Arm the idle check of the store, so one pass starts after the idle time.
 	 * @invariants An expired wait counts as activity, so no zero-delay timer repeats.
@@ -293,6 +298,7 @@ export class MemoryWorker {
 		}
 		this.arm(wait);
 	}
+	// #endregion METHOD_scheduleIdle
 
 	/** The count of dirty ranges over each live scope of the store. */
 	private dirtyCount(): number {
@@ -378,6 +384,7 @@ export class MemoryWorker {
 		}
 	}
 
+	// #region METHOD_paceNext
 	/**
 	 * @purpose Pace the next attempt from the counts of the pass that just ended.
 	 * @invariants A failed pass waits the retry delay. A pass that built a node starts the next pass
@@ -399,7 +406,9 @@ export class MemoryWorker {
 		}
 		this.scheduleIdle();
 	}
+	// #endregion METHOD_paceNext
 
+	// #region METHOD_modelFor
 	/**
 	 * @purpose Run the batch model call of one pass, with one rate slot and the route of the given
 	 *   inputs, and keep the complete lines of an answer that stops.
@@ -491,6 +500,7 @@ export class MemoryWorker {
 			}
 		};
 	}
+	// #endregion METHOD_modelFor
 
 	/** Act at the armed time: retry a failed pass, start a pass at dirty work, or wait one idle time. */
 	private onTimer(): void {
@@ -507,6 +517,7 @@ export class MemoryWorker {
 		this.scheduleIdle();
 	}
 
+	// #region METHOD_arm
 	/**
 	 * @purpose Arm the one timer of the worker.
 	 * @invariants Each call replaces the former timer. The recorded fire time gives the status.
@@ -523,6 +534,7 @@ export class MemoryWorker {
 			this.onTimer();
 		}, delay);
 	}
+	// #endregion METHOD_arm
 
 	private clearTimer(): void {
 		if (this.timer !== null) clearTimeout(this.timer);
@@ -530,6 +542,7 @@ export class MemoryWorker {
 		this.timerAt = 0;
 	}
 
+	// #region METHOD_record
 	/**
 	 * @purpose Add one event to the journal, mirror it to the host log, and keep the newest entries.
 	 * @invariants The journal holds at most one hundred entries. The host log holds each entry.
@@ -542,6 +555,7 @@ export class MemoryWorker {
 			this.journal.splice(0, this.journal.length - JOURNAL_LIMIT);
 		console.log(`${LOG}${text}`);
 	}
+	// #endregion METHOD_record
 
 	/** Stop the timer and reject each later start. Cordis disposal calls this. */
 	private dispose(): void {

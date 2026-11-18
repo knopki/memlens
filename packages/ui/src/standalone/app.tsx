@@ -54,6 +54,10 @@ const THEMES = [
 	["dark", "themeDark"],
 ] as const;
 
+export interface AppProps {
+	readonly api: ConsoleApi;
+}
+
 // #region COMPONENT_App
 /**
  * @purpose Draw the chrome and the current screen from the state of one console.
@@ -61,10 +65,6 @@ const THEMES = [
  * @invariants The number keys open the seven screens, unless a dialog is open or a field holds the
  * focus.
  */
-export interface AppProps {
-	readonly api: ConsoleApi;
-}
-
 export function App({ api }: AppProps): JSX.Element {
 	const state = useSyncExternalStore(
 		api.subscribe,
@@ -144,16 +144,16 @@ export function App({ api }: AppProps): JSX.Element {
 }
 // #endregion COMPONENT_App
 
-// #region COMPONENT_Header
-/**
- * @purpose Show the profile, the language, the theme, the here budget, and the create action.
- * @invariants The profile list and the dirty count come from the view.
- */
 interface HeaderProps {
 	readonly api: ConsoleApi;
 	readonly model: View;
 }
 
+// #region COMPONENT_Header
+/**
+ * @purpose Show the profile, the language, the theme, the here budget, and the create action.
+ * @invariants The profile list and the dirty count come from the view.
+ */
 function Header({ api, model }: HeaderProps): JSX.Element {
 	const { t } = api;
 	const state = api.state;
@@ -239,17 +239,16 @@ function Header({ api, model }: HeaderProps): JSX.Element {
 }
 // #endregion COMPONENT_Header
 
-// #region COMPONENT_Rail
-/**
- * @purpose Show the seven screens and the scope list of the view.
- * @invariants The live screen and the live scope take the class on.
- * @invariants The live screen states its place in the navigation.
- */
 interface RailProps {
 	readonly api: ConsoleApi;
 	readonly model: View;
 }
 
+// #region COMPONENT_Rail
+/**
+ * @purpose Show the seven screens and the scope list of the view.
+ * @invariants The live screen and the live scope take the class on.
+ */
 function Rail({ api, model }: RailProps): JSX.Element {
 	const { t } = api;
 	const state = api.state;
@@ -290,15 +289,15 @@ function Rail({ api, model }: RailProps): JSX.Element {
 }
 // #endregion COMPONENT_Rail
 
-// #region COMPONENT_Footer
-/**
- * @purpose Show the store path, the revision, and the backend of the view.
- */
 interface FooterProps {
 	readonly api: ConsoleApi;
 	readonly model: View;
 }
 
+// #region COMPONENT_Footer
+/**
+ * @purpose Show the store path, the revision, and the backend of the view.
+ */
 function Footer({ api, model }: FooterProps): JSX.Element {
 	const { t } = api;
 	return (

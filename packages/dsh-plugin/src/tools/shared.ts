@@ -216,10 +216,6 @@ export function visibleScopeList(memory: AgentMemory): ScopeKey[] {
 /**
  * @purpose Read one target row from its position or its address.
  * @invariants A number and a bare address name the fallback scope. A scoped address names its own scope.
- * @param memory - The store and the profile of the agent.
- * @param fallback - The scope of a target with no scope.
- * @param target - A `pos` or an `Address` of the tool call.
- * @returns The scope of the row and the row.
  */
 export function resolveTarget(
 	memory: AgentMemory,
@@ -263,10 +259,6 @@ export function resolveTarget(
 /**
  * @purpose Give the next review time of one note from its period or its kind.
  * @invariants `never` gives null. An absent period gives the days of the kind.
- * @param memory - The configuration with the review period of each kind.
- * @param kind - The kind of the record.
- * @param reviewIn - The period of the tool call, or none.
- * @returns The ISO time of the next review, or null.
  */
 export function reviewTime(
 	memory: AgentMemory,

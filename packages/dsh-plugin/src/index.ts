@@ -42,7 +42,6 @@ const RESPAWN_ATTEMPTS = 3;
 /** The pause between two attach attempts of one respawn, in milliseconds. */
 const RESPAWN_PAUSE_MS = 1_000;
 
-/** @purpose Wait one pause without holding the event loop. */
 function pause(ms: number): Promise<void> {
 	return new Promise((resolve) => {
 		const timer = setTimeout(resolve, ms);
