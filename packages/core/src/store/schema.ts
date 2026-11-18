@@ -2,11 +2,16 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Create and open the one database that holds the memory.
- * @scope Pragmas, the schema, the schema version, and the meta rows. NOT: reads and writes.
+ * @scope Pragmas, the schema, the schema version, the meta rows, and the bounded lock wait of one transaction.
+ *  NOT: reads and writes.
  * @invariants Every connection sets secure_delete, busy_timeout, and temp_store.
  * @invariants The index carries the FTS5 secure-delete option, so a delete removes its tokens.
  * @invariants The meta rows hold schema_version, store_id, clock, and fts_tokenizer.
  * @invariants Schema changes and their version updates commit in one transaction.
+ * @invariants The pragma busy_timeout waits for a lock inside the engine, and the wait stays within one
+ *   second, so a caller resumes fast.
+ * @invariants A lock that the engine reports at once repeats within the same one-second deadline.
+ * @invariants A retry repeats the lock acquisition only. The work of a transaction runs once.
  * @dependencies store/clock.ts for the store identity.
  * @keywords schema, open, pragma, database, migration, version
  * #endregion moduleContract
@@ -18,6 +23,12 @@ import { MemlensError } from "../types/errors.js";
 import { storeId } from "./clock.js";
 
 const debug = debuglog("memlens:schema");
+
+/** The longest wait of one lock inside the engine, and of a lock that the engine reports at once. */
+const BUSY_TIMEOUT_MS = 1000;
+
+/** The pause after one attempt of a lock that the engine reports at once. */
+const LOCK_PAUSE_MS = 25;
 
 const BASE_SCHEMA_VERSION = 2;
 
@@ -134,9 +145,11 @@ function tokenizerOf(language: string): string {
 /**
  * @purpose Open one database file with the required settings and the schema.
  * @invariants The open rejects an unknown schema version before it changes the file.
- * @invariants The open sets the journal mode before the schema work. A step that renames a table in
+ * @invariants The open sets the journal mode before migrations. A step that renames a table in
  *   a rollback-journal transaction leaves a lock on the connection, and the truncating checkpoint
  *   at close then fails with SQLITE_LOCKED.
+ * @invariants The schema work waits for a lock of another process. Each check runs again after the
+ *   wait, because the other process may have created or migrated the store meanwhile.
  * @invariants The schema and the meta rows are ready before the caller reads.
  */
 export function openDatabase(
@@ -147,12 +160,19 @@ export function openDatabase(
 	const db = new DatabaseSync(path);
 	try {
 		db.exec(
-			"PRAGMA synchronous = FULL; PRAGMA secure_delete = ON; PRAGMA busy_timeout = 5000; PRAGMA temp_store = MEMORY;",
+			`PRAGMA synchronous = FULL; PRAGMA secure_delete = ON; PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}; PRAGMA temp_store = MEMORY;`,
 		);
-		if (empty(db)) transaction(db, () => create(db, language));
+		if (empty(db))
+			transaction(db, () => {
+				if (empty(db)) create(db, language);
+			});
 		const version = schemaVersion(db, migrations);
-		db.exec("PRAGMA journal_mode = WAL");
-		transaction(db, () => migrate(db, migrations, version));
+		if (db.prepare("PRAGMA journal_mode").get()?.journal_mode !== "wal")
+			writeAheadLog(db);
+		if (version < BASE_SCHEMA_VERSION + migrations.length)
+			transaction(db, () =>
+				migrate(db, migrations, schemaVersion(db, migrations)),
+			);
 		debug("Store open", {
 			event: "open",
 			version: BASE_SCHEMA_VERSION + migrations.length,
@@ -176,22 +196,104 @@ function empty(db: DatabaseSync): boolean {
 	return row === undefined;
 }
 
+// #region FUNC_isLockError
+/**
+ * @purpose Name the two transient lock results of the engine, so only those wait for a later attempt.
+ * @invariants The check reads the numeric result of the engine. SQLITE_BUSY is 5, and SQLITE_LOCKED is 6.
+ */
+function isLockError(error: unknown): boolean {
+	if (typeof error !== "object" || error === null) return false;
+	const code = (error as { errcode?: unknown }).errcode;
+	if (typeof code !== "number") return false;
+	const primary = code & 0xff;
+	return primary === 5 || primary === 6;
+}
+// #endregion FUNC_isLockError
+
+/** @purpose Stop the thread for one pause. The caller blocks the event loop already. */
+function pause(ms: number): void {
+	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// #region FUNC_beginTransaction
+/**
+ * @purpose Start one transaction, and name a lock of another process as one store error.
+ * @invariants The pragma busy_timeout waits inside the engine. One attempt then keeps the wait short.
+ * @invariants A failed BEGIN starts no transaction, so the caller repeats no work.
+ * @invariants The wait blocks the thread. Only another process can release the lock during it.
+ * @throws MemlensError when the attempt meets a lock.
+ */
+export function beginTransaction(
+	db: DatabaseSync,
+	mode: "DEFERRED" | "IMMEDIATE",
+): void {
+	try {
+		db.exec(`BEGIN ${mode}`);
+	} catch (error) {
+		if (!isLockError(error)) throw error;
+		debug("Transaction locked", { event: "locked", mode });
+		throw new MemlensError("Data", "The store is locked. Retry the operation.");
+	}
+}
+// #endregion FUNC_beginTransaction
+
 // #region FUNC_transaction
 /**
  * @purpose Run one unit of schema work in one transaction, so a failure leaves no change.
  * @invariants The caller runs no other transaction for the same work.
+ * @invariants Only the lock acquisition repeats. The work and the commit run once.
  */
 function transaction(db: DatabaseSync, work: () => void): void {
-	db.exec("BEGIN IMMEDIATE");
+	beginTransaction(db, "IMMEDIATE");
 	try {
 		work();
 		db.exec("COMMIT");
 	} catch (error) {
-		db.exec("ROLLBACK");
+		try {
+			db.exec("ROLLBACK");
+		} catch {
+			// A commit that failed can close the transaction before this rollback.
+		}
 		throw error;
 	}
 }
 // #endregion FUNC_transaction
+
+// #region FUNC_writeAheadLog
+/**
+ * @purpose Set the write-ahead log, and wait through a transient lock of another process.
+ * @invariants The pragma reports a lock result at once, so this loop holds its own short deadline.
+ * @invariants Each attempt waits a short pause. The call reports one error when the deadline passes.
+ * @invariants The pragma reports the mode that it keeps. A mode other than wal stops the open.
+ */
+function writeAheadLog(db: DatabaseSync): void {
+	const deadline = Date.now() + BUSY_TIMEOUT_MS;
+	for (;;) {
+		let row: Record<string, unknown> | undefined;
+		try {
+			row = db.prepare("PRAGMA journal_mode = WAL").get() as
+				| Record<string, unknown>
+				| undefined;
+		} catch (error) {
+			if (!isLockError(error)) throw error;
+			if (Date.now() >= deadline)
+				throw new MemlensError(
+					"Data",
+					"The store is locked. Retry the operation.",
+				);
+			debug("Log mode locked", { event: "log_locked" });
+			pause(LOCK_PAUSE_MS);
+			continue;
+		}
+		const mode = String(row?.journal_mode ?? "");
+		if (mode === "wal") return;
+		throw new MemlensError(
+			"Data",
+			`The store cannot use the write-ahead log: ${mode}.`,
+		);
+	}
+}
+// #endregion FUNC_writeAheadLog
 
 // #region FUNC_schemaVersion
 /**

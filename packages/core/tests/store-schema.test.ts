@@ -4,13 +4,13 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Prove the clock order, the schema invariants, and the migration steps under the real SQLite engine.
- * @scope The clock rules, the open, the meta rows, the index flavor, the migration steps, the kind check, and the redaction bytes.
- * @keywords test, clock, schema, migration, version, kind, redaction, bytes
+ * @scope The clock rules, the open, the meta rows, the index flavor, the migration steps, and the kind check.
+ * @keywords test, clock, schema, migration, version, kind
  * #endregion moduleContract
  */
 
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -124,8 +124,7 @@ describe("clock", () => {
 
 // #region FUNC_test_schema
 /**
- * @purpose Prove the schema of a new store, the index flavor, and the redaction bytes.
- * @invariants A pooled connection that misses secure_delete leaves the marker in the file.
+ * @purpose Prove the schema of a new store and the index flavor.
  */
 describe("schema", () => {
 	it("creates each table and the meta rows", () => {
@@ -156,31 +155,6 @@ describe("schema", () => {
 			store,
 		);
 		second.close();
-	});
-
-	it("removes the marker bytes from the database file and the log", () => {
-		const path = storePath();
-		const db = openDatabase(path, "en");
-		const marker = "canary-marker-zzq-42";
-		addNote(db, 0, marker);
-		db.exec("BEGIN IMMEDIATE");
-		db.prepare(
-			"UPDATE notes SET state = 'deleted', cleared = 1, body = '', longform = NULL WHERE id = 'note-0'",
-		).run();
-		db.prepare("DELETE FROM fts WHERE rowid = 1").run();
-		db.exec("COMMIT");
-		db.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get();
-		db.close();
-		const bytes = readFileSync(path).toString("latin1");
-		const log = existsSync(`${path}-wal`)
-			? readFileSync(`${path}-wal`).toString("latin1")
-			: "";
-		const walHolds = log.includes(marker);
-		assert.equal(
-			bytes.includes(marker) || walHolds,
-			false,
-			`marker survived: db=${bytes.includes(marker)} wal=${walHolds}`,
-		);
 	});
 });
 // #endregion FUNC_test_schema

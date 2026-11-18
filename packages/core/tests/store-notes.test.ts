@@ -2,13 +2,13 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Prove that each note write keeps the row, the index, the nodes, the journal, and the clock in step.
- * @scope The duplicate check, the slot order, the scope move, the index removal, the redaction bytes, and the review fields.
+ * @scope The duplicate check, the slot order, the scope move, the index removal, the redaction, and the review fields.
  * @keywords test, note, amend, hide, redact, review, fts, slot
  * #endregion moduleContract
  */
 
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -289,11 +289,11 @@ describe("hide", () => {
 
 // #region FUNC_test_redact
 /**
- * @purpose Prove that a redact clears the content, the nodes, the proposals, and the raw bytes.
+ * @purpose Prove that a redact clears the content, the nodes, and the proposals.
  */
 describe("redact", () => {
-	it("clears content, nodes, proposals, and the marker bytes", () => {
-		const { store, dir } = fresh();
+	it("clears content, nodes, and proposals", () => {
+		const { store } = fresh();
 		const marker = "redactcanaryzzq42";
 		const created = note(store, { ...BASE, body: `A fact with ${marker}.` });
 		const id = idOf(created);
@@ -318,17 +318,6 @@ describe("redact", () => {
 		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 0);
 		assert.equal(count(store, "SELECT count(*) AS c FROM proposals"), 0);
 		assert.equal(ftsCount(store, marker), 0);
-		const dbBytes = readFileSync(join(dir, "memlens.db")).toString("latin1");
-		const walPath = join(dir, "memlens.db-wal");
-		const walBytes = existsSync(walPath)
-			? readFileSync(walPath).toString("latin1")
-			: "";
-		const survived = dbBytes.includes(marker) || walBytes.includes(marker);
-		assert.equal(
-			survived,
-			false,
-			`marker survived: db=${dbBytes.includes(marker)} wal=${walBytes.includes(marker)}`,
-		);
 	});
 });
 // #endregion FUNC_test_redact

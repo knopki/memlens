@@ -5,7 +5,8 @@
  * @scope The portable line list, the import transaction, and the write of one merged row.
  *  NOT: the transfer text and the field parsers, and the merge channels.
  * @invariants The import writes one publish transaction, so a failure leaves no partial copy.
- * @invariants A tombstone travels with no content. A cleared row holds no content after the merge.
+ * @invariants A tombstone travels with no content. A cleared row holds no content after the merge,
+ *  and no proposal payload targets it.
  * @dependencies node:sqlite, store/store.ts, store/slots.ts, store/nodes.ts,
  *  store/transfer-format.ts, store/transfer-merge.ts.
  * @keywords transfer, jsonl, export, import, merge, row, slot, index
@@ -74,6 +75,7 @@ interface Statements {
 	rowid: StatementSync;
 	ftsDelete: StatementSync;
 	ftsInsert: StatementSync;
+	proposals: StatementSync;
 }
 
 // #region FUNC_exportLines
@@ -126,7 +128,7 @@ export function exportLines(
  * @purpose Join one transfer file into the note rows of a store with the five merge channels.
  * @invariants The call validates the complete file before the first write.
  * @invariants A dry run reads the local rows per id and writes nothing.
- * @invariants A real run writes one publish, then truncates the log when a cleared flag latched.
+ * @invariants A real run writes one publish.
  * @requires The store is open and trusts the file creator.
  * @ensures A repeated import of one file reports no applied and no merged row.
  */
@@ -152,7 +154,6 @@ export function importLines(
 		return counted;
 	}
 	const result = applyRows(store, file.rows, clock);
-	if (result.clearedApplied) store.truncate();
 	debug("Import complete", {
 		event: "import_done",
 		applied: result.applied,
@@ -215,6 +216,7 @@ function countDecisions(
  * @invariants A winning scope change inserts the row at the destination rank and frees the old slot.
  * @invariants A changed row syncs the FTS row and deletes each node over a changed or shifted slot.
  * @invariants A lost local content or review channel appends one merge_lost fact.
+ * @invariants A cleared row leaves no proposal payload that targets it.
  */
 function applyRows(
 	store: Store,
@@ -242,11 +244,14 @@ function applyRows(
 			if (local === null) {
 				result.applied += 1;
 				if (applyMissing(tx, sql, row, tombstone)) result.clearedApplied = true;
+				if (tombstone) deleteProposals(sql, row.id);
 				continue;
 			}
 			const decision = mergeRow(local, row);
-			if (decision.merged.cleared && !local.cleared)
-				result.clearedApplied = true;
+			if (decision.merged.cleared) {
+				if (!local.cleared) result.clearedApplied = true;
+				deleteProposals(sql, row.id);
+			}
 			if (!decision.changed) continue;
 			writeMerged(tx, sql, local, decision.merged);
 			result.merged += 1;
@@ -416,9 +421,15 @@ function statementsOf(db: DatabaseSync): Statements {
 		ftsInsert: db.prepare(
 			"INSERT INTO fts(rowid, body, longform) VALUES (?, ?, ?)",
 		),
+		proposals: db.prepare("DELETE FROM proposals WHERE target = ?"),
 	};
 }
 // #endregion FUNC_statementsOf
+
+/** @purpose Delete each proposal that targets one erased note, as a direct redact does. */
+function deleteProposals(sql: Statements, id: string): void {
+	sql.proposals.run(id);
+}
 
 /** @purpose Read one local note row, or null when the id is absent. */
 function localFrom(row: Record<string, unknown> | undefined): LocalRow | null {

@@ -78,6 +78,8 @@ export interface AmendInput {
 /**
  * @purpose Add one note at its key rank, or name an existing live note as the duplicate.
  * @invariants A duplicate writes no note row and does not tick the clock.
+ * @invariants The duplicate check and the insert share one write transaction, so two writers cannot
+ *   both pass the check.
  * @invariants Each supersede target exists in the same scope, and each target becomes hidden.
  * @returns The new note, or the duplicate reason.
  */
@@ -86,23 +88,20 @@ export function note(store: Store, input: NoteInput): WriteResult<Note> {
 	const split = splitForWrite(input.body, input.longform ?? null);
 	const reviewAt = input.review_at ?? null;
 	const supersedes = input.supersedes ?? [];
-	if (supersedes.length === 0) {
-		const duplicate = store.read((db) =>
-			findDuplicate(
-				db,
-				scope,
-				split.body,
-				input.kind,
-				split.longform,
-				reviewAt,
-			),
+	return store.publish((tx): WriteResult<Note> => {
+		if (supersedes.length > 0) return { ok: true, value: noteTx(tx, input) };
+		const duplicate = findDuplicate(
+			tx.db,
+			scope,
+			split.body,
+			input.kind,
+			split.longform,
+			reviewAt,
 		);
-		if (duplicate) {
-			debug("Note duplicate", { event: "duplicate", scope, kind: input.kind });
-			return { ok: false, reason: "duplicate", value: toNote(duplicate) };
-		}
-	}
-	return { ok: true, value: store.publish((tx) => noteTx(tx, input)).value };
+		if (duplicate === undefined) return { ok: true, value: noteTx(tx, input) };
+		debug("Note duplicate", { event: "duplicate", scope, kind: input.kind });
+		return { ok: false, reason: "duplicate", value: toNote(duplicate) };
+	}).value;
 }
 // #endregion FUNC_note
 
@@ -386,9 +385,8 @@ export function hideTx(
 
 // #region FUNC_redact
 /**
- * @purpose Erase the content of one note, so no copy of the text stays in the store.
+ * @purpose Clear the content of one note from the memory.
  * @invariants The transaction clears the row, the index row, the covering nodes, and the proposals of the target.
- * @invariants The truncating checkpoint runs after the commit.
  * @returns The cleared note.
  */
 export function redact(store: Store, id: Ulid, reason: string): Note {
@@ -408,7 +406,6 @@ export function redact(store: Store, id: Ulid, reason: string): Note {
 		debug("Note redact", { event: "redact", id, scope: old.scope });
 		return requireNote(tx.db, id);
 	});
-	store.truncate();
 	return cleared.value;
 }
 // #endregion FUNC_redact

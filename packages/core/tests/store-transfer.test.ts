@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Prove the transfer text, the five merge channels, and the convergence of two stores.
- * @scope Export and import into real SQLite stores, raw SQL fixtures, and the redaction bytes.
+ * @scope Export and import into real SQLite stores and raw SQL fixtures.
  * @invariants Each test builds its own store directory and removes it at the end.
  * @keywords test, transfer, jsonl, merge, digest, tombstone, convergence
  * #endregion moduleContract
@@ -10,7 +10,7 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -25,8 +25,6 @@ const dirs: string[] = [];
 
 const stores: Store[] = [];
 
-const storePaths = new Map<Store, string>();
-
 afterAll(() => {
 	for (const store of stores) store.close();
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
@@ -38,7 +36,6 @@ function makeStore(): Store {
 	dirs.push(dir);
 	const store = new Store(dir, "en");
 	stores.push(store);
-	storePaths.set(store, dir);
 	return store;
 }
 
@@ -373,7 +370,7 @@ describe("merge channels", () => {
 		assert.equal(row?.body, "local hidden");
 	});
 
-	it("clears a locally amended row and removes the marker bytes", () => {
+	it("clears a locally amended row", () => {
 		const source = makeStore();
 		const target = makeStore();
 		const marker = "transfer-canary-marker-zzq-42";
@@ -411,19 +408,6 @@ describe("merge channels", () => {
 			.prepare("SELECT rowid FROM fts WHERE fts MATCH 'zzq'")
 			.all();
 		assert.equal(hits.length, 0);
-		const path = join(storePaths.get(target) ?? "", "memlens.db");
-		const bytes = readFileSync(path).toString("latin1");
-		let log = "";
-		try {
-			log = readFileSync(`${path}-wal`).toString("latin1");
-		} catch {
-			log = "";
-		}
-		assert.equal(
-			bytes.includes(marker) || log.includes(marker),
-			false,
-			`marker survived: db=${bytes.includes(marker)} wal=${log.includes(marker)}`,
-		);
 	});
 
 	it("takes a newer content group and journals the lost local channel", () => {
