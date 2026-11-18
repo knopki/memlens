@@ -18,6 +18,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	rmSync,
 	writeFileSync,
@@ -554,6 +555,18 @@ describe("@memlens/cli commands", () => {
 		expect(text).toContain("scope: project:a/b");
 		expect(text).toContain("## #0");
 		expect(text).not.toContain('"node"');
+	});
+
+	it("exports one long scope name as one cut file", async () => {
+		const test = makeEnv();
+		const scope = `project:${"a".repeat(300)}`;
+		await run(test, "note", "Long note", "--scope", scope);
+		const out = join(test.home, "out");
+		const answer = await run(test, "export", "--format", "md", "--out", out);
+		expect(answer.code).toBe(0);
+		const [file] = readdirSync(out);
+		expect(file).toMatch(/^project%3Aa{230}~[0-9a-f]{8}\.md$/);
+		expect(readFileSync(join(out, file), "utf8")).toContain(`scope: ${scope}`);
 	});
 
 	it("exports one scope and imports it into another store", async () => {

@@ -16,6 +16,7 @@
  * #endregion moduleContract
  */
 
+import { createHash } from "node:crypto";
 import { debuglog } from "node:util";
 import type { Note, ScopeKey } from "@memlens/core";
 
@@ -29,6 +30,12 @@ const debug = debuglog("memlens:export-md");
 /** The format marker of the first block of each file. */
 const MD_FORMAT = "memlens-md-1";
 
+/** The byte limit of one file name on the common file systems. */
+const FILENAME_LIMIT = 255;
+
+/** The room for one suffix after the stem, so the longest suffix fits the byte limit. */
+const SUFFIX_ROOM = ".jsonl".length;
+
 // #region FUNC_encodeScopeFilename
 /**
  * Encode one scope key into one safe filename stem.
@@ -37,6 +44,9 @@ const MD_FORMAT = "memlens-md-1";
  *   outside the export directory.
  * @invariants The encoding keeps a-z, 0-9, underscore, and hyphen. Every other UTF-8 byte of the
  *   key becomes %HH with uppercase digits, and the name ends with .md.
+ * @invariants The stem stays within the byte limit minus the suffix room. A stem above the limit
+ *   cuts to its head, and the head ends with one tilde and eight hash characters of the full
+ *   stem, so two long keys give two distinct files.
  */
 export function encodeScopeFilename(scope: ScopeKey): string {
 	const kept = /^[a-z0-9_-]+$/;
@@ -49,11 +59,22 @@ export function encodeScopeFilename(scope: ScopeKey): string {
 				: `%${byte.toString(16).toUpperCase().padStart(2, "0")}`,
 		);
 	}
-	const name = `${bytes.join("")}.md`;
+	const stem = stemWithinLimit(bytes.join(""));
+	const name = `${stem}.md`;
 	debug("Scope name encoded", { event: "encode", scope, name });
 	return name;
 }
 // #endregion FUNC_encodeScopeFilename
+
+/** @purpose Keep one encoded stem within the byte limit, so each export suffix fits. */
+function stemWithinLimit(stem: string): string {
+	if (stem.length <= FILENAME_LIMIT - SUFFIX_ROOM) return stem;
+	const hash = createHash("sha1").update(stem).digest("hex").slice(0, 8);
+	let head = stem.slice(0, FILENAME_LIMIT - SUFFIX_ROOM - hash.length - 1);
+	// A cut inside one %HH triplet leaves a broken tail, so step back to the last full byte.
+	while (/%$|%[0-9A-F]$/.test(head)) head = head.slice(0, -1);
+	return `${head}~${hash}`;
+}
 
 // #region FUNC_renderScopeMarkdown
 /**
