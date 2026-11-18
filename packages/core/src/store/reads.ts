@@ -17,6 +17,7 @@ import type { Node, Note } from "./types.js";
 
 const debug = debuglog("memlens:reads");
 
+// #region INTERFACE_DirectionLine
 /**
  * @purpose Give the caller one scope line of the directions block.
  * @invariants The summary stays null until the caller joins the top node line.
@@ -31,7 +32,9 @@ export interface DirectionLine {
 	/** The top node line. The caller joins it after this read. */
 	readonly summary: string | null;
 }
+// #endregion INTERFACE_DirectionLine
 
+// #region INTERFACE_DirectionsData
 /**
  * @purpose Give the caller the lines inside the budget and the older scopes outside it.
  * @invariants The lines run from the oldest to the newest.
@@ -44,6 +47,7 @@ export interface DirectionsData {
 	/** The older scopes, from the newest to the oldest. */
 	readonly rest: readonly ScopeKey[];
 }
+// #endregion INTERFACE_DirectionsData
 
 // #region FUNC_byAddress
 /**

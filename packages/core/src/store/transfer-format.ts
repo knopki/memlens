@@ -155,6 +155,7 @@ export function parseTransfer(input: readonly string[]): ParsedFile {
 }
 // #endregion FUNC_parseTransfer
 
+// #region FUNC_verifyTrailer
 /** @purpose Refuse a trailer whose digest or count does not match the note lines. */
 function verifyTrailer(
 	lines: readonly string[],
@@ -175,7 +176,9 @@ function verifyTrailer(
 			"The transfer count does not match the note lines.",
 		);
 }
+// #endregion FUNC_verifyTrailer
 
+// #region FUNC_parseRows
 /** @purpose Read each note line, and refuse a duplicate id. */
 function parseRows(noteLines: readonly string[]): ParsedRow[] {
 	const rows: ParsedRow[] = [];
@@ -192,7 +195,9 @@ function parseRows(noteLines: readonly string[]): ParsedRow[] {
 	}
 	return rows;
 }
+// #endregion FUNC_parseRows
 
+// #region FUNC_versionsOf
 /** @purpose Collect each version text that the clock must receive. */
 function versionsOf(
 	header: Record<string, unknown>,
@@ -206,6 +211,7 @@ function versionsOf(
 	}
 	return versions;
 }
+// #endregion FUNC_versionsOf
 
 // #region FUNC_parseRow
 /**
@@ -234,6 +240,7 @@ function parseRow(value: Record<string, unknown>): Row {
 }
 // #endregion FUNC_parseRow
 
+// #region FUNC_tombstoneRow
 /** @purpose Give the stored shape of a row without content. */
 function tombstoneRow(base: {
 	readonly id: string;
@@ -266,7 +273,9 @@ function tombstoneRow(base: {
 		v_review: base.v_review,
 	};
 }
+// #endregion FUNC_tombstoneRow
 
+// #region FUNC_contentRow
 /** @purpose Give the stored shape of a row with its content fields. */
 function contentRow(
 	base: {
@@ -297,12 +306,13 @@ function contentRow(
 		modified_at: optionalText(value.modified_at) ?? base.ts,
 	};
 }
+// #endregion FUNC_contentRow
 
-/** @purpose Hash the complete text of each line before the trailer. */
 export function digestOf(lines: readonly string[]): string {
 	return createHash("sha256").update(lines.join("\n")).digest("hex");
 }
 
+// #region FUNC_parseObject
 /** @purpose Read one JSON line as an object. */
 function parseObject(
 	text: string | undefined,
@@ -318,15 +328,14 @@ function parseObject(
 		throw new MemlensError("Data", `The transfer ${role} is not an object.`);
 	return value as Record<string, unknown>;
 }
+// #endregion FUNC_parseObject
 
-/** @purpose Read one required text field. */
 function requiredText(value: unknown, name: string): string {
 	if (typeof value !== "string" || value.length === 0)
 		throw new MemlensError("Data", `A note needs a text ${name}.`);
 	return value;
 }
 
-/** @purpose Read one optional text field. */
 function optionalText(value: unknown): string | null {
 	if (value === undefined || value === null) return null;
 	if (typeof value !== "string")
@@ -334,7 +343,6 @@ function optionalText(value: unknown): string | null {
 	return value;
 }
 
-/** @purpose Read the cleared flag as a boolean. */
 function parseCleared(value: unknown): boolean {
 	if (value === undefined || value === null) return false;
 	if (value === true || value === 1) return true;
@@ -342,14 +350,12 @@ function parseCleared(value: unknown): boolean {
 	throw new MemlensError("Data", "A cleared flag is not a boolean.");
 }
 
-/** @purpose Read one lifecycle state. */
 function parseState(value: unknown): NoteState {
 	if (typeof value === "string" && STATES.includes(value as NoteState))
 		return value as NoteState;
 	throw new MemlensError("Data", "A note state is not known.");
 }
 
-/** @purpose Read one note kind. */
 function parseKind(value: unknown): NoteKind {
 	if (value === undefined || value === null) return "note";
 	if (typeof value === "string" && NOTE_KINDS.includes(value as NoteKind))
@@ -357,13 +363,11 @@ function parseKind(value: unknown): NoteKind {
 	throw new MemlensError("Data", "A note kind is not known.");
 }
 
-/** @purpose Read the refs of one note object, so an invalid list fails the import. */
 function refsOfInput(value: unknown): string[] {
 	if (value === undefined || value === null) return [];
 	return textRefs(value, "The refs of a note are not text.");
 }
 
-/** @purpose Read the refs text of one stored row, so a damaged cell fails the transfer. */
 export function refsOfRow(value: unknown): string[] {
 	let parsed: unknown;
 	try {
@@ -374,7 +378,6 @@ export function refsOfRow(value: unknown): string[] {
 	return textRefs(parsed, "A note row holds invalid refs.");
 }
 
-/** @purpose Read one list of strings, or refuse the value with the message of its boundary. */
 function textRefs(value: unknown, message: string): string[] {
 	if (!Array.isArray(value) || value.some((item) => typeof item !== "string"))
 		throw new MemlensError("Data", message);

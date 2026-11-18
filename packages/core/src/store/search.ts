@@ -171,6 +171,7 @@ export function search(
 }
 // #endregion FUNC_search
 
+// #region FUNC_searchAll
 /** @purpose List each live row in the ts order, so an empty query shows the newest notes. */
 function searchAll(
 	db: DatabaseSync,
@@ -196,7 +197,9 @@ function searchAll(
 	});
 	return hits;
 }
+// #endregion FUNC_searchAll
 
+// #region FUNC_searchFts
 /** @purpose Match the query through the index and give the hits in rank order. */
 function searchFts(
 	db: DatabaseSync,
@@ -227,6 +230,7 @@ function searchFts(
 	});
 	return hits;
 }
+// #endregion FUNC_searchFts
 
 // #region FUNC_literalScan
 /**

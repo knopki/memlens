@@ -108,25 +108,23 @@ function indexOf(view: View): Index {
 	};
 }
 
-/** @purpose Report whether a live note occupies any slot of one half-open range. */
 function liveInIndex(index: Index, from: Pos, to: Pos): boolean {
 	const first = lowerBound(index.slots, from);
 	return first < index.slots.length && (index.slots[first] ?? Infinity) < to;
 }
 
-/** @purpose Give the live notes of one range in slot order. */
 function liveNotesOf(index: Index, range: Range): readonly Note[] {
 	const first = lowerBound(index.slots, range.start);
 	const last = lowerBound(index.slots, range.start + 2 ** range.level);
 	return index.live.slice(first, last);
 }
 
-/** @purpose Give the validity key of one leaf slot: the version and the state of the row. */
 function leafKey(index: Index, pos: Pos): string | null {
 	const note = index.notes.get(pos);
 	return note === undefined ? null : `${note.v_content}|${note.state}`;
 }
 
+// #region FUNC_halfValidInIndex
 /** @purpose Check one half of a node against its rows and its stored key. */
 function halfValidInIndex(
 	index: Index,
@@ -144,8 +142,8 @@ function halfValidInIndex(
 	const child = index.nodes.get(nodeKey(halfLevel, halfStart));
 	return child !== undefined && child.built_v === key;
 }
+// #endregion FUNC_halfValidInIndex
 
-/** @purpose Prove that one node row summarizes the current halves of its range. */
 function validOf(index: Index, node: Node): boolean {
 	const halfLevel = node.level - 1;
 	const width = 2 ** halfLevel;
@@ -193,7 +191,6 @@ export function notesInRange(view: View, from: Pos, to: Pos): readonly Note[] {
 }
 // #endregion FUNC_notesInRange
 
-/** @purpose Split one range into its two halves. */
 function halves(range: Range): readonly [Range, Range] {
 	const width = 2 ** (range.level - 1);
 	return [
@@ -250,7 +247,6 @@ export function joinText(
 }
 // #endregion FUNC_joinText
 
-/** @purpose Give the dates of the first and last live note in one range. */
 function periodOf(
 	index: Index,
 	range: Range,

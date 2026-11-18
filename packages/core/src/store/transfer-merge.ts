@@ -71,6 +71,7 @@ export function mergeRow(local: LocalRow, incoming: Row): Decision {
 }
 // #endregion FUNC_mergeRow
 
+// #region FUNC_mergeContent
 /** @purpose Apply the content channel of one merge, and report which side won. */
 function mergeContent(
 	merged: Row,
@@ -88,7 +89,9 @@ function mergeContent(
 		return { lost: false, kept: true };
 	return { lost: false, kept: false };
 }
+// #endregion FUNC_mergeContent
 
+// #region FUNC_mergeReview
 /** @purpose Apply the review channel of one merge, and report which side won. */
 function mergeReview(
 	merged: Row,
@@ -112,6 +115,7 @@ function mergeReview(
 		return { lost: false, kept: reviewDiffers(local, incoming) };
 	return { lost: false, kept: false };
 }
+// #endregion FUNC_mergeReview
 
 // #region FUNC_foldClock
 /**
@@ -130,14 +134,12 @@ export function foldClock(
 }
 // #endregion FUNC_foldClock
 
-/** @purpose Write the clock text of one store connection. */
 export function setClock(db: DatabaseSync, value: string): void {
 	db.prepare(
 		"INSERT INTO meta (key, value) VALUES ('clock', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
 	).run(value);
 }
 
-/** @purpose Copy each content field of the incoming row into the merged row. */
 function copyContent(target: Row, source: Row): void {
 	target.scope = source.scope;
 	target.ts = source.ts;
@@ -150,7 +152,6 @@ function copyContent(target: Row, source: Row): void {
 	target.preset = source.preset;
 }
 
-/** @purpose Report whether two content groups differ. */
 function contentDiffers(left: Row, right: Row): boolean {
 	return (
 		left.scope !== right.scope ||
@@ -165,13 +166,13 @@ function contentDiffers(left: Row, right: Row): boolean {
 	);
 }
 
-/** @purpose Report whether two review groups differ. */
 function reviewDiffers(left: Row, right: Row): boolean {
 	return (
 		left.review_at !== right.review_at || left.reviewed_at !== right.reviewed_at
 	);
 }
 
+// #region FUNC_rowDiffers
 /** @purpose Report whether one merge changed a stored field of the note. */
 function rowDiffers(left: Row, right: Row): boolean {
 	return (
@@ -196,8 +197,8 @@ function rowDiffers(left: Row, right: Row): boolean {
 		left.v_review !== right.v_review
 	);
 }
+// #endregion FUNC_rowDiffers
 
-/** @purpose Compare two arrays of refs by value. */
 function sameRefs(left: readonly string[], right: readonly string[]): boolean {
 	return (
 		left.length === right.length &&
@@ -205,17 +206,14 @@ function sameRefs(left: readonly string[], right: readonly string[]): boolean {
 	);
 }
 
-/** @purpose Give the greater of two version texts. */
 function maxText(left: string, right: string): string {
 	return left > right ? left : right;
 }
 
-/** @purpose Give the earlier of two texts. */
 function minText(left: string, right: string): string {
 	return left < right ? left : right;
 }
 
-/** @purpose Give the greater review version, where null is the least. */
 function maxReview(left: string | null, right: string | null): string | null {
 	if (left === null) return right;
 	if (right === null) return left;

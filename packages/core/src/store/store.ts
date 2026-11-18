@@ -119,7 +119,11 @@ export class Store {
 	}
 	// #endregion METHOD_abandon
 
-	/** @purpose Read one value from the meta table. */
+	// #region METHOD_meta
+	/**
+	 * @purpose Read one value from the meta table, so a caller reads the store facts through one call.
+	 * @returns The value text, or null when the table holds no such row.
+	 */
 	meta(key: string): string | null {
 		this.requireOpen();
 		const row = this.db
@@ -127,11 +131,17 @@ export class Store {
 			.get(key);
 		return row === undefined ? null : String(row.value);
 	}
+	// #endregion METHOD_meta
 
-	/** @purpose Read the change epoch: the clock text of the store. */
+	// #region METHOD_rev
+	/**
+	 * @purpose Give the change epoch: the clock text of the store, so a cache key follows each write.
+	 * @invariants An empty text means that the store holds no clock yet.
+	 */
 	rev(): string {
 		return this.meta("clock") ?? "";
 	}
+	// #endregion METHOD_rev
 
 	private storeId(): string {
 		return this.meta("store_id") ?? "";
@@ -181,11 +191,17 @@ export class Store {
 	}
 	// #endregion METHOD_read
 
-	/** @purpose Give the caller the open handle for a read model. */
+	// #region METHOD_handle
+	/**
+	 * @purpose Give the caller the open handle for a read model.
+	 * @invariants The caller runs one statement or a short deferred transaction. The write path stays
+	 *   with `publish`, so the store keeps one lock owner.
+	 */
 	handle(): DatabaseSync {
 		this.requireOpen();
 		return this.db;
 	}
+	// #endregion METHOD_handle
 
 	// #region METHOD_close
 	/** @purpose Release the handle once. */
@@ -197,7 +213,11 @@ export class Store {
 	}
 	// #endregion METHOD_close
 
-	/** @purpose Read the clock, or create it on the first call of a new store. */
+	// #region METHOD_clock
+	/**
+	 * @purpose Read the clock, or create it on the first call of a new store.
+	 * @invariants A store with no clock row takes the store identity and the version zero.
+	 */
 	private clock(): ClockState {
 		const text = this.meta("clock");
 		const parsed = text === null ? null : parseVersion(text);
@@ -209,6 +229,7 @@ export class Store {
 			}
 		);
 	}
+	// #endregion METHOD_clock
 
 	private setMeta(key: string, value: string): void {
 		this.db
@@ -236,7 +257,14 @@ export class Tx {
 		readonly version: Version,
 	) {}
 
-	/** @purpose Append one content-free audit fact of this change. */
+	// #region METHOD_journal
+	/**
+	 * @purpose Append one content-free audit fact of this change.
+	 * @invariants The row holds the op, the target, the scope, and an optional reason, and no note
+	 *   text.
+	 * @invariants The time is the local clock of the call, and the store name is the identity of the
+	 *   store.
+	 */
 	journal(
 		op: string,
 		target: string | null,
@@ -256,10 +284,10 @@ export class Tx {
 				reason ?? null,
 			);
 	}
+	// #endregion METHOD_journal
 }
 // #endregion CLASS_Tx
 
-/** @purpose Read the cumulative write count of the connection, so one publish sees its own writes. */
 function totalChanges(db: DatabaseSync): number {
 	return Number(db.prepare("SELECT total_changes() AS c").get()?.c ?? 0);
 }

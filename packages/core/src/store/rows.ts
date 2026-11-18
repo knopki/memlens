@@ -70,11 +70,11 @@ export function nodeFromRow(row: Record<string, unknown>): Node {
 }
 // #endregion FUNC_nodeFromRow
 
-/** @purpose Read one nullable text column. */
 export function nullable(value: unknown): string | null {
 	return value === null || value === undefined ? null : String(value);
 }
 
+// #region FUNC_parseRefs
 /** @purpose Read the JSON refs value of one row, so a damaged value never fails a read. */
 export function parseRefs(text: unknown): readonly string[] {
 	if (typeof text !== "string" || text === "") return [];
@@ -86,3 +86,4 @@ export function parseRefs(text: unknown): readonly string[] {
 		return [];
 	}
 }
+// #endregion FUNC_parseRefs

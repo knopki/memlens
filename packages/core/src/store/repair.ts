@@ -189,6 +189,7 @@ function scan(db: DatabaseSync, cutoff: string, max: number): Plan {
 	return { problems, indexed, live, invalid, empty, journal };
 }
 
+// #region FUNC_quickCheck
 /**
  * @purpose Read each problem of the database file.
  * @returns The problem texts. The list is empty after the word ok.
@@ -200,12 +201,13 @@ function quickCheck(db: DatabaseSync): readonly string[] {
 		.map((row) => String(row.quick_check))
 		.filter((text) => text !== "ok");
 }
+// #endregion FUNC_quickCheck
 
-/** @purpose Run one count statement and give its number. */
 function count(db: DatabaseSync, sql: string): number {
 	return Number(db.prepare(sql).get()?.c ?? 0);
 }
 
+// #region FUNC_journalPlan
 /**
  * @purpose Count the journal rows that the age limit and the row limit remove.
  * @invariants The row limit keeps the newest rows of the remaining set.
@@ -221,12 +223,13 @@ function journalPlan(db: DatabaseSync, cutoff: string, max: number): number {
 	const kept = Number(stored?.c ?? 0);
 	return old + Math.max(0, kept - max);
 }
+// #endregion FUNC_journalPlan
 
-/** @purpose Give the primary key of one node row. */
 function keyOf(node: Node): NodeKey {
 	return { scope: node.scope, level: node.level, start: node.start };
 }
 
+// #region FUNC_deleteNodes
 /**
  * @purpose Delete each named node row.
  * @returns The count of deleted rows.
@@ -240,7 +243,9 @@ function deleteNodes(db: DatabaseSync, keys: readonly NodeKey[]): number {
 		total += Number(stmt.run(key.scope, key.level, key.start).changes);
 	return total;
 }
+// #endregion FUNC_deleteNodes
 
+// #region FUNC_rebuildIndex
 /**
  * @purpose Rebuild the index from the live notes, so each drift direction goes.
  * @invariants The delete-all command needs no old text, so a stray index row also goes.
@@ -251,7 +256,9 @@ function rebuildIndex(db: DatabaseSync): void {
 		"INSERT INTO fts(rowid, body, longform) SELECT n, body, longform FROM notes WHERE state = 'live' AND cleared = 0",
 	);
 }
+// #endregion FUNC_rebuildIndex
 
+// #region FUNC_pruneJournal
 /**
  * @purpose Delete the journal rows past the age limit and the row limit.
  * @returns The count of deleted rows.
@@ -265,3 +272,4 @@ function pruneJournal(db: DatabaseSync, cutoff: string, max: number): number {
 		.run(max);
 	return Number(old.changes) + Number(extra.changes);
 }
+// #endregion FUNC_pruneJournal

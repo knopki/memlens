@@ -58,6 +58,7 @@ function widenKindCheck(db: DatabaseSync): void {
 }
 // #endregion FUNC_widenKindCheck
 
+/** The tokenizer of each language that the default does not serve. Only zh and ja use trigram. */
 const TOKENIZERS: Record<string, string> = {
 	zh: "trigram",
 	ja: "trigram",
@@ -140,22 +141,16 @@ const SCHEMA_SQL = `
 		${FTS_SQL}
 	`;
 
-// #region FUNC_tokenizerOf
-/** @purpose Name the FTS5 tokenizer of a language. Only zh and ja use trigram. */
 function tokenizerOf(language: string): string {
 	return TOKENIZERS[language] ?? "porter unicode61 remove_diacritics 1";
 }
-// #endregion FUNC_tokenizerOf
 
-// #region FUNC_indexTokenizer
-/** @purpose Read the tokenizer of the built index. A store without the row gives null. */
 function indexTokenizer(db: DatabaseSync): string | null {
 	const row = db
 		.prepare("SELECT value FROM meta WHERE key = 'fts_tokenizer'")
 		.get();
 	return typeof row?.value === "string" ? row.value : null;
 }
-// #endregion FUNC_indexTokenizer
 
 // #region FUNC_rebuildIndex
 /**
@@ -225,7 +220,6 @@ export function openDatabase(
 }
 // #endregion FUNC_openDatabase
 
-/** @purpose Tell whether the database file holds no table of its own. */
 function empty(db: DatabaseSync): boolean {
 	const row = db
 		.prepare(
@@ -249,7 +243,6 @@ function isLockError(error: unknown): boolean {
 }
 // #endregion FUNC_isLockError
 
-/** @purpose Stop the thread for one pause. The caller blocks the event loop already. */
 function pause(ms: number): void {
 	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
@@ -419,6 +412,7 @@ export function create(db: DatabaseSync, language: string): void {
 }
 // #endregion FUNC_create
 
+// #region FUNC_seedMeta
 /** @purpose Seed the rows that name the schema, the store, and the index. */
 function seedMeta(db: DatabaseSync, tokenizer: string): void {
 	const meta = db.prepare(
@@ -431,3 +425,4 @@ function seedMeta(db: DatabaseSync, tokenizer: string): void {
 		.get();
 	if (row === undefined) meta.run("fts_tokenizer", tokenizer);
 }
+// #endregion FUNC_seedMeta

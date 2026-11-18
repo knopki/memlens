@@ -261,6 +261,7 @@ function applyRows(
 }
 // #endregion FUNC_applyRows
 
+// #region FUNC_applyMissing
 /** @purpose Insert one absent row, and report whether it latched the cleared flag. */
 function applyMissing(
 	tx: Tx,
@@ -280,7 +281,9 @@ function applyMissing(
 	insertRow(tx.db, sql, next);
 	return next.cleared;
 }
+// #endregion FUNC_applyMissing
 
+// #region FUNC_countChannels
 /** @purpose Count the two merge channels of one changed row, and journal each loss. */
 function countChannels(
 	tx: Tx,
@@ -299,6 +302,7 @@ function countChannels(
 		tx.journal("merge_lost", incoming.id, decision.merged.scope, "review");
 	}
 }
+// #endregion FUNC_countChannels
 
 // #region FUNC_insertRow
 /**
@@ -425,11 +429,11 @@ function statementsOf(db: DatabaseSync): Statements {
 }
 // #endregion FUNC_statementsOf
 
-/** @purpose Delete each proposal that targets one erased note, as a direct redact does. */
 function deleteProposals(sql: Statements, id: string): void {
 	sql.proposals.run(id);
 }
 
+// #region FUNC_localFrom
 /** @purpose Read one local note row, or null when the id is absent. */
 function localFrom(row: Record<string, unknown> | undefined): LocalRow | null {
 	if (row === undefined) return null;
@@ -458,3 +462,4 @@ function localFrom(row: Record<string, unknown> | undefined): LocalRow | null {
 		v_review: nullable(row.v_review),
 	};
 }
+// #endregion FUNC_localFrom
