@@ -30,7 +30,12 @@ import { debuglog } from "node:util";
 import type { ScopeKey } from "../types/primitives.js";
 import { globMatches } from "./config.js";
 import type { Glob, Rule, ScopeDefault } from "./config-types.js";
-import { isCatalogKey, normalizeScopeKey, validateScopeKey } from "./scope.js";
+import {
+	isCatalogKey,
+	normalizeScopeKey,
+	sanitizeName,
+	validateScopeKey,
+} from "./scope.js";
 
 const debug = debuglog("memlens:active-scope");
 
@@ -81,11 +86,11 @@ const FALLBACK_SCOPE_KEY = "project:misc" as ScopeKey;
 /**
  * @purpose Take the repository name from one remote, so `{repo}` names the project.
  * @param remote - The remote URL, for example `git@github.com:knopki/optmem.git`.
- * @returns The last path segment of the remote, without `.git`, in lowercase.
+ * @returns The last path segment of the remote, without `.git`, sanitized.
  */
 export function repoName(remote: string): string {
 	const last = remote.trim().split(/[/:]/).filter(Boolean).at(-1) ?? "";
-	return last.replace(/\.git$/, "").toLowerCase();
+	return sanitizeName(last.replace(/\.git$/, ""));
 }
 // #endregion FUNC_repoName
 
@@ -133,7 +138,8 @@ export function activeScope(
  *   then the fallback key.
  * @invariants An ssh, scp, or https remote gives `project:<path after the host>`, and the path
  *   keeps each nested group. A local remote gives no key.
- * @invariants Each name takes the lowercase form, and an invalid key skips its step.
+ * @invariants Each derived name composes NFC, and each forbidden sign becomes one underscore. An
+ *   empty name skips its step.
  * @ensures The result names its source, and the last step gives the fallback key.
  * @param subject - The collected inputs of the context.
  * @param fallback - The key of the last step, from the `default` key of the configuration.
@@ -271,9 +277,8 @@ function remotePathScope(path: string): ScopeKey | null {
 	if (segments.length < 2) return null;
 	const last = segments.at(-1)?.replace(/\.git$/i, "") ?? "";
 	if (last.length === 0) return null;
-	const key = normalizeScopeKey(
-		`project:${[...segments.slice(0, -1), last].join("/")}`,
-	);
+	const name = sanitizeName([...segments.slice(0, -1), last].join("/"));
+	const key = normalizeScopeKey(`project:${name}`);
 	return validateScopeKey(key) ? key : null;
 }
 
@@ -281,7 +286,7 @@ function namedScope(value: string | null | undefined): ScopeKey | null {
 	if (value === null || value === undefined) return null;
 	const name = value.trim();
 	if (name.length === 0) return null;
-	const key = normalizeScopeKey(`project:${name}`);
+	const key = normalizeScopeKey(`project:${sanitizeName(name)}`);
 	return validateScopeKey(key) ? key : null;
 }
 

@@ -28,8 +28,8 @@ describe("repoName", () => {
 		expect(repoName("github.com/knopki/optmem")).toBe("optmem");
 	});
 
-	it("strips the git suffix of an ssh remote and lowercases", () => {
-		expect(repoName("git@github.com:knopki/OptMem.git")).toBe("optmem");
+	it("strips the git suffix of an ssh remote and keeps the case", () => {
+		expect(repoName("git@github.com:knopki/OptMem.git")).toBe("OptMem");
 	});
 });
 
@@ -129,7 +129,7 @@ describe("automaticScope", () => {
 		expect(
 			automaticScope({ gitRemote: "git@github.com:knopki/OptMem.git" }),
 		).toEqual({
-			key: "project:knopki/optmem",
+			key: "project:knopki/OptMem",
 			source: "git_remote",
 		});
 	});
@@ -171,7 +171,7 @@ describe("automaticScope", () => {
 				gitRemote: "git@gitlab.com:acme/team/MemLens.git",
 			}),
 		).toEqual({
-			key: "project:acme/team/memlens",
+			key: "project:acme/team/MemLens",
 			source: "git_remote",
 		});
 	});
@@ -220,28 +220,35 @@ describe("automaticScope", () => {
 
 	it("takes the repository name with no remote", () => {
 		expect(automaticScope({ repo: "MemLens" })).toEqual({
-			key: "project:memlens",
+			key: "project:MemLens",
 			source: "git",
 		});
 	});
 
 	it("keeps a nested repository name", () => {
 		expect(automaticScope({ repo: "Acme/Team/MemLens" })).toEqual({
-			key: "project:acme/team/memlens",
+			key: "project:Acme/Team/MemLens",
 			source: "git",
 		});
 	});
 
 	it("takes the workspace name", () => {
 		expect(automaticScope({ workspaceName: "Dsh" })).toEqual({
-			key: "project:dsh",
+			key: "project:Dsh",
 			source: "workspace",
 		});
 	});
 
 	it("takes a workspace name with a leading period", () => {
 		expect(automaticScope({ workspaceName: ".My-Workspace" })).toEqual({
-			key: "project:.my-workspace",
+			key: "project:.My-Workspace",
+			source: "workspace",
+		});
+	});
+
+	it("sanitizes the signs of a workspace name", () => {
+		expect(automaticScope({ workspaceName: "Мой Воркспейс" })).toEqual({
+			key: "project:Мой_Воркспейс",
 			source: "workspace",
 		});
 	});
@@ -256,6 +263,24 @@ describe("automaticScope", () => {
 	it("takes a directory name with a leading period", () => {
 		expect(automaticScope({ path: "/home/knopki/.config" })).toEqual({
 			key: "project:.config",
+			source: "path",
+		});
+	});
+
+	it("keeps the script of a directory name", () => {
+		expect(automaticScope({ path: "/home/котя" })).toEqual({
+			key: "project:котя",
+			source: "path",
+		});
+		expect(automaticScope({ path: "/home/飞书" })).toEqual({
+			key: "project:飞书",
+			source: "path",
+		});
+	});
+
+	it("replaces each forbidden sign of a directory name", () => {
+		expect(automaticScope({ path: "/home/my notes" })).toEqual({
+			key: "project:my_notes",
 			source: "path",
 		});
 	});
@@ -321,10 +346,10 @@ describe("automaticScope", () => {
 		).toEqual({ key: "project:dsh", source: "workspace" });
 	});
 
-	it("skips an invalid name and takes the next step", () => {
+	it("skips a blank name and takes the next step", () => {
 		expect(
 			automaticScope({
-				workspaceName: "My Project",
+				workspaceName: "  ",
 				path: "/home/knopki/prj/memlens",
 			}),
 		).toEqual({ key: "project:memlens", source: "path" });

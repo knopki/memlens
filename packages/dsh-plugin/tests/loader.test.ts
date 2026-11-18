@@ -83,12 +83,12 @@ it("restores a live agent through the built host entry", async () => {
 	);
 	expect(answer).toEqual({
 		state: "live",
-		addr: "project:loader-workspace#0",
+		addr: "project:Loader-Workspace#0",
 		id: expect.any(String),
 	});
 	expect(
 		note.output.render({ body: "Built entry restart." }, answer as never),
-	).toEqual([{ type: "text", text: "saved project:loader-workspace#0" }]);
+	).toEqual([{ type: "text", text: "saved project:Loader-Workspace#0" }]);
 	const find = root.tools.get("memory_find", key);
 	if (!find) throw new Error("The find tool is absent.");
 	expect(

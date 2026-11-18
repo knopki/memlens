@@ -185,7 +185,7 @@ describe("pluginActiveScope", () => {
 		const base = loadPluginBase(env());
 		expect(
 			pluginActiveScope(base, join(rootDir, "plain"), "ws-1", "My-Workspace"),
-		).toBe("project:my-workspace");
+		).toBe("project:My-Workspace");
 	});
 
 	it.skipIf(!hasGit)("uses the remote before the workspace title", () => {
@@ -196,7 +196,7 @@ describe("pluginActiveScope", () => {
 		git(repo, "init");
 		git(repo, "remote", "add", "upstream", "git@github.com:Acme/Demo.git");
 		expect(pluginActiveScope(base, repo, "ws-1", "workspace")).toBe(
-			"project:acme/demo",
+			"project:Acme/Demo",
 		);
 	});
 
@@ -237,15 +237,21 @@ describe("pluginActiveScope", () => {
 		const base = loadPluginBase(env());
 		expect(
 			pluginActiveScope(base, join(rootDir, "plain"), "ws-1", ".My-Workspace"),
-		).toBe("project:.my-workspace");
+		).toBe("project:.My-Workspace");
 	});
 
-	it("uses the configured default in a directory that names no scope", () => {
+	it("replaces each forbidden sign of a directory name", () => {
 		writeBase(BASE_CONFIG);
 		const base = loadPluginBase(env());
 		expect(pluginActiveScope(base, join(rootDir, "my notes"))).toBe(
-			"user:notes",
+			"project:my_notes",
 		);
+	});
+
+	it("uses the configured default at the file system root", () => {
+		writeBase(BASE_CONFIG);
+		const base = loadPluginBase(env());
+		expect(pluginActiveScope(base, "/")).toBe("user:notes");
 	});
 
 	it.skipIf(!hasGit)(

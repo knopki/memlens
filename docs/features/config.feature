@@ -43,3 +43,5 @@ Feature: Configuration and the active scope
     Then the active scope key comes from that remote
     And a directory with no repository and no workspace gives the key of `default`
     And a directory named `.config` gives the active scope key `project:.config`
+    And a directory named `котя` gives the active scope key `project:котя`
+    And a directory named `my notes` gives the active scope key `project:my_notes`

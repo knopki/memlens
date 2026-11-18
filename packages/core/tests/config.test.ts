@@ -149,18 +149,19 @@ scopes = ["*"]
 		expect(config.profile.default.budget).toEqual({ here: 20, directions: 10 });
 	});
 
-	it("rejects a rule key with an uppercase name", () => {
+	it("accepts a rule key with an uppercase name", () => {
 		const text = configToml({
 			rules: '{ match = "path", glob = "/x", key = "project:UPPER" }',
 		});
-		expect(() => loadBaseConfig(text, "/s")).toThrow(/scope key/);
+		const config = loadBaseConfig(text, "/s");
+		expect(config.scope_default.rules[0]?.key).toBe("project:UPPER");
 	});
 
 	it("rejects the placeholder in a path rule key", () => {
 		const text = configToml({
 			rules: '{ match = "path", glob = "/x", key = "project:{repo}" }',
 		});
-		expect(() => loadBaseConfig(text, "/s")).toThrow(/scope key/);
+		expect(() => loadBaseConfig(text, "/s")).toThrow(/placeholder/);
 	});
 
 	it("leaves the provider empty when the section omits it", () => {

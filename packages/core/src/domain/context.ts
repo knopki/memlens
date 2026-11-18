@@ -196,9 +196,14 @@ function fillTemplate(
 	return (input.customPrompt ?? CONTEXT_TEMPLATE)
 		.replaceAll("{{policy}}", input.policy ?? POLICY)
 		.replaceAll("{{append}}", input.customPromptAppend ?? input.append ?? "")
-		.replaceAll("{{scope}}", input.scope)
+		.replaceAll("{{scope}}", attribute(input.scope))
 		.replaceAll("{{directions}}", parts.directions)
 		.replaceAll("{{here}}", parts.here);
+}
+
+/** @purpose Escape one scope key for one quoted attribute value of the template. */
+function attribute(text: string): string {
+	return text.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }
 
 // #region FUNC_epoch

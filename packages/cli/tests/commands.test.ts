@@ -135,10 +135,10 @@ describe("@memlens/cli commands", () => {
 		mkdirSync(nested);
 		test.io = { ...test.io, cwd: nested };
 		expect((await run(test, "scope")).out).toContain(
-			"project:my-repo\nrule: git",
+			"project:My-Repo\nrule: git",
 		);
 		expect((await run(test, "note", "Automatic scope")).out).toContain(
-			"saved project:my-repo#0",
+			"saved project:My-Repo#0",
 		);
 		expect((await run(test, "slice")).out).toContain("Automatic scope");
 		expect(
@@ -196,10 +196,10 @@ describe("@memlens/cli commands", () => {
 			"git@github.com:knopki/Remote-Name.git",
 		]);
 		expect((await run(test, "scope")).out).toContain(
-			"project:remote-name\nrule: git_remote",
+			"project:Remote-Name\nrule: git_remote",
 		);
 		expect((await run(test, "note", "Remote rule")).out).toContain(
-			"saved project:remote-name#0",
+			"saved project:Remote-Name#0",
 		);
 	});
 
@@ -229,11 +229,19 @@ describe("@memlens/cli commands", () => {
 		);
 	});
 
-	it("uses the configured default in a directory that names no scope", async () => {
+	it("replaces each forbidden sign of a directory name", async () => {
 		const test = makeEnv(WORK_CONFIG);
 		const spaced = join(test.home, "my notes");
 		mkdirSync(spaced);
 		test.io = { ...test.io, cwd: spaced };
+		expect((await run(test, "scope")).out).toContain(
+			"project:my_notes\nrule: path",
+		);
+	});
+
+	it("uses the configured default at the file system root", async () => {
+		const test = makeEnv(WORK_CONFIG);
+		test.io = { ...test.io, cwd: "/" };
 		expect((await run(test, "scope")).out).toContain(
 			"user:notes\nrule: default",
 		);
@@ -276,7 +284,7 @@ describe("@memlens/cli commands", () => {
 		]);
 		test.io = { ...test.io, cwd: repo };
 		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/remote-name\nrule: git_remote",
+			"project:knopki/Remote-Name\nrule: git_remote",
 		);
 	});
 
@@ -295,7 +303,7 @@ describe("@memlens/cli commands", () => {
 		]);
 		test.io = { ...test.io, cwd: repo };
 		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/upstream-name\nrule: git_remote",
+			"project:knopki/Upstream-Name\nrule: git_remote",
 		);
 		execFileSync("git", [
 			"-C",
@@ -306,7 +314,7 @@ describe("@memlens/cli commands", () => {
 			"git@github.com:knopki/Origin-Name.git",
 		]);
 		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/origin-name\nrule: git_remote",
+			"project:knopki/Origin-Name\nrule: git_remote",
 		);
 	});
 
@@ -325,7 +333,7 @@ describe("@memlens/cli commands", () => {
 		]);
 		test.io = { ...test.io, cwd: repo };
 		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/custom-name\nrule: git_remote",
+			"project:knopki/Custom-Name\nrule: git_remote",
 		);
 	});
 
@@ -344,7 +352,7 @@ describe("@memlens/cli commands", () => {
 		]);
 		test.io = { ...test.io, cwd: repo };
 		expect((await run(test, "scope")).out).toContain(
-			"project:local-repo\nrule: git",
+			"project:Local-Repo\nrule: git",
 		);
 	});
 
@@ -354,10 +362,10 @@ describe("@memlens/cli commands", () => {
 		mkdirSync(directory);
 		test.io = { ...test.io, cwd: directory };
 		expect((await run(test, "scope")).out).toContain(
-			"project:plain-directory\nrule: path",
+			"project:Plain-Directory\nrule: path",
 		);
 		expect((await run(test, "note", "Directory note")).out).toContain(
-			"saved project:plain-directory#0",
+			"saved project:Plain-Directory#0",
 		);
 	});
 	it("writes, finds, and opens one note", async () => {

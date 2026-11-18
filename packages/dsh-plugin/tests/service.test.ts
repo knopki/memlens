@@ -281,7 +281,7 @@ describe("Memlens host service", () => {
 		await agentEvents(root, agent).serial("agent/created", {
 			source: "startup",
 		});
-		expect(root.memlens.forAgent(agent).scope).toBe("project:workspace-a");
+		expect(root.memlens.forAgent(agent).scope).toBe("project:Workspace-A");
 	});
 
 	it("resumes a session whose former directory is absent", async () => {

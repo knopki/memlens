@@ -389,7 +389,10 @@ function scopeSet(
 	const keys = visibleScopes(config.profile.scopes, [
 		...new Set([
 			...known,
-			...config.profile.scopes.filter(validateScopeKey),
+			...config.profile.scopes.filter(
+				(glob): glob is ScopeKey =>
+					!glob.includes("*") && validateScopeKey(glob),
+			),
 			scope,
 		]),
 	]);

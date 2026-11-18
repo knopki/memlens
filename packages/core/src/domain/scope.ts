@@ -1,19 +1,21 @@
 /**
- * Scope key validation and normalization.
+ * Scope key validation, normalization, and sanitization.
  *
  * #region moduleContract
  * @modulecontract
- * @purpose Validate and normalize scope keys, so the store writes no invalid or inconsistent key.
+ * @purpose Validate, normalize, and sanitize scope keys, so the store writes no broken key.
  * @scope
- *  - Scope key validation, lowercase normalization, and the hidden key prefix.
+ *  - Scope key validation, NFC normalization, kind lowercasing, and name sanitization.
  *  - NOT: configuration, profile filtering, or storage.
  * @invariants
- *  - A valid scope key has two segments separated by a colon.
- *  - The kind starts with a lowercase letter or digit. The name starts with a lowercase letter,
- *    digit, period, underscore, or hyphen. A leading slash starts no segment.
- *  - The rest of a segment holds lowercase letters, digits, period, underscore, slash, and hyphen.
- *  - Validation checks the supplied key without normalization.
- * @keywords scope, key, validate, normalize, segment
+ *  - A valid scope key has two segments separated by the first colon.
+ *  - The kind starts with a lowercase letter or digit, and holds lowercase letters, digits, period,
+ *    underscore, slash, and hyphen. The prefix `__` stays reserved for internal kinds.
+ *  - The name holds any text except whitespace, control and format characters, `#`, comma, and
+ *    brackets. The case and the script stay as given.
+ *  - Normalization composes NFC and lowercases the kind. Validation checks the supplied key
+ *    without normalization.
+ * @keywords scope, key, validate, normalize, sanitize, segment
  * #endregion moduleContract
  */
 
@@ -28,26 +30,56 @@ export const CATALOG_PREFIX = "__catalog__:";
 /** The kind grammar: starts with [a-z0-9], continues with [a-z0-9._/-]. */
 const KIND_RE = /^[a-z0-9][a-z0-9._/-]*$/;
 
-/** The name grammar: starts with [a-z0-9._-], continues with [a-z0-9._/-]. */
-const NAME_RE = /^[a-z0-9._-][a-z0-9._/-]*$/;
+/** The forbidden name signs: whitespace, control and format characters, #, comma, brackets. */
+const FORBIDDEN_SOURCE = "[\\s#,\\[\\],\\p{Cc}\\p{Cf}]";
+
+/** One test of the forbidden set, without the global flag. */
+const FORBIDDEN_TEST = new RegExp(FORBIDDEN_SOURCE, "u");
+
+/** The replacement form of the forbidden set, for sanitization. */
+const FORBIDDEN_ALL = new RegExp(FORBIDDEN_SOURCE, "gu");
 
 // #region FUNC_normalizeScopeKey
 /**
- * @purpose Normalize a scope key to lowercase before writing, so a wrong case does not create a new scope.
+ * @purpose Normalize one scope key before writing, so one composition and one kind case give one
+ * scope.
+ * @invariants The text composes to NFC. The part before the first colon lowercases, and the name
+ * keeps its case and script.
  * @param raw - The scope key as supplied by the caller.
- * @returns The normalized lowercase key.
+ * @returns The normalized key text.
  */
 export function normalizeScopeKey(raw: string): string {
-	const result = raw.toLowerCase();
+	const nfc = raw.normalize("NFC");
+	const colon = nfc.indexOf(":");
+	const result =
+		colon < 1 ? nfc : `${nfc.slice(0, colon).toLowerCase()}${nfc.slice(colon)}`;
 	debug("Scope key normalized", { event: "normalize", raw, result });
 	return result;
 }
 // #endregion FUNC_normalizeScopeKey
 
+// #region FUNC_sanitizeName
+/**
+ * @purpose Replace each forbidden sign of one derived name with one underscore, so one directory
+ * or workspace name always gives one valid name.
+ * @invariants The text composes to NFC first. Each forbidden sign becomes one underscore, and each
+ * other character keeps its form and length.
+ * @param name - The derived name text.
+ * @returns The name with each forbidden sign replaced.
+ */
+export function sanitizeName(name: string): string {
+	const result = name.normalize("NFC").replaceAll(FORBIDDEN_ALL, "_");
+	debug("Name sanitized", { event: "sanitize", name, result });
+	return result;
+}
+// #endregion FUNC_sanitizeName
+
 // #region FUNC_validateScopeKey
 /**
  * @purpose Reject a key that does not match the scope grammar, so no invalid key enters the store.
- * @param key - The normalized scope key.
+ * @invariants The kind matches the kind grammar, and the name holds at least one allowed
+ * character.
+ * @param key - The normalized key.
  * @returns True when the key matches the grammar.
  */
 export function validateScopeKey(key: string): key is ScopeKey {
@@ -62,7 +94,7 @@ export function validateScopeKey(key: string): key is ScopeKey {
 		debug("Scope key invalid: empty name", { key });
 		return false;
 	}
-	const result = KIND_RE.test(kind) && NAME_RE.test(name);
+	const result = KIND_RE.test(kind) && !FORBIDDEN_TEST.test(name);
 	debug("Scope key validated", { event: "validate", key, result });
 	return result;
 }

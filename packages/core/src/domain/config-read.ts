@@ -91,6 +91,12 @@ function expectScopeKey(
 	allowRepo: boolean,
 ): ScopeKey {
 	const key = expectString(value, where);
+	if (!allowRepo && key.includes("{repo}")) {
+		throw new MemlensError(
+			"Data",
+			`${where} holds the {repo} placeholder outside a git_remote rule: ${key}`,
+		);
+	}
 	const probe = allowRepo ? key.replaceAll("{repo}", "x") : key;
 	if (!validateScopeKey(probe)) {
 		throw new MemlensError("Data", `${where} is not a scope key: ${key}`);
