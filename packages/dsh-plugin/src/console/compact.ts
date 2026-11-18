@@ -56,9 +56,6 @@ interface Captured {
 // #region FUNC_buildInput
 /**
  * @purpose Read the current build input of one candidate range, or null when a half is empty.
- * @param memory - The store of the session.
- * @param scope - The scope of the compaction.
- * @param range - The start and the level of the range.
  */
 function buildInput(
 	memory: AgentMemory,
@@ -261,7 +258,11 @@ export function parseAnswers(raw: string): readonly Answer[] {
 }
 // #endregion FUNC_parseAnswers
 
-/** @purpose Render one build input with sorted keys, so an input check ignores the field order. */
+// #region FUNC_canonical
+/**
+ * @purpose Render one build input with sorted keys, so an input check ignores the field order.
+ * @invariants Each nested object renders with its keys sorted. A list keeps its order.
+ */
 function canonical(value: unknown): string {
 	return JSON.stringify(value, (_key, item) =>
 		item !== null && typeof item === "object" && !Array.isArray(item)
@@ -273,15 +274,13 @@ function canonical(value: unknown): string {
 			: item,
 	);
 }
+// #endregion FUNC_canonical
 
 // #region FUNC_applyAnswers
 /**
  * @purpose Write one answer for each range into the store as node rows.
  * @invariants An empty answer gives a Data error. A changed input counts as rejected with its
  *   address.
- * @param memory - The store of the session.
- * @param scope - The scope of the compaction.
- * @param answers - The parsed answer lines.
  * @param copied - The inputs of the job, or null when the request holds none.
  */
 export function applyAnswers(

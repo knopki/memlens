@@ -284,7 +284,6 @@ export function mountConsole(ctx: ClientContext): void {
 /**
  * @purpose Read the host runtime state of one surface, so the maintenance screen shows it.
  * @invariants A missing field stays absent, so the screen renders no empty row.
- * @param surface - The surface of the console.
  * @param profile - The profile of the request. A session surface ignores it.
  */
 async function statusOf(
@@ -362,8 +361,6 @@ export type Surface =
  * @purpose Give the surface identity of one wire input.
  * @invariants A session surface sends the session id. A profile surface sends the profile name,
  *   which the host reads as the default profile when it is empty.
- * @param surface - The surface of the console.
- * @param profile - The profile of the request. A session surface ignores it.
  */
 function identityOf(
 	surface: Surface,
@@ -381,7 +378,6 @@ function identityOf(
  * @invariants Each input carries the identity of the surface, because the transport carries no
  *   query.
  * @invariants The wire carries a position as text, as the host operations parse it.
- * @param surface - The surface of the console.
  */
 function portOf(surface: Surface): StorePort {
 	return {

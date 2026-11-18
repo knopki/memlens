@@ -547,7 +547,6 @@ export function consoleDescriptors(): readonly InvocationDescriptor[] {
 // #region FUNC_consoleContribution
 /**
  * @purpose Give the client the contribution that it mounts, built from the one descriptor list.
- * @invariants The object holds the package name and the descriptors that the host registers.
  */
 export function consoleContribution(): TypertRemoteContribution {
 	return { package: CONSOLE_PACKAGE, descriptors: consoleDescriptors() };

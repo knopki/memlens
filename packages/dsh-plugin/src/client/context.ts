@@ -20,8 +20,6 @@ import type { ComponentType } from "react";
 // #region TYPE_Message
 /**
  * @purpose Give the text of one key of a locale namespace.
- * @invariants The function fills each {name} placeholder from the values that it has.
- * @invariants A missing key gives the key text, and a missing value keeps its placeholder.
  */
 export type Message = (
 	key: string,
@@ -35,6 +33,8 @@ export type Message = (
  * @invariants The register call takes each dictionary of one namespace in one call.
  * @invariants The bind call gives one function for a namespace, and that function reads the active
  * language at call time.
+ * @invariants The bound function fills each {name} placeholder, and a missing key gives the key
+ *   text.
  */
 export interface LocaleService {
 	register(

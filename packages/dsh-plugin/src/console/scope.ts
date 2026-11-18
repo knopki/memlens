@@ -148,10 +148,7 @@ export function requestScope(
 /**
  * @purpose Give the one note row that a target address names.
  * @invariants A range address gives a Usage error. A row outside the profile gives NotAllowed.
- * @param memory - The store and the profile of the session.
- * @param fallback - The scope of a target with no scope.
- * @param target - The address of the request.
- * @returns The note row of the address.
+ * @invariants A target with no scope takes the fallback scope.
  */
 export function targetRecord(
 	memory: AgentMemory,

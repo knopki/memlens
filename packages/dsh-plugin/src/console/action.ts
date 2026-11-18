@@ -164,7 +164,12 @@ function applyProposal(
 }
 // #endregion FUNC_applyProposal
 
-/** @purpose Apply the payload of one accepted proposal inside its transaction. */
+// #region FUNC_applyAccepted
+/**
+ * @purpose Apply the payload of one accepted proposal inside its transaction.
+ * @invariants Each op writes once. An op with no target writes nothing, so a lost target fails the
+ *   accept instead of a silent write.
+ */
 function applyAccepted(
 	proposal: Proposal,
 	payload: unknown,
@@ -190,6 +195,7 @@ function applyAccepted(
 			...(data.scope ? { scope: data.scope } : {}),
 		});
 }
+// #endregion FUNC_applyAccepted
 
 /** The new note of one accepted note proposal. */
 function acceptedNote(proposal: Proposal, data: ProposalPayload): NoteInput {
