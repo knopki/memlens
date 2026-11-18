@@ -239,9 +239,23 @@ describe("automaticScope", () => {
 		});
 	});
 
+	it("takes a workspace name with a leading period", () => {
+		expect(automaticScope({ workspaceName: ".My-Workspace" })).toEqual({
+			key: "project:.my-workspace",
+			source: "workspace",
+		});
+	});
+
 	it("takes the directory name", () => {
 		expect(automaticScope({ path: "/home/knopki/prj/memlens/" })).toEqual({
 			key: "project:memlens",
+			source: "path",
+		});
+	});
+
+	it("takes a directory name with a leading period", () => {
+		expect(automaticScope({ path: "/home/knopki/.config" })).toEqual({
+			key: "project:.config",
 			source: "path",
 		});
 	});

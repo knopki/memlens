@@ -8,8 +8,9 @@
  *  - Scope key validation, lowercase normalization, and the hidden key prefix.
  *  - NOT: configuration, profile filtering, or storage.
  * @invariants
- *  - A valid scope key has two segments separated by a colon, and each segment starts with a
- *    lowercase letter or digit.
+ *  - A valid scope key has two segments separated by a colon.
+ *  - The kind starts with a lowercase letter or digit. The name starts with a lowercase letter,
+ *    digit, period, underscore, or hyphen. A leading slash starts no segment.
  *  - The rest of a segment holds lowercase letters, digits, period, underscore, slash, and hyphen.
  *  - Validation checks the supplied key without normalization.
  * @keywords scope, key, validate, normalize, segment
@@ -24,8 +25,11 @@ const debug = debuglog("memlens:scope");
 /** The catalog key prefix. The agent never sees this in the view. */
 export const CATALOG_PREFIX = "__catalog__:";
 
-/** The segment grammar: starts with [a-z0-9], continues with [a-z0-9._/-]. */
-const SEGMENT_RE = /^[a-z0-9][a-z0-9._/-]*$/;
+/** The kind grammar: starts with [a-z0-9], continues with [a-z0-9._/-]. */
+const KIND_RE = /^[a-z0-9][a-z0-9._/-]*$/;
+
+/** The name grammar: starts with [a-z0-9._-], continues with [a-z0-9._/-]. */
+const NAME_RE = /^[a-z0-9._-][a-z0-9._/-]*$/;
 
 // #region FUNC_normalizeScopeKey
 /**
@@ -58,7 +62,7 @@ export function validateScopeKey(key: string): key is ScopeKey {
 		debug("Scope key invalid: empty name", { key });
 		return false;
 	}
-	const result = SEGMENT_RE.test(kind) && SEGMENT_RE.test(name);
+	const result = KIND_RE.test(kind) && NAME_RE.test(name);
 	debug("Scope key validated", { event: "validate", key, result });
 	return result;
 }

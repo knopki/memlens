@@ -88,8 +88,8 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | `backoff`            | The local retry wait after a failed attempt: ten, sixty, then three hundred seconds. A restart clears it.                                                                    |
 | `ancestor`           | A node above another node in a tree. A change of a child makes each ancestor dirty.                                                                                          |
 | batch                | The input count of one compaction call. The default is 10, and the value is a whole number above zero. The key sets no upper limit.                                          |
-| scope key            | The key of a scope: two segments separated by a colon, and each segment holds lowercase text.                                                                                |
-| scope name           | The second part of a scope key: lowercase letters, digits, the period, the underscore, the slash, and the hyphen.                                                            |
+| scope key            | The key of a scope: two segments separated by a colon. The first segment starts with a lowercase letter or digit.                                                            |
+| scope name           | The second part of a scope key: lowercase letters, digits, the period, the underscore, the slash, and the hyphen. A slash starts no name.                                     |
 | wildcard             | The part `*` of a scope key. It matches any text of the kind or of the name.                                                                                                 |
 | address              | The pointer to one note or one range: `pos`, `pos-pos`, `scope#pos`, or `scope#pos-pos`.                                                                                     |
 | active scope         | The scope of the current workspace. A rule of `[scope_default]` gives it, and the source list applies with no match.                                                         |

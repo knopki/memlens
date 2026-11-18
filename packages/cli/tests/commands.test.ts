@@ -219,11 +219,21 @@ describe("@memlens/cli commands", () => {
 		);
 	});
 
-	it("uses the configured default in a directory that names no scope", async () => {
+	it("uses a directory name with a leading period", async () => {
 		const test = makeEnv(WORK_CONFIG);
 		const hidden = join(test.home, ".hidden");
 		mkdirSync(hidden);
 		test.io = { ...test.io, cwd: hidden };
+		expect((await run(test, "scope")).out).toContain(
+			"project:.hidden\nrule: path",
+		);
+	});
+
+	it("uses the configured default in a directory that names no scope", async () => {
+		const test = makeEnv(WORK_CONFIG);
+		const spaced = join(test.home, "my notes");
+		mkdirSync(spaced);
+		test.io = { ...test.io, cwd: spaced };
 		expect((await run(test, "scope")).out).toContain(
 			"user:notes\nrule: default",
 		);

@@ -224,20 +224,28 @@ describe("pluginActiveScope", () => {
 		expect(pluginActiveScope(base, repo)).toBe("project:demo");
 	});
 
-	it("uses the configured default in a directory that names no scope", () => {
+	it("uses a directory name with a leading period", () => {
 		writeBase(BASE_CONFIG);
 		const base = loadPluginBase(env());
 		expect(pluginActiveScope(base, join(rootDir, ".hidden"))).toBe(
-			"user:notes",
+			"project:.hidden",
 		);
 	});
 
-	it("skips a workspace title that names no scope", () => {
+	it("uses a workspace title with a leading period", () => {
 		writeBase(BASE_CONFIG);
 		const base = loadPluginBase(env());
 		expect(
 			pluginActiveScope(base, join(rootDir, "plain"), "ws-1", ".My-Workspace"),
-		).toBe("project:plain");
+		).toBe("project:.my-workspace");
+	});
+
+	it("uses the configured default in a directory that names no scope", () => {
+		writeBase(BASE_CONFIG);
+		const base = loadPluginBase(env());
+		expect(pluginActiveScope(base, join(rootDir, "my notes"))).toBe(
+			"user:notes",
+		);
 	});
 
 	it.skipIf(!hasGit)(

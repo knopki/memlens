@@ -53,6 +53,20 @@ describe("validateScopeKey", () => {
 	it("accepts a key that starts each segment with a digit", () => {
 		expect(validateScopeKey("1project:1name")).toBe(true);
 	});
+
+	it("accepts a name that starts with a period, underscore, or hyphen", () => {
+		expect(validateScopeKey("project:.hidden")).toBe(true);
+		expect(validateScopeKey("project:_private")).toBe(true);
+		expect(validateScopeKey("project:-dash")).toBe(true);
+	});
+
+	it("rejects a kind that starts with a period", () => {
+		expect(validateScopeKey(".project:foo")).toBe(false);
+	});
+
+	it("rejects a name that starts with a slash", () => {
+		expect(validateScopeKey("project:/foo")).toBe(false);
+	});
 });
 
 describe("isCatalogKey", () => {
