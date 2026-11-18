@@ -212,6 +212,8 @@ function versionsOf(
  * @purpose Read one JSON object as a note with the field limits of the table.
  * @invariants A missing content field takes the default of a tombstone.
  * @invariants A cleared row must be deleted, as the table constraint requires.
+ * @invariants An absent kind gives `note`, an absent cleared flag gives false, and absent refs give
+ *   no ref. An absent text gives the empty text, and an absent date gives the row ts.
  */
 function parseRow(value: Record<string, unknown>): Row {
 	const base = {
