@@ -27,6 +27,7 @@ import {
 	byAddress,
 	dueRecords,
 	hide,
+	linkSupersedes,
 	MemlensError,
 	NOTE_KINDS,
 	normalizeScopeKey,
@@ -278,6 +279,7 @@ export async function redactCommand(
  * @invariants The address scope gives the current scope of the record. The flag --scope gives the
  *   destination scope, and it also names the current scope when the address holds none.
  * @invariants Supersede targets take the address form, and they resolve in the destination scope.
+ *   Each target takes the amended note as its supersede link.
  */
 export async function amendCommand(
 	args: ParsedArgs,
@@ -313,8 +315,8 @@ export async function amendCommand(
 				: { longform: readBodyFile(longformFile) }),
 			...(kindRaw === null ? {} : { kind: kindRaw as NoteKind }),
 		});
-		for (const id of supersedes)
-			hide(runtime.store, id, `superseded by ${record.id}`);
+		if (supersedes.length > 0)
+			linkSupersedes(runtime.store, record.id, supersedes);
 		debug("Record amended", {
 			event: "amend",
 			scope,

@@ -109,12 +109,12 @@ export async function checkCommand(
 
 // #region FUNC_repairCommand
 /**
- * Rebuild the derived state of the store from the log.
+ * Apply the planned repairs of one store.
  *
- * @purpose Turn a store with findings into a store that matches its state, so a user recovers
- *   without an editor.
- * @invariants The command lists each applied change. The flag --dry-run lists the planned changes
- *   and writes nothing.
+ * @purpose Drop the invalid and the empty node rows, rebuild the index on a drift, and prune the
+ *   journal, so a user recovers a store whose caches do not match its rows.
+ * @invariants The command changes no note row, writes no summary, and calls no model. The flag
+ *   --dry-run lists the planned changes and writes nothing.
  */
 export async function repairCommand(
 	args: ParsedArgs,

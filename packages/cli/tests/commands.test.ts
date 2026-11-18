@@ -25,6 +25,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, expect, it } from "vitest";
 import { main } from "../src/cli.js";
 import type { CommandIo } from "../src/commands.js";
@@ -447,17 +448,36 @@ describe("@memlens/cli commands", () => {
 
 	it("changes the kind and adds a supersedes link on amend", async () => {
 		const test = makeEnv();
-		await run(test, "note", "First text", "--scope", "project:acme/x");
-		await run(test, "note", "Second text", "--scope", "project:acme/x");
+		const dir = join(test.home, "store");
+		await run(
+			test,
+			"note",
+			"First text",
+			"--scope",
+			"project:acme/x",
+			"--store",
+			dir,
+		);
+		await run(
+			test,
+			"note",
+			"Second text",
+			"--scope",
+			"project:acme/x",
+			"--store",
+			dir,
+		);
 		const kind = await run(
 			test,
 			"amend",
 			"project:acme/x#0",
 			"--kind",
 			"decision",
+			"--store",
+			dir,
 		);
 		expect(kind.code).toBe(0);
-		const found = await run(test, "find", "First", "--json");
+		const found = await run(test, "find", "First", "--json", "--store", dir);
 		expect(JSON.parse(found.out)).toMatchObject([{ kind: "decision" }]);
 		const link = await run(
 			test,
@@ -465,11 +485,22 @@ describe("@memlens/cli commands", () => {
 			"project:acme/x#1",
 			"--supersedes",
 			"0",
+			"--store",
+			dir,
 		);
 		expect(link.code).toBe(0);
-		const gone = await run(test, "find", "First", "--json");
+		const gone = await run(test, "find", "First", "--json", "--store", dir);
 		expect(JSON.parse(gone.out)).toEqual([]);
-		const status = await run(test, "status", "--json");
+		const db = new DatabaseSync(join(dir, "memlens.db"));
+		const target = db
+			.prepare(
+				"SELECT state, superseded_by FROM notes WHERE scope = ? AND pos = 0",
+			)
+			.get("project:acme/x");
+		db.close();
+		expect(target?.state).toBe("hidden");
+		expect(target?.superseded_by).not.toBeNull();
+		const status = await run(test, "status", "--json", "--store", dir);
 		expect(JSON.parse(status.out)).toMatchObject({ live: 1 });
 	});
 
