@@ -1,6 +1,6 @@
 # 0022. Plugin configuration
 
-Status: accepted. The preset key `profile` is optional, and its default is `default`.
+Status: accepted.
 
 ## Context
 
@@ -10,14 +10,15 @@ An agent scope inherits the scope of that preset revision. A separate service fo
 ## Decision
 
 The host entry supplies one `memlens` service and one store. The bundle patch inserts only the host row, with id `memlens`.
-An agent preset mounts `@memlens/dsh-plugin/preset` with row id `memlens/preset` and its `profile` key, which defaults to `default`.
-The exported plugin names remain `dsh-memlens` and `memlens/preset`.
+An agent preset mounts the module `@memlens/dsh-plugin/preset` with the row id `memlens/preset`.
+The preset key `profile` is optional, and its default is `default`. The exported plugin names are
+`dsh-memlens` and `memlens/preset`.
 
 The preset entry registers its settings in the shared service under the DSH scope key of its caller.
 An agent selects the nearest registration in its scope chain. Without a registration, the host uses the default profile.
 The preset owns its registration. The host owns the store, and each agent owns its cached memory inputs.
 
-The core owns the fallback TOML text. The CLI and plugin use that same text when the base file is absent.
+The core owns the defaults. A missing base file changes no value.
 The plugin rejects other file errors. The patch store path wins over the environment and the base file.
 
 The transform branch of each schema checks the raw value with the core rule and drops a rejected layer.
@@ -30,7 +31,7 @@ The plugin checks no model metadata. A model that holds no memory is a configura
 
 A service for each preset needs extra realms and cannot serve host consumers through ordinary agent lookup.
 A disabled preset row in the host bundle cannot work at host scope and gives the user an unusable entry.
-A copy of the CLI fallback text gives two sources for the same defaults.
+A copy of the defaults in each frontend gives two sources for one value.
 
 ## Consequences
 

@@ -1,7 +1,7 @@
 model {
   agent = actor 'LLM Agent' {
     description '
-      An agent session of the host. It reads and writes memory through the six tools.
+      An agent session of the host. It reads and writes memory through the memory tools.
     '
     -> memlens.tools 'calls the memory tools'
   }
@@ -99,7 +99,7 @@ model {
 
       tools = component 'Memory tools' {
         description '
-          The six tools: memory_map, memory_find, memory_note, memory_open,
+          The tools: memory_map, memory_find, memory_note, memory_open,
           memory_forget, and memory_review.
         '
       }

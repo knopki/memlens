@@ -4,7 +4,7 @@ Status: accepted. [0025 Context refresh](0025-context-refresh.md) replaces the r
 
 ## Context
 
-The agent needs one map at the start of a session. The text must stay stable for the prompt cache, and the harness gives a context slot.
+The agent needs one map at the start of a session. The harness gives a context slot.
 
 ## Decision
 
@@ -12,8 +12,10 @@ The slice is one `<memory>` block with the policy text, `<directions>`, and `<he
 
 ## Alternatives
 
-A system prompt section. `agent.inject` with a user message. Store a snapshot in memlens. Render the text on each turn.
+A system prompt section. `agent.inject` with a user message. Store a snapshot in memlens.
 
 ## Consequences
 
-The text survives a restart. A `redact` leaves the copy in the session history. A part above its budget merges built pairs, and one line then covers the raw lines that stay. The nudge is one line for the turn, and it is not part of the slice.
+The text survives a restart. A `redact` leaves the copy in the session history. A part above
+its budget merges pairs, and one line then covers the raw lines that stay. The nudge is one line of
+the turn, and it is not part of the memory text.

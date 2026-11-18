@@ -2,7 +2,7 @@
 # packages/dsh-plugin/tests/memory-context.test.ts,
 # packages/dsh-plugin/tests/console.test.ts and
 # packages/core/tests/store-proposals-repair.test.ts.
-# Decisions: ADR-0009, ADR-0012, ADR-0021.
+# Decisions: ADR-0009, ADR-0021, ADR-0027.
 Feature: Memory proposals
   A subagent proposes, and the store holds each proposal for the parent.
   A human in the console accepts or dismisses a proposal.

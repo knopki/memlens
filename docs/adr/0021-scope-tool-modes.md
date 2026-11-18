@@ -4,12 +4,9 @@ Status: accepted
 
 ## Context
 
-The slice holds the direction lines of the visible scopes and the frontier of the active scope. The
-other scopes have keys only. A range of another scope is not in the slice, so the agent has no
-address for `memory_open`. The tool lists the keys, and a key alone gives no next step. A subagent
-had no tool for the scopes, and its slice is a snapshot. A scope above the `directions` budget holds
-a comma list of keys and no summary. The name was `memory_scopes`, and
-this decision gives `memory_map`.
+The context text holds the direction lines of the visible scopes and the frontier of the active
+scope. The other scopes hold keys only, and a key alone gives no next step. A scope above the
+`directions` budget holds a comma list of keys and no summary.
 
 ## Decision
 

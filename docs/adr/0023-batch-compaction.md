@@ -5,14 +5,8 @@ Status: accepted.
 ## Context
 
 The compaction had three run forms: `parallel`, `batch`, and `auto`. The key `compaction.mode`
-selected one form. The form `auto` read the model family from `cacheTtl`. One batch call held six
-inputs. A broken batch answer made one retry, and then it used the form `parallel`.
-
-The customer removed the run form selection on 2026-11-16. One call now carries one batch of ready
-merge inputs. The customer set the count of one batch and the answer rules on the same day. The
-questions Q-524 and Q-525 held the remaining choices about the key `batch` and the removed key
-`mode`. The customer then removed the upper limit of the batch on the same day, and the key takes
-each whole number above zero.
+selected one form. The form `auto` read the model family from a cache value. A broken batch answer
+made one retry, and then it used the form `parallel`.
 
 ## Decision
 
@@ -48,8 +42,5 @@ The default batch fills one call, so the cost of one pass is easier to estimate.
 makes one call with more inputs, so one answer can be long and one call can cost more. A bad line
 costs only its own retry, and the good lines of the same answer stay. The retries stop at one input,
 and a range that still fails waits for the next pass.
-The plugin starts on the built-in defaults after a rejected base file, and a reload keeps the last
-valid configuration.
-
-The closed answers Q-063, Q-069, Q-078, and Q-079 describe the earlier design. This decision closes
-Q-524 and Q-525.
+A file that holds `mode` fails the check, and the user removes the key. The plugin starts on the
+built-in defaults after a rejected base file, and a reload keeps the last valid configuration.

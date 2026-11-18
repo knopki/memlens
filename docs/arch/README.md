@@ -2,7 +2,7 @@
 
 # memlens architecture
 
-The LikeC4 model of memlens: the context, the containers, the parts of the core and the plugin, the main use cases, and one deployment. Status: pilot. See ADR-0024 in docs/adr. Run `pnpm run arch` for the live preview. This file is generated: `pnpm run lint:docs` refreshes the diagrams. Module contracts own the local rules.
+The LikeC4 model of memlens: the context, the containers, the parts of the core and the plugin, the main use cases, and one deployment. Run `pnpm run arch` for the live preview. This file is generated: `pnpm run lint:docs` refreshes the diagrams. Module contracts own the local rules.
 
 ### Deployment: one laptop
 

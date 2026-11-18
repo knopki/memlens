@@ -15,6 +15,8 @@ Feature: Console surfaces
     Then the side panel holds a row with the id memlens
     And the main slot holds the page under that id
 
+  # No proving test found
+  @wip
   Scenario: The side panel holds one entry of the plugin
     When the plugin registers its surfaces
     Then the side panel holds one row of the plugin
@@ -43,13 +45,24 @@ Feature: Console surfaces
     And each action changes the record as the CLI does
     And a delete needs a confirmation
 
+  # No proving test found
+  @wip
   Scenario: The scope menu shows one flat list
     Given a view with visible scopes
     When a human opens the scope menu
     Then the menu holds one entry for each visible scope
     And the menu holds no tree, no group, and no filter field
 
+  # No proving test found
+  @wip
   Scenario: The scope menu holds each visible scope
     Given a profile with fifty scopes
     When a human opens the scope menu
     Then the menu holds fifty entries
+
+  # No proving test found.
+  @wip
+  Scenario: Each button keeps a contrast ratio of 4.5 to 1
+    Given the console in the light theme and in the dark theme
+    When a human measures each button
+    Then the ratio between its text and its background is 4.5 to 1 or more

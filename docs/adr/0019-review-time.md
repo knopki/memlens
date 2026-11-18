@@ -15,9 +15,10 @@ A record with no review time is never due.
 A record carries `modified_at`, the `at` of the latest event that affects it.
 `recorded_at` stays the write time.
 `modified_at` takes no part in the tree revision or the merge comparison, so a review makes no node dirty.
-The log keeps older date values, and the text order of the two forms gives one comparison.
+
 
 ## Consequences
 
-The projection schema version grows to 2. A store rebuilds its snapshot from the log on the first read.
-The queue can grow inside a day. The display of lists stays date only.
+The store holds a full time for each review date, and the due test is one comparison. A record with
+no review time is never due. A review moves `modified_at` and no node row. The display of a list
+stays date only.

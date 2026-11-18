@@ -1,6 +1,6 @@
 # 0018. Amend metadata
 
-Status: accepted. The customer gives the rule.
+Status: accepted.
 
 ## Context
 
@@ -12,8 +12,8 @@ A review can find that a note replaces an earlier note. The write that found thi
 
 An amendment carries optional `kind` and `supersedes` fields.
 The record takes the new kind. The write date, the review date, and the content stay.
-The supersedes of a record are the union of the note list and each amendment list.
-An amendment adds links and removes none.
+A supersede link sits on the target as `superseded_by`, and the target keeps its first link. One note
+holds one link, not a list. An amendment adds a link to a target that holds none.
 The store applies the note rules to each new target.
 The target is an ordinary note of the same scope.
 The target becomes hidden, and the first `superseded_by` value stays.
@@ -28,6 +28,6 @@ A separate metadata event. It adds an operation for two optional fields.
 ## Consequences
 
 The event schema gains two optional fields on one operation.
-The projection applies supersedes at the position of the amendment, so the target leaves the view at that step.
+The target leaves the view at the amendment, and the link stays on the target.
 The console form and the command line expose both fields.
 A kind change starts no review period and changes no tree node.
