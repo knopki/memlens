@@ -15,6 +15,10 @@
  *   A long address cuts the scope prefix and keeps the position.
  * @invariants A caption of the page head shares the baseline of its value, so the head reads as one
  *   line of text.
+ * @invariants A row caption keeps its width and its line, so a long list beside it never squeezes
+ *   the caption.
+ * @invariants The scope row shows each scope. A height limit belongs to the slice, not to the
+ *   scope list.
  * @invariants A dialog with no status text shows no status row, so the footer follows the last
  *   field.
  * @invariants The sheet is a text constant. Each surface renders it in a `style` element, so the
@@ -743,13 +747,16 @@ export const CONSOLE_CSS = `
 }
 .ml-console .ml-scoperow {
 	display: flex;
+	flex: 0 0 auto;
 	align-items: flex-start;
 	gap: 8px;
 	min-width: 0;
 	padding: 8px 12px 0;
 }
 .ml-console .ml-scoperow .ml-bar-title {
+	flex: 0 0 auto;
 	padding-top: 3px;
+	white-space: nowrap;
 }
 .ml-console .ml-scopelist {
 	display: flex;
@@ -757,8 +764,6 @@ export const CONSOLE_CSS = `
 	flex-wrap: wrap;
 	gap: 4px;
 	min-width: 0;
-	max-height: 84px;
-	overflow-y: auto;
 }
 .ml-console .ml-scope-tag {
 	display: inline-flex;

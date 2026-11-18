@@ -723,6 +723,7 @@ describe("tab body", () => {
 		);
 		expect(markup).toContain('class="ml-console ml-session"');
 		expect(markup).toContain('<span class="ml-title">Memory</span>');
+		expect(markup.match(/class="ml-chip"/g)?.length).toBe(1);
 		expect(markup).toContain('role="status"');
 		expect(markup).toContain("--dsw-alias-bg-base");
 		expect(markup).not.toContain('<button class="ml-screen');

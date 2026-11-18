@@ -2,8 +2,8 @@
  * #region moduleContract
  * @purpose Draw the memory state of one session, so a human reads the current slice, the profile,
  *   and the scopes of the session that owns the tab.
- * @scope The head line, the scope list, the slice, the runtime line, the status line, and the
- *   stylesheet. NOT: the slot registration, the transport, the console, and the page.
+ * @scope The head line, the scope list, the slice, the status line, and the stylesheet. NOT: the
+ *   slot registration, the transport, the console, and the page.
  * @invariants The tab takes its session id and its translate function from the slot props.
  * @invariants The tab reads and writes no page address and no history. The address stays in memory.
  * @invariants The tab renders the stylesheet in a `style` element, so the CSS leaves with the tab.
@@ -51,22 +51,11 @@ export function MemoryView({
 }
 // #endregion COMPONENT_MemoryView
 
-// #region FUNC_when
-/**
- * @purpose Give the local time text of one ISO instant.
- * @invariants An invalid instant gives the text as it comes.
- */
-function when(iso: string): string {
-	const time = new Date(iso);
-	return Number.isNaN(time.valueOf()) ? iso : time.toLocaleTimeString();
-}
-// #endregion FUNC_when
-
 // #region COMPONENT_SessionState
 /**
  * @purpose Hold one session console and draw its state.
  * @invariants The console starts once per mount. The first restore reads the state of the session.
- * @invariants The head names the profile and the saved snapshot of the session.
+ * @invariants The head names the profile of the session.
  * @invariants The status line is the only place for a failed call.
  */
 function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
@@ -80,8 +69,6 @@ function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 		void api.call.restore(DEFAULT_ROUTE);
 	}, [api]);
 	const model = state.model;
-	const runtime = state.runtime;
-	const saved = runtime?.snapshotSaved;
 	const profile = model?.profile || state.profile;
 	const scopes = model?.scopes ?? [];
 	return (
@@ -93,18 +80,6 @@ function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 					<span className="ml-bar-title">{t("profile")}</span>
 					<b>{profile || "—"}</b>
 				</span>
-				{saved !== undefined ? (
-					<span className="ml-chip">
-						<span className="ml-bar-title">{t("snapshotSaved")}</span>
-						<b>{saved ? t("savedState") : t("unsavedState")}</b>
-					</span>
-				) : null}
-				{runtime?.materializedAt ? (
-					<span className="ml-chip">
-						<span className="ml-bar-title">{t("materializedAt")}</span>
-						<b>{when(runtime.materializedAt)}</b>
-					</span>
-				) : null}
 			</div>
 			{model ? (
 				<>
