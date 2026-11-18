@@ -162,7 +162,7 @@ The `[scope_default]` section maps one working context to its active scope key.
 
 | Key      | Type      | Default         | Effect                              |
 | -------- | --------- | --------------- | ----------------------------------- |
-| `default` | scope key | `project:misc` | The key of a profile without a session context. |
+| `default` | scope key | `project:misc` | The key of the last step of the automatic list. |
 | `rules`  | rule list | `[]`            | The ordered rules. The first match wins. |
 
 Each rule is one table with the key `match`:
@@ -176,7 +176,7 @@ Each rule is one table with the key `match`:
 In a `git_remote` key, the part `{repo}` takes the repository name of the remote in lowercase.
 
 A context without a matching rule gets its key from the automatic list. The list runs: the git
-remote, the repository name, the workspace name, the directory name, then `project:misc`.
+remote, the repository name, the workspace name, the directory name, then the key of `default`.
 
 ### The nudge section
 

@@ -16,7 +16,7 @@
  *    file.
  *  - Each runtime owns one row store and the visible scopes of its selected profile.
  *  - Scope rules take precedence over the automatic list: the Git remote, the repository name,
- *    the directory name, and the fallback `project:misc`.
+ *    the directory name, and the fallback key of `scope_default.default`.
  *  - The Git remote is origin when it exists, and the first remote otherwise.
  * @usecases
  *  - Open: command => gives --store and a profile name => gets one runtime and closes it
@@ -182,7 +182,10 @@ export function cliScopeResult(
 	};
 	const result = activeScope(base.scope_default, subject);
 	if (result.rule !== null) return { ...result, source: "rule" };
-	const automatic = automaticScope({ ...subject, gitRemote: remote });
+	const automatic = automaticScope(
+		{ ...subject, gitRemote: remote },
+		base.scope_default.default,
+	);
 	debug("Scope selected automatically", {
 		event: "scope",
 		key: automatic.key,

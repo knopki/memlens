@@ -260,6 +260,20 @@ describe("automaticScope", () => {
 		});
 	});
 
+	it("takes the stated fallback at the last step", () => {
+		expect(automaticScope({}, "user:notes")).toEqual({
+			key: "user:notes",
+			source: "default",
+		});
+	});
+
+	it("keeps each detection step before the stated fallback", () => {
+		expect(automaticScope({ repo: "memlens" }, "user:notes")).toEqual({
+			key: "project:memlens",
+			source: "git",
+		});
+	});
+
 	it("takes the remote before the other inputs", () => {
 		expect(
 			automaticScope({

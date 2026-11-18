@@ -224,6 +224,22 @@ describe("pluginActiveScope", () => {
 		expect(pluginActiveScope(base, repo)).toBe("project:demo");
 	});
 
+	it("uses the configured default in a directory that names no scope", () => {
+		writeBase(BASE_CONFIG);
+		const base = loadPluginBase(env());
+		expect(pluginActiveScope(base, join(rootDir, ".hidden"))).toBe(
+			"user:notes",
+		);
+	});
+
+	it("skips a workspace title that names no scope", () => {
+		writeBase(BASE_CONFIG);
+		const base = loadPluginBase(env());
+		expect(
+			pluginActiveScope(base, join(rootDir, "plain"), "ws-1", ".My-Workspace"),
+		).toBe("project:plain");
+	});
+
 	it.skipIf(!hasGit)(
 		"falls back to the repository name after an unmatched rule",
 		() => {

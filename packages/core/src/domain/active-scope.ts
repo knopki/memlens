@@ -13,7 +13,7 @@
  * @invariants
  *  - Each match gives a valid scope key, or falls through to the next rule or the default.
  *  - The automatic list applies after the rules: the git remote, the repository name, the
- *    workspace name, the directory name, then `project:misc`.
+ *    workspace name, the directory name, then the fallback key of the caller.
  *  - The remote key keeps the full path after the host, in lowercase.
  *  - The visible list holds only scope keys that a profile glob matches, in the given order.
  *  - The join adds the literal key of the active scope when no profile glob matches it.
@@ -74,7 +74,7 @@ export interface AutomaticScope {
 	source: AutomaticSource;
 }
 
-/** The last key of the automatic list. */
+/** The fallback key when the caller states none. */
 const FALLBACK_SCOPE_KEY = "project:misc" as ScopeKey;
 
 // #region FUNC_repoName
@@ -130,15 +130,19 @@ export function activeScope(
 /**
  * @purpose Apply the automatic list to one subject, so a context with no matching rule gets a key.
  * @invariants The list runs in order: git remote, repository name, workspace name, directory name,
- *   then `project:misc`.
+ *   then the fallback key.
  * @invariants An ssh, scp, or https remote gives `project:<path after the host>`, and the path
  *   keeps each nested group. A local remote gives no key.
  * @invariants Each name takes the lowercase form, and an invalid key skips its step.
- * @ensures The result names its source, and the last step gives `project:misc`.
+ * @ensures The result names its source, and the last step gives the fallback key.
  * @param subject - The collected inputs of the context.
+ * @param fallback - The key of the last step, from the `default` key of the configuration.
  * @returns The key and the source of the first step that gives a valid key.
  */
-export function automaticScope(subject: ScopeSubject): AutomaticScope {
+export function automaticScope(
+	subject: ScopeSubject,
+	fallback: ScopeKey = FALLBACK_SCOPE_KEY,
+): AutomaticScope {
 	const remote = subject.gitRemote;
 	if (remote !== null && remote !== undefined) {
 		const key = remoteScope(remote);
@@ -150,7 +154,7 @@ export function automaticScope(subject: ScopeSubject): AutomaticScope {
 	if (workspace !== null) return selected(workspace, "workspace");
 	const directory = namedScope(dirName(subject.path));
 	if (directory !== null) return selected(directory, "path");
-	return selected(FALLBACK_SCOPE_KEY, "default");
+	return selected(fallback, "default");
 }
 // #endregion FUNC_automaticScope
 

@@ -145,7 +145,10 @@ export function pluginActiveScope(
 	};
 	const selected = activeScope(base.scope_default, subject);
 	return selected.rule === null
-		? automaticScope({ ...subject, gitRemote: remote }).key
+		? automaticScope(
+				{ ...subject, gitRemote: remote },
+				base.scope_default.default,
+			).key
 		: selected.key;
 }
 // #endregion FUNC_pluginActiveScope

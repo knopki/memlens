@@ -304,7 +304,7 @@ describe("Memlens host service", () => {
 		expect(root.memlens.forAgent(agent).scope).toBe("project:missing");
 	});
 
-	it("uses the built-in fallback key when a session has no directory", async () => {
+	it("uses the configured default key when a session has no directory", async () => {
 		const { root } = await composition();
 		const agent = subject(root);
 		Object.assign(agent, {

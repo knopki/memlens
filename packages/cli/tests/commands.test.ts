@@ -219,6 +219,16 @@ describe("@memlens/cli commands", () => {
 		);
 	});
 
+	it("uses the configured default in a directory that names no scope", async () => {
+		const test = makeEnv(WORK_CONFIG);
+		const hidden = join(test.home, ".hidden");
+		mkdirSync(hidden);
+		test.io = { ...test.io, cwd: hidden };
+		expect((await run(test, "scope")).out).toContain(
+			"user:notes\nrule: default",
+		);
+	});
+
 	it("answers a profile that the base file does not name", async () => {
 		const test = makeEnv();
 		const repo = join(test.home, "ghost-profile");
