@@ -9,7 +9,7 @@
  * @invariants The fake session supplies the derived history only. The harness owns the real log.
  * @invariants The redaction test uses the real session log, so it shows what the derived history
  * keeps after a store redaction.
- * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-llm, @deepseek-ai/dsh-session,
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-llm, @deepseek-ai/dsh-session
  * @deepseek-ai/dsh-scope, @deepseek-ai/dsh-system-prompt, @memlens/core,
  * ../src/memory-context.ts, ../src/service.ts
  * @keywords test, context, snapshot, restore, compaction, subagent, redact

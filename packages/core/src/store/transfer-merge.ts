@@ -4,7 +4,7 @@
  * @purpose Join one incoming note with the local row through the five merge channels, so no update is lost.
  * @scope The lifecycle, content, review, and supersede channels; the version clock text.
  *  NOT: the transfer text and the store write.
- * @dependencies node:sqlite, store/clock.ts, store/transfer-format.ts for the row shapes.
+ * @dependencies USES API: node:sqlite
  * @keywords transfer, merge, channel, clock, version, content, review, tombstone
  * #endregion moduleContract
  */

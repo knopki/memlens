@@ -4,7 +4,7 @@
  * @purpose Read and change the stored note row, so each note write keeps the row and the index in step.
  * @scope The row shape, the index row, the slot open, the row read, the duplicate test, and the body limits.
  *  NOT: the operations, the transactions, the journal, and the nodes.
- * @dependencies node:sqlite, store/slots.ts, store/nodes.ts, domain/note-body.ts, domain/scope.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords note, row, slot, fts, index, refs, duplicate, body
  * #endregion moduleContract
  */

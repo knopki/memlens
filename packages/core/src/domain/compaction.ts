@@ -9,7 +9,6 @@
  * state, and a restart clears them: candidates always derive from the current tree.
  * @invariants A partial, malformed, or rejected batch answer keeps its good lines and retries each
  * unresolved range in a batch half the size, down to one range. A range that still fails stays dirty.
- * @dependencies store/build.ts, store/store.ts, domain/merge-line.ts.
  * @keywords compaction, merge, batch, retry, rate, pass, node
  * #endregion moduleContract
  */

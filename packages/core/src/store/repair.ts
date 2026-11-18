@@ -6,7 +6,7 @@
  *        NOT: the note rows, the schema, or the clock.
  * @invariants The scan runs in one read transaction. The fixes run in one publish call.
  * @invariants A clean store returns no action. The check changes no row of a clean store.
- * @dependencies node:sqlite, store/store.ts, store/nodes.ts, store/rows.ts, store/types.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords repair, check, node, validity, fts, drift, journal, prune, retention
  * #endregion moduleContract
  */

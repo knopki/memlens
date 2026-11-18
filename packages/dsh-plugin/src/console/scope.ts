@@ -11,7 +11,7 @@
  * @invariants The session supplies the active scope and the profile of a session request. A profile
  *   request names its profile, and the host file gives its fallback scope.
  * @invariants A request whose store is not open resolves its scope from no row.
- * @dependencies USES API: @memlens/core, ../service.ts, ../tools/shared.ts
+ * @dependencies USES API: @memlens/core
  * @keywords console, scope, profile, target, kind, request, field
  * #endregion moduleContract
  */

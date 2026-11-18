@@ -4,7 +4,6 @@
  * model of the page.
  * @scope The view, the job, the record row, the selection, the opened target, the theme, and the
  * history step. NOT: the markup and the host calls.
- * @dependencies USES TYPE: the console model, the open reads, the store types, and the tree types.
  * @keywords state, view, job, selection, theme, step, type
  * #endregion moduleContract
  */

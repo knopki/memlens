@@ -12,7 +12,7 @@
  * @invariants Each command closes the runtime that it opens.
  * @usecases
  *  - Flag: command => gives one flag name => gets one typed value
- * @dependencies USES API: @memlens/core, args.ts, runtime.ts
+ * @dependencies USES API: @memlens/core
  * @keywords command, io, flag, scope, runtime, answer, json
  * #endregion moduleContract
  */

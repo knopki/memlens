@@ -8,7 +8,6 @@
  * @invariants A hit body goes into text nodes. The words of the query mark the matches.
  * @invariants A hit address splits into the scope prefix and the position, so the column cuts the
  * prefix and keeps the position.
- * @dependencies USES: the inspector, the primitives, the console api, and the kind name helper.
  * @keywords search, find, hit, filter, highlight, scope, react
  * #endregion moduleContract
  */

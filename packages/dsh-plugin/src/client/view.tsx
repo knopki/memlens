@@ -11,7 +11,7 @@
  * @invariants The tab shows no screen control. The page holds the screens of the console.
  * @invariants A store that is not open gives the stated error in place of the slice. The tab probes
  *   the host at each retry, and the view load replaces that error when the store opens.
- * @dependencies USES: the session console, the console stylesheet, and the message table.
+ * @dependencies USES API: @memlens/ui, react
  * @keywords client, tab, view, memory, session, slice, profile, scope, status
  * #endregion moduleContract
  */

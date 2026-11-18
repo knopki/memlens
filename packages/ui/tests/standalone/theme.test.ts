@@ -4,7 +4,6 @@
  * the choice and follows the system setting while the choice is system.
  * @scope The three choices and the attribute of the document root.
  * @invariants Each test supplies one system setting.
- * @dependencies USES: the theme adapter.
  * @keywords test, theme, dark, light, system, attribute
  * #endregion moduleContract
  */

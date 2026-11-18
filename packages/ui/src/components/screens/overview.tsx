@@ -5,7 +5,6 @@
  * calls and the address.
  * @invariants Keep a card for a scope with no live note.
  * @invariants Quote the whole slice as text. The slice holds no height limit and no inner scroll.
- * @dependencies USES: the button and panel primitives and the console api.
  * @keywords overview, scope, card, slice, budget, react
  * #endregion moduleContract
  */

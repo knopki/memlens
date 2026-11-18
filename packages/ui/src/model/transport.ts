@@ -7,7 +7,7 @@
  * @invariants A read sends no body. An action sends a JSON object.
  * @invariants A failed answer gives the message of its error field. An answer that is not JSON gives
  * a status message.
- * @dependencies USES API: the CLI host routes.
+ * @dependencies USES API: the CLI host HTTP routes
  * @keywords transport, http, port, fetch, json, error
  * #endregion moduleContract
  */

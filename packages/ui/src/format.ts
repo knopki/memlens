@@ -5,7 +5,6 @@
  * @scope The record address, the range id, the parsed range, the line text, and the date span. NOT:
  * the markup, the store reads, the state, and the localised kind name.
  * @invariants A range id holds the start and the end of the range.
- * @dependencies USES TYPE: the tree types.
  * @keywords address, range, line, text
  * #endregion moduleContract
  */

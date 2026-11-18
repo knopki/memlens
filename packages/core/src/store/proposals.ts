@@ -6,7 +6,7 @@
  *        NOT: the note write of an accepted payload, rendering, or transport.
  * @invariants One publish call writes each change. A closed row keeps no payload.
  * @invariants A closed or stale id changes no row.
- * @dependencies node:sqlite, store/store.ts, store/types.ts, types/errors.ts, types/primitives.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords proposal, propose, pending, accept, dismiss, expire, sweep, scope
  * #endregion moduleContract
  */

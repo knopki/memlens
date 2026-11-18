@@ -6,7 +6,6 @@
  * @invariants The file names each module that a host uses. A host takes no other module.
  * @invariants The modules of this package import each other by a relative path, so the package holds
  *   no import of itself.
- * @dependencies USES: the modules of this package.
  * @keywords console, package, surface, entry, host, barrel
  * #endregion moduleContract
  */

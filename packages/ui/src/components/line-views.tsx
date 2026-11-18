@@ -5,7 +5,6 @@
  * @scope The kind labels, the legend, and the children panel. NOT: the line row and the open calls.
  * @invariants Each text comes from the message table of the api.
  * @invariants The panel states the count of its rows. An empty panel states that fact.
- * @dependencies USES: the panel primitive and the slice line types.
  * @keywords legend, children, line, kind, panel, react
  * #endregion moduleContract
  */

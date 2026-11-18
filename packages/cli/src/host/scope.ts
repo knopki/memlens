@@ -12,7 +12,7 @@
  * @invariants A scope outside the profile gives NotAllowed.
  * @usecases
  *  - View: client => gives no scope => gets the active scope or the first listed scope
- * @dependencies USES API: @memlens/core, commands.ts, runtime.ts, host/http.ts
+ * @dependencies USES API: @memlens/core
  * @keywords ui, scope, profile, target, kind, resolve
  * #endregion moduleContract
  */

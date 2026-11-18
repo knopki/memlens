@@ -13,7 +13,6 @@
  * writes no busy flag and no status text, so it does not block or clear an action.
  * @invariants One running watch holds one timer. A stop clears the timer and drops each later
  * answer of the stopped watch.
- * @dependencies USES: the store, the port, the storage, the route format, and the message table.
  * @keywords controller, action, busy, generation, status, dialog, reset
  * #endregion moduleContract
  */

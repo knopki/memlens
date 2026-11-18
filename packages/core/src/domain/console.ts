@@ -7,7 +7,6 @@
  * @invariants The model holds the scopes of the profile only, and each value is plain JSON.
  * @invariants The frontier holds the slice lines of the selected scope, in the same order and with
  * the same fold as the text of the slice. A range line hides the notes inside that range.
- * @dependencies store/reads.ts, store/view.ts, domain/context.ts, domain/reads.ts, domain/tree.ts
  * @keywords console, model, frontier, catalog, directions, review, candidates, scope
  * #endregion moduleContract
  */

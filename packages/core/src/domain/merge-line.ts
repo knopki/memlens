@@ -6,7 +6,6 @@
  * answer, and the shrink check.
  *  NOT: the triggers, the timers, the model service, and the store locks.
  * @invariants A line holds at most 640 characters, and a cut text takes the truncated flag.
- * @dependencies domain/time.ts, domain/tree.ts, types/tree.ts.
  * @keywords merge, line, retelling, prompt, batch, parse, retry, summary
  * #endregion moduleContract
  */

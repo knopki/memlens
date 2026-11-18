@@ -4,7 +4,6 @@
  * @purpose Build summary cache rows from consistent child snapshots.
  * @scope Candidate ranges, build reads, joins, and conditional publication.
  * @invariants A model call runs outside the store transaction.
- * @dependencies store/view.ts, store/store.ts, domain/tree.ts.
  * #endregion moduleContract
  */
 

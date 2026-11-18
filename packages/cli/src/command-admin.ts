@@ -7,7 +7,7 @@
  * @scope
  *  - The commands status, check, and repair.
  *  - NOT: the repair rules of the store and the exit code mapping.
- * @dependencies USES API: @memlens/core, commands.ts; READS: the store directory
+ * @dependencies USES API: @memlens/core; READS: the store directory
  * @keywords status, check, repair, admin, cli
  * #endregion moduleContract
  */

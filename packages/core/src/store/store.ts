@@ -8,7 +8,7 @@
  * @invariants A commit that reports no success reports no value.
  * @invariants The wait of a lock blocks the event loop, so only another process can release the lock.
  * @invariants The truncating checkpoint is best effort. A busy or failed result is a state, not an error.
- * @dependencies node:sqlite, store/schema.ts, store/clock.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords store, transaction, publish, clock, journal, checkpoint, close
  * #endregion moduleContract
  */

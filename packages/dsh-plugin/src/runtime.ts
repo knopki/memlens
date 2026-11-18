@@ -4,7 +4,7 @@
  * @scope Configuration file access, store path precedence, and Git inputs for core scope rules.
  * @invariants An absent or rejected base file selects the shared fallback. Other file errors propagate.
  * @invariants The patch store path wins over the environment and the base file. An empty selected path is an error.
- * @dependencies node:fs, node:child_process, node:path, @memlens/core.
+ * @dependencies USES API: node:fs, node:child_process, node:path, @memlens/core
  * @keywords plugin, configuration, scope, git, store, paths
  * #endregion moduleContract
  */

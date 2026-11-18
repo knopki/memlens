@@ -6,7 +6,7 @@
  *  - Each tool answer against its declared shape, the profile checks, the proposals, and the parent report.
  * @invariants Each call goes through the real tool registration of the agent scope.
  * @invariants Each answer passes the output schema of its tool.
- * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @deepseek-ai/dsh-system-prompt, @deepseek-ai/dsh-tools, @memlens/core, ../src/service.ts, ../src/memory-tools.ts
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @deepseek-ai/dsh-system-prompt, @deepseek-ai/dsh-tools, @memlens/core
  * @keywords test, memlens, tools, subagent, proposal, scope, map, review
  * #endregion moduleContract
  */

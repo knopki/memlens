@@ -10,7 +10,7 @@
  *  - NOT: the action route, the transport, and the scope rules.
  * @usecases
  *  - View: client => asks for one scope => gets the console model
- * @dependencies USES API: @memlens/core, host/http.ts, host/scope.ts
+ * @dependencies USES API: @memlens/core
  * @keywords ui, view, search, open, catalog, read
  * #endregion moduleContract
  */

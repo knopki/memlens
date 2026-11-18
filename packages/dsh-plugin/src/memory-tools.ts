@@ -11,10 +11,7 @@
  * @usecases
  *  - Child write: subagent => gives one note => gets a proposal id for its parent
  *  - Parent report: child disposal => reads its open proposals => injects one line for each into the parent
- * @dependencies
- *  USES API: @deepseek-ai/dsh-tools, @deepseek-ai/dsh-llm
- *  READS: agent.session.header
- *  WRITES: the parent inbox
+ * @dependencies USES API: node:util, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-llm, @deepseek-ai/dsh-tools, @memlens/core; READS: agent.session.header; WRITES: the parent inbox
  * @keywords memlens, tools, subagent, proposal, report, scope, registration
  * #endregion moduleContract
  */

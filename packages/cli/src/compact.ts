@@ -11,7 +11,7 @@
  * @usecases
  *  - Job: user => runs compact => gets the merge inputs of the dirty ranges
  *  - Answer: user => gives one answer file => gets the built nodes
- * @dependencies USES API: @memlens/core, commands.ts, runtime.ts; WRITES: the store directory
+ * @dependencies USES API: @memlens/core; WRITES: the store directory
  * @keywords compact, tree, merge, join, answer, node, cli
  * #endregion moduleContract
  */

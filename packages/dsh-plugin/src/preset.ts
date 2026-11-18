@@ -3,7 +3,7 @@
  * @purpose Let one DSH agent preset select its memory profile without replacing the shared host store.
  * @scope The preset entry, schema, dependency declaration, and scoped configuration registration.
  * @invariants The host supplies the store and base configuration. The preset supplies no service instance.
- * @dependencies @deepseek-ai/cordis, @memlens/core, config.ts, service.ts.
+ * @dependencies USES API: @deepseek-ai/cordis, @memlens/core
  * @keywords preset, configuration, profile, memlens, registration
  * #endregion moduleContract
  */

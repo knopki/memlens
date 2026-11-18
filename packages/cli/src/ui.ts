@@ -11,7 +11,7 @@
  * @invariants Each request opens its selected profile and closes its store, including on failure.
  * @usecases
  *  - Start: user => runs memlens ui => gets the console address
- * @dependencies USES API: @memlens/core, args.ts, commands.ts, host/, runtime.ts
+ * @dependencies USES API: @memlens/core
  * @keywords ui, console, loopback, http, route, asset, host
  * #endregion moduleContract
  */

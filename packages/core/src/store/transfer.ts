@@ -7,8 +7,7 @@
  * @invariants The import writes one publish transaction, so a failure leaves no partial copy.
  * @invariants A tombstone travels with no content. A cleared row holds no content after the merge,
  *  and no proposal payload targets it.
- * @dependencies node:sqlite, store/store.ts, store/slots.ts, store/nodes.ts,
- *  store/transfer-format.ts, store/transfer-merge.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords transfer, jsonl, export, import, merge, row, slot, index
  * #endregion moduleContract
  */

@@ -11,7 +11,6 @@
  * @invariants Each command accepts the global flag --store.
  * @usecases
  *  - Parse: command => gives argv and usage => gets positional values and flags or a Usage error
- * @dependencies USES API: @memlens/core errors
  * @keywords args, flags, usage, parse, cli
  * #endregion moduleContract
  */

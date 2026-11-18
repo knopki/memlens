@@ -7,8 +7,7 @@
  * @invariants The address decides the first place of a visit.
  * @invariants The stored language and theme survive a reload. A blocked storage gives the browser
  * language and the system theme.
- * @dependencies USES: React, the console model, the HTTP port, the address adapter, the storage
- * adapter, and the theme adapter.
+ * @dependencies USES API: react-dom
  * @keywords entry, standalone, bootstrap, store, port, api, restore
  * #endregion moduleContract
  */

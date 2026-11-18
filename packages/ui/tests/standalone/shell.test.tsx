@@ -5,7 +5,6 @@
  * @scope The header pickers, the rail, the heading, the main element, the footer, and the status
  * line.
  * @invariants Each test renders one fixed console state and one fixed api.
- * @dependencies USES: the shell, the server renderer, and the message table.
  * @keywords test, shell, standalone, header, rail, heading, footer, status
  * #endregion moduleContract
  */

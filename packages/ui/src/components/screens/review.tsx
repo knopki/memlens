@@ -7,8 +7,6 @@
  * @invariants The kind filter keeps one kind in both lists. The next list states its shown count and
  * the count before the cap.
  * @invariants A note body goes into a text node.
- * @dependencies USES: the record actions of the inspector, the primitives, the console api, and the
- * kind name helper.
  * @keywords review, due, next, period, kind, note, actions, react
  * #endregion moduleContract
  */

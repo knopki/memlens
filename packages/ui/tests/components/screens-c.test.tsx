@@ -7,7 +7,6 @@
  *   stylesheet.
  * @invariants Each test reads the static markup of one component against one fixed state.
  * @invariants The message function is the real English table, so the test reads the user text.
- * @dependencies USES: React server rendering, the components, and the console fakes.
  * @keywords test, maintenance, compaction, inspector, runtime, markup
  * #endregion moduleContract
  */

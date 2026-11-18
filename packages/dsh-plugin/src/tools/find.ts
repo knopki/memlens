@@ -4,7 +4,7 @@
  * @scope The memory_find schema, the scope choice, the filters, and the hit answer.
  *  NOT: the index rules, the profile check, and the registration.
  * @invariants A scope outside the profile gives NotAllowed, and the profile hides each other scope.
- * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools; shared.ts
+ * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools
  * @keywords memlens, tool, find, search, scope, hit
  * #endregion moduleContract
  */

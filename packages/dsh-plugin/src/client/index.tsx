@@ -9,8 +9,7 @@
  * @invariants The tab mounts in the slot `conversation.view` with a session id and a translate
  *   function.
  * @invariants The client entry imports no harness client package. It holds its own contracts.
- * @dependencies USES API: the slot service, the locale service, and the Remote service of the
- * harness Web page.
+ * @dependencies USES API: @memlens/ui
  * @keywords client, plugin, panel, tab, sidebar, slot, memory, locale, remote
  * #endregion moduleContract
  */

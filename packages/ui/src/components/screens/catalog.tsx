@@ -7,7 +7,6 @@
  * @invariants A range line opens its two halves in the panel beside the list. A line over one scope
  * opens the tree of that scope.
  * @invariants The list takes the legend of the two kinds that a catalog line can hold.
- * @dependencies USES: the line views, the primitives, the console api, and the format helpers.
  * @keywords catalog, direction, range, scope, budget, children, react
  * #endregion moduleContract
  */

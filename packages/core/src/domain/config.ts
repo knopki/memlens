@@ -15,7 +15,7 @@
  * @usecases
  *  - Load: caller => gives TOML text and a default store path => gets the base layer
  *  - Resolve: caller => gives three layers => gets one resolved configuration
- * @dependencies USES API: smol-toml, node:path, domain/config-read.ts, domain/config-types.ts
+ * @dependencies USES API: smol-toml, node:path
  * @rationale
  *  - Q: Why do the readers fill the defaults?
  *    A: Each layer leaves the reader complete, so the merge works on plain spreads.

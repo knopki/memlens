@@ -5,7 +5,7 @@
  * @scope The covering delete of the write path, the range delete of a shift, and the three validity rules.
  * @invariants A node covers the slot range `[start, start + 2^level)` of one scope.
  * @invariants A write that changes a covered slot deletes the node in the same transaction, so the read keys guard against a missed path.
- * @dependencies node:sqlite, store/types.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords node, summary, cover, delete, validity, key, half
  * #endregion moduleContract
  */

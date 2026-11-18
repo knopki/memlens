@@ -5,7 +5,6 @@
  * @scope The page state, the store port, the storage, the API, the actions, the dialog, and the
  * host runtime state. NOT: the behaviour, the transport, the markup, and the styles.
  * @invariants This module holds types and interfaces only. It holds no implementation.
- * @dependencies USES TYPE: the console model, the route, the message table, and the store types.
  * @keywords console, model, contract, state, port, action, dialog, runtime
  * #endregion moduleContract
  */
@@ -231,7 +230,6 @@ export interface ConsoleRuntime {
  * @invariants The port gives the shapes of the CLI routes view, search, open, catalog, and action.
  * @usecases
  *  - View: controller => asks for one scope => gets the console model
- * @dependencies USES API: the CLI host routes and the harness Remote service.
  * @keywords port, transport, view, search, open, catalog, action, runtime
  */
 export interface StorePort {

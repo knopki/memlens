@@ -9,7 +9,7 @@
  *   materialization time until its next snapshot.
  * @invariants The saved state comes from the derived history. The materialization time comes from
  *   the event time. The plugin sets, starts, or changes no timer.
- * @dependencies USES API: @memlens/core, @deepseek-ai/cordis, scope.ts, worker.ts, ../service.ts
+ * @dependencies USES API: @memlens/core, @deepseek-ai/cordis
  * @keywords console, status, snapshot, materialization, trigger, compaction, backoff
  * #endregion moduleContract
  */

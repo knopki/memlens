@@ -4,7 +4,7 @@
  * @purpose Read and write the portable note text of one transfer file, so an import validates the whole file first.
  * @scope The JSONL header, note line, and trailer; the field parsers; the row shapes.
  *  NOT: the merge channels and the write of the store.
- * @dependencies node:crypto, types/errors.ts, types/primitives.ts.
+ * @dependencies USES API: node:crypto
  * @keywords transfer, jsonl, export, parse, digest, row, tombstone, header, trailer
  * #endregion moduleContract
  */

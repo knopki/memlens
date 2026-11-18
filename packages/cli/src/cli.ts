@@ -14,7 +14,7 @@
  *    refusal.
  * @usecases
  *  - Command: user => runs the binary => gets the usage text or a result
- * @dependencies USES API: @memlens/core, args.ts, commands.ts, command-*.ts, compact.ts, ui.ts
+ * @dependencies USES API: @memlens/core
  * @keywords cli, terminal, memlens, dispatch, usage, exit code
  * #endregion moduleContract
  */

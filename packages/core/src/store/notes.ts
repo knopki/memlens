@@ -7,7 +7,7 @@
  * @invariants One publish call owns one transaction.
  * @invariants The index changes before the content row, because the external-content table needs the old values.
  * @invariants A write that changes a covered slot deletes each node over that slot and over the moved tail.
- * @dependencies node:sqlite, store/store.ts, store/note-rows.ts, store/nodes.ts, domain/ulid.ts, types/errors.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords note, amend, hide, redact, review, fts, journal, slot, supersede
  * #endregion moduleContract
  */

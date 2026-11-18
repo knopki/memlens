@@ -10,7 +10,7 @@
  *  - NOT: the Markdown format and the store rules.
  * @usecases
  *  - Export: user => gives a format and a directory => gets one written file for each scope
- * @dependencies USES API: @memlens/core, commands.ts, export-md.ts; WRITES: the export directory
+ * @dependencies USES API: @memlens/core; WRITES: the export directory
  * @keywords export, import, markdown, jsonl, transfer, cli
  * #endregion moduleContract
  */

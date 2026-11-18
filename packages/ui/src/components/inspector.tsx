@@ -7,7 +7,6 @@
  * @invariants The note body and its document go into text nodes, never into markup.
  * @invariants A page without a selection renders no inspector.
  * @invariants The component holds no style, no transport, and no address.
- * @dependencies USES: the primitives, the kind name helper, the message table, and the console API.
  * @keywords inspector, note, provenance, action, delete, amend, component
  * #endregion moduleContract
  */

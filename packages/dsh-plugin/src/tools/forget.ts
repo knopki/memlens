@@ -4,7 +4,7 @@
  * @scope The memory_forget schema, the target read, the hide, and the hide proposal.
  *  NOT: the row rules and the console decision.
  * @invariants The answer is the empty object, and a proposal gives the same answer.
- * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools; shared.ts
+ * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools
  * @keywords memlens, tool, forget, hide, proposal, scope
  * #endregion moduleContract
  */

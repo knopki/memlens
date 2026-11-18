@@ -14,7 +14,7 @@
  *    The model learns the state from the tool errors, and the surface shows the state.
  *  - An `off` subagent gets no registration.
  *  - The registration ends with the agent context.
- * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-system-prompt, @memlens/core.
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-system-prompt, @memlens/core
  * @keywords context, snapshot, runtime-context, restore, compaction, subagent
  * #endregion moduleContract
  */

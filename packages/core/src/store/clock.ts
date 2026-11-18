@@ -5,7 +5,7 @@
  * @scope The version text, the store identity, and the tick of a local write.
  * @invariants A version is `physical|counter|store_id`. Text comparison gives the order, and the clock never decreases.
  * @invariants Store id comparison breaks a tie, so two stores never issue the same version.
- * @dependencies node:crypto for the store identity.
+ * @dependencies USES API: node:crypto
  * @keywords clock, version, hlc, tick, receive, store id
  * #endregion moduleContract
  */

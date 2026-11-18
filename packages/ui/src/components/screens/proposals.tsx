@@ -8,8 +8,6 @@
  * @invariants A decision calls the API intent and holds no state of its own.
  * @invariants The table lists the proposals of the view scope only, so the list follows the
  *   selected scope. A line below the table states the count of the other scopes.
- * @dependencies USES: the panel, table, and button primitives, the console api, and the message
- * keys.
  * @keywords proposal, waiting, accept, dismiss, decision, react
  * #endregion moduleContract
  */

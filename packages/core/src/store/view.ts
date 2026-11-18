@@ -5,7 +5,7 @@
  * @scope The note rows and the node rows of one scope, the validity test against those rows, the join text,
  * and the slice lines. NOT: compaction, the model call, the write path, and the store lock.
  * @invariants A read of the view uses the one handle of the caller and opens no long transaction.
- * @dependencies node:sqlite, store/types.ts for the row shapes, domain/tree.ts for the fold and the line limit.
+ * @dependencies USES API: node:sqlite
  * @usecases Slice: console => loads the view of one scope => gets the frontier lines
  * @keywords view, frontier, slice, node, note, validity, join, temporary, slot
  * #endregion moduleContract

@@ -8,7 +8,7 @@
  * @invariants The answer fields and the defaults match the standalone console.
  * @usecases
  *  - View: tab => asks for one scope => gets the console model
- * @dependencies USES API: @memlens/core, scope.ts, ../tools/shared.ts
+ * @dependencies USES API: @memlens/core
  * @keywords console, view, search, open, catalog, read
  * #endregion moduleContract
  */

@@ -8,7 +8,6 @@
  * @invariants A key outside the layer type is an error at load.
  * @invariants A scope key outside the two-segment shape is an error at load, except the `{repo}` placeholder of a `git_remote` rule.
  * @invariants The compaction batch is a whole number above 0. It has no upper limit.
- * @dependencies types/errors.ts, domain/scope.ts, domain/config-types.ts.
  * @keywords config, read, validate, expect, layer, base, patch, preset, rule
  * #endregion moduleContract
  */

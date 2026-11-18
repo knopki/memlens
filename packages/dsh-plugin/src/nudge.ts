@@ -7,7 +7,7 @@
  * @invariants One nudge resets both counters. A successful note write resets both counters.
  * @invariants The line holds `{n}`, and the count of that counter takes its place.
  * @invariants The line goes through injected context only. The memory snapshot holds none of it.
- * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-llm (types), @deepseek-ai/dsh-tools (types), @memlens/core.
+ * @dependencies USES API: @deepseek-ai/cordis, @memlens/core
  * @keywords nudge, counter, tool_calls, turns, inject, memlens-nudge
  * #endregion moduleContract
  */

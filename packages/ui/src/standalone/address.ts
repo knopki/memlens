@@ -6,7 +6,7 @@
  * NOT: the route format, the state rules, and the markup.
  * @invariants A write keeps the path of the page, so the host serves the same page for each place.
  * @invariants A repeated address writes nothing, so a second click on the live scope adds no entry.
- * @dependencies READS: the page address. WRITES: the browser history.
+ * @dependencies READS: the page address; WRITES: the browser history
  * @keywords address, route, history, pushstate, replacestate, popstate
  * #endregion moduleContract
  */

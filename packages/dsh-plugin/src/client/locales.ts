@@ -8,8 +8,7 @@
  *   tab name.
  * @invariants A refused registration gives the English table, so the tab still draws its text.
  * @invariants The translate function reads the active language at call time.
- * @dependencies USES: the message tables and the fill helper of the console, and the locale service
- * of the harness page.
+ * @dependencies USES API: @memlens/ui
  * @keywords client, locale, namespace, dictionary, tab, fallback, text
  * #endregion moduleContract
  */

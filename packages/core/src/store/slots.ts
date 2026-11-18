@@ -6,7 +6,6 @@
  * @invariants A slot is the rank of the note over all note rows of the scope, in any state.
  * @invariants An insert into the middle shifts each later slot by one in the same transaction.
  * @invariants A vacated slot stays empty until a later note takes the tail again.
- * @dependencies node:sqlite only.
  * @keywords slot, rank, order, shift, position, tail
  * #endregion moduleContract
  */

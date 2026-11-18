@@ -4,7 +4,6 @@
  * console usable and throws no error.
  * @scope The read of a blocked storage, the read of a stored value, and the write.
  * @invariants Each test supplies its own storage object.
- * @dependencies USES: the storage adapter.
  * @keywords test, storage, fallback, blocked, language, theme
  * #endregion moduleContract
  */

@@ -5,7 +5,7 @@
  *  NOT: the slice render, the profile check, and the active scope.
  * @invariants The answer sets no active scope and takes the field `scope` only.
  * @invariants The first scope line holds the scopes outside the directions budget, and its text is empty.
- * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools; shared.ts
+ * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools
  * @keywords memlens, tool, map, scope, direction, frontier, slice
  * #endregion moduleContract
  */

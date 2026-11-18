@@ -13,8 +13,7 @@
  * @invariants The API state reads the current snapshot, so the screen store stays stable.
  * @invariants A refused call rejects with an error that carries the cause text of its failure.
  * @invariants A missing namespace rejects each call, so no call falls back to a second transport.
- * @dependencies USES: the console model, the store, the controller, the Remote contribution, and the
- * client context.
+ * @dependencies USES API: @memlens/core, @memlens/ui
  * @keywords client, console, port, store, controller, session, address, storage, remote
  * #endregion moduleContract
  */

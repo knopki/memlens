@@ -5,7 +5,7 @@
  * @scope The two local storage calls and the fallback of a blocked storage. NOT: the choice rules
  * and the markup.
  * @invariants A blocked storage keeps the choice for this page only and throws no error.
- * @dependencies READS: localStorage. WRITES: localStorage.
+ * @dependencies READS: localStorage; WRITES: localStorage
  * @keywords storage, local storage, language, theme, fallback
  * #endregion moduleContract
  */

@@ -6,7 +6,7 @@
  *   label, and the page.
  * @invariants The glyph takes the text colour of the row, so the theme tokens colour it.
  * @invariants A selected panel draws a thicker stroke. The size is the square edge of the row.
- * @dependencies USES TYPE: the panel icon props of the client context.
+ * @dependencies USES API: react
  * @keywords client, icon, panel, sidebar, glyph, stroke
  * #endregion moduleContract
  */

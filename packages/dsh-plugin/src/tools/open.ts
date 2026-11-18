@@ -4,7 +4,7 @@
  * @scope The memory_open schema, the target parse, the longform window, and the child lines.
  *  NOT: the row rules, the longform limits, and the profile check.
  * @invariants A target with no scope names the active scope. A range gives its children.
- * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools; shared.ts
+ * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools
  * @keywords memlens, tool, open, address, range, longform, child
  * #endregion moduleContract
  */

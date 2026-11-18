@@ -18,10 +18,7 @@
  * @usecases
  *  - View: tab => calls memlens.view => gets the console model
  *  - Action: user => calls memlens.action => gets the changed note
- * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-agent,
- *   @deepseek-ai/dsh-session, @deepseek-ai/dsh-typert-protocol, @deepseek-ai/dsh-typert-registry,
- *   @memlens/core, ../service.ts, ../worker.ts, remote-contract.ts, scope.ts, read.ts, action.ts,
- *   status.ts
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-session, @deepseek-ai/dsh-typert-protocol, @deepseek-ai/dsh-typert-registry, @memlens/core
  * @keywords console, remote, typert, service, descriptor, session, action, result
  * #endregion moduleContract
  */

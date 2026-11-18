@@ -6,7 +6,6 @@
  * and the transport.
  * @invariants The snapshot keeps its reference until a change. A set gives a new state object.
  * @invariants The store holds no DOM, no storage, and no fetch.
- * @dependencies USES TYPE: the console state contract.
  * @keywords store, state, snapshot, subscribe, patch
  * #endregion moduleContract
  */

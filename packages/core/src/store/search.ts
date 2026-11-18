@@ -5,7 +5,7 @@
  * @scope The match expression, the FTS query, the literal fallback scan, and the hit order.
  * @invariants A hidden, deleted, or cleared row gives no hit.
  * @invariants No log holds the query text or a note text.
- * @dependencies node:sqlite, store/store.ts for the handle and the tokenizer, domain/address.ts, store/types.ts.
+ * @dependencies USES API: node:sqlite
  * @keywords search, fts5, match, prefix, exclusion, trigram, literal, scan, rank, hit
  * #endregion moduleContract
  */

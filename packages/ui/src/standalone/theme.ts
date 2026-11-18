@@ -6,7 +6,7 @@
  * choice rules, the storage, and the markup.
  * @invariants The attribute holds the resolved theme, light or dark.
  * @invariants A system change calls the theme step again without a page reload.
- * @dependencies READS: the system color scheme. WRITES: the attribute `data-theme`.
+ * @dependencies READS: the system color scheme; WRITES: the attribute `data-theme`
  * @keywords theme, dark, light, system, matchmedia, attribute
  * #endregion moduleContract
  */

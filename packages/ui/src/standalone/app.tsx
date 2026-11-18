@@ -10,8 +10,6 @@
  * @invariants A page without a model shows the status line only, as the DOM console did.
  * @invariants The tree screen and the search screen hold the inspector. The shell adds no second
  * inspector.
- * @dependencies USES: the primitives, the screens, the note dialog, the console API, the address
- * adapter, and the theme adapter.
  * @usecases
  *  - Screen: human => presses a number key => gets the screen of that key
  *  - Theme: human => selects the system theme => gets the palette of the system setting

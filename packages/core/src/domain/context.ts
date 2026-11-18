@@ -9,9 +9,6 @@
  * text, and a process restart gives the same text.
  * - The text holds no review date and no catalog key. It names no review tool: the agent reads a
  * memory and does not plan the review of one.
- * @dependencies
- * USES API: store/view.ts (sliceOf, topLineOf, textOfLine)
- * READS: View, SliceLine, DirectionLine
  * @keywords context, slice, snapshot, directions, frontier, policy, template, epoch
  * #endregion moduleContract
  */

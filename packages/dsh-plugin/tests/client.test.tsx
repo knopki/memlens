@@ -9,8 +9,6 @@
  * NOT: the host service and the built artifact.
  * @invariants Each test renders from a fake namespace or a fake console API. No host call leaves the
  * test.
- * @dependencies USES: the client entry, the tab body, the screen registry, the message table, and
- * the server renderer of the console package.
  * @keywords test, client, tab, session, locale, fallback, screen, style, remote
  * #endregion moduleContract
  */

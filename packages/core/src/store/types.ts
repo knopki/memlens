@@ -4,7 +4,6 @@
  * @purpose Define the row shapes of one SQLite-backed memory, so each module names one shape.
  * @scope Notes, nodes, proposals, and their field groups. NOT: SQL, locks, and files.
  * @invariants A node covers the slot range `[start, start + 2^level)` of one scope.
- * @dependencies types/primitives.ts for Ulid and NoteKind.
  * @keywords note, node, proposal, scope, slot, state, version
  * #endregion moduleContract
  */

@@ -8,7 +8,7 @@
  * @scope
  *  - The commands find, open, scopes, scope, and slice.
  *  - NOT: the store rules, the argument parse, and the exit code mapping.
- * @dependencies USES API: @memlens/core, commands.ts, runtime.ts; READS: the store directory
+ * @dependencies USES API: @memlens/core; READS: the store directory
  * @keywords find, open, scopes, scope, slice, read, cli
  * #endregion moduleContract
  */

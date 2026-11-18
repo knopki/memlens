@@ -4,7 +4,6 @@
  * lost text, and a lost class hook.
  * @scope The three screens and the note dialog.
  * @invariants Each surface renders from one fixed console state and one fixed api.
- * @dependencies USES: the screens, the dialog, the server renderer, and the message table.
  * @keywords test, screen, search, review, proposal, dialog, markup, class
  * #endregion moduleContract
  */

@@ -7,7 +7,6 @@
  * @invariants Every language holds every key of the English table, and a missing language gives
  * English.
  * No message holds markup: the client puts each text into a text node.
- * @dependencies No import. The client owns the screens that read these messages.
  * @keywords console, language, locale, translation, message, text
  * #endregion moduleContract
  */

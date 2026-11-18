@@ -13,7 +13,7 @@
  *    command takes the scope in the address or in --scope.
  *  - Each target scope must be visible in the profile, or the command gives NotAllowed.
  *  - Each supersedes address must resolve to a record id before the write.
- * @dependencies USES API: @memlens/core, commands.ts, runtime.ts; WRITES: the store directory
+ * @dependencies USES API: @memlens/core; WRITES: the store directory
  * @keywords note, amend, forget, redact, review, write, cli
  * #endregion moduleContract
  */

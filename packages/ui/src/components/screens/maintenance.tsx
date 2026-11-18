@@ -11,7 +11,6 @@
  * @invariants A runtime field without a value renders no row.
  * @invariants The live refresh starts on mount and stops on cleanup, so another screen holds no
  *   timer. The refresh reads the runtime state only, so it reloads no view.
- * @dependencies USES: the primitives, the range format, the message table, and the console API.
  * @keywords maintenance, budget, candidate, level, runtime, snapshot, compaction, journal, refresh
  * #endregion moduleContract
  */

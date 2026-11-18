@@ -21,7 +21,6 @@
  *  - Active scope: caller => gives the rules and the subject => gets the key and the rule index
  *  - Automatic scope: caller => gives the subject => gets the key and the source name
  *  - Session scopes: caller => gives the profile globs and the active key => gets the joined globs
- * @dependencies USES API: config.ts globMatches, config-types.ts, scope.ts
  * @keywords active, scope, rule, git_remote, path, workspace, repo, automatic, source, visible, join
  * #endregion moduleContract
  */

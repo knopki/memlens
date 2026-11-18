@@ -5,7 +5,6 @@
  * @scope The layer types, the rule types, the resolved shape, and the default texts and periods.
  *  NOT: reading a layer and merging the layers.
  * @invariants The review period is a count of days for each note kind.
- * @dependencies types/primitives.ts, types/tree.ts.
  * @keywords config, type, layer, rule, budget, review, nudge, defaults
  * #endregion moduleContract
  */

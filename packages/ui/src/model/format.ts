@@ -6,7 +6,6 @@
  * NOT: the state, the transport, and the markup.
  * @invariants Each helper takes its message function, so a screen shows the language of its host.
  * @invariants The module reads no DOM and no global state.
- * @dependencies USES: the pure address helpers and the kind message keys.
  * @keywords format, address, range, line, kind, label
  * #endregion moduleContract
  */

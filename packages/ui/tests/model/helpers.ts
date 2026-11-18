@@ -4,7 +4,6 @@
  * with a controlled address.
  * @scope The view, the record, the entry, the state, the port calls, and the harness.
  * @invariants The fakes hold no network, no DOM, and no local storage.
- * @dependencies USES: the controller, the store, the route, and the console model types.
  * @keywords test, fake, port, storage, harness, state
  * #endregion moduleContract
  */

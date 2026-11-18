@@ -12,7 +12,7 @@
  * @invariants A request from a foreign host or origin gives NotAllowed.
  * @usecases
  *  - Answer: host => gives one value => writes one JSON response
- * @dependencies USES API: @memlens/core, runtime.ts
+ * @dependencies USES API: @memlens/core
  * @keywords ui, http, body, header, answer, trust, json
  * #endregion moduleContract
  */

@@ -8,9 +8,6 @@
  * @invariants
  *  - Reads use the supplied rows through store/reads.ts and store/view.ts, with no log scan and
  *    no wait for a compaction.
- * @dependencies
- *  USES API: domain/address.ts, store/reads.ts, store/view.ts
- *  READS: Store, IndexHit, Note, View
  * @keywords find, filter, open, longform, range, review, due, scopes, reads, store
  * #endregion moduleContract
  */

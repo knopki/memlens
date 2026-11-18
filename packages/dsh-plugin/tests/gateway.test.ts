@@ -10,11 +10,7 @@
  * @invariants Tests use the owner principal for the allowed calls and a non-owner principal without
  *   a policy for the refused call.
  * @invariants Tests use a stub LLM. No test opens a socket and no test makes a paid call.
- * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-api-gateway,
- *   @deepseek-ai/dsh-api-remote-access, @deepseek-ai/dsh-typert-protocol,
- *   @deepseek-ai/dsh-typert-registry, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-llm,
- *   @deepseek-ai/dsh-scope, @memlens/core, ../src/service.ts, ../src/worker.ts,
- *   ../src/console/remote.ts, ../src/console/remote-contract.ts
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-api-gateway, @deepseek-ai/dsh-api-remote-access, @deepseek-ai/dsh-typert-protocol, @deepseek-ai/dsh-typert-registry, @deepseek-ai/dsh-agent, @deepseek-ai/dsh-llm, @deepseek-ai/dsh-scope, @memlens/core
  * @keywords gateway, remote, access, principal, denial, input, disposal, console
  * #endregion moduleContract
  */

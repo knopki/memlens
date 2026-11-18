@@ -3,7 +3,6 @@
  * @purpose Guard the three console screens against a crash, a lost text, and a lost class hook.
  * @scope The overview, the tree, and the catalog screens.
  * @invariants Each screen renders from one fixed console state and one fixed api.
- * @dependencies USES: the three screens, the server renderer, and the message table.
  * @keywords test, screen, overview, tree, catalog, markup, class
  * #endregion moduleContract
  */

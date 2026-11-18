@@ -6,7 +6,7 @@
  *  NOT: the row rules, the proposal table, and the console.
  * @invariants A child gives a proposal with its session id. A supersede target outside the profile gives NotAllowed.
  * @invariants A call may name the moment of the note, and the store ranks the note by that time.
- * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools; shared.ts
+ * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools
  * @keywords memlens, tool, note, write, supersede, proposal, review
  * #endregion moduleContract
  */

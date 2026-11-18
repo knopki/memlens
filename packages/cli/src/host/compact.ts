@@ -10,7 +10,7 @@
  *  - NOT: the merge rules of the library and the read routes.
  * @usecases
  *  - Job: user => presses compact => gets the merge inputs of one scope
- * @dependencies USES API: @memlens/core, compact.ts, host/http.ts
+ * @dependencies USES API: @memlens/core
  * @keywords ui, compact, merge, answer, node, job
  * #endregion moduleContract
  */

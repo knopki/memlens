@@ -10,7 +10,7 @@
  *  - Job: tab => presses compact => gets the merge inputs of one scope
  * @invariants The job publishes each fitting copy and join with no model call. The store checks the
  *   input under the write lock, and a changed input counts as rejected.
- * @dependencies USES API: @memlens/core, scope.ts, ../tools/shared.ts
+ * @dependencies USES API: @memlens/core
  * @keywords console, compact, merge, answer, node, job
  * #endregion moduleContract
  */

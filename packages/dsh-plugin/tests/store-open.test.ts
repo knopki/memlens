@@ -5,7 +5,7 @@
  * @scope The store boundary, the first failure, the retry delays, the success, and the disposal.
  * @invariants The test replaces the store boundary only. The service, its configuration, and its
  *   disposal are real.
- * @dependencies @deepseek-ai/cordis, @memlens/core, ../src/service.ts
+ * @dependencies USES API: @deepseek-ai/cordis, @memlens/core
  * @keywords test, store, open, retry, backoff, lock, disposal
  * #endregion moduleContract
  */

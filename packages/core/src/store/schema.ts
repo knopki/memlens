@@ -14,7 +14,6 @@
  * @invariants A retry repeats the lock acquisition only. The work of a transaction runs once.
  * @invariants The open builds the index with the tokenizer of the language key when the stored
  *   tokenizer differs, so a language change needs no command.
- * @dependencies store/clock.ts for the store identity.
  * @keywords schema, open, pragma, database, migration, version
  * #endregion moduleContract
  */

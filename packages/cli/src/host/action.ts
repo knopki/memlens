@@ -10,7 +10,7 @@
  *  - NOT: the store rules, the transport, and the read routes.
  * @usecases
  *  - Amend: user => gives one target and a body => gets the changed note
- * @dependencies USES API: @memlens/core, host/http.ts, host/scope.ts, host/compact.ts
+ * @dependencies USES API: @memlens/core
  * @keywords ui, action, note, proposal, amend, forget, delete, scope
  * #endregion moduleContract
  */

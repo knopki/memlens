@@ -5,7 +5,6 @@
  * @scope Note by address or id, due reviews, live counts, scope notes, nodes, and the directions data.
  * @invariants The note reads give a row in any state. A hidden row is evidence, not content loss.
  * @invariants Each read uses one statement on the store handle. No read opens a long transaction.
- * @dependencies store/store.ts for the handle, store/types.ts for the row shapes, types/primitives.ts for the key types.
  * @keywords read, note, node, due, review, count, scope, directions, rest
  * #endregion moduleContract
  */

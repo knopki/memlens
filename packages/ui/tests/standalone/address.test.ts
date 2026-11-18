@@ -4,7 +4,6 @@
  * reload and a browser button return to the same console place.
  * @scope The read of a query text, the write to the browser history, and the empty address.
  * @invariants Each test gives one fixed route and one fixed address.
- * @dependencies USES: the address adapter and the route format.
  * @keywords test, address, route, history, round trip
  * #endregion moduleContract
  */

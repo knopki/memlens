@@ -11,8 +11,6 @@
  * @invariants The body field shows a body of the declared size without a scroll, and it grows with
  * the text. The amendment form shows the supersede links of the record as text, and its field
  * takes the added addresses only.
- * @dependencies USES: the dialog, field, input, text area, select, and button primitives. USES: the
- * kind list and the message keys.
  * @keywords dialog, note, create, amend, supersede, scope, kind, characters, react
  * #endregion moduleContract
  */

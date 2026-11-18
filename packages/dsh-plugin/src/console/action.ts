@@ -11,7 +11,7 @@
  *   proposal together.
  * @invariants The plugin host permits a delete through the harness Remote service. A delete still
  *   needs confirmation.
- * @dependencies USES API: @memlens/core, scope.ts, compact.ts, ../tools/shared.ts
+ * @dependencies USES API: @memlens/core
  * @keywords console, action, note, proposal, amend, forget, delete, scope
  * #endregion moduleContract
  */

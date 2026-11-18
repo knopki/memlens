@@ -14,7 +14,7 @@
  *   unavailable state, and the first valid read replaces the fallback scopes.
  * @invariants Each store read goes through one accessor. An unavailable store throws a Data error
  *   and never gives an empty store.
- * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @memlens/core, runtime.ts.
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @memlens/core
  * @keywords memlens, service, preset, configuration, agent, lifecycle
  * #endregion moduleContract
  */

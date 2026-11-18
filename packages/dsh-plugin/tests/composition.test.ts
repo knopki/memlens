@@ -4,7 +4,7 @@
  * @scope The real Cordis context, DSH scopes, preset registration, agent lookup, and disposal.
  * @invariants A preset registration uses the caller scope, not the host scope.
  * @invariants Two agent scopes with different presets receive different profiles from one store.
- * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @deepseek-ai/dsh-agent, ../src/service.ts
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @deepseek-ai/dsh-agent
  * @keywords test, cordis, scope, preset, agent, memlens
  * #endregion moduleContract
  */

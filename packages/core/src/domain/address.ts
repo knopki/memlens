@@ -10,7 +10,6 @@
  *  - NOT: pos allocation, scope resolution, or record lookup.
  * @invariants
  *  - Positions are non-negative integers. A range end is not before its start.
- * @dependencies scope.ts for scope key validation
  * @keywords address, pos, range, scope, addr, parse, render
  * #endregion moduleContract
  */

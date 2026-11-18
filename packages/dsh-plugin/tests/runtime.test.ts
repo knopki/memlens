@@ -4,7 +4,7 @@
  * @scope The base file, store path precedence, path and workspace rules, and the Git inputs.
  * @invariants A missing base file gives the shared default, and another read error propagates.
  * @invariants The patch store path wins over the environment, and the environment wins over the base file.
- * @dependencies node:fs, node:child_process, node:path, @memlens/core, ../src/runtime.ts
+ * @dependencies USES API: node:fs, node:child_process, node:path, @memlens/core
  * @keywords test, config, store, scope, git, memlens
  * #endregion moduleContract
  */

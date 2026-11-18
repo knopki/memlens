@@ -6,7 +6,6 @@
  *   NOT: the screens, the shell, the transport, and the styles.
  * @invariants Each screen takes one `ScreenProps` and reads the state and the actions from its API.
  * @invariants The registry holds one entry for each name of `SCREENS`.
- * @dependencies USES: the seven screens and the screen prop type.
  * @keywords screens, registry, component, shell, route
  * #endregion moduleContract
  */

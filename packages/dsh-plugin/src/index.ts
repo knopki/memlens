@@ -15,7 +15,7 @@
  *  registration of one name. A failed attach repeats a bounded count of times, so a transient
  *  failure costs no memory surface. A respawn that exhausts its attempts logs the loss.
  * @invariants The plugin checks no model metadata. A model that holds no memory is a configuration error of the user.
- * @dependencies @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @memlens/core.
+ * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-agent, @memlens/core
  * @keywords dsh, plugin, memlens, configuration, registration, context, nudge, worker
  * #endregion moduleContract
  */

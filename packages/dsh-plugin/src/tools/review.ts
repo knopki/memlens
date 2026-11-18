@@ -4,7 +4,7 @@
  * @scope The memory_review schema, the due list, the target read, and the review write.
  *  NOT: the review rows, the due rule, and the console.
  * @invariants A numeric target needs a scope. A target outside the profile gives NotAllowed.
- * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools; shared.ts
+ * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools
  * @keywords memlens, tool, review, due, next, scope
  * #endregion moduleContract
  */

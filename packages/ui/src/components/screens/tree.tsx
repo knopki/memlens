@@ -6,8 +6,6 @@
  * the host calls and the address.
  * @invariants A range line opens its children, and a note line opens its record. A temporary line
  * shows its period only.
- * @dependencies USES: the line views, the inspector, the primitives, the console api, and the
- * format helpers.
  * @keywords tree, frontier, line, range, note, inspector, react
  * #endregion moduleContract
  */

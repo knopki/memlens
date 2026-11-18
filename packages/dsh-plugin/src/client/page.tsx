@@ -11,8 +11,7 @@
  * @invariants The page renders the stylesheet in a `style` element, so the CSS leaves with the page.
  * @invariants A store that is not open gives the stated error in the body. The page probes the host
  *   at each retry, and the view load replaces that error when the store opens.
- * @dependencies USES: the profile console, the screen registry, the record dialog, and the console
- *   stylesheet.
+ * @dependencies USES API: @memlens/ui, react
  * @keywords client, page, panel, memory, profile, screen, scope, dialog, status
  * #endregion moduleContract
  */

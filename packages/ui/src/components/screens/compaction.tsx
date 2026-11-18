@@ -7,7 +7,6 @@
  * @invariants A job without a merge input states that fact and shows no answer form.
  * @invariants The job text and the answers go into text nodes.
  * @invariants The component holds no style, no transport, and no address.
- * @dependencies USES: the primitives, the range format, the message table, and the console API.
  * @keywords compaction, job, answer, summary, range, merge, component
  * #endregion moduleContract
  */

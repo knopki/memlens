@@ -16,7 +16,7 @@
  *  update keeps the call times of the hour and the armed retry wait.
  * @invariants The journal holds the last hundred events in local state, and the host log mirrors each
  *  entry. A restart clears the journal.
- * @dependencies node:util, @deepseek-ai/cordis, @deepseek-ai/dsh-llm, @memlens/core, @memlens/core (store helpers).
+ * @dependencies USES API: node:util, @deepseek-ai/cordis, @deepseek-ai/dsh-llm, @memlens/core
  * @keywords worker, compaction, background, timer, idle, dirty, retry, rate, llm
  * #endregion moduleContract
  */

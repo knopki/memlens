@@ -11,7 +11,6 @@
  * stylesheet.
  * @invariants A primitive emits the same element and the same classes as the DOM helper that it
  * replaces.
- * @dependencies USES: React 19. The dialog uses the native dialog element API.
  * @keywords component, primitive, button, panel, table, dialog, status
  * #endregion moduleContract
  */

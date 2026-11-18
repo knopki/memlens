@@ -11,7 +11,7 @@
  * @invariants The command opens no store.
  * @invariants The answer holds every key of the resolved configuration, and a dotted path names no
  *   single key.
- * @dependencies USES API: @memlens/core, smol-toml, runtime.ts; READS: config.toml
+ * @dependencies USES API: @memlens/core, smol-toml; READS: config.toml
  * @keywords config, toml, show, resolved, cli
  * #endregion moduleContract
  */
