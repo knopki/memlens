@@ -53,8 +53,7 @@ not remember one.
 
 A hidden note keeps its slot and its content, and it leaves the view. A redacted note keeps its
 row as a tombstone with no content. The redact clears the body, the longform, the index row, the
-covering node rows, and the proposals that name the note. The transaction commits, a truncating
-checkpoint runs, and the cleared bytes leave the database file and the write-ahead log.
+covering node rows, and the proposals that name the note in one transaction.
 
 ## The tree
 
@@ -119,9 +118,13 @@ it writes a new message only when the text changes. The text stays the same thro
 session and through the writes of that session. A session start and a successful compaction give a
 new snapshot, and a process restart gives the same text.
 
+When the store cannot open, the session continues and the console reports that memory is unavailable.
+A session without a saved section gets no memory context until the store opens. The memory tools
+answer errors. The plugin retries the open and connects the live sessions when the store becomes available.
+
 ## The tools
 
-The plugin registers six tools in the context of each agent.
+The plugin registers the memory tools in the context of each agent.
 
 | Tool            | Who                  | Effect                                                                 |
 | --------------- | -------------------- | ---------------------------------------------------------------------- |
@@ -197,9 +200,7 @@ applies one answer file after the store rechecks each input. The command `export
 full note rows with a header and a trailer. Proposals, summaries, and slots never travel. The
 command `import` merges by `id` with five channels. Content and review merge by version.
 Lifecycle merges by maximum. Cleared merges by latch. The supersede link merges by the first
-write. A repeated import changes no
-row. The CLI reads sessions of the harness into notes: this import has no reader yet, and
-[questions.md](questions.md) holds the open rule.
+write. A repeated import changes no row.
 
 ## Errors
 

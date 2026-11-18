@@ -1,5 +1,6 @@
 # Proven by packages/dsh-plugin/tests/memory-context.test.ts,
 # packages/dsh-plugin/tests/service.test.ts,
+# packages/dsh-plugin/tests/store-open.test.ts,
 # packages/core/tests/context.test.ts
 # Decisions: ADR-0007, ADR-0025
 Feature: Memory context
@@ -22,8 +23,6 @@ Feature: Memory context
     When the plugin registers the memory context
     Then the text is the text of that section
 
-  # No proving test found
-  @wip
   Scenario: A redact keeps the earlier snapshot
     Given a session history with the memory text
     When a human redacts a note of that text
@@ -58,3 +57,11 @@ Feature: Memory context
     Then the session writes a note with memory_note
     And memory_find gives that note
     And the next request holds the memory context
+
+  Scenario: A session continues while the store does not open
+    Given a live session and a store that does not open
+    When the session registers its memory surface
+    Then the memory tools answer errors
+    And a session without a saved section gives no memory context
+    When the store opens and the host respawns the surface
+    Then the session holds the memory context

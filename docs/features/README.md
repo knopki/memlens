@@ -27,14 +27,13 @@ the decisions.
 | File                   | Capability                        | Scenarios |
 | ---------------------- | --------------------------------- | --------- |
 | addresses.feature     | Address forms and active scope    | 4         |
-| agent-tools.feature   | The six memory tools              | 13        |
+| agent-tools.feature   | The memory tools                   | 13        |
 | compaction.feature    | Batch compaction                  | 8         |
 | config.feature        | Configuration and active scope    | 5         |
-| console.feature       | Console surfaces in the harness   | 9         |
-| memory-context.feature | The memory snapshot              | 8         |
+| console.feature       | Console surfaces in the harness   | 8         |
+| memory-context.feature | The memory snapshot              | 9         |
 | nudge.feature         | The nudge counters                | 5         |
-| proposals.feature     | Subagent modes and proposals      | 17        |
+| proposals.feature     | Subagent modes and proposals      | 16        |
 | schema.feature        | The store schema and its version  | 2         |
-| session-import.feature | Session import (pending)          | 1         |
 | store.feature         | The row store and the tree        | 10        |
-| transfer.feature      | JSONL transfer and store merge    | 6         |
+| transfer.feature      | JSONL transfer and store merge    | 7         |

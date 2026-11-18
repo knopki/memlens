@@ -2,7 +2,7 @@
 
 memlens — долговременная память агента: набор курируемых заметок и дерево пересказов над ними.
 
-**Статус:** ядро и CLI уже в коде. Отдельная консоль работает на хранилище строк. В плагине готовы регистрация и настройки. Внедрение памяти в контекст, tools и импорт сессий ещё предстоит реализовать.
+**Статус:** ядро, CLI, отдельная консоль и плагин реализованы.
 
 ## Части
 
@@ -25,12 +25,11 @@ memlens — долговременная память агента: набор �
 
 | Файл                                                             | Содержимое                                 |
 | ---------------------------------------------------------------- | ------------------------------------------ |
-| [docs/spec/00-overview.md](docs/spec/00-overview.md)             | Граница продукта.                          |
+| [docs/architecture.md](docs/architecture.md)                     | Как устроена система.                      |
 | [docs/configuration.md](docs/configuration.md)                   | Формат конфигурации и примеры.             |
-| [docs/spec/README.md](docs/spec/README.md)                       | Индекс спецификации и правила её ведения.  |
-| [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | Требования с идентификаторами и статусами. |
-| [docs/spec/04-data.md](docs/spec/04-data.md)                     | Таблицы, группы полей и каналы слияния.    |
-| [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | Открытые вопросы, блокирующие работу.      |
+| [docs/arch/README.md](docs/arch/README.md)                       | Модель архитектуры в виде диаграмм.        |
+| [docs/features/README.md](docs/features/README.md)               | Межмодульное поведение в сценариях.        |
+| [docs/questions.md](docs/questions.md)                           | Открытые вопросы, блокирующие решения.     |
 | [AGENTS.md](AGENTS.md)                                           | Правила работы для агентов.                |
 
 ## Конфигурация
@@ -86,11 +85,3 @@ prek install
 | Комментарии в коде   | Simplified Technical English, ASD-STE100.                                 |
 | README               | восемь языков набора DSH. В репозитории сейчас английский, русский (этот файл) и китайский ([README.zh.md](README.zh.md)). |
 | Локализация продукта | восемь языков набора DSH. |
-
-## Следующий шаг
-
-Ядро, CLI и консоль уже в коде. Поверхность плагина и импорт сессий ждут реализации.
-См. [06-architecture.md](docs/spec/06-architecture.md#remaining-work).
-
-Текст policy text для среза не спроектирован. См. [Q-456](docs/spec/03-open-questions.md#q-456).
-См. [Q-009](docs/spec/03-open-questions.md#q-009) и следующие за ней.

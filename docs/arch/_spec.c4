@@ -73,10 +73,6 @@ specification {
     }
   }
 
-  tag pending {
-    color amber
-  }
-
   deploymentNode environment {
     notation 'Deployment Environment'
     style {

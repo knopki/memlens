@@ -2,7 +2,7 @@
 
 memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构成的树。
 
-**状态：** 核心库与 CLI 已进入代码。独立控制台使用行存储。插件已实现注册和配置。记忆上下文、工具和会话导入尚未实现。
+**状态：** 核心库、CLI、独立控制台和插件已实现。
 
 ## 组成部分
 
@@ -23,15 +23,14 @@ memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构
 
 ## 文档
 
-| 文件                                                             | 内容                   |
+| 文件                                                               | 内容                     |
 | ---------------------------------------------------------------- | ---------------------- |
-| [docs/spec/00-overview.md](docs/spec/00-overview.md)             | 产品边界。             |
-| [docs/configuration.md](docs/configuration.md)                   | 配置格式与示例。       |
-| [docs/spec/README.md](docs/spec/README.md)                       | 规范的目录与维护规则。 |
-| [docs/spec/02-requirements.md](docs/spec/02-requirements.md)     | 带标识符和状态的需求。 |
-| [docs/spec/04-data.md](docs/spec/04-data.md)                     | 表、字段组与合并通道。 |
-| [docs/spec/03-open-questions.md](docs/spec/03-open-questions.md) | 阻塞工作的未决问题。   |
-| [AGENTS.md](AGENTS.md)                                           | 代理工作规则。         |
+| [docs/architecture.md](docs/architecture.md)                     | 系统的工作方式。               |
+| [docs/configuration.md](docs/configuration.md)                   | 配置格式与示例。               |
+| [docs/arch/README.md](docs/arch/README.md)                       | 以图表表示的架构模型。            |
+| [docs/features/README.md](docs/features/README.md)               | 以场景描述的跨模块行为。           |
+| [docs/questions.md](docs/questions.md)                           | 阻碍决策的开放问题。             |
+| [AGENTS.md](AGENTS.md)                                           | 代理工作规则。                |
 
 ## 配置
 
@@ -85,10 +84,3 @@ prek install
 | 代码注释   | Simplified Technical English，ASD-STE100。                 |
 | README     | DSH 套件的八种语言。目前仓库中有英文、俄文（[README.ru.md](README.ru.md)）和中文（本文件）。 |
 | 产品本地化 | DSH 套件的八种语言。 |
-
-## 下一步
-
-核心库、CLI 与控制台已进入代码。插件表面与会话导入尚未实现。
-见 [06-architecture.md](docs/spec/06-architecture.md#remaining-work)。
-
-切片的 policy text 尚未设计。见 [Q-456](docs/spec/03-open-questions.md#q-456)。

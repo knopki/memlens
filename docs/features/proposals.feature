@@ -93,13 +93,6 @@ Feature: Memory proposals
     When the agent calls `memory_forget` on a record of its profile
     Then the answer is `{}`
 
-  # No proving test found. The preset registers no subagent prompt. See Q-518
-  # in docs/questions.md.
-  @wip
-  Scenario: A subagent gets the subagent prompt
-    Given a subagent session
-    Then the child prompt holds the subagent prompt
-
   Scenario: A propose subagent gets four tools and the scope list
     Given a subagent of the mode `propose`
     Then its tool list holds `memory_find`, `memory_open`, `memory_note`, and `memory_map`

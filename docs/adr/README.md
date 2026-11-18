@@ -42,7 +42,7 @@ What becomes easy. What becomes difficult. What a reader must know.
 | 0005 | Catalog | replaced by 0011 |
 | 0006 | Scope and config | accepted |
 | 0007 | Slice and context | accepted |
-| 0008 | Redaction | accepted |
+| 0008 | Redaction | replaced by 0020 |
 | 0009 | Agent surface | accepted |
 | 0010 | Process and stack | accepted |
 | 0011 | Nodes are events | replaced by 0020 |
@@ -63,6 +63,6 @@ What becomes easy. What becomes difficult. What a reader must know.
 
 The decision texts of 2026-11-10 call the compaction the writer. The product renamed the term on 2026-11-11, and the texts stay as decided.
 
-ADR 0002, 0003, 0011, 0014, 0015, and 0017 describe the event store. [0020](0020-storage-pivot.md) replaces them.
-ADR 0001, 0004, 0008, 0013, and 0016 stay accepted, and 0020 replaces their event mechanism.
+ADR 0002, 0003, 0008, 0011, 0014, 0015, and 0017 describe the event store. [0020](0020-storage-pivot.md) replaces them.
+ADR 0001, 0004, 0013, and 0016 stay accepted, and 0020 replaces their event mechanism.
 [0023](0023-batch-compaction.md) replaces the run form of 0004 and removes the key `mode`.

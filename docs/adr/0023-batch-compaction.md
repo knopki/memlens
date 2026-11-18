@@ -48,10 +48,8 @@ The default batch fills one call, so the cost of one pass is easier to estimate.
 makes one call with more inputs, so one answer can be long and one call can cost more. A bad line
 costs only its own retry, and the good lines of the same answer stay. The retries stop at one input,
 and a range that still fails waits for the next pass.
-A file that holds `mode` fails the check, and the user removes the key. The plugin starts on the
-built-in defaults after a rejected base file, and a reload keeps the last valid configuration. The
-requirements [REQ-571](../spec/archive/02-requirements.md) to [REQ-577](../spec/archive/02-requirements.md) state
-these rules.
+The plugin starts on the built-in defaults after a rejected base file, and a reload keeps the last
+valid configuration.
 
 The closed answers Q-063, Q-069, Q-078, and Q-079 describe the earlier design. This decision closes
 Q-524 and Q-525.

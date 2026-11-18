@@ -1,10 +1,10 @@
 # Work rules for agents
 
 The core library implements the domain, one SQLite row store, the slice, and the configuration. The
-CLI implements the command surface, including `compact`, `check`, `repair`, and `ui`. The session
-import is pending. The plugin implements host and preset configuration, one shared store, the memory
-context, the six tools, the nudge, and the background compaction worker. The console surfaces are
-the profile page, the session tab, the worker status, and the worker journal.
+CLI implements the command surface, including `compact`, `check`, `repair`, and `ui`. The plugin
+implements host and preset configuration, one shared store, the memory context, the tools, the
+nudge, and the background compaction worker. The console surfaces are the profile page, the session
+tab, the worker status, and the worker journal.
 See [docs/architecture.md](docs/architecture.md) for the current state.
 The behavior features in `docs/features/` own cross-module behavior. The file
 [docs/questions.md](docs/questions.md) owns the open questions.

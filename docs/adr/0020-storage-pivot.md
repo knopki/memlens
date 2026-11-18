@@ -1,6 +1,6 @@
 # 0020. Storage pivot
 
-Status: accepted. The code holds the row store. The pending items are in [06-architecture.md](../spec/06-architecture.md#remaining-work).
+Status: accepted. The code holds the row store.
 
 ## Context
 
@@ -29,4 +29,4 @@ Use key-interval tree nodes without slots. This avoids the tail shift but rewrit
 
 ## Consequences
 
-The CLI and the console read SQL rows. No whole-store view remains. The plugin is a scaffold, and it reads the same rows when its surface arrives. A backdated insert moves later slots, so a numeric address is not stable in time, and the console shows the date beside the position. Tombstones never expire, or an old export restores deleted content. Summaries rebuild per store. A file copy needs a new store identity, and [Q-515](../spec/03-open-questions.md#q-515) holds that open point. The directions block becomes a derived scope list with no stored catalog. The storage pivot refuses the requirements that name events, the cursor, the projection, or two backends. The storage pivot accepts REQ-521 to REQ-537.
+The CLI and the console read SQL rows. No whole-store view remains. The plugin is a scaffold, and it reads the same rows when its surface arrives. A backdated insert moves later slots, so a numeric address is not stable in time, and the console shows the date beside the position. Tombstones never expire, or an old export restores deleted content. Summaries rebuild per store. A file copy needs a new store identity. The directions block becomes a derived scope list with no stored catalog.

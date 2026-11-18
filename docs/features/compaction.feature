@@ -1,4 +1,3 @@
-# REQ-573, REQ-574, REQ-575, REQ-576, REQ-577
 # Proven by packages/core/tests/compaction.test.ts,
 # packages/core/tests/console.test.ts,
 # packages/dsh-plugin/tests/worker.test.ts

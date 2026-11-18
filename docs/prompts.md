@@ -17,8 +17,3 @@ The slice is one template with five placeholders. The `customPrompt` key
 replaces the whole template, and the placeholders apply in it. The
 `customPromptAppend` key fills the `append` slot. The `<how-to>` part is never
 cut, and the two other parts obey the line budgets of the profile.
-
-## The subagent prompt
-
-The design states a prompt for a subagent, and no source file holds it. See
-[questions.md](questions.md#q-518).

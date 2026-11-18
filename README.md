@@ -3,7 +3,7 @@
 memlens is the long-term memory of an agent. It keeps curated notes across sessions and folds them
 into a tree of summaries. The agent gets a small map at the start of each session.
 
-**Status:** the core library and the CLI are in the code. The standalone console uses the store. The plugin implements configuration and registration. Its memory context and tools, and the session import, are pending.
+**Status:** the core library, the CLI, the standalone console, and the plugin are in the code.
 
 ## The problem
 
@@ -164,9 +164,3 @@ Run the commands in a shell that mise activates, or start each command with `mis
 | Code comments        | Simplified Technical English, ASD-STE100.                                               |
 | README files         | The eight languages of the DSH set. The repository has English, Russian ([README.ru.md](README.ru.md)), and Chinese ([README.zh.md](README.zh.md)) now. |
 | Product localization | The eight languages of the DSH set.                                                     |
-
-## Next step
-
-The core, the CLI, and the console are in the code. The plugin surface and the session import are
-pending. See [06-architecture.md](docs/spec/06-architecture.md#remaining-work). The policy text of the
-slice is a working copy.

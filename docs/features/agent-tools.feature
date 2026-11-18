@@ -1,5 +1,6 @@
 # Proven by packages/dsh-plugin/tests/memory-tools.test.ts and
-# packages/dsh-plugin/tests/memory-context.test.ts.
+# packages/dsh-plugin/tests/memory-context.test.ts and
+# packages/dsh-plugin/tests/loader.test.ts.
 # Decisions: ADR-0007, ADR-0009, ADR-0021.
 Feature: Agent memory tools
   The main agent reads and writes the memory of its profile.
@@ -72,10 +73,8 @@ Feature: Agent memory tools
     Then the store holds a live note of `user:notes`
     And `memory_map` with no field lists `user:notes`
 
-  # No proving test found
-  @wip
-  Scenario: A memory error skips the memory surface
-    Given a memory error at the start of one agent
-    When the session runs
-    Then the session holds no memory tool
-    And the session continues
+  Scenario: A registration error skips the memory surface
+    Given a memory registration error at the start of one agent
+    When the agent starts
+    Then the agent holds no memory tool
+    And the agent startup continues

@@ -1,6 +1,7 @@
 # Proven by packages/core/tests/store-schema.test.ts,
 # packages/core/tests/store-proposals-repair.test.ts,
 # packages/core/tests/store-notes.test.ts,
+# packages/core/tests/store-locks.test.ts,
 # packages/core/tests/store-reads.test.ts,
 # packages/core/tests/store-seams.test.ts,
 # packages/core/tests/store-transfer.test.ts,
@@ -80,16 +81,14 @@ Feature: The row store
     Then each profile gives one entry for that scope
     And the scope key is the same in both lists
 
-  # No proving test found
-  @wip
   Scenario: Two sessions write at the same time
     Given two sessions with one open store
     When each session writes one note at the same time
-    Then the store holds both notes
-    And the store reports no error
+    Then the store holds both notes when each lock wait fits its budget
+    And the store reports one error when a lock wait outlasts its budget
 
-  Scenario: A redact is one transaction and clears the raw bytes
-    When the store redacts a note with a unique marker
-    Then the redact runs in one transaction
-    And the marker text is absent from the database file
-    And the marker text is absent from the write-ahead log
+  Scenario: A redact clears a note and its derived content
+    Given a note with a node row above it and a search index entry
+    When the store redacts the note
+    Then the note holds no content
+    And the node row, the search index entry, and the proposals of the note are absent

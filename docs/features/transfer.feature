@@ -1,4 +1,5 @@
 # Proven by packages/core/tests/store-transfer.test.ts,
+# packages/core/tests/store-transfer-cleared.test.ts,
 # packages/core/tests/store-schema.test.ts,
 # packages/core/tests/store-reads.test.ts,
 # packages/core/tests/ulid.test.ts,
@@ -57,3 +58,10 @@ Feature: Transfer and store merge
     Then each store holds one row for that id
     And the row fields are equal in both stores
     And the id is a ULID
+
+  Scenario: An import of a cleared note deletes each proposal that targets it
+    Given a first store that redacts a note
+    And a second store with a proposal that targets that note
+    When the second store imports the export of the first store
+    Then the note takes the deleted state
+    And each proposal that targets the note is absent

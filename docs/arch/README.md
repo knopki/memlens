@@ -104,7 +104,7 @@ graph TB
   Human -. "`reviews notes in the console`" .-> Memlens.Ui
   Dsh -. "`loads at start`" .-> Memlens.Plugin
   Memlens.Core -. "`[...]`" .-> Memlens.Db
-  Memlens.Cli -. "`[...]`" .-> Memlens.Core
+  Memlens.Cli -. "`calls the engine`" .-> Memlens.Core
   Memlens.Plugin -. "`[...]`" .-> Memlens.Core
   Memlens.Cli -. "`serves the client`" .-> Memlens.Ui
   Memlens.Ui -. "`reads and acts over HTTP`" .-> Memlens.Cli
@@ -141,17 +141,15 @@ graph TB
     MemlensPlugin.Tools@{ shape: rectangle, label: "Memory tools" }
     MemlensPlugin.Worker@{ shape: rectangle, label: "Compaction worker" }
   end
-  subgraph MemlensCli["`@memlens/cli`"]
-    MemlensCli.Commands@{ shape: rectangle, label: "Terminal commands" }
-  end
+  MemlensCliCommands@{ shape: rectangle, label: "Terminal commands" }
   MemlensDb@{ shape: disk, label: "SQLite store" }
   MemlensCore.Store -. "`one transaction per write`" .-> MemlensDb
   MemlensCore.Search -. "`holds the FTS5 tables`" .-> MemlensDb
   MemlensPlugin.Worker -. "`collects dirty ranges`" .-> MemlensCore.Tree
   MemlensPlugin.Tools -. "`calls the engine`" .-> MemlensCore
-  MemlensCli.Commands -. "`calls the engine`" .-> MemlensCore
+  MemlensCliCommands -. "`calls the engine`" .-> MemlensCore
   classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
-  class MemlensCore.Domain,MemlensCore.Transfer,MemlensPlugin.Tools,MemlensCli.Commands,MemlensPlugin.Worker,MemlensCore.Store,MemlensCore.Search,MemlensCore.Tree,MemlensDb primary
+  class MemlensCore.Domain,MemlensCore.Transfer,MemlensPlugin.Tools,MemlensCliCommands,MemlensPlugin.Worker,MemlensCore.Store,MemlensCore.Search,MemlensCore.Tree,MemlensDb primary
   linkStyle 0,1,2,3,4 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 

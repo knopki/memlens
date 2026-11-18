@@ -80,13 +80,6 @@ model {
         '
       }
 
-      importer = component 'Session import' {
-        #pending
-        description '
-          The import from host session logs into notes. The rule that selects
-          the note text is open. See Q-514.
-        '
-      }
     }
 
     ui = web-app 'Console client' {
@@ -217,7 +210,6 @@ model {
   memlens.plugin.consoles -> memlens.ui 'builds the surfaces on the shared client'
 
   memlens.cli.commands -> memlens.core 'calls the engine'
-  memlens.cli.importer -> memlens.core.store 'writes imported notes'
   memlens.cli.uihost -> memlens.ui 'serves the client'
   memlens.ui -> memlens.cli.uihost 'reads and acts over HTTP'
 
