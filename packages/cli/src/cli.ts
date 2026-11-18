@@ -70,7 +70,7 @@ const USAGE = `Usage: ${NAME} <command> [flags]
   repair [--dry-run]
   export --format md|jsonl --out dir [--scope key]
   import --in path [--as key] [--dry-run]
-  config get|set key [value]
+  config show [--profile name] [--json]
   ui [--port 7788] [--allow-delete]
 
 A target is <pos>, <pos>-<pos>, <scope>#<pos>, or <scope>#<pos>-<pos>.
@@ -171,7 +171,7 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 	},
 	config: {
 		run: (args, io) => configCommand(args, io),
-		spec: { positional: ["action", "key", "value?"], flags: {} },
+		spec: { positional: ["action"], flags: { json: 0, profile: 1 } },
 	},
 };
 

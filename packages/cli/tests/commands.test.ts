@@ -636,13 +636,23 @@ describe("@memlens/cli commands", () => {
 		expect(found.out).toContain("project:acme/x#0");
 	});
 
-	it("sets and gets one configuration key", async () => {
+	it("shows the resolved configuration", async () => {
 		const test = makeEnv();
-		const set = await run(test, "config", "set", "store.idle", "60");
-		expect(set.code).toBe(0);
-		const got = await run(test, "config", "get", "store.idle");
-		expect(got.code).toBe(0);
-		expect(got.out).toContain("store.idle: 60");
+		const shown = await run(test, "config", "show");
+		expect(shown.code).toBe(0);
+		expect(shown.out).toContain("[profile]");
+		expect(shown.out).toContain("here = 20");
+		const json = JSON.parse((await run(test, "config", "show", "--json")).out);
+		expect(json.budget).toMatchObject({ here: 20, directions: 10 });
+		expect(json.review).toMatchObject({ decision: 365, gotcha: 180, task: 7 });
+		const work = makeEnv(WORK_CONFIG);
+		const scoped = JSON.parse(
+			(await run(work, "config", "show", "--json", "--profile", "work")).out,
+		);
+		expect(scoped.profile.scopes).toEqual(["project:*"]);
+		const removed = await run(test, "config", "get", "store.idle");
+		expect(removed.code).toBe(2);
+		expect(removed.err).toContain("outside the usage");
 	});
 
 	it("publishes one copy input and gives a compaction job with --max", async () => {
