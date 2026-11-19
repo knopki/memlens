@@ -35,7 +35,7 @@ import { CONSOLE_RULES } from "@memlens/ui/styles";
  */
 export const CONSOLE_CSS = `${CONSOLE_RULES}
 .ml-console {
-	--ml-accent: var(--dsw-alias-brand-primary);
+	--ml-accent: var(--dsw-alias-state-business-primary);
 	--ml-line-strong: var(--dsw-alias-border-l2);
 	--ml-pill-bg: var(--dsw-alias-bg-layer-2);
 	--ml-muted: var(--dsw-alias-label-secondary);
