@@ -12,7 +12,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import { debuglog } from "node:util";
-import { renderAddress } from "../domain/address.js";
+import { renderAddress } from "../domain/address-form.js";
 import type { NoteKind, ScopeKey } from "../types/primitives.js";
 import type { Store } from "./store.js";
 import type { IndexHit } from "./types.js";

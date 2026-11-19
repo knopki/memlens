@@ -14,7 +14,7 @@ import type { OpenLine, SliceLine } from "@memlens/core";
 import { dateSpan } from "@memlens/core/view";
 import { type JSX, useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
-import { lineAddress, lineText, rangeAddress } from "../../model/format.js";
+import { lineAddress, lineText, renderRange } from "../../model/format.js";
 import { Inspector } from "../inspector.js";
 import { ChildrenPanel, Legend } from "../line-views.js";
 import { Button, Panel } from "../primitives.js";
@@ -114,7 +114,7 @@ export function TreeView({ api }: ScreenProps): JSX.Element {
 		(line) => lineAddress(state.scope, line) === target,
 	);
 	const selectedNode = model.nodes.find(
-		({ scope, node, clean }) => clean && rangeAddress(scope, node) === target,
+		({ scope, node, clean }) => clean && renderRange(scope, node) === target,
 	);
 	const range = target?.match(/^(.*)#(\d+)-(\d+)$/);
 	const rangeNotes = range

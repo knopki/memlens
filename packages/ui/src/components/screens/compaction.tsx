@@ -13,7 +13,7 @@
 
 import type { JSX } from "react";
 import { useState } from "react";
-import { rangeId } from "../../model/format.js";
+import { renderRange } from "../../model/format.js";
 import { Button, Field, Panel, TextArea } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
 
@@ -58,7 +58,7 @@ export function CompactionPanel({ api }: ScreenProps): JSX.Element {
 					<pre className="slice">{job.job}</pre>
 					<Field
 						label={`${t("answers")} · ${job.inputs
-							.map((input) => rangeId(input.range))
+							.map((input) => renderRange(null, input.range))
 							.join(", ")}`}
 					>
 						<TextArea

@@ -1,16 +1,15 @@
 /**
- * Address parsing and rendering.
+ * Address parsing.
  *
  * #region moduleContract
  * @modulecontract
- * @purpose Parse and render record addresses, so the tools and the CLI share one address grammar.
+ * @purpose Parse record addresses, so the tools and the CLI share one address grammar.
  * @scope
  *  - Parsing of pos, pos-pos, scope#pos, and scope#pos-pos.
- *  - Rendering of addresses with a leading #.
  *  - NOT: pos allocation, scope resolution, or record lookup.
  * @invariants
  *  - Positions are non-negative integers. A range end is not before its start.
- * @keywords address, pos, range, scope, addr, parse, render
+ * @keywords address, pos, range, scope, addr, parse
  * #endregion moduleContract
  */
 
@@ -113,24 +112,3 @@ function parseNonNegInt(s: string): number | null {
 	if (!Number.isInteger(n) || n < 0) return null;
 	return n;
 }
-
-// #region FUNC_renderAddress
-/**
- * @purpose Render a pos or range in the address form of a slice line.
- * @invariants A local address starts with #. A scoped address starts with scope#.
- * @param scope - The scope key, or null for the active scope.
- * @param start - The start position.
- * @param end - The end position, or null for a single record.
- * @returns The rendered address string with a leading #.
- */
-export function renderAddress(
-	scope: ScopeKey | null,
-	start: Pos,
-	end: Pos | null,
-): string {
-	const range = end === null ? String(start) : `${start}-${end}`;
-	const result = scope === null ? `#${range}` : `${scope}#${range}`;
-	debug("Address rendered", { scope, start, end, result });
-	return result;
-}
-// #endregion FUNC_renderAddress

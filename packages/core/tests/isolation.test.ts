@@ -50,6 +50,7 @@ describe("library isolation", () => {
 
 	it("keeps store imports limited to pure domain helpers", () => {
 		const allowed = new Set([
+			"../domain/address-form.js",
 			"../domain/address.js",
 			"../domain/note-body.js",
 			"../domain/scope.js",

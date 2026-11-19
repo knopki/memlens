@@ -24,7 +24,7 @@ import {
 	type View,
 } from "../store/view.js";
 import type { IsoTime, NoteKind, ScopeKey } from "../types/primitives.js";
-import { renderAddress } from "./address.js";
+import { renderAddress } from "./address-form.js";
 
 const debug = debuglog("memlens:reads");
 

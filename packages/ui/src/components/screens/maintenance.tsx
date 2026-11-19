@@ -18,7 +18,7 @@
 import type { JSX } from "react";
 import { useEffect } from "react";
 import type { ConsoleApi, ConsoleRuntime } from "../../model/console.js";
-import { localTime, rangeAddress } from "../../model/format.js";
+import { localTime, renderRange } from "../../model/format.js";
 import type { View } from "../../types.js";
 import { KeyValue, Panel, Table, widthPercent } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
@@ -65,7 +65,7 @@ export function Maintenance({ api }: ScreenProps): JSX.Element {
 					headers={[t("scope"), t("range"), t("level"), t("state")]}
 					rows={model.candidates.map((item) => [
 						item.scope,
-						rangeAddress(item.scope, item.range),
+						renderRange(item.scope, item.range),
 						String(item.range.level),
 						item.ready ? t("ready") : t("waits"),
 					])}

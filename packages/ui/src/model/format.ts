@@ -15,13 +15,12 @@ import { KIND_KEYS, type Table } from "../i18n.js";
 import type { Translate } from "./console.js";
 
 export {
-	address,
 	lineAddress,
 	lineText,
 	localTime,
-	rangeAddress,
-	rangeId,
-	rangeOf,
+	readRange,
+	renderAddress,
+	renderRange,
 } from "../format.js";
 
 // #region FUNC_kindName

@@ -16,7 +16,7 @@ import { dateSpan } from "@memlens/core/view";
 import type { JSX } from "react";
 import { useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
-import { lineText, rangeId, rangeOf } from "../../model/format.js";
+import { lineText, readRange, renderRange } from "../../model/format.js";
 import type { View } from "../../types.js";
 import { ChildrenPanel, Legend } from "../line-views.js";
 import { Button, Panel } from "../primitives.js";
@@ -77,7 +77,7 @@ function catalogRange(line: SliceLine): Range {
 }
 
 function catalogTarget(line: SliceLine): string {
-	return rangeId(catalogRange(line));
+	return renderRange(null, catalogRange(line));
 }
 
 function catalogName(model: View, range: Range): string {
@@ -85,7 +85,7 @@ function catalogName(model: View, range: Range): string {
 		range.start,
 		range.start + 2 ** range.level,
 	);
-	return covered.join(",") || rangeId(range);
+	return covered.join(",") || renderRange(null, range);
 }
 
 // #region COMPONENT_Catalog
@@ -105,11 +105,12 @@ export function Catalog({ api }: ScreenProps): JSX.Element {
 	const selection = state.selection;
 	const result = selection?.result;
 	const target = selection?.target ?? "";
+	const openRange = readRange(target);
 	const detail =
 		result?.kind === "catalog" ? (
 			<ChildrenPanel
 				api={api}
-				title={`${api.t("children")} · ${catalogName(model, rangeOf(target))}`}
+				title={`${api.t("children")} · ${openRange ? catalogName(model, openRange) : target}`}
 				rows={result.children.map((line) => (
 					<CatalogLine
 						key={catalogTarget(line)}

@@ -23,10 +23,8 @@ export {
 	visibleScopes,
 	withActiveScope,
 } from "./domain/active-scope.js";
-export {
-	parseAddress,
-	renderAddress,
-} from "./domain/address.js";
+export { parseAddress } from "./domain/address.js";
+export { renderAddress } from "./domain/address-form.js";
 export {
 	compactionPass,
 	RateWindow,

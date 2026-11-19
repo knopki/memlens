@@ -19,7 +19,7 @@
 
 import type { BuildInput, NoteKind, OpenEntry, Range } from "@memlens/core";
 import { NOTE_KINDS } from "@memlens/core/view";
-import { address, rangeId, rangeOf } from "../format.js";
+import { readRange, renderAddress, renderRange } from "../format.js";
 import { LANGS, type Lang } from "../i18n.js";
 import { DEFAULT_ROUTE, type Route, routeOf, type Screen } from "../route.js";
 import type { Choice, RecordModel, Step, View } from "../types.js";
@@ -404,7 +404,7 @@ export function createConsoleController(
 		});
 		set({
 			selection: {
-				target: rangeId(range),
+				target: renderRange(null, range),
 				result: { kind: "catalog", children },
 			},
 		});
@@ -466,10 +466,15 @@ export function createConsoleController(
 			return;
 		}
 		if (get().query) await find("none");
-		if (target)
-			await (route.screen === "catalog"
-				? openCatalog(rangeOf(target), "none")
-				: openTarget(target, "none"));
+		if (target && route.screen === "catalog") {
+			const range = readRange(target);
+			if (range) await openCatalog(range, "none");
+			else
+				console.debug("Console range rejected", {
+					event: "range",
+					target,
+				});
+		} else if (target) await openTarget(target, "none");
 		enter("replace");
 	}
 	// #endregion FUNC_restore
@@ -598,7 +603,7 @@ export function createConsoleController(
 	async function applyCompaction(answers: string): Promise<void> {
 		const job = get().job;
 		if (!job) return;
-		const wanted = job.inputs.map((input) => rangeId(input.range));
+		const wanted = job.inputs.map((input) => renderRange(null, input.range));
 		try {
 			if (!answers.trim()) throw new Error(t("enterAnswers"));
 			const unknown = unknownInputs(answers, wanted);
@@ -641,7 +646,7 @@ export function createConsoleController(
 	 */
 	async function editNote(target: string, supersede: boolean): Promise<void> {
 		const record = get().model?.records.find(
-			(item) => address(item) === target,
+			(item) => renderAddress(item.scope, item.pos, null) === target,
 		);
 		if (record) {
 			set({ dialog: dialogOf(record, supersede ? target : "") });

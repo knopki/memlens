@@ -1,11 +1,11 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Check the address grammar and the rendered address form.
+ * @purpose Check the address grammar of one record.
  * #endregion moduleContract
  */
 import { describe, expect, it } from "vitest";
-import { parseAddress, renderAddress } from "../src/domain/address.js";
+import { parseAddress } from "../src/domain/address.js";
 
 describe("parseAddress", () => {
 	it("parses a pos", () => {
@@ -64,23 +64,5 @@ describe("parseAddress", () => {
 
 	it("rejects an invalid scope key", () => {
 		expect(parseAddress("Invalid Scope#42")).toBeNull();
-	});
-});
-
-describe("renderAddress", () => {
-	it("renders a pos with a leading #", () => {
-		expect(renderAddress(null, 42, null)).toBe("#42");
-	});
-
-	it("renders a range with a leading #", () => {
-		expect(renderAddress(null, 10, 20)).toBe("#10-20");
-	});
-
-	it("renders a scoped pos", () => {
-		expect(renderAddress("project:dsh", 42, null)).toBe("project:dsh#42");
-	});
-
-	it("renders a scoped range", () => {
-		expect(renderAddress("project:dsh", 10, 20)).toBe("project:dsh#10-20");
 	});
 });
