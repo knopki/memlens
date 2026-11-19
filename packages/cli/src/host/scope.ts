@@ -3,47 +3,28 @@
  *
  * #region moduleContract
  * @modulecontract
- * @purpose Resolve the scope and the target of one request, so each handler works on one listed
- *   scope.
+ * @purpose Resolve the scope of one console request, so each handler works on one listed scope.
  * @scope
- *  - The requested scope, the active scope, the listed scope check, the note kind, and the target
- *    row.
- *  - NOT: the HTTP transport and the action semantics.
+ *  - The requested scope, the newest scope, and the active scope of the directory.
+ *  - NOT: the HTTP transport, the action semantics, and the listed scope check.
  * @invariants A scope outside the profile gives NotAllowed.
  * @usecases
  *  - View: client => gives no scope => gets the active scope or the first listed scope
  * @dependencies USES API: @memlens/core
- * @keywords ui, scope, profile, target, kind, resolve
+ * @keywords ui, scope, resolve, active
  * #endregion moduleContract
  */
 
-import type { Note, NoteKind, ScopeKey } from "@memlens/core";
 import {
-	byAddress,
-	MemlensError,
-	NOTE_KINDS,
+	allowedScope,
+	type Fields,
 	newestScope,
-	parseAddress,
+	type ScopeKey,
+	text,
 	validateScopeKey,
 } from "@memlens/core";
 import { cliActiveScope, profileLists, type Runtime } from "../runtime.js";
-import { type Fields, type HostOptions, text } from "./http.js";
-
-// #region FUNC_allowedScope
-/**
- * Check one scope against the profile of the runtime.
- *
- * @purpose Refuse a scope outside the profile, so a request changes no record of another profile.
- * @invariants An invalid key gives a Usage error. An unlisted key gives NotAllowed.
- */
-export function allowedScope(runtime: Runtime, raw: string): ScopeKey {
-	if (!validateScopeKey(raw))
-		throw new MemlensError("Usage", "The scope key is invalid.");
-	if (!profileLists(runtime, raw))
-		throw new MemlensError("NotAllowed", "The scope is outside this profile.");
-	return raw;
-}
-// #endregion FUNC_allowedScope
+import { type HostOptions, hostOf } from "./http.js";
 
 // #region FUNC_resolveScope
 /**
@@ -68,34 +49,8 @@ export function resolveScope(
 		runtime.config.profile.scopes.find(validateScopeKey) ??
 		fallback;
 	return allowedScope(
-		runtime,
+		hostOf(runtime),
 		requested || fresh || (profileLists(runtime, fallback) ? fallback : first),
 	);
 }
 // #endregion FUNC_resolveScope
-
-// #region FUNC_noteKind
-/** @purpose Give the note kind of one field, or a Usage error. */
-export function noteKind(raw: string): NoteKind {
-	if (!(NOTE_KINDS as readonly string[]).includes(raw))
-		throw new MemlensError("Usage", "The kind is unknown.");
-	return raw as NoteKind;
-}
-// #endregion FUNC_noteKind
-
-// #region FUNC_targetRecord
-/** @purpose Give the one note row that a target address names. */
-export function targetRecord(
-	runtime: Runtime,
-	fallback: ScopeKey,
-	target: string,
-): Note {
-	const address = parseAddress(target);
-	if (!address || address.kind === "range" || address.kind === "scoped-range")
-		throw new MemlensError("Usage", "The target must name one note.");
-	const scope = allowedScope(runtime, address.scope ?? fallback);
-	const row = byAddress(runtime.store, scope, address.pos);
-	if (!row) throw new MemlensError("Data", "The note does not exist.");
-	return row;
-}
-// #endregion FUNC_targetRecord

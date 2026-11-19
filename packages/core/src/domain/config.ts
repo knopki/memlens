@@ -12,8 +12,9 @@
  *    A table merges with a table, and a scalar or a list replaces.
  *  - The preset holds no compaction key. The base and the patch select the compaction route.
  *  - The configuration lives in `$XDG_CONFIG_HOME/memlens`. The data lives in `$XDG_DATA_HOME/memlens`.
+ *  - An absent base file is the default layer, and no parser runs for it.
  * @usecases
- *  - Load: caller => gives TOML text and a default store path => gets the base layer
+ *  - Load: caller => gives the TOML text or an absent file and a default store path => gets the base layer
  *  - Resolve: caller => gives three layers => gets one resolved configuration
  * @dependencies USES API: smol-toml, node:path
  * @rationale
@@ -59,14 +60,29 @@ const debug = debuglog("memlens:config");
 // #region FUNC_loadBaseConfig
 /**
  * @purpose Read the base TOML file into a complete layer, so the rest of the code sees one shape.
- * @param text - The content of `config.toml`.
+ *   An absent file is the default layer, and no parser runs.
+ * @param text - The content of `config.toml`, or null when the file is absent.
  * @param defaultStorePath - The store path when the file gives none.
  * @returns The validated base layer with the defaults filled.
  */
 export function loadBaseConfig(
-	text: string,
+	text: string | null,
 	defaultStorePath: Path,
 ): BaseConfig {
+	if (text === null) {
+		const layer: BaseConfig = {
+			language: "en",
+			defaultProfile: "default",
+			store: readStore(undefined, defaultStorePath),
+			profile: readProfiles(undefined),
+			scope_default: readScopeDefault(undefined),
+			nudge: readNudge(undefined),
+			compaction: readCompaction(undefined),
+			review: readReview(undefined),
+		};
+		debug("Base config loaded", { event: "base", absent: true });
+		return layer;
+	}
 	const value = parseToml(text) as unknown;
 	const root = expectRecord(value, "config");
 	expectKeys(

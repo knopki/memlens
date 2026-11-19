@@ -29,6 +29,7 @@ import {
 	SCREEN_COMPONENTS,
 	SCREENS,
 } from "@memlens/ui";
+import { CONSOLE_RULES } from "@memlens/ui/styles";
 import type { ComponentType, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -886,6 +887,12 @@ describe("screen registry", () => {
 });
 
 describe("console stylesheet", () => {
+	it("puts the shared rules before the host palette and overrides", () => {
+		expect(CONSOLE_RULES.length).toBeGreaterThan(0);
+		expect(CONSOLE_CSS.startsWith(CONSOLE_RULES)).toBe(true);
+		expect(CONSOLE_CSS.indexOf(CONSOLE_RULES, CONSOLE_RULES.length)).toBe(-1);
+	});
+
 	it("keeps every selector under the surface root", () => {
 		const selectors = CONSOLE_CSS.split("\n")
 			.map((line) => line.trim())

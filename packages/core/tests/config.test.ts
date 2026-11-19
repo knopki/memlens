@@ -15,6 +15,10 @@ import {
 	storePath,
 	xdgDirs,
 } from "../src/domain/config.js";
+import {
+	DEFAULT_REVIEW_DAYS,
+	NUDGE_TEXTS,
+} from "../src/domain/config-types.js";
 
 const BASE_TOML = `
 defaultProfile = "default"
@@ -79,18 +83,29 @@ ${parts.nudge ?? ""}
 }
 
 describe("loadBaseConfig", () => {
-	it("loads an empty file with each default", () => {
-		const config = loadBaseConfig("", "/default/store");
-		expect(config.language).toBe("en");
-		expect(config.defaultProfile).toBe("default");
-		expect(config.store).toEqual({ path: "/default/store", idle: 300 });
-		expect(config.profile).toEqual({});
-		expect(config.scope_default).toEqual({
-			rules: [],
-			default: "project:misc",
+	it("gives the default layer for an absent file", () => {
+		expect(loadBaseConfig(null, "/store")).toEqual({
+			language: "en",
+			defaultProfile: "default",
+			store: { path: "/store", idle: 300 },
+			profile: {},
+			scope_default: { rules: [], default: "project:misc" },
+			nudge: { tool_calls: 10, turns: 10, text: NUDGE_TEXTS },
+			compaction: {
+				provider: "",
+				model: "",
+				effort: "",
+				batch: 10,
+				maxCallsPerHour: 120,
+			},
+			review: DEFAULT_REVIEW_DAYS,
 		});
-		expect(config.compaction.provider).toBe("");
-		expect(config.compaction.model).toBe("");
+	});
+
+	it("gives the same layer for an empty file", () => {
+		expect(loadBaseConfig("", "/store")).toEqual(
+			loadBaseConfig(null, "/store"),
+		);
 	});
 
 	it("fills the defaults of an incomplete file", () => {

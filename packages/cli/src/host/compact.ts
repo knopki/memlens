@@ -16,10 +16,9 @@
  */
 
 import type { BuildInput, ScopeKey } from "@memlens/core";
-import { MemlensError } from "@memlens/core";
+import { type Fields, MemlensError, text } from "@memlens/core";
 import { applyAnswers, parseAnswers, prepareCompact } from "../compact.js";
 import type { Runtime } from "../runtime.js";
-import { type Fields, text } from "./http.js";
 
 // #region FUNC_compactAction
 /**

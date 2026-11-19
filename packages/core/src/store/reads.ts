@@ -2,10 +2,11 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Answer each memory read from the rows of one store, so no read scans the log.
- * @scope Note by address or id, due reviews, live counts, scope notes, nodes, and the directions data.
+ * @scope Note by address or id, due reviews, live counts, scope notes, nodes, the directions data,
+ *   and the journal rows.
  * @invariants The note reads give a row in any state. A hidden row is evidence, not content loss.
  * @invariants Each read uses one statement on the store handle. No read opens a long transaction.
- * @keywords read, note, node, due, review, count, scope, directions, rest
+ * @keywords read, note, node, due, review, count, scope, directions, journal, rest
  * #endregion moduleContract
  */
 
@@ -253,6 +254,75 @@ function lastWrites(
 		.sort(newerFirst);
 }
 // #endregion FUNC_lastWrites
+
+// #region INTERFACE_JournalRow
+/**
+ * @purpose Give the caller one journal event of the audit trail.
+ */
+export interface JournalRow {
+	/** The sequence number of the event. */
+	readonly seq: number;
+
+	/** The wall clock of the event. */
+	readonly at: IsoTime;
+
+	/** The operation name of the event. */
+	readonly op: string;
+
+	/** The note id of the target, or null when the event names no note. */
+	readonly target: Ulid | null;
+
+	/** The scope key of the target, or null when the event names no scope. */
+	readonly scope: ScopeKey | null;
+
+	/** The reason text, or null when the writer gave none. */
+	readonly reason: string | null;
+}
+// #endregion INTERFACE_JournalRow
+
+// #region FUNC_journalRows
+/**
+ * @purpose List the newest journal events, so a user reads the audit trail of the store.
+ * @invariants The answer runs from the oldest event of the set to the newest. The read holds no
+ *   content of a note.
+ * @returns The newest events, at most the given limit.
+ */
+export function journalRows(
+	store: Store,
+	options: { limit: number; scope?: ScopeKey },
+): readonly JournalRow[] {
+	const cap = Math.max(0, options.limit);
+	const rows = options.scope
+		? store
+				.handle()
+				.prepare(
+					"SELECT seq, at, op, target, scope, reason FROM journal WHERE scope = ? ORDER BY seq DESC LIMIT ?",
+				)
+				.all(options.scope, cap)
+		: store
+				.handle()
+				.prepare(
+					"SELECT seq, at, op, target, scope, reason FROM journal ORDER BY seq DESC LIMIT ?",
+				)
+				.all(cap);
+	debug("Journal rows", {
+		event: "journal_rows",
+		count: rows.length,
+		limit: cap,
+		scope: options.scope ?? null,
+	});
+	return rows
+		.map((row) => ({
+			seq: Number(row.seq),
+			at: String(row.at) as IsoTime,
+			op: String(row.op),
+			target: row.target === null ? null : (String(row.target) as Ulid),
+			scope: row.scope === null ? null : (String(row.scope) as ScopeKey),
+			reason: row.reason === null ? null : String(row.reason),
+		}))
+		.reverse();
+}
+// #endregion FUNC_journalRows
 
 // #region FUNC_newestScope
 /**

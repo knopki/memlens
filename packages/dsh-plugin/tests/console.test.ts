@@ -25,7 +25,6 @@ import { TypertRegistry } from "@deepseek-ai/dsh-typert-registry";
 import {
 	byAddress,
 	type CompactionConfig,
-	DEFAULT_CONFIG_TOML,
 	note,
 	propose,
 	type StoreConfig,
@@ -152,11 +151,21 @@ function workerInputs(): {
 	};
 }
 
-/** The base file of the cases: the built-in file with a stated fallback scope key. */
-const CASE_BASE = DEFAULT_CONFIG_TOML.replace(
-	'default = "project:misc"',
-	'default = "user:notes"',
-).replace(
+/** The base file of the cases: the defaults with a stated fallback scope key. */
+const CASE_BASE = `[store]
+idle = 300
+
+[profile.default]
+scopes = ["*"]
+
+[profile.default.budget]
+here = 20
+directions = 10
+
+[scope_default]
+rules = []
+default = "user:notes"
+`.replace(
 	"rules = []",
 	'rules = [{ match = "path", glob = "*", key = "user:notes" }]',
 );
@@ -738,10 +747,7 @@ describe("console actions", () => {
 
 	it("inside one scope, changes the scope and the kind of one note", async () => {
 		const testCase = composition({
-			base: DEFAULT_CONFIG_TOML.replace(
-				'scopes = ["*"]',
-				'scopes = ["user:notes", "project:moved"]',
-			),
+			base: `[profile.default]\nscopes = ["user:notes", "project:moved"]\n`,
 		});
 		insert(testCase, "alpha beta", 1);
 		await registered(testCase);

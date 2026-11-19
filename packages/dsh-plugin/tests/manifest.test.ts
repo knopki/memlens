@@ -1,14 +1,18 @@
 /**
  * #region moduleContract
- * @purpose Check the manifest, the patch file, the locales, and the icon that the harness loads.
+ * @purpose Check the manifest, the patch file, the locales, the language bar, and the icon that the
+ *   harness loads.
  * @invariants Each peer dependency has a development mirror. Both entry points exist after the build.
  * @invariants The patch holds the host entry id. The manifest exports the host and the preset paths.
+ * @invariants The language list comes from @memlens/ui. The locale directory and the README bar hold
+ * one entry per language of that list, and no other entry.
  * #endregion moduleContract
  */
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { LANGS } from "@memlens/ui";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -119,8 +123,8 @@ describe("plugin manifest", () => {
 		}
 	});
 
-	it("gives display metadata in eight languages", () => {
-		for (const language of ["de", "en", "es", "fr", "ja", "pt", "ru", "zh"]) {
+	it("gives display metadata in each language of the console", () => {
+		for (const language of LANGS) {
 			const data = JSON.parse(
 				readFileSync(join(root, "locale", `${language}.json`), "utf8"),
 			) as {
@@ -129,6 +133,23 @@ describe("plugin manifest", () => {
 			expect(data.meta?.title).toBeTruthy();
 			expect(data.meta?.description).toBeTruthy();
 		}
+	});
+
+	it("ships one locale file per console language, and no other file", () => {
+		expect(readdirSync(join(root, "locale")).sort()).toEqual(
+			[...LANGS].map((code) => `${code}.json`).sort(),
+		);
+	});
+
+	it("links each console language in the README bar", () => {
+		const document = readFileSync(join(root, "README.md"), "utf8");
+		const linked = [...document.matchAll(/\(README\.([a-z]+)\.md\)/g)].map(
+			(match) => match[1] ?? "",
+		);
+		// The English file names its own language with no link.
+		expect([...new Set(linked)].sort()).toEqual(
+			[...LANGS].filter((code) => code !== "en").sort(),
+		);
 	});
 
 	it("keeps the icon below 256 KiB", () => {

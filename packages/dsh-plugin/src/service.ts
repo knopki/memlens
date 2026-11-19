@@ -32,7 +32,6 @@ import {
 import {
 	activeScope,
 	type BaseConfig,
-	DEFAULT_CONFIG_TOML,
 	loadBaseConfig,
 	loadPatchConfig,
 	loadPresetConfig,
@@ -444,7 +443,7 @@ export class Memlens extends Service {
 				event: "base-error",
 				error: this.openError,
 			});
-			return loadBaseConfig(DEFAULT_CONFIG_TOML, xdgDirs(process.env).dataDir);
+			return loadBaseConfig(null, xdgDirs(process.env).dataDir);
 		}
 	}
 	// #endregion METHOD_initialBase

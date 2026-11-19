@@ -34,6 +34,7 @@ await build({
 // system exists. The script registers one factory under the package name, and
 // the factory returns the plugin exports. React and the other baseline modules
 // come from the module table of the page, so they stay external.
+// Bundle the shared console rules from the UI package with the host palette.
 const CLIENT_PACKAGES = [
 	"react",
 	"react/jsx-runtime",

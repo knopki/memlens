@@ -1,31 +1,27 @@
 /**
  * #region moduleContract
- * @purpose Resolve the fields, the scope, and the target of one console request, so every handler
- *   works on one scope that the profile of the request lists.
+ * @purpose Resolve the fields and the scope of one console request, so every handler works on one
+ *   scope that the profile of the request lists.
  * @scope
- *  - The request fields, the note kind, the listed scope check, the request scope, and the target
- *    row.
- *  - NOT: the transport, the reads, the actions, and the status.
+ *  - The request type, the request scope, and the backend context of one memory.
+ *  - NOT: the transport, the reads, the actions, the status, and the listed scope check.
  * @invariants An invalid scope key gives Usage. A scope outside the profile of the request gives
  *   NotAllowed.
  * @invariants The session supplies the active scope and the profile of a session request. A profile
  *   request names its profile, and the host file gives its fallback scope.
  * @invariants A request whose store is not open resolves its scope from no row.
  * @dependencies USES API: @memlens/core
- * @keywords console, scope, profile, target, kind, request, field
+ * @keywords console, scope, profile, request, field, host
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
 import type { Agent } from "@deepseek-ai/dsh-agent";
 import {
-	byAddress,
-	MemlensError,
-	NOTE_KINDS,
-	type Note,
-	type NoteKind,
+	allowedScope,
+	type ConsoleHost,
+	type Fields,
 	newestScope,
-	parseAddress,
 	type ScopeKey,
 	validateScopeKey,
 } from "@memlens/core";
@@ -33,9 +29,6 @@ import type { AgentMemory } from "../service.js";
 import { listedInProfile, visibleScopeList } from "../tools/shared.js";
 
 const debug = debuglog("memlens:plugin:console");
-
-/** One request body or query, with the fields of the console. */
-export type Fields = Record<string, unknown>;
 
 // #region INTERFACE_ConsoleRequest
 /**
@@ -55,52 +48,16 @@ export interface ConsoleRequest {
 }
 // #endregion INTERFACE_ConsoleRequest
 
-// #region FUNC_text
-/**
- * @purpose Give one text field of the request, so a value of a wrong type gives a Usage error.
- * @param fields - The query and body fields of one request.
- * @param key - The field name.
- * @returns The text, or an empty text when the field is absent.
- */
-export function text(fields: Fields, key: string): string {
-	const value = fields[key];
-	if (value === undefined) return "";
-	if (typeof value !== "string")
-		throw new MemlensError("Usage", `The field ${key} must be text.`);
-	return value;
+// #region FUNC_hostOf
+/** @purpose Give the backend context of one memory, so one adapter holds no host rule. */
+export function hostOf(memory: AgentMemory): ConsoleHost {
+	return {
+		store: memory.store,
+		config: memory.config,
+		scopes: visibleScopeList(memory),
+	};
 }
-// #endregion FUNC_text
-
-// #region FUNC_noteKind
-/**
- * @purpose Give the note kind of one field, so an unknown kind gives a Usage error.
- * @param raw - The kind text of the request.
- * @returns The note kind.
- */
-export function noteKind(raw: string): NoteKind {
-	if (!(NOTE_KINDS as readonly string[]).includes(raw))
-		throw new MemlensError("Usage", "The kind is unknown.");
-	return raw as NoteKind;
-}
-// #endregion FUNC_noteKind
-
-// #region FUNC_allowedScope
-/**
- * @purpose Refuse a scope outside the session profile, so a request changes no record of another
- *   profile.
- * @invariants An invalid key gives a Usage error. An unlisted key gives NotAllowed.
- * @param memory - The store and the profile of the session.
- * @param raw - The scope text of the request or of a target address.
- * @returns The checked scope key.
- */
-export function allowedScope(memory: AgentMemory, raw: string): ScopeKey {
-	if (!validateScopeKey(raw))
-		throw new MemlensError("Usage", "The scope key is invalid.");
-	if (!listedInProfile(memory, raw))
-		throw new MemlensError("NotAllowed", "The scope is outside this profile.");
-	return raw;
-}
-// #endregion FUNC_allowedScope
+// #endregion FUNC_hostOf
 
 // #region FUNC_requestScope
 /**
@@ -118,7 +75,7 @@ export function requestScope(
 	requested: string,
 	newest = false,
 ): ScopeKey {
-	if (requested) return allowedScope(memory, requested);
+	if (requested) return allowedScope(hostOf(memory), requested);
 	const visible = memory.storeState.ready ? visibleScopeList(memory) : [];
 	const active = memory.scope;
 	const fresh =
@@ -140,27 +97,6 @@ export function requestScope(
 	// check. A requested scope still passes the check, because the request names it.
 	return requested === "" && !memory.storeState.ready
 		? scope
-		: allowedScope(memory, scope);
+		: allowedScope(hostOf(memory), scope);
 }
 // #endregion FUNC_requestScope
-
-// #region FUNC_targetRecord
-/**
- * @purpose Give the one note row that a target address names.
- * @invariants A range address gives a Usage error. A row outside the profile gives NotAllowed.
- * @invariants A target with no scope takes the fallback scope.
- */
-export function targetRecord(
-	memory: AgentMemory,
-	fallback: ScopeKey,
-	target: string,
-): Note {
-	const address = parseAddress(target);
-	if (!address || address.kind === "range" || address.kind === "scoped-range")
-		throw new MemlensError("Usage", "The target must name one note.");
-	const scope = allowedScope(memory, address.scope ?? fallback);
-	const row = byAddress(memory.store, scope, address.pos);
-	if (!row) throw new MemlensError("Data", "The note does not exist.");
-	return row;
-}
-// #endregion FUNC_targetRecord

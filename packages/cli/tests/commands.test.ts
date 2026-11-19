@@ -574,6 +574,30 @@ describe("@memlens/cli commands", () => {
 		expect(status.out).toContain("rev:");
 	});
 
+	it("shows the journal rows in order and honors the limit", async () => {
+		const test = makeEnv();
+		await run(test, "note", "Kept text", "--scope", "project:acme/x");
+		await run(test, "note", "Hidden text", "--scope", "project:acme/x");
+		await run(test, "forget", "project:acme/x#1");
+		const whole = await run(test, "journal");
+		expect(whole.code).toBe(0);
+		expect(whole.out.trim().split("\n")).toHaveLength(3);
+		const limited = await run(test, "journal", "--limit", "2");
+		expect(limited.code).toBe(0);
+		const lines = limited.out.trim().split("\n");
+		expect(lines).toHaveLength(2);
+		expect(lines[0]).toMatch(/ {2}note {2}/);
+		expect(lines[1]).toMatch(/ {2}hide {2}/);
+		expect(lines[1]).toContain("project:acme/x");
+		const narrow = await run(test, "journal", "--scope", "project:other");
+		expect(narrow.code).toBe(0);
+		expect(narrow.out).toBe("");
+		const json = await run(test, "journal", "--json");
+		expect(json.code).toBe(0);
+		const rows = JSON.parse(json.out) as { op: string }[];
+		expect(rows.map((row) => row.op)).toEqual(["note", "note", "hide"]);
+	});
+
 	it("exports markdown with an encoded name and no node section", async () => {
 		const test = makeEnv();
 		await run(test, "note", "Export note", "--scope", "project:a/b");

@@ -28,10 +28,11 @@ import {
 	publishJoin,
 	publishNode,
 	readBuild,
+	text,
 } from "@memlens/core";
 import type { AgentMemory } from "../service.js";
 import { visibleScopeList } from "../tools/shared.js";
-import { type ConsoleRequest, text } from "./scope.js";
+import type { ConsoleRequest } from "./scope.js";
 
 const debug = debuglog("memlens:plugin:console");
 

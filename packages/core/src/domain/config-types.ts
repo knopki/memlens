@@ -180,26 +180,3 @@ export const DEFAULT_SCOPE_DEFAULT: ScopeDefault = {
 	rules: [],
 	default: "project:misc",
 };
-
-/** The fallback base file for a machine without a configuration file. */
-export const DEFAULT_CONFIG_TOML = `language = "en"
-defaultProfile = "default"
-
-[store]
-idle = 300
-
-[compaction]
-batch = 10
-maxCallsPerHour = 120
-
-[profile.default]
-scopes = ["*"]
-
-[profile.default.budget]
-here = 20
-directions = 10
-
-[scope_default]
-rules = []
-default = "project:misc"
-`;

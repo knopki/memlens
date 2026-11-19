@@ -17,7 +17,6 @@ import {
 	activeScope,
 	automaticScope,
 	type BaseConfig,
-	DEFAULT_CONFIG_TOML,
 	expandTilde,
 	loadBaseConfig,
 	MemlensError,
@@ -61,14 +60,14 @@ export function readPluginBase(
 ): BaseRead {
 	const { configDir, dataDir } = xdgDirs(env);
 	const path = join(configDir, "config.toml");
-	let text: string;
+	let text: string | null;
 	let present = true;
 	try {
 		text = readFileSync(path, "utf8");
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT" || required)
 			throw error;
-		text = DEFAULT_CONFIG_TOML;
+		text = null;
 		present = false;
 	}
 	let base: BaseConfig;
@@ -81,7 +80,7 @@ export function readPluginBase(
 			path,
 			error: String(error),
 		});
-		base = loadBaseConfig(DEFAULT_CONFIG_TOML, dataDir);
+		base = loadBaseConfig(null, dataDir);
 	}
 	debug("Base loaded", { event: "base", path, present });
 	return { base, present };

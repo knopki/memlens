@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { note, propose, scopeNotes } from "@memlens/core";
 import { afterEach, describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG_TOML, openRuntime } from "../src/runtime.js";
+import { openRuntime } from "../src/runtime.js";
 import { startUi } from "../src/ui.js";
 
 const cleanups: (() => Promise<unknown>)[] = [];
@@ -27,7 +27,10 @@ async function fixture(allowDelete = false, scopes = '["*"]', base?: string) {
 	await mkdir(config, { recursive: true });
 	await writeFile(
 		join(config, "config.toml"),
-		(base ?? DEFAULT_CONFIG_TOML)
+		(
+			base ??
+			`[profile.default]\nscopes = ["*"]\n\n[scope_default]\nrules = []\ndefault = "project:misc"\n`
+		)
 			.replace('scopes = ["*"]', `scopes = ${scopes}`)
 			.replace('default = "project:misc"', 'default = "user:notes"')
 			.replace(

@@ -1,15 +1,8 @@
 /* #region moduleContract
- * @purpose Keep the console readable on a desktop screen in a light and a dark theme.
- * @scope The page shell, the panels, the tables, the forms, and the two palettes.
- * @invariants The page scrolls, and no screen scrolls inside itself, so the slice text renders in
- * full.
- * A line kind of the frontier keeps one palette color, and the legend shows the same color.
- * The stylesheet holds no layout decision of a screen, and the attribute data-theme selects the
- * palette.
- * A result line holds four fixed tracks, so each row starts its columns at one place. A long
- * address cuts the scope prefix and keeps the position.
- * Each button keeps a contrast ratio of 4.5 to 1 or more between its text and its background, in
- * both palettes.
+ * @purpose Keep the standalone console shell and palettes separate from the shared component rules.
+ * @scope The light and dark palettes, the shell, the status line, and the host overrides.
+ * @invariants The data-theme attribute selects the palette without a colour change.
+ * The build puts the shared rules before this sheet, so host overrides win.
  * #endregion moduleContract
  */
 :root {
@@ -27,7 +20,6 @@
 	--amber: #a86a12;
 	--red: #c0392b;
 	--violet: #6d4fd0;
-	--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font:
 		13px / 1.5 system-ui,
 		-apple-system,
@@ -51,6 +43,44 @@
 	--red: #e0605e;
 	--violet: #a78bfa;
 }
+:root {
+	--ml-accent: var(--accent);
+	--ml-line-strong: var(--line2);
+	--ml-pill-bg: var(--panel2);
+	--ml-muted: var(--muted);
+	--ml-warn-label: var(--amber);
+	--ml-button-border: var(--line2);
+	--ml-button-bg: var(--panel2);
+	--ml-text: var(--text);
+	--ml-primary-bg: var(--accent);
+	--ml-primary-text: #fff;
+	--ml-error: var(--red);
+	--ml-panel-bg: var(--panel);
+	--ml-panel-border: var(--line);
+	--ml-active-bg: var(--accent-dim);
+	--ml-success: var(--green);
+	--ml-warn: var(--amber);
+	--ml-hover-bg: var(--panel2);
+	--ml-quote-bg: var(--panel2);
+	--ml-quote-border: var(--line2);
+	--ml-label: var(--muted);
+	--ml-line: var(--line);
+	--ml-filter-border: var(--line2);
+	--ml-filter-bg: var(--panel);
+	--ml-filter-text: var(--text);
+	--ml-kind: var(--violet);
+	--ml-slice-bg: var(--panel2);
+	--ml-slice-border: var(--line);
+	--ml-field-border: var(--line2);
+	--ml-field-bg: var(--panel2);
+	--ml-field-text: var(--text);
+	--ml-dim: var(--dim);
+	--ml-dialog-border: var(--line2);
+	--ml-dialog-bg: var(--panel);
+	--ml-backdrop: rgb(6 10 18 / 0.55);
+	--ml-bg: var(--bg);
+	--ml-primary-hover: var(--accent);
+}
 * {
 	box-sizing: border-box;
 }
@@ -71,10 +101,6 @@ body {
 a {
 	color: var(--accent);
 }
-:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 1px;
-}
 .skip {
 	position: absolute;
 	left: -999px;
@@ -87,6 +113,10 @@ a {
 }
 .skip:focus {
 	left: 12px;
+}
+.skip:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
 }
 #status {
 	position: fixed;
@@ -117,13 +147,13 @@ a {
 #status.error:not(:empty) {
 	border-color: var(--red);
 }
-.shell {
+.ml-console .shell {
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr) auto;
 	height: 100%;
 	min-height: 0;
 }
-header {
+.ml-console header {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -133,99 +163,31 @@ header {
 	background: var(--panel);
 	border-bottom: 1px solid var(--line);
 }
-.brand {
+.ml-console .brand {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	margin-right: 6px;
 	font-size: 14px;
 }
-.pill {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 3px 8px;
-	border: 1px solid var(--line2);
-	border-radius: 999px;
-	background: var(--panel2);
-	font-size: 12px;
-}
-.pill .k {
-	color: var(--muted);
-}
-.pill.warn {
-	border-color: var(--amber);
-	color: var(--amber);
-}
-.pill select {
+.ml-console .pill select {
 	background: transparent;
 	border: 0;
 	color: var(--text);
 	font: inherit;
 	padding: 0 2px;
 }
-.hspacer {
+.ml-console .hspacer {
 	flex: 1;
 }
-.budget {
+.ml-console .budget {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 	font-size: 12px;
 	color: var(--muted);
 }
-.meter {
-	width: 90px;
-	height: 6px;
-	border-radius: 999px;
-	background: var(--line2);
-	overflow: hidden;
-}
-.meter i {
-	display: block;
-	height: 100%;
-	background: var(--accent);
-}
-button,
-select,
-input,
-textarea {
-	font: inherit;
-	color: inherit;
-}
-.btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 6px;
-	min-height: 28px;
-	padding: 4px 10px;
-	border: 1px solid var(--line2);
-	border-radius: 7px;
-	background: var(--panel2);
-	color: var(--text);
-	cursor: pointer;
-}
-.btn:hover:not(:disabled) {
-	border-color: var(--accent);
-}
-.btn:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-.btn.pri {
-	background: var(--accent);
-	border-color: var(--accent);
-	color: #fff;
-}
-.btn.ghost {
-	background: transparent;
-}
-.btn.danger {
-	color: var(--red);
-	border-color: var(--red);
-}
-.layout {
+.ml-console .layout {
 	display: grid;
 	grid-template-columns: 210px minmax(0, 1fr);
 	min-height: 0;
@@ -240,18 +202,18 @@ aside {
 	overflow: auto;
 	scrollbar-gutter: stable;
 }
-.rail-title {
+.ml-console .rail-title {
 	margin: 8px 6px 2px;
 	color: var(--muted);
 	font-size: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 }
-nav {
+.ml-console nav {
 	display: grid;
 	gap: 2px;
 }
-.nav {
+.ml-console .nav {
 	display: grid;
 	grid-template-columns: 16px minmax(0, 1fr);
 	align-items: center;
@@ -263,24 +225,24 @@ nav {
 	text-align: left;
 	cursor: pointer;
 }
-.nav svg {
+.ml-console .nav svg {
 	width: 16px;
 	height: 16px;
 	stroke-width: 1.4;
 }
-.nav:hover {
+.ml-console .nav:hover {
 	background: var(--panel2);
 }
-.nav.on {
+.ml-console .nav.on {
 	background: var(--accent-dim);
 	border-color: var(--accent);
 	color: var(--accent);
 }
-.scopes {
+.ml-console .scopes {
 	display: grid;
 	gap: 2px;
 }
-.sc {
+.ml-console .sc {
 	padding: 5px 8px;
 	border: 1px solid transparent;
 	border-radius: 7px;
@@ -289,15 +251,15 @@ nav {
 	word-break: break-all;
 	cursor: pointer;
 }
-.sc:hover {
+.ml-console .sc:hover {
 	background: var(--panel2);
 }
-.sc.on {
+.ml-console .sc.on {
 	background: var(--accent-dim);
 	border-color: var(--accent);
 	color: var(--accent);
 }
-main {
+.ml-console main {
 	display: grid;
 	align-content: start;
 	gap: 14px;
@@ -306,495 +268,18 @@ main {
 	overflow: auto;
 	scrollbar-gutter: stable both-edges;
 }
-main h1 {
+.ml-console main h1 {
 	margin: 0;
 	font-size: 17px;
 	font-weight: 600;
 }
-.sub {
-	margin: 0;
-	color: var(--muted);
-	max-width: 78ch;
-}
-.muted {
-	color: var(--muted);
-}
-.panel {
-	display: grid;
-	gap: 10px;
-	padding: 12px 14px;
-	background: var(--panel);
-	border: 1px solid var(--line);
-	border-radius: 10px;
-	min-width: 0;
-}
-.panel .head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 12px;
-}
-.panel .head .t {
-	font-weight: 600;
-}
-.panel .head .r {
-	color: var(--muted);
-	font-size: 12px;
-}
-.cards {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-	gap: 12px;
-}
-.card {
-	display: grid;
-	align-content: start;
-	gap: 8px;
-	padding: 12px 14px;
-	background: var(--panel);
-	border: 1px solid var(--line);
-	border-radius: 10px;
-	min-width: 0;
-}
-.card.active {
-	border-color: var(--accent);
-}
-.card-head {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	min-width: 0;
-}
-.card-head .key {
-	font-weight: 600;
-	word-break: break-all;
-}
-.tag {
-	padding: 1px 6px;
-	border-radius: 999px;
-	background: var(--accent-dim);
-	color: var(--accent);
-	font-size: 11px;
-}
-.stats {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
-	color: var(--muted);
-	font-size: 12px;
-}
-.mini {
-	display: grid;
-	gap: 4px;
+.ml-console .mini {
 	padding-right: 4px;
-	font-family: var(--mono);
-	font-size: 11.5px;
-	color: var(--muted);
-	overflow: hidden;
 }
-.mini div {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.card .btn {
-	align-self: start;
-	justify-self: start;
-}
-.split {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
-	gap: 14px;
-	align-items: start;
-}
-.column {
-	display: grid;
-	gap: 14px;
-}
-.legend {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
-	color: var(--muted);
-	font-size: 12px;
-}
-.legend .lg::before {
-	content: "";
-	display: inline-block;
-	width: 9px;
-	height: 9px;
-	margin-right: 5px;
-	border-radius: 2px;
-	background: var(--line2);
-	vertical-align: -1px;
-}
-.legend .lg.r::before {
-	background: var(--green);
-}
-.legend .lg.s::before {
-	background: var(--accent);
-}
-.legend .lg.t::before {
-	background: var(--amber);
-}
-.lines {
-	display: grid;
-	gap: 3px;
-}
-.line {
-	display: grid;
-	grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
-	align-items: baseline;
-	gap: 10px;
-	width: 100%;
-	padding: 5px 9px;
-	border: 1px solid transparent;
-	border-radius: 6px;
-	background: transparent;
-	text-align: left;
-	cursor: pointer;
-	font-family: var(--mono);
-	font-size: 12px;
-}
-.line:hover {
-	background: var(--panel2);
-}
-.line.sel {
-	background: var(--accent-dim);
-	border-color: var(--accent);
-}
-.line .id {
-	color: var(--muted);
-}
-/* An address that names a scope list can be long, so the column keeps a limit. */
-.keys .line {
-	grid-template-columns: minmax(0, 26ch) minmax(0, 1fr);
-}
-.keys .line .id {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.line.r .id {
-	color: var(--green);
-}
-.line.s .id {
-	color: var(--accent);
-}
-.line.t .id {
-	color: var(--amber);
-}
-.line .tx {
-	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-	font-family: inherit;
-}
-.line.pending .tx {
-	color: var(--amber);
-}
-.ins .quote {
-	padding: 10px 12px;
-	background: var(--panel2);
-	border-left: 3px solid var(--line2);
-	border-radius: 0 6px 6px 0;
-	white-space: pre-wrap;
-}
-.ins .quote .doc {
-	margin-top: 8px;
-	color: var(--muted);
-	font-family: var(--mono);
-	font-size: 12px;
-}
-.kv {
-	display: grid;
-	grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
-	gap: 4px 12px;
-	font-size: 12px;
-}
-.kv b {
-	color: var(--muted);
-	font-weight: 500;
-}
-.kv span {
-	word-break: break-all;
-}
-.actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-}
-.table-wrap {
-	overflow-x: auto;
-}
-.table-wrap + .muted {
-	margin-top: 6px;
-}
-table {
-	border-collapse: collapse;
-	width: 100%;
-	font-size: 12.5px;
-}
-th {
-	padding: 6px 10px 6px 0;
-	color: var(--muted);
-	font-weight: 500;
-	text-align: left;
-	border-bottom: 1px solid var(--line2);
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-}
-td {
-	padding: 7px 10px 7px 0;
-	border-bottom: 1px solid var(--line);
-	vertical-align: top;
-}
-tr:last-child td {
-	border-bottom: 0;
-}
-td:first-child {
-	padding-left: 2px;
-}
-th:last-child,
-td:last-child {
-	padding-right: 6px;
-}
-.tiles {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-	gap: 12px;
-}
-.tile {
-	padding: 12px 14px;
-	background: var(--panel);
-	border: 1px solid var(--line);
-	border-radius: 10px;
-}
-.tile .n {
-	font-size: 22px;
-	font-weight: 600;
-}
-.tile .l {
-	color: var(--muted);
-	font-size: 12px;
-}
-.bar {
-	display: grid;
-	grid-template-columns: 110px minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 10px;
-	font-size: 12px;
-}
-.bar .track {
-	height: 6px;
-	border-radius: 999px;
-	background: var(--line2);
-	overflow: hidden;
-}
-.bar .track i {
-	display: block;
-	height: 100%;
-	background: var(--accent);
-}
-.searchbar {
-	display: flex;
-	gap: 8px;
-}
-.searchbar input {
-	flex: 1;
-	min-width: 0;
-	padding: 6px 10px;
-	border: 1px solid var(--line2);
-	border-radius: 7px;
-	background: var(--panel);
-}
-.filters {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 12px;
-}
-.filters label {
-	display: grid;
-	gap: 4px;
-	color: var(--muted);
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-}
-.filters select,
-.filters input {
-	padding: 4px 8px;
-	border: 1px solid var(--line2);
-	border-radius: 6px;
-	background: var(--panel);
-	color: var(--text);
-	font-size: 12.5px;
-}
-/* A hit takes the row of a frontier line, so a result list holds no frame of its own. */
-.hit {
-	grid-template-columns: minmax(0, 176px) 92px minmax(0, 1fr) 84px;
-	font-family: inherit;
-}
-.hit .id {
-	display: flex;
-	min-width: 0;
-	font-family: var(--mono);
-}
-/* A long address cuts the scope prefix and keeps the position. */
-.hit .id .scope {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.hit .id .pos {
-	flex: 0 0 auto;
-}
-.hit .kind {
-	overflow: hidden;
-	color: var(--violet);
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-.hit .when {
-	color: var(--muted);
-	font-variant-numeric: tabular-nums;
-	text-align: right;
-	white-space: nowrap;
-}
-mark {
-	background: var(--accent-dim);
-	color: var(--accent);
-	border-radius: 3px;
-	padding: 0 1px;
-}
-pre.slice {
-	margin: 0;
-	padding: 12px 14px;
-	background: var(--panel2);
-	border: 1px solid var(--line);
-	border-radius: 8px;
-	font-family: var(--mono);
-	font-size: 12px;
-	line-height: 1.5;
-	white-space: pre-wrap;
-	word-break: break-word;
-}
-.field {
-	display: grid;
-	gap: 5px;
-	min-width: 0;
-}
-.field label {
-	display: grid;
-	gap: 5px;
-	color: var(--muted);
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-}
-.field input,
-.field select,
-.field textarea,
-dialog textarea {
-	padding: 6px 9px;
-	border: 1px solid var(--line2);
-	border-radius: 7px;
-	background: var(--panel2);
-	color: var(--text);
-	font-size: 13px;
-	text-transform: none;
-	letter-spacing: normal;
-}
-.field textarea,
-dialog textarea {
-	max-height: 50vh;
-	min-height: 127px;
-	font-family: var(--mono);
-	font-size: 12.5px;
-	field-sizing: content;
-	resize: vertical;
-}
-.field input:disabled,
-.field select:disabled {
-	opacity: 0.6;
-}
-.field input,
-.field select {
-	height: 34px;
-}
-.hint {
-	color: var(--dim);
-	font-size: 11.5px;
-}
-.banner {
-	margin: 0;
-	padding: 8px 10px;
-	border: 1px solid var(--red);
-	border-radius: 7px;
-	color: var(--red);
-	font-size: 12.5px;
-}
-.links {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	letter-spacing: normal;
-	text-transform: none;
-}
-.links .tag {
-	font-family: var(--mono);
-}
-.counter {
-	color: var(--muted);
-	font-size: 11.5px;
-}
-.row2 {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	align-items: start;
-	gap: 12px;
-}
-dialog {
-	width: min(680px, 94vw);
-	padding: 0;
-	border: 1px solid var(--line2);
-	border-radius: 12px;
-	background: var(--panel);
-	color: var(--text);
+.ml-console dialog {
 	box-shadow: 0 24px 64px rgb(0 0 0 / 0.35);
 }
-dialog::backdrop {
-	background: rgb(6 10 18 / 0.55);
-}
-dialog .head {
-	padding: 14px 16px;
-	border-bottom: 1px solid var(--line);
-	font-weight: 600;
-}
-dialog form {
-	display: grid;
-	gap: 12px;
-	padding: 14px 16px 16px;
-}
-.dlg-note {
-	min-height: 16px;
-	color: var(--muted);
-	font-size: 11.5px;
-}
-.dlg-note:empty {
-	display: none;
-}
-.dlg-note.error {
-	color: var(--red);
-}
-.dlg-foot {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
-	padding-top: 4px;
-}
-footer {
+.ml-console footer {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 4px 18px;
@@ -814,12 +299,12 @@ footer {
 	#app {
 		height: auto;
 	}
-	.shell {
+	.ml-console .shell {
 		height: auto;
 		min-height: 100dvh;
 		grid-template-rows: auto minmax(0, 1fr) auto;
 	}
-	.layout {
+	.ml-console .layout {
 		grid-template-columns: 1fr;
 		align-content: start;
 	}
@@ -834,34 +319,31 @@ footer {
 		overflow: visible;
 		scrollbar-gutter: auto;
 	}
-	.rail-title {
+	.ml-console .rail-title {
 		display: none;
 	}
-	nav,
-	.scopes {
+	.ml-console nav,
+	.ml-console .scopes {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 4px;
 	}
-	.nav,
-	.sc {
+	.ml-console .nav,
+	.ml-console .sc {
 		padding: 5px 7px;
 	}
-	.hspacer {
+	.ml-console .hspacer {
 		display: none;
 	}
-	header .btn.pri {
+	.ml-console header .btn.pri {
 		margin-left: auto;
 	}
-	main {
+	.ml-console main {
 		overflow: visible;
 		scrollbar-gutter: auto;
 		padding: 12px 12px 24px;
 	}
-	.split {
-		grid-template-columns: 1fr;
-	}
-	footer {
+	.ml-console footer {
 		padding: 4px 12px;
 		white-space: normal;
 		overflow: visible;

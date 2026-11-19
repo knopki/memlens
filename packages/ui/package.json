@@ -16,7 +16,11 @@
 			"default": "./dist/standalone/main.js"
 		},
 		"./standalone/index.html": "./dist/standalone/index.html",
-		"./standalone/style.css": "./dist/standalone/style.css"
+		"./standalone/style.css": "./dist/standalone/style.css",
+		"./styles": {
+			"types": "./dist/styles.d.ts",
+			"default": "./dist/styles.js"
+		}
 	},
 	"files": [
 		"dist"

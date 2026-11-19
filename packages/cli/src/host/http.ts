@@ -6,26 +6,28 @@
  * @purpose Move one request and one answer between the loopback client and the host, so the route
  *   code holds no HTTP detail.
  * @scope
- *  - The trusted request URL, the JSON body read, the response headers, the JSON answer, and the
- *    error answer.
+ *  - The trusted request URL, the JSON body read, the response headers, the JSON answer, the
+ *    error answer, and the backend context of one runtime.
  *  - NOT: routing, scope rules, and action semantics.
  * @invariants A request from a foreign host or origin gives NotAllowed.
  * @usecases
  *  - Answer: host => gives one value => writes one JSON response
  * @dependencies USES API: @memlens/core
- * @keywords ui, http, body, header, answer, trust, json
+ * @keywords ui, http, body, header, answer, trust, json, host
  * #endregion moduleContract
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { debuglog } from "node:util";
-import { MemlensError, type ScopeKey } from "@memlens/core";
+import {
+	type ConsoleHost,
+	type Fields,
+	MemlensError,
+	type ScopeKey,
+} from "@memlens/core";
 import type { Runtime } from "../runtime.js";
 
 const debug = debuglog("memlens:ui");
-
-/** One request body or query, with the fields of the console. */
-export type Fields = Record<string, unknown>;
 
 /** The options of one console host. */
 export interface HostOptions {
@@ -44,16 +46,16 @@ export type Handler = (
 	options: HostOptions,
 ) => unknown | Promise<unknown>;
 
-// #region FUNC_text
-/** @purpose Give one text field of the request, so a value of a wrong type gives a Usage error. */
-export function text(fields: Fields, key: string): string {
-	const value = fields[key];
-	if (value === undefined) return "";
-	if (typeof value !== "string")
-		throw new MemlensError("Usage", `The field ${key} must be text.`);
-	return value;
+// #region FUNC_hostOf
+/** @purpose Give the backend context of one runtime, so one adapter holds no host rule. */
+export function hostOf(runtime: Runtime): ConsoleHost {
+	return {
+		store: runtime.store,
+		config: runtime.config,
+		scopes: runtime.scopes,
+	};
 }
-// #endregion FUNC_text
+// #endregion FUNC_hostOf
 
 // #region FUNC_requestUrl
 /**

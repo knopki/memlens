@@ -5,22 +5,31 @@
  * @modulecontract
  * @purpose Report and repair the state of one store, so a user trusts the memory or recovers it.
  * @scope
- *  - The commands status, check, and repair.
+ *  - The commands status, check, repair, and journal.
  *  - NOT: the repair rules of the store and the exit code mapping.
  * @dependencies USES API: @memlens/core; READS: the store directory
- * @keywords status, check, repair, admin, cli
+ * @keywords status, check, repair, journal, admin, cli
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
-import { check, dueRecords, liveCounts, nowIso } from "@memlens/core";
+import {
+	check,
+	dueRecords,
+	type JournalRow,
+	journalRows,
+	liveCounts,
+	nowIso,
+} from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import {
 	type CommandAnswer,
 	type CommandIo,
+	countFlag,
 	isJson,
 	openCommandRuntime,
 	print,
+	scopeList,
 } from "./commands.js";
 
 const debug = debuglog("memlens:commands");
@@ -130,3 +139,42 @@ export async function repairCommand(
 	}
 }
 // #endregion FUNC_repairCommand
+
+// #region FUNC_journalCommand
+/**
+ * Print the journal of the store.
+ *
+ * @purpose Show the newest journal events, so a user audits each change of the memory.
+ */
+export async function journalCommand(
+	args: ParsedArgs,
+	io: CommandIo,
+): Promise<string> {
+	const limit = countFlag(args.flags, "limit", 20);
+	const scope = scopeList(args.flags)[0];
+	const runtime = await openCommandRuntime(args, io);
+	try {
+		const rows = journalRows(
+			runtime.store,
+			scope ? { limit, scope } : { limit },
+		);
+		debug("Journal answered", { event: "journal", rows: rows.length, limit });
+		return isJson(args.flags)
+			? print(rows)
+			: rows.map(renderJournalRow).join("\n");
+	} finally {
+		await runtime.close();
+	}
+}
+// #endregion FUNC_journalCommand
+
+/** Render one journal row as one line: the time, the operation, the target, the scope, the reason. */
+function renderJournalRow(row: JournalRow): string {
+	return [
+		row.at,
+		row.op,
+		row.target ?? "-",
+		row.scope ?? "-",
+		row.reason ?? "-",
+	].join("  ");
+}

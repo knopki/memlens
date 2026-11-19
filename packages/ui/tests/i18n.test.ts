@@ -1,11 +1,12 @@
 /**
  * #region moduleContract
- * @purpose Check that each language of the console holds every message with its placeholders.
+ * @purpose Check that the console names one language set, and that each language of that set holds
+ *   every message with its placeholders.
  * #endregion moduleContract
  */
 
 import { describe, expect, it } from "vitest";
-import { LANGS, MESSAGES } from "../src/i18n.js";
+import { LANG_NAMES, LANGS, MESSAGES } from "../src/i18n.js";
 
 const english = MESSAGES.en;
 
@@ -13,6 +14,12 @@ const placeholders = (text: string): string[] =>
 	[...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? "").sort();
 
 describe("console messages", () => {
+	it("names the same language set in LANGS, LANG_NAMES, and MESSAGES", () => {
+		const codes = [...LANGS].sort();
+		expect(Object.keys(LANG_NAMES).sort()).toEqual(codes);
+		expect(Object.keys(MESSAGES).sort()).toEqual(codes);
+	});
+
 	it("holds every English key in each language", () => {
 		const keys = Object.keys(english).sort();
 		for (const lang of LANGS)

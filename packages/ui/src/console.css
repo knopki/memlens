@@ -1,0 +1,569 @@
+/* #region moduleContract
+ * @purpose Keep the console component rules in one source for both hosts.
+ * @scope The shared controls, panels, tables, forms, and the narrow split.
+ * @invariants Each selector starts with .ml-console and reaches only its surface.
+ * Each colour uses a surface property. Each host supplies its palette.
+ * Host rules follow these rules and keep the host layout and overrides.
+ * #endregion moduleContract
+ */
+.ml-console {
+	--ml-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.ml-console :where(*) {
+	box-sizing: border-box;
+}
+.ml-console :focus-visible {
+	outline: 2px solid var(--ml-accent);
+	outline-offset: 1px;
+}
+.ml-console .pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 8px;
+	border: 1px solid var(--ml-line-strong);
+	border-radius: 999px;
+	background: var(--ml-pill-bg);
+	font-size: 12px;
+}
+.ml-console .pill .k {
+	color: var(--ml-muted);
+}
+.ml-console .pill.warn {
+	border-color: var(--ml-warn-label);
+	color: var(--ml-warn-label);
+}
+.ml-console .meter {
+	width: 90px;
+	height: 6px;
+	border-radius: 999px;
+	background: var(--ml-line-strong);
+	overflow: hidden;
+}
+.ml-console .meter i {
+	display: block;
+	height: 100%;
+	background: var(--ml-accent);
+}
+.ml-console button,
+.ml-console select,
+.ml-console input,
+.ml-console textarea {
+	font: inherit;
+	color: inherit;
+}
+.ml-console .btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-height: 28px;
+	padding: 4px 10px;
+	border: 1px solid var(--ml-button-border);
+	border-radius: 7px;
+	background: var(--ml-button-bg);
+	color: var(--ml-text);
+	cursor: pointer;
+}
+.ml-console .btn:hover:not(:disabled) {
+	border-color: var(--ml-accent);
+}
+.ml-console .btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.ml-console .btn.pri {
+	background: var(--ml-primary-bg);
+	border-color: var(--ml-primary-bg);
+	color: var(--ml-primary-text);
+}
+.ml-console .btn.ghost {
+	background: transparent;
+}
+.ml-console .btn.danger {
+	color: var(--ml-error);
+	border-color: var(--ml-error);
+}
+.ml-console .sub {
+	margin: 0;
+	color: var(--ml-muted);
+	max-width: 78ch;
+}
+.ml-console .muted {
+	color: var(--ml-muted);
+}
+.ml-console .panel {
+	display: grid;
+	gap: 10px;
+	padding: 12px 14px;
+	background: var(--ml-panel-bg);
+	border: 1px solid var(--ml-panel-border);
+	border-radius: 10px;
+	min-width: 0;
+}
+.ml-console .panel .head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+}
+.ml-console .panel .head .t {
+	font-weight: 600;
+}
+.ml-console .panel .head .r {
+	color: var(--ml-muted);
+	font-size: 12px;
+}
+.ml-console .cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 12px;
+}
+.ml-console .card {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+	padding: 12px 14px;
+	background: var(--ml-panel-bg);
+	border: 1px solid var(--ml-panel-border);
+	border-radius: 10px;
+	min-width: 0;
+}
+.ml-console .card.active {
+	border-color: var(--ml-accent);
+}
+.ml-console .card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+.ml-console .card-head .key {
+	font-weight: 600;
+	word-break: break-all;
+}
+.ml-console .tag {
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: var(--ml-active-bg);
+	color: var(--ml-accent);
+	font-size: 11px;
+}
+.ml-console .stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	color: var(--ml-muted);
+	font-size: 12px;
+}
+.ml-console .mini {
+	display: grid;
+	gap: 4px;
+	font-family: var(--ml-mono);
+	font-size: 11.5px;
+	color: var(--ml-muted);
+	overflow: hidden;
+}
+.ml-console .mini div {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.ml-console .card .btn {
+	align-self: start;
+	justify-self: start;
+}
+.ml-console .split {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+	gap: 14px;
+	align-items: start;
+}
+.ml-console .column {
+	display: grid;
+	gap: 14px;
+}
+.ml-console .legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	color: var(--ml-muted);
+	font-size: 12px;
+}
+.ml-console .legend .lg::before {
+	content: "";
+	display: inline-block;
+	width: 9px;
+	height: 9px;
+	margin-right: 5px;
+	border-radius: 2px;
+	background: var(--ml-line-strong);
+	vertical-align: -1px;
+}
+.ml-console .legend .lg.r::before {
+	background: var(--ml-success);
+}
+.ml-console .legend .lg.s::before {
+	background: var(--ml-accent);
+}
+.ml-console .legend .lg.t::before {
+	background: var(--ml-warn);
+}
+.ml-console .lines {
+	display: grid;
+	gap: 3px;
+}
+.ml-console .line {
+	display: grid;
+	grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
+	align-items: baseline;
+	gap: 10px;
+	width: 100%;
+	padding: 5px 9px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	background: transparent;
+	text-align: left;
+	cursor: pointer;
+	font-family: var(--ml-mono);
+	font-size: 12px;
+}
+.ml-console .line:hover {
+	background: var(--ml-hover-bg);
+}
+.ml-console .line.sel {
+	background: var(--ml-active-bg);
+	border-color: var(--ml-accent);
+}
+.ml-console .line .id {
+	color: var(--ml-muted);
+}
+.ml-console .keys .line {
+	grid-template-columns: minmax(0, 26ch) minmax(0, 1fr);
+}
+.ml-console .keys .line .id {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ml-console .line.r .id {
+	color: var(--ml-success);
+}
+.ml-console .line.s .id {
+	color: var(--ml-accent);
+}
+.ml-console .line.t .id {
+	color: var(--ml-warn);
+}
+.ml-console .line .tx {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-family: inherit;
+}
+.ml-console .line.pending .tx {
+	color: var(--ml-warn);
+}
+.ml-console .ins .quote {
+	padding: 10px 12px;
+	background: var(--ml-quote-bg);
+	border-left: 3px solid var(--ml-quote-border);
+	border-radius: 0 6px 6px 0;
+	white-space: pre-wrap;
+}
+.ml-console .ins .quote .doc {
+	margin-top: 8px;
+	color: var(--ml-muted);
+	font-family: var(--ml-mono);
+	font-size: 12px;
+}
+.ml-console .kv {
+	display: grid;
+	grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
+	gap: 4px 12px;
+	font-size: 12px;
+}
+.ml-console .kv b {
+	color: var(--ml-muted);
+	font-weight: 500;
+}
+.ml-console .kv span {
+	word-break: break-all;
+}
+.ml-console .actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.ml-console .table-wrap {
+	overflow-x: auto;
+}
+.ml-console .table-wrap + .muted {
+	margin-top: 6px;
+}
+.ml-console table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 12.5px;
+}
+.ml-console th {
+	padding: 6px 10px 6px 0;
+	color: var(--ml-label);
+	font-weight: 500;
+	text-align: left;
+	border-bottom: 1px solid var(--ml-line-strong);
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.ml-console td {
+	padding: 7px 10px 7px 0;
+	border-bottom: 1px solid var(--ml-line);
+	vertical-align: top;
+}
+.ml-console tr:last-child td {
+	border-bottom: 0;
+}
+.ml-console td:first-child {
+	padding-left: 2px;
+}
+.ml-console th:last-child,
+.ml-console td:last-child {
+	padding-right: 6px;
+}
+.ml-console .tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 12px;
+}
+.ml-console .tile {
+	padding: 12px 14px;
+	background: var(--ml-panel-bg);
+	border: 1px solid var(--ml-panel-border);
+	border-radius: 10px;
+}
+.ml-console .tile .n {
+	font-size: 22px;
+	font-weight: 600;
+}
+.ml-console .tile .l {
+	color: var(--ml-muted);
+	font-size: 12px;
+}
+.ml-console .bar {
+	display: grid;
+	grid-template-columns: 110px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 10px;
+	font-size: 12px;
+}
+.ml-console .bar .track {
+	height: 6px;
+	border-radius: 999px;
+	background: var(--ml-line-strong);
+	overflow: hidden;
+}
+.ml-console .bar .track i {
+	display: block;
+	height: 100%;
+	background: var(--ml-accent);
+}
+.ml-console .searchbar {
+	display: flex;
+	gap: 8px;
+}
+.ml-console .searchbar input {
+	flex: 1;
+	min-width: 0;
+	padding: 6px 10px;
+	border: 1px solid var(--ml-line-strong);
+	border-radius: 7px;
+	background: var(--ml-panel-bg);
+}
+.ml-console .filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+.ml-console .filters label {
+	display: grid;
+	gap: 4px;
+	color: var(--ml-label);
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.ml-console .filters select,
+.ml-console .filters input {
+	padding: 4px 8px;
+	border: 1px solid var(--ml-filter-border);
+	border-radius: 6px;
+	background: var(--ml-filter-bg);
+	color: var(--ml-filter-text);
+	font-size: 12.5px;
+}
+.ml-console .hit {
+	grid-template-columns: minmax(0, 176px) 92px minmax(0, 1fr) 84px;
+	font-family: inherit;
+}
+.ml-console .hit .id {
+	display: flex;
+	min-width: 0;
+	font-family: var(--ml-mono);
+}
+.ml-console .hit .id .scope {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ml-console .hit .id .pos {
+	flex: 0 0 auto;
+}
+.ml-console .hit .kind {
+	overflow: hidden;
+	color: var(--ml-kind);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ml-console .hit .when {
+	color: var(--ml-muted);
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+	white-space: nowrap;
+}
+.ml-console mark {
+	background: var(--ml-active-bg);
+	color: var(--ml-accent);
+	border-radius: 3px;
+	padding: 0 1px;
+}
+.ml-console pre.slice {
+	margin: 0;
+	padding: 12px 14px;
+	background: var(--ml-slice-bg);
+	border: 1px solid var(--ml-slice-border);
+	border-radius: 8px;
+	font-family: var(--ml-mono);
+	font-size: 12px;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+.ml-console .field {
+	display: grid;
+	gap: 5px;
+	min-width: 0;
+}
+.ml-console .field label {
+	display: grid;
+	gap: 5px;
+	color: var(--ml-label);
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+.ml-console .field input,
+.ml-console .field select,
+.ml-console .field textarea,
+.ml-console dialog textarea {
+	padding: 6px 9px;
+	border: 1px solid var(--ml-field-border);
+	border-radius: 7px;
+	background: var(--ml-field-bg);
+	color: var(--ml-field-text);
+	font-size: 13px;
+	text-transform: none;
+	letter-spacing: normal;
+}
+.ml-console .field textarea,
+.ml-console dialog textarea {
+	max-height: 50vh;
+	min-height: 127px;
+	font-family: var(--ml-mono);
+	font-size: 12.5px;
+	field-sizing: content;
+	resize: vertical;
+}
+.ml-console .field input:disabled,
+.ml-console .field select:disabled {
+	opacity: 0.6;
+}
+.ml-console .field input,
+.ml-console .field select {
+	height: 34px;
+}
+.ml-console .hint {
+	color: var(--ml-dim);
+	font-size: 11.5px;
+}
+.ml-console .banner {
+	margin: 0;
+	padding: 8px 10px;
+	border: 1px solid var(--ml-error);
+	border-radius: 7px;
+	color: var(--ml-error);
+	font-size: 12.5px;
+}
+.ml-console .links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	letter-spacing: normal;
+	text-transform: none;
+}
+.ml-console .links .tag {
+	font-family: var(--ml-mono);
+}
+.ml-console .counter {
+	color: var(--ml-muted);
+	font-size: 11.5px;
+}
+.ml-console .row2 {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: start;
+	gap: 12px;
+}
+.ml-console dialog {
+	width: min(680px, 94vw);
+	padding: 0;
+	border: 1px solid var(--ml-dialog-border);
+	border-radius: 12px;
+	background: var(--ml-dialog-bg);
+	color: var(--ml-text);
+}
+.ml-console dialog::backdrop {
+	background: var(--ml-backdrop);
+}
+.ml-console dialog .head {
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--ml-line);
+	font-weight: 600;
+}
+.ml-console dialog form {
+	display: grid;
+	gap: 12px;
+	padding: 14px 16px 16px;
+}
+.ml-console .dlg-note {
+	min-height: 16px;
+	color: var(--ml-muted);
+	font-size: 11.5px;
+}
+.ml-console .dlg-note:empty {
+	display: none;
+}
+.ml-console .dlg-note.error {
+	color: var(--ml-error);
+}
+.ml-console .dlg-foot {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding-top: 4px;
+}
+@media (max-width: 860px) {
+	.ml-console .split {
+		grid-template-columns: 1fr;
+	}
+}

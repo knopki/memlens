@@ -110,5 +110,6 @@ applyTheme(theme);
 
 const root = document.getElementById("app");
 if (!root) throw new Error("Console root is absent");
+root.classList.add("ml-console");
 createRoot(root).render(<App api={api} />);
 void api.call.restore(readAddress(location.search));

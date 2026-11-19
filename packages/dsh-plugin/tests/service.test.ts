@@ -23,7 +23,7 @@ import {
 	SystemPrompt,
 } from "@deepseek-ai/dsh-system-prompt";
 import { ToolsService } from "@deepseek-ai/dsh-tools";
-import { DEFAULT_CONFIG_TOML, liveCounts, Store } from "@memlens/core";
+import { liveCounts, Store } from "@memlens/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as host from "../src/index.js";
 import * as preset from "../src/preset.js";
@@ -200,7 +200,7 @@ describe("Memlens host service", () => {
 
 	it("restores an off-mode child after its preset registers again", async () => {
 		const { root, hostFiber } = await composition(
-			`${DEFAULT_CONFIG_TOML}\n[profile.off]\nscopes = ["*"]\nsubagents = "off"\n`,
+			`${BASE_TOML}\n[profile.off]\nscopes = ["*"]\nsubagents = "off"\n`,
 		);
 		const key = {};
 		const scope = createScope(root, key);
@@ -284,7 +284,7 @@ describe("Memlens host service", () => {
 
 	it("uses a workspace rule from the optional registry", async () => {
 		const { root } = await composition(
-			DEFAULT_CONFIG_TOML.replace(
+			BASE_TOML.replace(
 				"rules = []",
 				'rules = [{ match = "workspace", id = "ws-a", key = "project:workspace" }]',
 			),
@@ -345,10 +345,7 @@ describe("Memlens host service", () => {
 
 	it("skips directory and model checks for an off-mode child", async () => {
 		const { root } = await composition(
-			DEFAULT_CONFIG_TOML.replace(
-				'scopes = ["*"]',
-				'scopes = ["*"]\nsubagents = "off"',
-			),
+			BASE_TOML.replace('scopes = ["*"]', 'scopes = ["*"]\nsubagents = "off"'),
 		);
 		const lookup = vi.fn(async () => {
 			throw new Error("No lookup expected");
@@ -431,15 +428,28 @@ describe("Memlens configuration that cannot be read", () => {
 		expect(root.memlens.profiles().length).toBeGreaterThan(0);
 		const configPath = join(directory, "memlens", "config.toml");
 		rmSync(configPath, { recursive: true, force: true });
-		writeFileSync(configPath, DEFAULT_CONFIG_TOML);
+		writeFileSync(configPath, BASE_TOML);
 		root.memlens.retry();
 		expect(root.memlens.storeState()).toEqual({ ready: true, error: null });
 		expect(root.memlens.store.rev()).toBe("");
 	});
 });
 
+/** A minimal base file with the hooks that the tests replace. */
+const BASE_TOML = `[store]
+idle = 300
+
+[profile.default]
+scopes = ["*"]
+
+[scope_default]
+rules = []
+default = "project:misc"
+`;
+
+/** A base file that names the store path. */
 function baseWithStore(store: string): string {
-	return DEFAULT_CONFIG_TOML.replace(
+	return BASE_TOML.replace(
 		"[store]\nidle = 300",
 		`[store]\nidle = 300\npath = "${store}"`,
 	);

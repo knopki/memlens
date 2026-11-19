@@ -32,7 +32,7 @@ import {
 	TypertRemoteService,
 } from "@deepseek-ai/dsh-typert-protocol";
 import type { TypertContribution } from "@deepseek-ai/dsh-typert-registry";
-import { MemlensError } from "@memlens/core";
+import { type Fields, MemlensError, text } from "@memlens/core";
 import type { Memlens } from "../service.js";
 import type { MemoryWorker } from "../worker.js";
 import { actionRoute } from "./action.js";
@@ -47,12 +47,7 @@ import {
 	consoleDescriptors,
 	consoleSchemaFactories,
 } from "./remote-contract.js";
-import {
-	type ConsoleRequest,
-	type Fields,
-	requestScope,
-	text,
-} from "./scope.js";
+import { type ConsoleRequest, requestScope } from "./scope.js";
 import { statusAnswer, trackSnapshots } from "./status.js";
 
 const debug = debuglog("memlens:plugin:console");

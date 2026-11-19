@@ -6,14 +6,12 @@
  * @purpose Give each CLI command one opened store and one resolved configuration, so no command
  * reads files or the environment itself.
  * @scope
- *  - The base TOML load with a built-in fallback, the CLI store path order, the profile scopes,
- *    and the visible scope list.
+ *  - The base TOML load, the CLI store path order, the profile scopes, and the visible scope list.
  *  - The active scope of one directory: the configured rules, then the automatic list.
  *  - NOT: command semantics, argument parsing, output formats, and the harness patch.
  * @invariants
  *  - The store path order is --store, then MEMLENS_STORE, then the base file.
- *  - A missing base file falls back to the built-in default configuration, and the CLI writes no
- *    file.
+ *  - A missing base file gives the default layer without a parser, and the CLI writes no file.
  *  - Each runtime owns one row store and the visible scopes of its selected profile.
  *  - Scope rules take precedence over the automatic list: the Git remote, the repository name,
  *    the directory name, and the fallback key of `scope_default.default`.
@@ -39,7 +37,6 @@ import type {
 import {
 	activeScope,
 	automaticScope,
-	DEFAULT_CONFIG_TOML,
 	expandTilde,
 	globMatches,
 	isCatalogKey,
@@ -54,9 +51,6 @@ import {
 
 const debug = debuglog("memlens:runtime");
 
-/** Preserve the CLI export of the shared fallback configuration. */
-export { DEFAULT_CONFIG_TOML } from "@memlens/core";
-
 /** One opened CLI runtime: configuration, a row store, and visible profile scopes. */
 export interface Runtime {
 	readonly base: BaseConfig;
@@ -68,13 +62,13 @@ export interface Runtime {
 }
 
 // #region FUNC_loadCliBaseConfig
-/** Read the base layer: the file of the config directory, or the built-in fallback. */
+/** Read the base layer: the file of the config directory, or the defaults for an absent file. */
 export function loadCliBaseConfig(
 	env: Record<string, string | undefined>,
 ): BaseConfig {
 	const { configDir, dataDir } = xdgDirs(env);
 	const text = readCliFile(join(configDir, "config.toml"));
-	const layer = loadBaseConfig(text ?? DEFAULT_CONFIG_TOML, dataDir);
+	const layer = loadBaseConfig(text, dataDir);
 	debug("Base layer loaded", {
 		event: "base",
 		fromFile: text !== null,

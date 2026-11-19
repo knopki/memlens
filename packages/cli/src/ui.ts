@@ -24,7 +24,7 @@ import {
 	type ServerResponse,
 } from "node:http";
 import { debuglog } from "node:util";
-import { MemlensError } from "@memlens/core";
+import { MemlensError, text } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import { type CommandIo, countFlag, flagValue } from "./commands.js";
 import { actionRoute } from "./host/action.js";
@@ -37,7 +37,6 @@ import {
 	respondError,
 	send,
 	setHeaders,
-	text,
 } from "./host/http.js";
 import { READ_ROUTES } from "./host/read.js";
 import { resolveScope } from "./host/scope.js";

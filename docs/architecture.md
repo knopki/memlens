@@ -41,7 +41,8 @@ rows. A change deletes each node row over the changed slot in the same transacti
 summary cannot survive a write. The command `memlens repair` drops the invalid node rows, rebuilds
 the index on a drift, and prunes the journal.
 
-The journal is an audit trail for a human. It holds no content, and no state path reads it.
+The journal is an audit trail for a human. The command `memlens journal` prints its newest events.
+It holds no content, and no state path reads it.
 
 The store path comes from `--store`, then the plugin patch, then `MEMLENS_STORE`, then the base
 config file, then the built-in defaults. See [configuration.md](configuration.md).
@@ -172,6 +173,9 @@ and the translations. The command `memlens ui` serves the built client over a lo
 The plugin mounts the console in the side panel and a session tab, and it narrows the tab to the
 session scope.
 
+One backend module in `@memlens/core` holds the edit rules and the read rules of the console, so
+both hosts apply one rule set.
+
 A client stays in its own package and its own bundle. A file never mixes client code and backend
 code.
 
@@ -196,6 +200,7 @@ memlens compact --answer path
 memlens status [--json]
 memlens check [--json]
 memlens repair [--dry-run]
+memlens journal [--limit 20] [--scope key] [--json]
 memlens export --format md|jsonl --out dir [--scope key]
 memlens import --in path [--as key] [--dry-run]
 memlens config show [--profile name] [--json]

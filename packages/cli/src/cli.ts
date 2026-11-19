@@ -26,7 +26,12 @@ import { debuglog } from "node:util";
 import { MemlensError, NAME } from "@memlens/core";
 import type { ParsedArgs, UsageSpec } from "./args.js";
 import { parseArgs } from "./args.js";
-import { checkCommand, repairCommand, statusCommand } from "./command-admin.js";
+import {
+	checkCommand,
+	journalCommand,
+	repairCommand,
+	statusCommand,
+} from "./command-admin.js";
 import { configCommand } from "./command-config.js";
 import {
 	findCommand,
@@ -68,6 +73,7 @@ const USAGE = `Usage: ${NAME} <command> [flags]
   status [--json]
   check [--json]
   repair [--dry-run]
+  journal [--limit 20] [--scope key] [--json]
   export --format md|jsonl --out dir [--scope key]
   import --in path [--as key] [--dry-run]
   config show [--profile name] [--json]
@@ -156,6 +162,10 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 	repair: {
 		run: repairCommand,
 		spec: { positional: [], flags: { "dry-run": 0 } },
+	},
+	journal: {
+		run: journalCommand,
+		spec: { positional: [], flags: { limit: 1, scope: 1, json: 0 } },
 	},
 	export: {
 		run: exportCommand,
