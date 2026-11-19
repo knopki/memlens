@@ -60,8 +60,8 @@ and `spec`.
 6. Write tests with each module. Run `pnpm run format`, then `pnpm run verify`, before you finish a
    change.
 7. A change of the console needs the build and the tests. The server-rendered tests cover the
-   markup, the classes, and the labels. Open `memlens ui` for a change of an interaction or of a
-   layout.
+   markup, the classes, and the labels. The happy-dom tests cover the clicks, the picks, the keys,
+   and the form submit. Open `memlens ui` for a change of a layout.
 
 ## Boundaries
 
