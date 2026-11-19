@@ -83,7 +83,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | range                | The positions under one line: `2^level` positions from `start`.                                                                                                              |
 | due                  | The priority of a pair: `(total - (start + 2^(level+1) - 1)) / 2^level`. The fold and the rebuild use it.                                                                    |
 | due filter           | The filter of `memory_find` that gives the records with a review time of now or earlier. It is no priority.                                                                  |
-| epoch                | The clock value of the store. A long-lived reader refetches when it changes.                                                                                                 |
+| epoch                | The clock value of the store. The console shows the revision of one read, and a write moves the clock. |
 | reason               | The cause of a `hide`, `redact`, `dismiss`, or `forget` event.                                                                                                               |
 | `job`                | One computed dirty range that a compaction attempts. It has no persistent queue row or lease.                                                                                |
 | `backoff`            | The local retry wait after a failed attempt: ten, sixty, then three hundred seconds. A restart clears it.                                                                    |

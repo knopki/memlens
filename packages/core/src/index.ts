@@ -77,7 +77,6 @@ export {
 	CONTEXT_TEMPLATE,
 	type ContextInput,
 	directionLines,
-	epoch,
 	hereLines,
 	POLICY,
 	renderContext,

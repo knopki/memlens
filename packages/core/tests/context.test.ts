@@ -1,10 +1,10 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Check the context template, the line forms, the ages, the budgets, and the epoch.
+ * @purpose Check the context template, the line forms, the ages, and the budgets.
  * @scope The store branch over row views, the directions order, and the projection branch.
  * @invariants The fixtures write rows by raw SQL. The directions follow the store order of the scopes.
- * @keywords test, context, here, directions, budget, epoch, template
+ * @keywords test, context, here, directions, budget, template
  * #endregion moduleContract
  */
 
@@ -15,7 +15,6 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
 	CONTEXT_TEMPLATE,
 	directionLines,
-	epoch,
 	hereLines,
 	POLICY,
 	renderContext,
@@ -297,34 +296,6 @@ describe("renderContext", () => {
 		expect(CONTEXT_TEMPLATE).toContain("<how-to>\n{{policy}}\n{{append}}");
 		expect(CONTEXT_TEMPLATE).toContain("{{directions}}\n</directions>");
 		expect(CONTEXT_TEMPLATE).toContain('<here scope="{{scope}}">');
-	});
-});
-
-describe("epoch", () => {
-	it("changes with the store clock only", () => {
-		expect(epoch("1")).toBe(epoch("1"));
-		expect(epoch("1")).not.toBe(epoch("2"));
-		expect(epoch("")).toBe(epoch(""));
-	});
-
-	it("gives a different key for each clock value of a store", () => {
-		const store = newStore();
-		const first = store.rev();
-		store.publish((tx) => tx.journal("epoch", null, null));
-		const second = store.rev();
-		expect(second).not.toBe(first);
-		expect(epoch(second)).not.toBe(epoch(first));
-	});
-
-	it("follows the clock of the store and holds it on a no-op publish", () => {
-		const store = newStore();
-		const first = store.rev();
-		store.publish((tx) => tx.journal("epoch", null, null));
-		expect(store.rev()).not.toBe(first);
-		const before = store.rev();
-		store.publish(() => undefined);
-		expect(store.rev()).toBe(before);
-		expect(epoch(store.rev())).not.toBe(epoch(first));
 	});
 });
 

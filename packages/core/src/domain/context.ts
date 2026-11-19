@@ -2,14 +2,14 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Assemble the memory context text from the store rows, so a session reads one stable map.
- * @scope The template, the policy text, the direction and frontier lines, and the view epoch.
+ * @scope The template, the policy text, the direction and frontier lines.
  * NOT: the nudge, the harness registration, snapshot persistence, and refresh triggers.
  * @invariants
  * - The text is a pure function of its inputs: the same rows and scopes give the same
  * text, and a process restart gives the same text.
  * - The text holds no review date and no catalog key. It names no review tool: the agent reads a
  * memory and does not plan the review of one.
- * @keywords context, slice, snapshot, directions, frontier, policy, template, epoch
+ * @keywords context, slice, snapshot, directions, frontier, policy, template
  * #endregion moduleContract
  */
 
@@ -203,18 +203,3 @@ function fillTemplate(
 function attribute(text: string): string {
 	return text.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }
-
-// #region FUNC_epoch
-/**
- * @purpose Derive the context epoch from the store clock into one view cache key.
- * @invariants The epoch changes when the clock changes. The hash keeps the key short.
- */
-export function epoch(storeRev: string): string {
-	let hash = 0x811c9dc5;
-	for (const byte of Buffer.from(storeRev, "utf8")) {
-		hash ^= byte;
-		hash = Math.imul(hash, 0x01000193) >>> 0;
-	}
-	return hash.toString(16);
-}
-// #endregion FUNC_epoch
