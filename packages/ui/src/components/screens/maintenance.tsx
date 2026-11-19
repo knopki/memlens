@@ -152,6 +152,11 @@ function runtimePanel(api: ConsoleApi, runtime: ConsoleRuntime): JSX.Element {
 			t("snapshotSaved"),
 			runtime.snapshotSaved ? t("savedState") : t("unsavedState"),
 		]);
+	const store = runtime.store;
+	if (store !== undefined) {
+		rows.push([t("store"), store.ready ? t("ready") : t("notOpen")]);
+		if (store.error !== null) rows.push([t("lastError"), store.error]);
+	}
 	const compaction = runtime.compaction;
 	if (compaction !== undefined) {
 		rows.push([t("modelRoute"), `${compaction.provider}/${compaction.model}`]);

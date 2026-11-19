@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
  * @purpose Check that each built entry keeps the plugin contract that the harness loads.
- * @invariants The host bundle exports the name dsh-memlens, an apply function, and a Config.
+ * @invariants The host bundle exports the name memlens, an apply function, and a Config.
  * @invariants The preset bundle exports a name, an apply function, and a Config.
  * #endregion moduleContract
  */
@@ -24,7 +24,7 @@ const preset = (await import("../lib/preset.js")) as {
 
 describe("host bundle", () => {
 	it("exports the plugin identifier", () => {
-		expect(host.name).toBe("dsh-memlens");
+		expect(host.name).toBe("memlens");
 	});
 
 	it("exports apply as a function", () => {

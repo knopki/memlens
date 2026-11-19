@@ -115,6 +115,10 @@ describe("maintenance screen", () => {
 						session: "sess-7",
 						materializedAt: "2026-11-14T10:00:00.000Z",
 						snapshotSaved: false,
+						store: {
+							ready: true,
+							error: "The base file holds no configuration.",
+						},
 						compaction: {
 							attempts: 3,
 							active: 1,
@@ -153,6 +157,10 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("Snapshot build time");
 		expect(markup).toContain("Snapshot saved");
 		expect(markup).toContain("not saved");
+		expect(markup).toContain("Store");
+		expect(markup).toContain("ready");
+		expect(markup).toContain("Last error");
+		expect(markup).toContain("The base file holds no configuration.");
 		expect(markup).toContain("Compaction attempts");
 		expect(markup).toContain("Active builds");
 		expect(markup).toContain("Backoff time");
@@ -170,6 +178,34 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("compaction pass: built 2, failed 0");
 		expect(markup).not.toContain("2026-11-14T10:30:00.000Z");
 		expect(markup).not.toContain("2026-11-14T11:00:00.000Z");
+	});
+
+	it("states a closed store with its error while the runtime runs", () => {
+		const markup = renderToStaticMarkup(
+			<Maintenance
+				api={apiOf({
+					model: modelOf(),
+					runtime: { store: { ready: false, error: "The store is busy." } },
+				})}
+			/>,
+		);
+		expect(markup).toContain("Store");
+		expect(markup).toContain("not open");
+		expect(markup).toContain("Last error");
+		expect(markup).toContain("The store is busy.");
+	});
+
+	it("states no store row without a host runtime store", () => {
+		const markup = renderToStaticMarkup(
+			<Maintenance
+				api={apiOf({
+					model: modelOf(),
+					runtime: { session: "sess-8" },
+				})}
+			/>,
+		);
+		expect(markup).toContain("sess-8");
+		expect(markup).not.toContain("Last error");
 	});
 });
 

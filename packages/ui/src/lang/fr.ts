@@ -126,6 +126,7 @@ export const fr: Table = {
 	snapshotSaved: "Instantané enregistré",
 	savedState: "enregistré",
 	unsavedState: "non enregistré",
+	notOpen: "non ouvert",
 	modelRoute: "Route du modèle",
 	lastRun: "Dernière exécution",
 	nextRun: "Prochaine exécution",

@@ -126,6 +126,7 @@ export const pt: Table = {
 	snapshotSaved: "Resumo guardado",
 	savedState: "guardado",
 	unsavedState: "não guardado",
+	notOpen: "não aberto",
 	modelRoute: "Rota do modelo",
 	lastRun: "Última execução",
 	nextRun: "Próxima execução",

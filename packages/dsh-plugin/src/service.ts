@@ -5,13 +5,16 @@
  * @invariants The host owns the store. A preset owns only its configuration registration.
  * @invariants A preset cannot change the store path or expose its settings to another preset.
  * @invariants A valid base or host change affects the next configuration read of a live agent.
- * @invariants A base change keeps the open store, its language, and each agent scope.
+ * @invariants A successful base read resets the cached agent inputs, so a changed scope rule reaches
+ *   each live agent with no restart.
  * @invariants The service starts once. A store that does not open keeps the service and each
  *   surface in place, with a stated error, and a bounded retry opens the store later.
- * @invariants Each retry reads the base file again. A file that once named the store must stay
- *   present and valid, so no retry opens another store from the default layer.
- * @invariants An existing base file must be valid. A malformed file starts the service in the
- *   unavailable state, and the first valid read replaces the fallback scopes.
+ * @invariants The store opens from the layer of each base read. A broken configuration file never
+ *   stops the open; it gives the default layer and a stated error.
+ * @invariants A reload that resolves another store path closes the open handle and opens the new
+ *   path, so a repaired file moves the store with no restart.
+ * @invariants Each harness layer that the core rule rejects gives the empty layer and enters the
+ *   configuration error, so no layer fails unseen.
  * @invariants Each store read goes through one accessor. An unavailable store throws a Data error
  *   and never gives an empty store.
  * @dependencies USES API: @deepseek-ai/cordis, @deepseek-ai/dsh-scope, @memlens/core
@@ -32,7 +35,6 @@ import {
 import {
 	activeScope,
 	type BaseConfig,
-	loadBaseConfig,
 	loadPatchConfig,
 	loadPresetConfig,
 	MemlensError,
@@ -58,19 +60,23 @@ const debug = debuglog("memlens:plugin");
 // #region FUNC_safePatch
 /**
  * @purpose Re-read the merged harness row with the strict core rule.
- * @invariants A rejected row gives the empty layer, so one broken row blocks no session.
+ * @invariants A rejected row gives the empty layer, so one broken row blocks no session. The
+ *   rejection text travels with the layer, so the caller states it.
  * @param patch - The merged row value of the harness.
- * @returns The validated patch layer.
+ * @returns The validated patch layer and the text of a rejection, or null.
  */
-function safePatch(patch: PatchConfig): PatchConfig {
+function safePatch(patch: PatchConfig): {
+	layer: PatchConfig;
+	error: string | null;
+} {
 	try {
-		return loadPatchConfig(patch);
+		return { layer: loadPatchConfig(patch), error: null };
 	} catch (error) {
 		debug("Patch layer rejected; the empty layer applies", {
 			event: "patch-reject",
 			error: String(error),
 		});
-		return {};
+		return { layer: {}, error: String(error) };
 	}
 }
 // #endregion FUNC_safePatch
@@ -125,14 +131,14 @@ function locked(error: unknown): boolean {
 
 // #region INTERFACE_StoreState
 /**
- * @purpose State whether the one store is open and why the last open failed.
+ * @purpose State whether the one store is open, and why the last open or configuration read failed.
  * @invariants The state is a read. It writes no field and starts no attempt.
  */
 export interface StoreState {
 	/** True when the store is open and each memory call can read it. */
 	readonly ready: boolean;
 
-	/** The text of the last failed open, or null when the store is open. */
+	/** The text of the last failed open, else the text of the last rejected configuration layer. */
 	readonly error: string | null;
 }
 // #endregion INTERFACE_StoreState
@@ -195,16 +201,27 @@ export class Memlens extends Service {
 
 	private handle: Store | null = null;
 	private openError: string | null = null;
+
+	/** The text of the last rejected base read, or null when the last read gave a layer. */
+	private baseError: string | null = null;
+
+	/** The text of the last rejected host layer, or null when the layer was valid. */
+	private patchError: string | null = null;
+
+	/** The text of the last rejected preset layer, or null when each layer was valid. */
+	private presetError: string | null = null;
+
+	/** The preset scope of `presetError`, so a valid registration of that scope clears the text. */
+	private presetErrorScope: RegistrationScope | null = null;
 	private retryWait = RETRY_FIRST_MS;
 	private retryTimer: ReturnType<typeof setTimeout> | null = null;
 	private unwatch: (() => void) | null = null;
-
-	/** True when a base file supplied the configuration, so each later read must find it again. */
-	private fileBacked = false;
-
-	/** True while the base layer stands in for a file that no read supplied. */
-	private fallbackBase = false;
 	private readonly storeListeners = new Set<() => void>();
+
+	/** The visible configuration error: the base error first, then the host and preset errors. */
+	private get configError(): string | null {
+		return this.baseError ?? this.patchError ?? this.presetError;
+	}
 
 	/** The host-level resolution, with no preset layer. */
 	get resolved(): ResolvedConfig {
@@ -221,9 +238,12 @@ export class Memlens extends Service {
 
 	constructor(ctx: Context, patch: PatchConfig) {
 		super(ctx, "memlens");
-		this.patch = safePatch(patch);
-		this.base = this.initialBase();
-		this.path = this.startPath();
+		const patchRead = safePatch(patch);
+		this.patch = patchRead.layer;
+		this.patchError = patchRead.error;
+		const read = readPluginBase(process.env);
+		this.base = read.base;
+		this.path = "";
 		this.watchBase();
 		ctx.effect(() => async () => {
 			this.unwatchBase();
@@ -240,7 +260,7 @@ export class Memlens extends Service {
 			this.handle = null;
 			debug("Host disposed", { event: "dispose", path: this.path });
 		});
-		this.open();
+		this.open(read);
 		debug("Host started", {
 			event: "start",
 			path: this.path,
@@ -266,18 +286,22 @@ export class Memlens extends Service {
 
 	// #region METHOD_storeState
 	/**
-	 * @purpose State whether the store is open and why the last attempt failed.
+	 * @purpose State whether the store is open, and the last failure of the open or the layers.
 	 * @invariants The read writes no field and starts no attempt.
 	 */
 	storeState(): StoreState {
-		return { ready: this.handle !== null, error: this.openError };
+		return {
+			ready: this.handle !== null,
+			error: this.openError ?? this.configError,
+		};
 	}
 	// #endregion METHOD_storeState
 
 	// #region METHOD_onStoreChange
 	/**
-	 * @purpose Notify a consumer when an open succeeds, so the consumer starts its store work.
-	 * @invariants A listener runs after the handle is set, so it reads the store.
+	 * @purpose Notify a consumer when the store opens or a base read keeps the open store, so the
+	 *   consumer starts or refreshes its store work.
+	 * @invariants A listener runs while the handle is set, so it reads the store.
 	 * @param listener - The callback that builds the work of the open store.
 	 * @returns A function that removes the callback.
 	 */
@@ -302,29 +326,28 @@ export class Memlens extends Service {
 
 	// #region METHOD_open
 	/**
-	 * @purpose Open the store, or record the failure and arm the next attempt.
+	 * @purpose Open the store from the layer of one base read, or record the failure and arm the
+	 *   next attempt.
 	 * @invariants The open runs in one step, so a disposer cannot overlap it and leave a handle.
-	 * @invariants A success clears the error, resets the wait, and notifies each store listener.
+	 * @invariants A configuration failure never holds the open: the read gives the default layer
+	 *   and its error, and the store opens from that layer.
+	 * @invariants A success clears the open error, resets the wait, and notifies each store
+	 *   listener.
 	 * @invariants A failure keeps the service and every surface, so no session stops.
+	 * @param read - The base read of the attempt. A caller with no read takes a fresh one.
 	 */
-	private open(): void {
+	private open(read: BaseRead = readPluginBase(process.env)): void {
 		if (this.closed || this.handle !== null) return;
 		this.clearRetry();
-		let read: BaseRead;
+		this.adoptBase(read);
 		let handle: Store;
 		try {
-			// The default layer selects another store. A file that once named the store must stay
-			// present and valid, so a rewritten or absent file keeps the store of the last read.
-			read = readPluginBase(process.env, true, this.fileBacked);
-			this.fileBacked ||= read.present;
-			const path = safeStorePath(read.base, this.patch);
-			this.path = path;
-			handle = new Store(path, read.base.language);
+			this.path = safeStorePath(read.base, this.patch);
+			handle = new Store(this.path, read.base.language);
 		} catch (error) {
 			this.fail(error);
 			return;
 		}
-		this.adoptBase(read.base, read.present);
 		this.handle = handle;
 		const recovered = this.openError !== null;
 		this.openError = null;
@@ -397,75 +420,13 @@ export class Memlens extends Service {
 	}
 
 	// #region METHOD_adoptBase
-	/**
-	 * @purpose Apply a base layer that one read gave, so the store and each scope follow it.
-	 * @invariants The first read after the fallback drops the cached agent inputs, because the
-	 *   fallback computed their scope from another configuration. An ordinary live edit keeps them.
-	 * @param base - The base layer of the read.
-	 * @param present - True when the same read took its text from the file.
-	 */
-	private adoptBase(base: BaseConfig, present: boolean): void {
-		if (this.fallbackBase) {
-			this.memories = new WeakMap();
-			this.fallbackBase = false;
-			debug("First base read after the fallback; the agent scopes reset", {
-				event: "base-adopt",
-			});
-		}
-		this.base = base;
-		// The flag never declines: a read that found the file keeps its claim, and the claim comes
-		// from that read, not from a second check of the path.
-		this.fileBacked = this.fileBacked || present;
+	/** @purpose Apply the base layer of one read, so the host follows it. */
+	private adoptBase(read: BaseRead): void {
+		this.base = read.base;
+		this.baseError = read.error;
+		this.memories = new WeakMap();
 	}
 	// #endregion METHOD_adoptBase
-
-	// #region METHOD_initialBase
-	/**
-	 * @purpose Give the base layer of the start, so an unreadable file stops no session.
-	 * @invariants The read failure enters the unavailable state and keeps the default layer as the
-	 *   shape of the configuration. The open then reads the file again, so no store opens from the
-	 *   default layer.
-	 */
-	private initialBase(): BaseConfig {
-		try {
-			// A file that exists must be valid, and an absent file is the zero-config start. One read
-			// decides both, so no check of the path runs beside it.
-			const read = readPluginBase(process.env, true);
-			this.fileBacked = read.present;
-			return read.base;
-		} catch (error) {
-			this.openError = error instanceof Error ? error.message : String(error);
-			this.fallbackBase = true;
-			// A read that fails on any other cause still means a file stands behind the store, so
-			// each later attempt must find it again. An absent path can hide behind that failure.
-			this.fileBacked = true;
-			debug("Base file unreadable; the host waits", {
-				event: "base-error",
-				error: this.openError,
-			});
-			return loadBaseConfig(null, xdgDirs(process.env).dataDir);
-		}
-	}
-	// #endregion METHOD_initialBase
-
-	// #region METHOD_startPath
-	/**
-	 * @purpose Give the store path of the first attempt, or the empty text when the layers give no
-	 * usable path.
-	 * @invariants The call throws no error, so the service starts from a broken configuration.
-	 */
-	private startPath(): string {
-		try {
-			return safeStorePath(this.base, this.patch);
-		} catch (error) {
-			debug("Store path absent at the start", {
-				event: "path-start",
-				error: String(error),
-			});
-			return "";
-		}
-	}
-	// #endregion METHOD_startPath
 
 	// #region METHOD_watchBase
 	/**
@@ -492,25 +453,55 @@ export class Memlens extends Service {
 
 	// #region METHOD_reloadBase
 	/**
-	 * @purpose Apply a valid base file without replacing the open store.
-	 * @invariants A rejected file leaves the last valid configuration in use.
+	 * @purpose Apply one base read without a restart, and move the store when the read names
+	 *   another path.
+	 * @invariants A read that names another path closes the open handle first, so the open takes
+	 *   the new path.
+	 * @invariants A read that keeps the path refreshes each store listener, so a changed scope rule
+	 *   reaches each live surface.
 	 */
 	reloadBase(): void {
+		if (this.closed) return;
+		const read = readPluginBase(process.env);
+		let path: string;
 		try {
-			const read = readPluginBase(process.env, true, this.fileBacked);
-			this.adoptBase(
-				{ ...read.base, language: this.base.language },
-				read.present,
-			);
-			debug("Base reloaded", { event: "reload" });
-			this.notify();
-			this.retry();
+			path = safeStorePath(read.base, this.patch);
 		} catch (error) {
-			debug("Base reload rejected", {
-				event: "reload-reject",
+			// A validated layer states a usable path, so this branch holds the last known path.
+			debug("Store path absent at the reload; the last path stays", {
+				event: "path-reload",
 				error: String(error),
 			});
+			path = this.path;
 		}
+		const moved = path !== this.path;
+		if (moved) this.path = path;
+		this.adoptBase(read);
+		if (moved && this.handle !== null) {
+			this.handle.close();
+			this.handle = null;
+			debug("Store path moved; the open handle closed", {
+				event: "store-move",
+				path,
+			});
+		}
+		this.notify();
+		if (this.handle === null) {
+			this.retryWait = RETRY_FIRST_MS;
+			this.open(read);
+		} else {
+			for (const listener of this.storeListeners) {
+				try {
+					listener();
+				} catch (error) {
+					debug("Store listener failed", {
+						event: "listener-error",
+						error: String(error),
+					});
+				}
+			}
+		}
+		debug("Base reloaded", { event: "reload", moved, error: read.error });
 	}
 	// #endregion METHOD_reloadBase
 
@@ -520,10 +511,12 @@ export class Memlens extends Service {
 	 * @param patch - The new host layer.
 	 */
 	updatePatch(patch: PatchConfig): void {
-		this.patch = safePatch(patch);
+		const read = safePatch(patch);
+		this.patch = read.layer;
+		this.patchError = read.error;
 		this.notify();
 		this.retry();
-		debug("Host layer reloaded", { event: "patch-reload" });
+		debug("Host layer reloaded", { event: "patch-reload", error: read.error });
 	}
 	// #endregion METHOD_updatePatch
 
@@ -572,7 +565,13 @@ export class Memlens extends Service {
 		let preset: PresetConfig;
 		try {
 			preset = loadPresetConfig(config);
+			if (this.presetErrorScope === scope) {
+				this.presetError = null;
+				this.presetErrorScope = null;
+			}
 		} catch (error) {
+			this.presetError = String(error);
+			this.presetErrorScope = scope;
 			debug("Preset layer rejected; the empty layer applies", {
 				event: "preset-reject",
 				error: String(error),

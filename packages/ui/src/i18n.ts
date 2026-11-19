@@ -158,6 +158,7 @@ const en = {
 	snapshotSaved: "Snapshot saved",
 	savedState: "saved",
 	unsavedState: "not saved",
+	notOpen: "not open",
 	modelRoute: "Model route",
 	lastRun: "Last run",
 	nextRun: "Next run",

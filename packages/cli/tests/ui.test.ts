@@ -222,6 +222,28 @@ describe("console", () => {
 		).toBe(400);
 	});
 
+	it("answers a catalog level above the last cap", async () => {
+		const { get, post } = await fixture();
+		await post({ action: "note", body: "alpha memory" });
+		await post({ action: "note", body: "beta memory", scope: "user:other" });
+		const all = await get("/api/catalog?start=0&level=40");
+		expect(all.map((line: { kind: string }) => line.kind)).toEqual([
+			"temporary",
+			"temporary",
+		]);
+		const tail = await get("/api/catalog?start=1&level=40");
+		expect(tail).toHaveLength(1);
+		expect(tail[0].text).toContain("beta memory");
+	});
+
+	it("answers a search limit above the last cap", async () => {
+		const { get, post } = await fixture();
+		await post({ action: "note", body: "alpha memory" });
+		await post({ action: "note", body: "beta memory", scope: "user:other" });
+		const hits = await get("/api/search?query=memory&limit=5000");
+		expect(hits).toHaveLength(2);
+	});
+
 	it("publishes proposal approval and dismissal together", async () => {
 		const { root, env, get, post } = await fixture();
 		const runtime = await openRuntime({

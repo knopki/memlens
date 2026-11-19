@@ -49,8 +49,7 @@ dsh plugin --profile web add @memlens/dsh-plugin
 - Точка входа пресета — модуль `@memlens/dsh-plugin/preset`. Пресет агента монтирует её как строку
   `memlens/preset`.
 
-Лог хоста использует второе имя, которое объявляет каждый модуль: `dsh-memlens` для точки входа
-хоста и `memlens/preset` для точки входа пресета.
+Точка входа хоста объявляет имя `memlens`, а точка входа пресета — `memlens/preset`.
 
 #### Строка хоста
 

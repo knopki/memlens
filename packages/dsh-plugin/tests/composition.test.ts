@@ -162,31 +162,34 @@ describe("Memlens preset scoping", () => {
 		expect(host.forAgent(agent)).toBe(host.forAgent(agent));
 	});
 
-	it("reloads the base for existing agents and keeps the last valid file", () => {
+	it("reloads the base for existing agents and falls back on a broken file", () => {
 		const preset = presetScope(root, "preset-a");
 		preset.scope.ctx.memlens.registerPreset({
 			profile: "a",
 			budget: { directions: 7 },
 		});
 		const scope = agentScope(root, "agent-a", preset);
-		const memory = host.forAgent(fakeAgent(scope.scope.ctx, "session-a"));
-		const initialScope = memory.scope;
+		const agent = fakeAgent(scope.scope.ctx, "session-a");
+		const memory = host.forAgent(agent);
 		const initialPath = host.path;
 		const path = join(rootDir, "config", "memlens", "config.toml");
 		writeFileSync(
 			path,
-			BASE_CONFIG.replace("here = 20", "here = 3").replace(
-				'default = "user:notes"',
-				'default = "user:other"',
-			),
+			`${BASE_CONFIG.replace("here = 20", "here = 3")}
+[[scope_default.rules]]
+match = "path"
+glob = "*/project"
+key = "project:real"
+`,
 		);
 		host.reloadBase();
 		expect(memory.config.budget).toEqual({ here: 3, directions: 7 });
-		expect(memory.scope).toBe(initialScope);
 		expect(host.path).toBe(initialPath);
+		expect(host.forAgent(agent).scope).toBe("project:real");
 		writeFileSync(path, "not toml = [");
 		host.reloadBase();
-		expect(memory.config.budget.here).toBe(3);
+		expect(memory.config.budget.here).toBe(20);
+		expect(host.storeState().error).toMatch(/config|TOML|parse|table/i);
 	});
 
 	it("detects a base file change without a host restart", async () => {

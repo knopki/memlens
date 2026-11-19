@@ -50,8 +50,8 @@ par ce service. Le point d'entrée hôte déclare le service d'espace de travail
 - Le point d'entrée préréglage est le module `@memlens/dsh-plugin/preset`. Un préréglage d'agent le
   monte comme ligne `memlens/preset`.
 
-Le journal de l'hôte utilise un second nom, que chaque module déclare : `dsh-memlens` pour le point
-d'entrée hôte et `memlens/preset` pour le point d'entrée préréglage.
+Le point d'entrée hôte déclare le nom `memlens`, et le point d'entrée préréglage
+déclare `memlens/preset`.
 
 #### Ligne hôte
 

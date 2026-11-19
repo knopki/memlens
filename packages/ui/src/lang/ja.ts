@@ -124,6 +124,7 @@ export const ja: Table = {
 	snapshotSaved: "スナップショット保存済み",
 	savedState: "保存済み",
 	unsavedState: "未保存",
+	notOpen: "開いていません",
 	modelRoute: "モデルルート",
 	lastRun: "最終実行",
 	nextRun: "次回実行",

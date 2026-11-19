@@ -2,7 +2,8 @@
  * #region moduleContract
  * @purpose Give the plugin one base configuration and resolve the active scope from its working directory.
  * @scope Configuration file access, store path precedence, and Git inputs for core scope rules.
- * @invariants An absent or rejected base file selects the shared fallback. Other file errors propagate.
+ * @invariants The base read never throws. An absent or rejected file gives the default layer, and a
+ *   rejected file states its error text.
  * @invariants The patch store path wins over the environment and the base file. An empty selected path is an error.
  * @dependencies USES API: node:fs, node:child_process, node:path, @memlens/core
  * @keywords plugin, configuration, scope, git, store, paths
@@ -31,59 +32,71 @@ const debug = debuglog("memlens:plugin:runtime");
 // #region INTERFACE_BaseRead
 /** The result of one read of the shared base file. */
 export interface BaseRead {
-	/** The base layer: the file layer, or the default layer after a rejection. */
+	/** The base layer: the file layer, or the default layer when the read gave no layer. */
 	readonly base: BaseConfig;
 
-	/** True when the same read took its text from the file. */
+	/** True when the path holds a file or another object, so the read found something present. */
 	readonly present: boolean;
+
+	/** The text of the failure of the same read, or null when the read gave a layer. */
+	readonly error: string | null;
 }
 // #endregion INTERFACE_BaseRead
 
+/** The message of an Error, or the string of any other value. */
+function errorText(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
 // #region FUNC_readPluginBase
 /**
- * @purpose Load the shared base file and state whether the same read found it.
+ * @purpose Load the shared base file, state whether the path held something, and state the failure
+ * of a read that gave no layer.
+ * @invariants The read never throws, so no configuration failure stops a session.
  * @invariants The presence comes from the read outcome, so no second check of the path runs beside
  *   the read and no absence can hide behind a check.
- * @invariants An absent file gives the default layer, so the host starts with no file.
- * @invariants A required file gives the error when it is absent, because a store that the file once
- *   named must not move to the default path.
- * @invariants An unreadable file gives the error. The default layer would select another store, so
- *   the caller must not open a store from it.
+ * @invariants An absent file gives the default layer. A present file that no read can parse or take
+ *   gives the default layer and the error text, so the caller opens a store and states the failure.
  * @param env - The environment that supplies the XDG roots.
- * @param strict - Reject an invalid file instead of selecting the default layer.
- * @param required - Reject an absent file instead of selecting the default layer.
  */
 export function readPluginBase(
 	env: Record<string, string | undefined>,
-	strict = false,
-	required = false,
 ): BaseRead {
 	const { configDir, dataDir } = xdgDirs(env);
 	const path = join(configDir, "config.toml");
-	let text: string | null;
-	let present = true;
+	let text: string | null = null;
+	let present = false;
+	let error: string | null = null;
 	try {
 		text = readFileSync(path, "utf8");
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code !== "ENOENT" || required)
-			throw error;
-		text = null;
-		present = false;
+		present = true;
+	} catch (cause) {
+		// A path that holds a directory or a file with no permission is present, so the failure
+		// states an error and no read claims the default layer as the file layer.
+		if ((cause as NodeJS.ErrnoException).code !== "ENOENT") {
+			present = true;
+			error = errorText(cause);
+		}
 	}
 	let base: BaseConfig;
-	try {
-		base = loadBaseConfig(text, dataDir);
-	} catch (error) {
-		if (strict) throw error;
+	if (text === null) {
+		base = loadBaseConfig(null, dataDir);
+	} else {
+		try {
+			base = loadBaseConfig(text, dataDir);
+		} catch (cause) {
+			error ??= errorText(cause);
+			base = loadBaseConfig(null, dataDir);
+		}
+	}
+	if (error !== null)
 		debug("Base rejected; the default base applies", {
 			event: "base-reject",
 			path,
-			error: String(error),
+			error,
 		});
-		base = loadBaseConfig(null, dataDir);
-	}
 	debug("Base loaded", { event: "base", path, present });
-	return { base, present };
+	return { base, present, error };
 }
 // #endregion FUNC_readPluginBase
 

@@ -121,6 +121,7 @@ export const zh: Table = {
 	snapshotSaved: "快照已保存",
 	savedState: "已保存",
 	unsavedState: "未保存",
+	notOpen: "未打开",
 	modelRoute: "模型路由",
 	lastRun: "上次运行",
 	nextRun: "下次运行",

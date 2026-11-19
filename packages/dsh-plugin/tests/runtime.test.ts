@@ -2,7 +2,8 @@
  * #region moduleContract
  * @purpose Check the plugin configuration inputs and the active scope rules without a harness process.
  * @scope The base file, store path precedence, path and workspace rules, and the Git inputs.
- * @invariants A missing base file gives the shared default, and another read error propagates.
+ * @invariants The base read never throws. An absent or rejected file gives the default layer, and a
+ *   rejected file states its error.
  * @invariants The patch store path wins over the environment, and the environment wins over the base file.
  * @dependencies USES API: node:fs, node:child_process, node:path, @memlens/core
  * @keywords test, config, store, scope, git, memlens
@@ -105,34 +106,34 @@ function git(cwd: string, ...args: string[]): void {
 describe("readPluginBase", () => {
 	it("reads the base file from the XDG configuration directory", () => {
 		writeBase(BASE_CONFIG);
-		const base = readPluginBase(env()).base;
-		expect(base.defaultProfile).toBe("a");
-		expect(base.profile.a).toBeDefined();
+		const read = readPluginBase(env());
+		expect(read.base.defaultProfile).toBe("a");
+		expect(read.base.profile.a).toBeDefined();
+		expect(read.present).toBe(true);
+		expect(read.error).toBe(null);
 	});
 
 	it("uses the shared default when the base file is absent", () => {
-		const base = readPluginBase(env()).base;
-		expect(base.defaultProfile).toBe("default");
+		const read = readPluginBase(env());
+		expect(read.base.defaultProfile).toBe("default");
+		expect(read.present).toBe(false);
+		expect(read.error).toBe(null);
 	});
 
-	it("propagates a read error that is not ENOENT", () => {
+	it("gives the default layer and the error text when the path holds a directory", () => {
 		mkdirSync(join(configDir, "memlens", "config.toml"), { recursive: true });
-		expect(() => readPluginBase(env())).toThrow();
+		const read = readPluginBase(env());
+		expect(read.base.defaultProfile).toBe("default");
+		expect(read.present).toBe(true);
+		expect(read.error).toMatch(/EISDIR|directory/);
 	});
 
-	it("states the file of the same read, so no later absence changes the claim", () => {
-		writeBase(BASE_CONFIG);
-		const found = readPluginBase(env(), true);
-		expect(found.present).toBe(true);
-		expect(found.base.defaultProfile).toBe("a");
-		rmSync(join(configDir, "memlens", "config.toml"));
-		// The claim belongs to the read that found the file. A later check cannot take it back.
-		expect(found.present).toBe(true);
-		const absent = readPluginBase(env(), true);
-		expect(absent.present).toBe(false);
-		expect(absent.base.defaultProfile).toBe("default");
-		expect(readPluginBase(env(), true).base).toEqual(absent.base);
-		expect(() => readPluginBase(env(), true, true)).toThrow();
+	it("gives the default layer and the parse text when the file holds no configuration", () => {
+		writeBase("this is not a configuration [");
+		const read = readPluginBase(env());
+		expect(read.base.defaultProfile).toBe("default");
+		expect(read.present).toBe(true);
+		expect(read.error).toMatch(/config|TOML|parse|table/i);
 	});
 });
 

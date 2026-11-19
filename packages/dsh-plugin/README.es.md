@@ -50,8 +50,7 @@ través de él. La entrada del host declara el servicio de espacio de trabajo co
 - La entrada del preset es el módulo `@memlens/dsh-plugin/preset`. Un preset de agente la monta como
   fila `memlens/preset`.
 
-El log del host usa un segundo nombre, que declara cada módulo: `dsh-memlens` para la entrada del
-host y `memlens/preset` para la entrada del preset.
+La entrada del host declara el nombre `memlens`, y la entrada del preset declara `memlens/preset`.
 
 #### Fila del host
 

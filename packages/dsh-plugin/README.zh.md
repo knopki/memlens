@@ -41,7 +41,7 @@ dsh plugin --profile web add @memlens/dsh-plugin
 - 宿主入口是模块 `@memlens/dsh-plugin`。打包补丁插入行 `memlens`，配置档覆盖的正是这个行 id。
 - 预设入口是模块 `@memlens/dsh-plugin/preset`。智能体预设把它作为行 `memlens/preset` 挂载。
 
-宿主日志使用每个模块各自声明的第二个名字：宿主入口是 `dsh-memlens`，预设入口是 `memlens/preset`。
+宿主入口声明名字 `memlens`，预设入口声明 `memlens/preset`。
 
 #### 宿主行
 

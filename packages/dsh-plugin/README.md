@@ -49,8 +49,7 @@ The host entry declares the workspace service as optional.
 - The preset entry is the module `@memlens/dsh-plugin/preset`. An agent preset mounts it as the row
   `memlens/preset`.
 
-The host log uses a second name, which each module declares: `dsh-memlens` for the host entry and
-`memlens/preset` for the preset entry.
+The host entry declares the name `memlens`, and the preset entry declares the name `memlens/preset`.
 
 #### Host row
 
@@ -104,8 +103,9 @@ The preset overrides the plugin patch. The plugin patch overrides the base profi
 
 The base file is `$XDG_CONFIG_HOME/memlens/config.toml`. If the file is absent, the built-in fallback
 applies: the profile `default`, the scopes `*`, the budgets 20 and 10, and the scope `project:misc`.
-An absent section of the file gives its default value. An invalid or unreadable base file keeps the
-store closed, and the session continues.
+An absent section of the file gives its default value. An invalid or unreadable file gives the
+built-in fallback, and the store opens from it. The console shows the error, and a later valid file
+applies with no restart.
 
 The store path comes from the patch `store.path` first, then from `MEMLENS_STORE`, then from the base
 file.
@@ -153,9 +153,10 @@ an agent. To mount the surface means to register these parts in the context of o
 - **One store for the host.** The host opens the store once and shares it with every agent. The
   preset entry adds settings to one agent preset, and it starts no second store.
 - **The open can fail.** To open the store means to read the configuration and to connect to the
-  database. A missing directory, a database lock of another process, or an invalid configuration
-  file stops the open. The plugin keeps every session, mounts the surface that answers errors, and
-  tries the open again after a wait. Each new try waits longer than the last.
+  database. A missing directory or a database lock of another process stops the open. An invalid
+  configuration file never stops the open: the read gives the built-in fallback, the store opens
+  from it, and the console shows the error. The plugin keeps every session, mounts the surface that
+  answers errors, and tries the open again after a wait. Each new try waits longer than the last.
 - **The surface of each agent.** The host and the agent both own the surface of the agent, and each
   registration ends with the agent context. A child subagent gets no nudge, because the nudge asks
   for a memory write.

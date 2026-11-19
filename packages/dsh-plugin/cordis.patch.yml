@@ -1,4 +1,4 @@
-# The dsh-memlens bundle layer. The manifest points to this file with
+# The memlens bundle layer. The manifest points to this file with
 # package.json#dsh.bundle.patch.
 #
 # The layer is a YAML array of row verbs. `insert` adds one plugin row to the

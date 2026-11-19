@@ -433,8 +433,8 @@ export function consoleSearch(
 	scope: ScopeKey,
 ): readonly IndexHit[] {
 	const raw = text(fields, "limit") || "10";
-	if (!/^\d+$/.test(raw) || Number(raw) > 1000)
-		throw new MemlensError("Usage", "The limit must be between 0 and 1000.");
+	if (!/^\d+$/.test(raw))
+		throw new MemlensError("Usage", "The limit must be a whole number from 0.");
 	const scopes = text(fields, "scope") ? [scope] : host.scopes;
 	const hits = scopes.flatMap((key) =>
 		search(host.store, text(fields, "query"), key, 50),
@@ -507,8 +507,7 @@ export async function consoleCatalog(
 		!Number.isInteger(start) ||
 		start < 0 ||
 		!Number.isInteger(level) ||
-		level < 1 ||
-		level > 31
+		level < 1
 	)
 		throw new MemlensError("Usage", "The catalog target must be a range.");
 	const model = await readConsole(host.store, host.config, scope);

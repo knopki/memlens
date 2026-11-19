@@ -37,9 +37,9 @@ is `~/.config/memlens/config.toml`. The data lives in `$XDG_DATA_HOME/memlens`.
 
 The command `memlens config show` prints the resolved values, and it writes no file.
 
-An absent key gives its default. An absent file uses the built-in defaults. If the file is invalid
-or unreadable, the session continues without an open store. The plugin reports the failure and
-retries. The CLI reports an invalid file as an error.
+An absent key gives its default. An absent file uses the built-in defaults. An invalid or unreadable
+file gives the built-in defaults, and the store opens from them. The console shows the error, and a
+later valid file applies with no restart. The CLI reports an invalid file as an error.
 
 ### The complete example
 

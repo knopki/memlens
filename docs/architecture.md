@@ -45,7 +45,9 @@ The journal is an audit trail for a human. The command `memlens journal` prints 
 It holds no content, and no state path reads it.
 
 The store path comes from `--store`, then the plugin patch, then `MEMLENS_STORE`, then the base
-config file, then the built-in defaults. See [configuration.md](configuration.md).
+config file, then the built-in defaults. An invalid or unreadable base file gives the built-in
+defaults, and the console shows the error. A later valid file applies with no restart. See
+[configuration.md](configuration.md).
 
 ## Order and addresses
 

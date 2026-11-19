@@ -98,7 +98,7 @@ not a chat message.
 | [packages/core](packages/core)             | `@memlens/core`       | The headless library.                     |
 | [packages/cli](packages/cli)               | `@memlens/cli`        | The CLI frontend. Binary `memlens`.       |
 | [packages/ui](packages/ui)                 | `@memlens/ui`         | The browser client of the console.        |
-| [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | The DSH plugin. Identifier `dsh-memlens`. |
+| [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | The DSH plugin. Identifier `memlens`.     |
 
 ## Documents
 

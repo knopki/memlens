@@ -19,7 +19,7 @@ memlens — долговременная память агента: набор �
 | [packages/core](packages/core)             | `@memlens/core`       | Headless-библиотека.                     |
 | [packages/cli](packages/cli)               | `@memlens/cli`        | CLI-фронтенд. Бинарь `memlens`.          |
 | [packages/ui](packages/ui)                 | `@memlens/ui`         | Клиент браузера для консоли.             |
-| [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | Плагин DSH. Идентификатор `dsh-memlens`. |
+| [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | Плагин DSH. Идентификатор `memlens`.     |
 
 ## Документы
 

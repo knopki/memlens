@@ -50,8 +50,8 @@ sendet. Der Host-Einstiegspunkt deklariert den Workspace-Dienst als optional.
 - Der Preset-Einstiegspunkt ist das Modul `@memlens/dsh-plugin/preset`. Ein Agent-Preset montiert es
   als Zeile `memlens/preset`.
 
-Das Host-Log nutzt einen zweiten Namen, den jedes Modul deklariert: `dsh-memlens` für den
-Host-Einstiegspunkt und `memlens/preset` für den Preset-Einstiegspunkt.
+Der Host-Einstiegspunkt deklariert den Namen `memlens`, und der Preset-Einstiegspunkt
+deklariert `memlens/preset`.
 
 #### Host-Zeile
 

@@ -50,8 +50,7 @@ dsh plugin --profile web add @memlens/dsh-plugin
 - プリセットエントリはモジュール `@memlens/dsh-plugin/preset` です。エージェントプリセットは行
   `memlens/preset` としてこれをマウントします。
 
-ホストのログは、各モジュールが宣言する 2 つ目の名前を使います。ホストエントリは `dsh-memlens`、
-プリセットエントリは `memlens/preset` です。
+ホストエントリは名前 `memlens` を宣言し、プリセットエントリは `memlens/preset` を宣言します。
 
 #### ホスト行
 

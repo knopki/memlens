@@ -45,7 +45,7 @@ import {
 const debug = debuglog("memlens:plugin:worker");
 
 /** The prefix of each host log line of the worker. */
-const LOG = "[dsh-memlens] ";
+const LOG = "[memlens] ";
 
 /** The greatest count of journal events that the worker keeps. */
 const JOURNAL_LIMIT = 100;
@@ -557,8 +557,8 @@ export class MemoryWorker {
 	}
 	// #endregion METHOD_record
 
-	/** Stop the timer and reject each later start. Cordis disposal calls this. */
-	private dispose(): void {
+	/** Stop the timer and reject each later start. The host and Cordis disposal call this. */
+	dispose(): void {
 		this.disposed = true;
 		this.retryAt = 0;
 		this.clearTimer();

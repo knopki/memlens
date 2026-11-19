@@ -49,8 +49,7 @@ ele. A entrada do host declara o serviço de workspace como opcional.
 - A entrada de predefinição é o módulo `@memlens/dsh-plugin/preset`. Uma predefinição de agente a
   monta como linha `memlens/preset`.
 
-O log do host usa um segundo nome, que cada módulo declara: `dsh-memlens` para a entrada do host e
-`memlens/preset` para a entrada de predefinição.
+A entrada do host declara o nome `memlens`, e a entrada de predefinição declara `memlens/preset`.
 
 #### Linha do host
 

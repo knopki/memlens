@@ -25,7 +25,7 @@ import type { Context } from "@deepseek-ai/cordis";
 import type { Agent } from "@deepseek-ai/dsh-agent";
 import { scopeChainOf, scopeOf } from "@deepseek-ai/dsh-scope";
 import type {} from "@deepseek-ai/dsh-workspace";
-import type { PatchConfig } from "@memlens/core";
+import type { PatchConfig, Store } from "@memlens/core";
 import { PatchConfigSchema } from "./config.js";
 import { registerConsoleRemote } from "./console/remote.js";
 import { registerMemoryContext } from "./memory-context.js";
@@ -55,8 +55,8 @@ export { type AgentMemory, Memlens } from "./service.js";
 
 export type Config = PatchConfig;
 
-/** The diagnostic plugin name. The bundle row id is memlens. */
-export const name = "dsh-memlens";
+/** The diagnostic plugin name. It matches the bundle row id, memlens. */
+export const name = "memlens";
 
 /** The LLM service runs the compaction model calls of the worker. */
 export const inject = ["llm"];
@@ -81,9 +81,13 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
 		};
 	};
 	let worker: MemoryWorker | undefined;
+
+	/** The store handle that the worker reads. A replaced handle retires the worker. */
+	let workerStore: Store | undefined;
 	const startWorker = (): void => {
 		if (worker !== undefined || !memlens.storeState().ready) return;
-		worker = new MemoryWorker(ctx, memlens.store, workerInputs(), ctx.llm);
+		workerStore = memlens.store;
+		worker = new MemoryWorker(ctx, workerStore, workerInputs(), ctx.llm);
 		debug("Worker started", { event: "start", path: memlens.path });
 	};
 	startWorker();
@@ -202,6 +206,16 @@ export async function apply(ctx: Context, config: Config = {}): Promise<void> {
 	);
 	ctx.effect(() =>
 		memlens.onStoreChange(() => {
+			// A moved store path closes the old handle. The worker reads that handle, so it retires
+			// and a new worker follows the new handle.
+			if (worker !== undefined && workerStore !== memlens.store) {
+				worker.dispose();
+				worker = undefined;
+				debug("Store replaced; the worker retires", {
+					event: "worker-retire",
+					path: memlens.path,
+				});
+			}
 			startWorker();
 			debug("Store opened; the memory surfaces respawn", {
 				event: "store-open",

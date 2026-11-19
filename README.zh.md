@@ -19,7 +19,7 @@ memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构
 | [packages/core](packages/core)             | `@memlens/core`       | 无头库。                         |
 | [packages/cli](packages/cli)               | `@memlens/cli`        | CLI 前端。可执行文件 `memlens`。 |
 | [packages/ui](packages/ui)                 | `@memlens/ui`         | 控制台的浏览器客户端。           |
-| [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | DSH 插件。标识符 `dsh-memlens`。 |
+| [packages/dsh-plugin](packages/dsh-plugin) | `@memlens/dsh-plugin` | DSH 插件。标识符 `memlens`。     |
 
 ## 文档
 

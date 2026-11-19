@@ -124,6 +124,7 @@ export const ru: Table = {
 	snapshotSaved: "Снимок сохранён",
 	savedState: "сохранён",
 	unsavedState: "не сохранён",
+	notOpen: "не открыт",
 	modelRoute: "Маршрут модели",
 	lastRun: "Последний запуск",
 	nextRun: "Следующий запуск",

@@ -12,7 +12,7 @@ An agent scope inherits the scope of that preset revision. A separate service fo
 The host entry supplies one `memlens` service and one store. The bundle patch inserts only the host row, with id `memlens`.
 An agent preset mounts the module `@memlens/dsh-plugin/preset` with the row id `memlens/preset`.
 The preset key `profile` is optional, and its default is `default`. The exported plugin names are
-`dsh-memlens` and `memlens/preset`.
+`memlens` and `memlens/preset`.
 
 The preset entry registers its settings in the shared service under the DSH scope key of its caller.
 An agent selects the nearest registration in its scope chain. Without a registration, the host uses the default profile.

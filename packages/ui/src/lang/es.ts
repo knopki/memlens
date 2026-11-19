@@ -126,6 +126,7 @@ export const es: Table = {
 	snapshotSaved: "Resumen guardado",
 	savedState: "guardado",
 	unsavedState: "sin guardar",
+	notOpen: "no abierto",
 	modelRoute: "Ruta del modelo",
 	lastRun: "Última ejecución",
 	nextRun: "Próxima ejecución",
