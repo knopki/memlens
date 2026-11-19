@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "Dá a cada agente um contexto de memória, seis ferramentas de memória, um aviso de escrita e compactação em segundo plano."
+		"description": "Dá a cada agente um contexto de memória, as ferramentas de memória, um aviso de escrita e compactação em segundo plano."
 	}
 }

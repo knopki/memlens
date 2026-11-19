@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "Gibt jedem Agenten einen Speicherkontext, sechs Speicherwerkzeuge, einen Schreibhinweis und eine Hintergrundverdichtung."
+		"description": "Gibt jedem Agenten einen Speicherkontext, die Speicherwerkzeuge, einen Schreibhinweis und eine Hintergrundverdichtung."
 	}
 }

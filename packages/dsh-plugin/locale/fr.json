@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "Donne à chaque agent un contexte de mémoire, six outils de mémoire, un rappel d'écriture et une compaction en arrière-plan."
+		"description": "Donne à chaque agent un contexte de mémoire, les outils de mémoire, un rappel d'écriture et une compaction en arrière-plan."
 	}
 }

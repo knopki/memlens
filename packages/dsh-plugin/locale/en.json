@@ -1,6 +1,6 @@
 {
 	"meta": {
 		"title": "memlens",
-		"description": "Gives each agent a memory context, six memory tools, a write nudge, and background compaction."
+		"description": "Gives each agent a memory context, the memory tools, a write nudge, and background compaction."
 	}
 }
