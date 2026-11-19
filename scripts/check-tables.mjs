@@ -5,7 +5,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const roots = ["README.md", "AGENTS.md", "docs"];
+const roots = ["README.md", "AGENTS.md", "docs", "packages"];
 
 /** List the markdown files below one path. */
 function files(path) {
