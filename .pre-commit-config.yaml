@@ -17,7 +17,7 @@ repos:
         name: region layout
         entry: node scripts/check-regions.mjs
         language: system
-        types_or: [ts]
+        types_or: [ts, tsx]
 
       - id: ste-lint
         name: ste lint
