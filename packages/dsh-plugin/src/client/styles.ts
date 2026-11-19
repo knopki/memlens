@@ -58,13 +58,13 @@ export const CONSOLE_CSS = `${CONSOLE_RULES}
 	--ml-line: var(--dsw-alias-border-l1);
 	--ml-filter-border: var(--dsw-alias-border-l2);
 	--ml-filter-bg: var(--dsw-alias-bg-layer-1);
-	--ml-filter-text: var(--dsw-alias-label-tertiary);
+	--ml-filter-text: var(--dsw-alias-label-primary);
 	--ml-kind: var(--dsw-alias-state-business-primary);
 	--ml-slice-bg: var(--dsw-alias-bg-layer-2);
 	--ml-slice-border: var(--dsw-alias-border-l1);
 	--ml-field-border: var(--dsw-alias-border-l2);
 	--ml-field-bg: var(--dsw-alias-bg-layer-2);
-	--ml-field-text: var(--dsw-alias-label-tertiary);
+	--ml-field-text: var(--dsw-alias-label-primary);
 	--ml-dim: var(--dsw-alias-label-dimmed);
 	--ml-dialog-border: var(--dsw-alias-border-l2);
 	--ml-dialog-bg: var(--dsw-alias-bg-layer-1);
