@@ -11,13 +11,13 @@
 
 import { defineTool, type ToolDefinition } from "@deepseek-ai/dsh-tools";
 import {
-	byAddress,
 	loadRangeView,
 	MemlensError,
+	type Note,
 	openNote,
 	openRange,
 	parseAddress,
-	type ScopeKey,
+	resolveTarget,
 } from "@memlens/core";
 import type { AgentMemory } from "../service.js";
 import {
@@ -34,16 +34,11 @@ import {
  * @invariants The answer keeps the fields of the declared entry type and drops the rest.
  */
 function entryAnswer(
-	memory: AgentMemory,
-	scope: ScopeKey,
-	pos: number,
+	record: Note,
 	mode: "none" | "head" | "all",
 	offset: number,
 ): MemoryOpenEntry {
-	const record = byAddress(memory.store, scope, pos);
-	if (record === null)
-		throw new MemlensError("Data", `No record of ${scope} is at ${pos}.`);
-	const entry = openNote(scope, record, mode, offset);
+	const entry = openNote(record.scope, record, mode, offset);
 	return {
 		kind: "entry",
 		addr: entry.addr,
@@ -74,9 +69,9 @@ function openAnswer(
 	const active = checkedScope(memory, memory.scope);
 	if (typeof input.target === "number")
 		return entryAnswer(
-			memory,
-			active,
-			input.target,
+			resolveTarget(memory.store, active, input.target, (raw) =>
+				checkedScope(memory, raw),
+			),
 			input.longform ?? "head",
 			input.offset ?? 0,
 		);
@@ -99,9 +94,9 @@ function openAnswer(
 			).children.map((line) => ({ ...line })),
 		};
 	return entryAnswer(
-		memory,
-		scope,
-		address.pos,
+		resolveTarget(memory.store, active, input.target, (raw) =>
+			checkedScope(memory, raw),
+		),
 		input.longform ?? "head",
 		input.offset ?? 0,
 	);

@@ -24,7 +24,6 @@ import type { DueRecord, Note, NoteKind, ScopeKey } from "@memlens/core";
 import {
 	addDaysAtTime,
 	amend,
-	byAddress,
 	dueRecords,
 	hide,
 	linkSupersedes,
@@ -33,8 +32,8 @@ import {
 	normalizeScopeKey,
 	note,
 	nowIso,
-	parseAddress,
 	redact,
+	resolveTarget,
 	review,
 	toIso,
 } from "@memlens/core";
@@ -107,31 +106,23 @@ export async function noteCommand(
 }
 // #endregion FUNC_noteCommand
 
-// #region FUNC_resolveRowTarget
-/** Resolve an address to one visible note row. */
 function resolveRowTarget(
 	runtime: Runtime,
 	raw: string,
 	fallback: string | null,
 ): { scope: ScopeKey; record: Note } {
-	const address = parseAddress(raw);
-	if (!address || address.kind === "range" || address.kind === "scoped-range")
-		throw new MemlensError("Usage", `The target ${raw} is not a note address.`);
-	const scopeRaw = address.scope ?? fallback;
-	if (scopeRaw === null)
-		throw new MemlensError(
-			"Usage",
-			"The target needs a scope in the address or in --scope.",
-		);
-	const scope = normalizeScopeKey(scopeRaw) as ScopeKey;
+	const record = resolveTarget(runtime.store, fallback, raw, (scope) =>
+		checkedScope(runtime, scope),
+	);
+	return { scope: record.scope, record };
+}
+
+function checkedScope(runtime: Runtime, raw: string): ScopeKey {
+	const scope = normalizeScopeKey(raw) as ScopeKey;
 	if (!runtime.scopes.includes(scope))
 		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
-	const record = byAddress(runtime.store, scope, address.pos);
-	if (record === null)
-		throw new MemlensError("Data", `No note of ${scope} is at ${address.pos}.`);
-	return { scope, record };
+	return scope;
 }
-// #endregion FUNC_resolveRowTarget
 
 // #region FUNC_supersedeIds
 /** Resolve each --supersedes target to its row id. */

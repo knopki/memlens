@@ -16,7 +16,6 @@ import {
 	blocks,
 	checkedScope,
 	debug,
-	listedInProfile,
 	type MemoryReviewInput,
 	type MemoryReviewOutput,
 	resolveTarget,
@@ -50,13 +49,8 @@ function reviewAnswer(
 		if (typeof target === "number" && scope === null)
 			throw new MemlensError("Usage", "A numeric review target needs a scope.");
 		const resolved = resolveTarget(memory, scope ?? memory.scope, target);
-		if (!listedInProfile(memory, resolved.scope))
-			throw new MemlensError(
-				"NotAllowed",
-				`The scope ${resolved.scope} is not visible.`,
-			);
-		const reviewAt = reviewTime(memory, resolved.row.kind, input.reviewIn);
-		review(memory.store, resolved.row.id, reviewAt);
+		const reviewAt = reviewTime(memory, resolved.kind, input.reviewIn);
+		review(memory.store, resolved.id, reviewAt);
 		if (reviewAt !== null) next.push(reviewAt);
 	}
 	next.sort();

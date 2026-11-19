@@ -37,15 +37,20 @@ function forgetAnswer(
 			? memory.scope
 			: (normalizeScopeKey(input.scope) as ScopeKey);
 	for (const target of input.targets) {
-		const resolved = resolveTarget(memory, fallback, target);
+		const resolved = resolveTarget(
+			memory,
+			fallback,
+			target,
+			(raw) => normalizeScopeKey(raw) as ScopeKey,
+		);
 		if (listedInProfile(memory, resolved.scope)) {
-			hide(memory.store, resolved.row.id, input.reason);
+			hide(memory.store, resolved.id, input.reason);
 			continue;
 		}
 		propose(memory.store, {
 			scope: resolved.scope,
 			op: "hide",
-			target: resolved.row.id,
+			target: resolved.id,
 			payload: { session: agent.id },
 		});
 	}

@@ -55,12 +55,7 @@ function noteAnswer(
 	const ts = noteTime(input.ts);
 	const targets = (input.supersedes ?? []).map((target) => {
 		const resolved = resolveTarget(memory, scope, target);
-		if (!listedInProfile(memory, resolved.scope))
-			throw new MemlensError(
-				"NotAllowed",
-				`The scope ${resolved.scope} is not visible.`,
-			);
-		return resolved.row;
+		return resolved;
 	});
 	const ids = targets.map((row) => row.id);
 	const longform =

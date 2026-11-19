@@ -14,9 +14,8 @@
  */
 
 import { debuglog } from "node:util";
-import type { IndexHit, ScopeKey } from "@memlens/core";
+import type { IndexHit, Note, ScopeKey } from "@memlens/core";
 import {
-	byAddress,
 	filterHits,
 	loadRangeView,
 	MemlensError,
@@ -26,6 +25,7 @@ import {
 	openRange,
 	parseAddress,
 	readConsole,
+	resolveTarget,
 	scopeLines,
 	search,
 } from "@memlens/core";
@@ -112,26 +112,25 @@ export async function openCommand(
 	const runtime = await openCommandRuntime(args, io);
 	try {
 		const raw = args.positional[0] ?? "";
+		const fallback = flagValue(args.flags, "scope");
 		const address = parseAddress(raw);
 		if (address === null)
 			throw new MemlensError("Usage", `The target ${raw} is not an address.`);
-		const scopeRaw = address.scope ?? flagValue(args.flags, "scope");
-		if (scopeRaw === null)
-			throw new MemlensError(
-				"Usage",
-				"The target needs a scope in the address or in --scope.",
-			);
-		const scope = normalizeScopeKey(scopeRaw) as ScopeKey;
-		if (!runtime.scopes.includes(scope))
-			throw new MemlensError(
-				"NotAllowed",
-				`The scope ${scope} is not visible.`,
-			);
 		const answer =
-			address.kind === "pos" || address.kind === "scoped-pos"
-				? openPos(runtime, scope, address.pos, args)
-				: openRangeAddress(runtime, scope, address.start, address.end);
-		debug("Open answered", { event: "open", scope });
+			address.kind === "range" || address.kind === "scoped-range"
+				? openRangeAddress(
+						runtime,
+						address.scope ?? fallback,
+						address.start,
+						address.end,
+					)
+				: openPos(
+						resolveTarget(runtime.store, fallback, raw, (scope) =>
+							checkedScope(runtime, scope),
+						),
+						args,
+					);
+		debug("Open answered", { event: "open", scope: answer.scope });
 		return isJson(args.flags) ? print(answer.value) : answer.text;
 	} finally {
 		await runtime.close();
@@ -139,20 +138,20 @@ export async function openCommand(
 }
 // #endregion FUNC_openCommand
 
-// #region FUNC_openPos
-/** One note answer: the entry object and its text form. */
+function checkedScope(runtime: Runtime, raw: string): ScopeKey {
+	const scope = normalizeScopeKey(raw) as ScopeKey;
+	if (!runtime.scopes.includes(scope))
+		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
+	return scope;
+}
+
 function openPos(
-	runtime: Runtime,
-	scope: ScopeKey,
-	pos: number,
+	record: Note,
 	args: ParsedArgs,
-): { value: unknown; text: string } {
-	const record = byAddress(runtime.store, scope, pos);
-	if (record === null)
-		throw new MemlensError("Data", `No record of ${scope} is at ${pos}.`);
+): { value: unknown; text: string; scope: ScopeKey } {
 	const mode = args.flags["no-longform"] === true ? "none" : "head";
 	const entry = openNote(
-		scope,
+		record.scope,
 		record,
 		mode,
 		countFlag(args.flags, "offset", 0),
@@ -162,18 +161,21 @@ function openPos(
 			? ""
 			: `\n--- longform ${entry.longformChars} chars, next offset ${entry.longformOffset} ---\n${entry.longform}`
 	}`;
-	return { value: entry, text };
+	return { value: entry, text, scope: record.scope };
 }
-// #endregion FUNC_openPos
 
-// #region FUNC_openRangeAddress
-/** One range answer: the children object and its text form. */
 function openRangeAddress(
 	runtime: Runtime,
-	scope: ScopeKey,
+	scopeText: string | null,
 	start: number,
 	end: number,
-): { value: unknown; text: string } {
+): { value: unknown; text: string; scope: ScopeKey } {
+	if (scopeText === null)
+		throw new MemlensError(
+			"Usage",
+			"The target needs a scope in the address or in --scope.",
+		);
+	const scope = checkedScope(runtime, scopeText);
 	const children = openRange(
 		scope,
 		loadRangeView(runtime.store, scope),
@@ -186,9 +188,8 @@ function openRangeAddress(
 				`${line.addr}  ${line.ts_from}..${line.ts_to}  ${line.built ? line.text : "(no summary yet)"}`,
 		)
 		.join("\n");
-	return { value: children, text };
+	return { value: children, text, scope };
 }
-// #endregion FUNC_openRangeAddress
 
 // #region FUNC_scopesCommand
 /**

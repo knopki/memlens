@@ -122,6 +122,7 @@ export {
 	normalizeScopeKey,
 	validateScopeKey,
 } from "./domain/scope.js";
+export { resolveTarget } from "./domain/target.js";
 export {
 	addDaysAtTime,
 	compareIso,

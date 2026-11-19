@@ -35,7 +35,7 @@ import {
 	reviewTx,
 } from "../store/notes.js";
 import { accept, dismiss, pending } from "../store/proposals.js";
-import { byAddress, scopeNotes } from "../store/reads.js";
+import { scopeNotes } from "../store/reads.js";
 import { search } from "../store/search.js";
 import type { Store } from "../store/store.js";
 import type { IndexHit, Note, Proposal } from "../store/types.js";
@@ -57,6 +57,7 @@ import {
 	openRange,
 } from "./reads.js";
 import { isCatalogKey, validateScopeKey } from "./scope.js";
+import { resolveTarget } from "./target.js";
 import { addDaysAtTime, nowIso } from "./time.js";
 
 const debug = debuglog("memlens:console");
@@ -119,13 +120,15 @@ function targetRecord(
 	fallback: ScopeKey,
 	target: string,
 ): Note {
-	const address = parseAddress(target);
-	if (!address || address.kind === "range" || address.kind === "scoped-range")
-		throw new MemlensError("Usage", "The target must name one note.");
-	const scope = allowedScope(host, address.scope ?? fallback);
-	const row = byAddress(host.store, scope, address.pos);
-	if (!row) throw new MemlensError("Data", "The note does not exist.");
-	return row;
+	try {
+		return resolveTarget(host.store, fallback, target, (raw) =>
+			allowedScope(host, raw),
+		);
+	} catch (error) {
+		if (error instanceof MemlensError && error.code === "Data")
+			throw new MemlensError("Data", "The note does not exist.");
+		throw error;
+	}
 }
 
 /** The transaction type that the store gives to one proposal handler. */
@@ -474,8 +477,7 @@ export function consoleOpen(
 			address.start,
 			address.end,
 		);
-	const row = byAddress(host.store, key, address.pos);
-	if (!row) throw new MemlensError("Data", "The note does not exist.");
+	const row = targetRecord(host, scope, text(fields, "target"));
 	const offset = Number(text(fields, "offset") || "0");
 	if (!Number.isInteger(offset) || offset < 0)
 		throw new MemlensError(

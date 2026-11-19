@@ -14,7 +14,6 @@ import { debuglog } from "node:util";
 import type { ContentBlock } from "@deepseek-ai/dsh-llm";
 import {
 	addDaysAtTime,
-	byAddress,
 	globMatches,
 	isCatalogKey,
 	liveCounts,
@@ -23,7 +22,7 @@ import {
 	type Note,
 	type NoteKind,
 	normalizeScopeKey,
-	parseAddress,
+	resolveTarget as resolveCoreTarget,
 	type ScopeKey,
 	toIso,
 	validateScopeKey,
@@ -159,12 +158,6 @@ export type MemoryMapOutput =
 	| { kind: "scopes"; lines: MemoryDirectionLine[] }
 	| { kind: "scope"; scope: ScopeKey; lines: MemoryOpenLine[] };
 
-/** One resolved target: the scope of the record and the row. */
-interface Target {
-	readonly scope: ScopeKey;
-	readonly row: Note;
-}
-
 // #region FUNC_blocks
 /** The text answer of one tool call, as the model reads it. */
 export function blocks(text: string): ContentBlock[] {
@@ -214,48 +207,14 @@ export function visibleScopeList(memory: AgentMemory): ScopeKey[] {
 }
 // #endregion FUNC_visibleScopeList
 
-// #region FUNC_resolveTarget
-/**
- * @purpose Read one target row from its position or its address.
- * @invariants A number and a bare address name the fallback scope. A scoped address names its own scope.
- */
 export function resolveTarget(
 	memory: AgentMemory,
 	fallback: ScopeKey,
 	target: number | string,
-): Target {
-	if (typeof target === "number") {
-		const row = byAddress(memory.store, fallback, target);
-		if (row === null)
-			throw new MemlensError(
-				"Data",
-				`No record of ${fallback} is at ${target}.`,
-			);
-		return { scope: fallback, row };
-	}
-	const address = parseAddress(target);
-	if (
-		address === null ||
-		address.kind === "range" ||
-		address.kind === "scoped-range"
-	)
-		throw new MemlensError(
-			"Usage",
-			`The target ${target} is not a note address.`,
-		);
-	const scope =
-		address.scope === null
-			? fallback
-			: (normalizeScopeKey(address.scope) as ScopeKey);
-	const row = byAddress(memory.store, scope, address.pos);
-	if (row === null)
-		throw new MemlensError(
-			"Data",
-			`No record of ${scope} is at ${address.pos}.`,
-		);
-	return { scope, row };
+	canSee: (raw: string) => ScopeKey = (raw) => checkedScope(memory, raw),
+): Note {
+	return resolveCoreTarget(memory.store, fallback, target, canSee);
 }
-// #endregion FUNC_resolveTarget
 
 // #region FUNC_reviewTime
 /**
