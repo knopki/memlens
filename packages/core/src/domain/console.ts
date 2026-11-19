@@ -289,8 +289,8 @@ function catalogLines(
 			? {
 					kind: "temporary",
 					range,
-					from: line.lastWrite,
-					to: line.lastWrite,
+					from: line.newestTs,
+					to: line.newestTs,
 					text: "",
 				}
 			: { ...top, range };

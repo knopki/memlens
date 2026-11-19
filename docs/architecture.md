@@ -108,9 +108,10 @@ The context text is one `<memory>` section with three parts: `<how-to>`, `<direc
 replaces the whole template, and the placeholders apply in it.
 
 The `<directions>` part holds one line for each of the newest scopes of the profile, from the oldest
-to the newest, within the directions budget. A line has the form `[<key>] <age> <summary>`. The text
-is the summary of the top node of the scope. Every scope older than the budget becomes one comma
-list of keys with no description. A scope with no live note gives no line.
+to the newest, within the directions budget. A scope ranks by the `ts` of its newest live note, and
+the age is the idle time of that note. A line has the form `[<key>] <age> <summary>`. The text is
+the summary of the top node of the scope. Every scope older than the budget becomes one comma list
+of keys with no description. A scope with no live note gives no line.
 
 The `<here>` part holds the frontier of the active scope. A leaf line has the form
 `#<pos> <YYYY-MM-DD> <body>`, and a range line has the form `#<a>-<b> <start>..<end> <summary>`,

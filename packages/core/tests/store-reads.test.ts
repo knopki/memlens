@@ -3,7 +3,8 @@
  * @modulecontract
  * @purpose Prove the search and the read models against the real store engine.
  * @scope The prefix match, the scope filter, the hidden row, the tie order, the trigram fallback, the due list, and the directions block.
- * @invariants Each test reads rows that the test wrote by raw SQL.
+ * @invariants Each test reads rows that the test wrote by raw SQL, except the move test, which
+ *   writes through the note API.
  * @keywords test, search, fts, trigram, read, due, directions
  * #endregion moduleContract
  */
@@ -13,6 +14,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, it } from "vitest";
+import { amend, note } from "../src/store/notes.js";
 import {
 	byAddress,
 	byId,
@@ -361,21 +363,23 @@ describe("directions", () => {
 			pos: 0,
 			scope: "p:a",
 			body: "a",
-			modified_at: T0,
+			ts: T0,
 		});
 		addNote(store, {
 			id: "b",
 			pos: 0,
 			scope: "p:b",
 			body: "b",
-			modified_at: T2,
+			ts: T2,
+			modified_at: T0,
 		});
 		addNote(store, {
 			id: "c",
 			pos: 0,
 			scope: "p:c",
 			body: "c",
-			modified_at: T1,
+			ts: T1,
+			modified_at: T0,
 		});
 		addNote(store, {
 			id: "e",
@@ -383,14 +387,15 @@ describe("directions", () => {
 			scope: "p:e",
 			body: "e",
 			state: "hidden",
-			modified_at: T3,
+			ts: T3,
 		});
 		addNote(store, {
 			id: "f",
 			pos: 1,
 			scope: "p:a",
 			body: "f",
-			modified_at: "2026-01-10T00:00:00.000Z",
+			ts: "2026-01-10T00:00:00.000Z",
+			modified_at: T3,
 		});
 		const data = directionsData(
 			store,
@@ -402,11 +407,54 @@ describe("directions", () => {
 			["p:c", "p:b"],
 		);
 		assert.deepEqual(
-			data.lines.map((line) => line.lastWrite),
+			data.lines.map((line) => line.newestTs),
 			[T1, T2],
 		);
 		assert.ok(data.lines.every((line) => line.summary === null));
 		assert.deepEqual(data.rest, ["p:a"]);
+	});
+
+	it("keeps the rank of a scope when an old note moves into it", () => {
+		const store = newStore();
+		const old = note(store, {
+			scope: "p:wrong",
+			body: "a 2023 record",
+			ts: T0,
+			kind: "note",
+			session: "s",
+			turn: "t",
+			preset: "p",
+		});
+		if (!old.ok) assert.fail(old.reason);
+		note(store, {
+			scope: "p:target",
+			body: "an older record",
+			ts: T1,
+			kind: "note",
+			session: "s",
+			turn: "t",
+			preset: "p",
+		});
+		note(store, {
+			scope: "p:fresh",
+			body: "a fresh record",
+			ts: T2,
+			kind: "note",
+			session: "s",
+			turn: "t",
+			preset: "p",
+		});
+		amend(store, { id: old.value.id, scope: "p:target" });
+		const data = directionsData(
+			store,
+			["p:wrong", "p:target", "p:fresh"].map((scope) => scope as ScopeKey),
+			2,
+		);
+		assert.deepEqual(
+			data.lines.map((line) => line.scope),
+			["p:target", "p:fresh"],
+		);
+		assert.deepEqual(data.rest, []);
 	});
 
 	it("gives no line and no rest entry for an empty profile", () => {
@@ -426,21 +474,24 @@ describe("newest scope", () => {
 			pos: 0,
 			scope: "p:a",
 			body: "a",
-			modified_at: T1,
+			ts: T1,
+			modified_at: T3,
 		});
 		addNote(store, {
 			id: "b",
 			pos: 0,
 			scope: "p:b",
 			body: "b",
-			modified_at: T3,
+			ts: T3,
+			modified_at: T1,
 		});
 		addNote(store, {
 			id: "c",
 			pos: 0,
 			scope: "p:c",
 			body: "c",
-			modified_at: T2,
+			ts: T2,
+			modified_at: T0,
 		});
 		assert.equal(
 			newestScope(
@@ -458,7 +509,7 @@ describe("newest scope", () => {
 			pos: 0,
 			scope: "p:a",
 			body: "a",
-			modified_at: T1,
+			ts: T1,
 		});
 		addNote(store, {
 			id: "b",
@@ -466,7 +517,7 @@ describe("newest scope", () => {
 			scope: "p:b",
 			body: "b",
 			state: "hidden",
-			modified_at: T3,
+			ts: T3,
 		});
 		assert.equal(newestScope(store, ["p:a"]), "p:a");
 		assert.equal(newestScope(store, ["p:b"]), null);

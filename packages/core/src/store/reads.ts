@@ -27,8 +27,8 @@ export interface DirectionLine {
 	/** The scope of the line. */
 	readonly scope: ScopeKey;
 
-	/** The wall clock of the last live write of the scope. */
-	readonly lastWrite: IsoTime;
+	/** The `ts` of the newest live note of the scope. */
+	readonly newestTs: IsoTime;
 
 	/** The top node line. The caller joins it after this read. */
 	readonly summary: string | null;
@@ -196,7 +196,8 @@ export function nodesOf(store: Store, scope: ScopeKey): readonly Node[] {
 /**
  * @purpose Give the scope lines of the directions block and the older scopes outside its budget.
  * @invariants The read covers the live notes of the supplied scopes. A scope with no live note gives no entry.
- * @invariants The lines are the budget newest scopes, from the oldest to the newest.
+ * @invariants The lines are the budget newest scopes, from the oldest to the newest. A scope ranks
+ *   by the `ts` of its newest live note.
  * @invariants The rest list holds each older scope, from the newest to the oldest.
  * @invariants The summary is null, because the caller joins the top node line later.
  */
@@ -207,12 +208,12 @@ export function directionsData(
 ): DirectionsData {
 	const cap = Math.max(0, budget);
 	const scopes = [...new Set(profileScopes)];
-	const marksByWrite = lastWrites(store, scopes);
-	const lines = marksByWrite
+	const newest = newestTimes(store, scopes);
+	const lines = newest
 		.slice(0, cap)
 		.reverse()
 		.map((mark) => ({ ...mark, summary: null }));
-	const rest = marksByWrite.slice(cap).map((mark) => mark.scope);
+	const rest = newest.slice(cap).map((mark) => mark.scope);
 	debug("Directions read", {
 		event: "directions",
 		scopes: scopes.length,
@@ -224,24 +225,25 @@ export function directionsData(
 }
 // #endregion FUNC_directionsData
 
-// #region FUNC_lastWrites
+// #region FUNC_newestTimes
 /**
- * @purpose Give the last write of each scope with a live note, so a reader knows the recency of a
- *   scope.
- * @invariants A scope with no live note gives no entry. The newest write comes first, and an equal
- *   write orders by the scope key.
+ * @purpose Give the `ts` of the newest live note of each scope, so a reader knows how fresh the
+ *   records of a scope are.
+ * @invariants A scope with no live note gives no entry. The newest time comes first, and an equal
+ *   time orders by the scope key.
+ * @invariants Only the live notes set the rank, so a move or a review of a note moves no scope.
  */
-function lastWrites(
+function newestTimes(
 	store: Store,
 	profileScopes: readonly ScopeKey[],
-): readonly { readonly scope: ScopeKey; readonly lastWrite: string }[] {
+): readonly { readonly scope: ScopeKey; readonly newestTs: string }[] {
 	const scopes = [...new Set(profileScopes)];
 	if (scopes.length === 0) return [];
 	const marks = scopes.map(() => "?").join(", ");
 	const rows = store
 		.handle()
 		.prepare(
-			`SELECT scope, MAX(modified_at) AS last_write FROM notes
+			`SELECT scope, MAX(ts) AS newest_ts FROM notes
 			WHERE state = 'live' AND scope IN (${marks})
 			GROUP BY scope`,
 		)
@@ -249,11 +251,11 @@ function lastWrites(
 	return rows
 		.map((row) => ({
 			scope: String(row.scope) as ScopeKey,
-			lastWrite: String(row.last_write),
+			newestTs: String(row.newest_ts),
 		}))
 		.sort(newerFirst);
 }
-// #endregion FUNC_lastWrites
+// #endregion FUNC_newestTimes
 
 // #region INTERFACE_JournalRow
 /**
@@ -327,14 +329,14 @@ export function journalRows(
 // #region FUNC_newestScope
 /**
  * @purpose Give the scope of the newest live note among a set, so the console opens on the scope of
- * the last write.
+ * the newest record.
  * @invariants A set with no live note gives null.
  */
 export function newestScope(
 	store: Store,
 	scopes: readonly ScopeKey[],
 ): ScopeKey | null {
-	const scope = lastWrites(store, scopes)[0]?.scope ?? null;
+	const scope = newestTimes(store, scopes)[0]?.scope ?? null;
 	debug("Newest scope", {
 		event: "newest_scope",
 		scope,
@@ -345,9 +347,9 @@ export function newestScope(
 // #endregion FUNC_newestScope
 
 function newerFirst(
-	a: { readonly lastWrite: string; readonly scope: ScopeKey },
-	b: { readonly lastWrite: string; readonly scope: ScopeKey },
+	a: { readonly newestTs: string; readonly scope: ScopeKey },
+	b: { readonly newestTs: string; readonly scope: ScopeKey },
 ): number {
-	if (a.lastWrite !== b.lastWrite) return a.lastWrite < b.lastWrite ? 1 : -1;
+	if (a.newestTs !== b.newestTs) return a.newestTs < b.newestTs ? 1 : -1;
 	return a.scope < b.scope ? -1 : a.scope === b.scope ? 0 : 1;
 }

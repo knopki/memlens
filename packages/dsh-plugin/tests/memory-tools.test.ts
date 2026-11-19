@@ -482,7 +482,7 @@ describe("memory tools of one agent", () => {
 		);
 		const tops = data.lines.map((line) => ({
 			scope: line.scope,
-			lastWrite: line.lastWrite,
+			newestTs: line.newestTs,
 			summary: textOfLine(
 				topLineOf(loadView(host.store.handle(), line.scope)) as never,
 			),

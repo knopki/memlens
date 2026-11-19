@@ -126,7 +126,7 @@ function idleAge(latest: string, now: IsoTime): number {
  * @invariants Each budgeted scope gives one line [<key>] <age> <text>. A null text leaves the head.
  * The older scopes join into one comma list of keys before the budgeted lines.
  * An empty list gives an empty block.
- * @invariants The age is the idle time of the newest live write of the scope in whole days, and
+ * @invariants The age is the idle time of the newest live note of the scope in whole days, and
  * less than one day gives 0d. A scope with no live note gives no line.
  */
 export function directionLines(
@@ -137,7 +137,7 @@ export function directionLines(
 	const head = older.length ? `[${older.join(",")}]` : null;
 	const text = lines
 		.map((line) => {
-			const prefix = `[${line.scope}] ${idleAge(line.lastWrite, now)}d`;
+			const prefix = `[${line.scope}] ${idleAge(line.newestTs, now)}d`;
 			return line.summary ? `${prefix} ${line.summary}` : prefix;
 		})
 		.join("\n");

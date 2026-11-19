@@ -183,9 +183,9 @@ describe("hereLines", () => {
 });
 
 describe("directionLines", () => {
-	const line = (scope: string, lastWrite: string, summary: string | null) => ({
+	const line = (scope: string, newestTs: string, summary: string | null) => ({
 		scope: scope as ScopeKey,
-		lastWrite,
+		newestTs,
 		summary,
 	});
 
@@ -245,7 +245,7 @@ describe("renderContext", () => {
 			directions: [
 				{
 					scope: "project:a" as ScopeKey,
-					lastWrite: "2026-11-10T12:00:00.000Z",
+					newestTs: "2026-11-10T12:00:00.000Z",
 					summary: "root summary",
 				},
 			],

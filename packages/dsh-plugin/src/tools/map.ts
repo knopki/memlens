@@ -83,16 +83,16 @@ function directionAnswers(memory: AgentMemory): MemoryDirectionLine[] {
 	if (older.length > 0)
 		lines.push({
 			keys: older.map((line) => line.scope).reverse(),
-			ts_from: older[0]?.lastWrite ?? "",
-			ts_to: older[older.length - 1]?.lastWrite ?? "",
+			ts_from: older[0]?.newestTs ?? "",
+			ts_to: older[older.length - 1]?.newestTs ?? "",
 			text: "",
 		});
 	for (const line of shown) {
 		const top = topLineOf(loadRangeView(memory.store, line.scope));
 		lines.push({
 			keys: [line.scope],
-			ts_from: line.lastWrite,
-			ts_to: line.lastWrite,
+			ts_from: line.newestTs,
+			ts_to: line.newestTs,
 			text: top === null ? "" : textOfLine(top),
 		});
 	}
@@ -136,7 +136,7 @@ export function mapTool(memory: AgentMemory): ToolDefinition {
 	return defineTool({
 		name: "memory_map",
 		description:
-			"List the visible scopes with their last write and summary, or give the frontier lines of one scope. A scope outside the profile gives an error.",
+			"List the visible scopes with the time of their newest note and its summary, or give the frontier lines of one scope. A scope outside the profile gives an error.",
 		parameters: {
 			scope: {
 				type: "string",
