@@ -29,6 +29,7 @@ describe("console address", () => {
 
 	it("keeps a place through the write and the read", () => {
 		expect(readRoute(routeOf(full))).toEqual(full);
+		expect(readRoute(`?${routeOf(full)}`)).toEqual(full);
 	});
 
 	it("keeps the selected scope out of the search field", () => {

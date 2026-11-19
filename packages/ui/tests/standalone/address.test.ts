@@ -1,16 +1,16 @@
 /**
  * #region moduleContract
- * @purpose Hold the address adapter to one route round trip and to the two history steps, so a
- * reload and a browser button return to the same console place.
- * @scope The read of a query text, the write to the browser history, and the empty address.
+ * @purpose Hold the write of the address adapter to the chosen history step, so a click puts one
+ * console place into the page address.
+ * @scope The write to the browser history, and the step that writes nothing.
  * @invariants Each test gives one fixed route and one fixed address.
- * @keywords test, address, route, history, round trip
+ * @keywords test, address, history, pushstate, replacestate
  * #endregion moduleContract
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_ROUTE, type Route, routeOf } from "../../src/route.js";
-import { readAddress, writeAddress } from "../../src/standalone/address.js";
+import { type Route, routeOf } from "../../src/route.js";
+import { writeAddress } from "../../src/standalone/address.js";
 
 /** One place with every field away from its default. */
 const ROUTE: Route = {
@@ -31,15 +31,6 @@ afterEach(() => {
 });
 
 describe("address adapter", () => {
-	it("reads the route that it wrote", () => {
-		const written = `?${routeOf(ROUTE)}`;
-		expect(readAddress(written)).toEqual(ROUTE);
-	});
-
-	it("gives the first place of an empty address", () => {
-		expect(readAddress("")).toEqual(DEFAULT_ROUTE);
-	});
-
 	it("keeps the path of the page and the chosen history step", () => {
 		const pushState = vi.fn();
 		const replaceState = vi.fn();

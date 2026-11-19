@@ -31,9 +31,9 @@ import {
 import { SCREEN_COMPONENTS } from "../components/screens/index.js";
 import { LANG_NAMES, LANGS, type Table } from "../i18n.js";
 import type { ConsoleApi } from "../model/console.js";
-import { SCREENS } from "../route.js";
+import { readRoute, SCREENS } from "../route.js";
 import type { View } from "../types.js";
-import { readAddress, watchAddress } from "./address.js";
+import { watchAddress } from "./address.js";
 import { applyTheme, watchSystemTheme } from "./theme.js";
 
 /** The glyph of each screen, in the order of the rail. */
@@ -105,7 +105,7 @@ export function App({ api }: AppProps): JSX.Element {
 	useEffect(
 		() =>
 			watchAddress(() => {
-				void api.call.restore(readAddress(location.search));
+				void api.call.restore(readRoute(location.search));
 			}),
 		[api],
 	);

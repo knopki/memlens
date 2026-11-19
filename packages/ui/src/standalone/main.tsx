@@ -18,8 +18,9 @@ import type { ConsoleApi, ConsoleState, Translate } from "../model/console.js";
 import { createConsoleController } from "../model/controller.js";
 import { createConsoleStore } from "../model/store.js";
 import { createHttpPort } from "../model/transport.js";
+import { readRoute } from "../route.js";
 import type { Choice } from "../types.js";
-import { readAddress, writeAddress } from "./address.js";
+import { writeAddress } from "./address.js";
 import { App } from "./app.js";
 import { createLocalStorage } from "./storage.js";
 import { applyTheme } from "./theme.js";
@@ -101,7 +102,7 @@ const api: ConsoleApi = {
 		storage,
 		store,
 		t,
-		readRoute: () => readAddress(location.search),
+		readRoute: () => readRoute(location.search),
 		writeRoute: writeAddress,
 	}),
 };
@@ -112,4 +113,4 @@ const root = document.getElementById("app");
 if (!root) throw new Error("Console root is absent");
 root.classList.add("ml-console");
 createRoot(root).render(<App api={api} />);
-void api.call.restore(readAddress(location.search));
+void api.call.restore(readRoute(location.search));

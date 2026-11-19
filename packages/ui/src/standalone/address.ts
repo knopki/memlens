@@ -1,9 +1,9 @@
 /**
  * #region moduleContract
- * @purpose Keep the place of a human in the page address of the standalone host, so a reload and
- * the browser buttons return to the same screen, scope, and note.
- * @scope The read of the query text, the write to the browser history, and the popstate listener.
- * NOT: the route format, the state rules, and the markup.
+ * @purpose Keep the place of a human in the page address of the standalone host, so the browser
+ * buttons return to the same screen, scope, and note.
+ * @scope The write to the browser history and the popstate listener. NOT: the route format, the
+ * read of the query text, the state rules, and the markup.
  * @invariants A write keeps the path of the page, so the host serves the same page for each place.
  * @invariants A repeated address writes nothing, so a second click on the live scope adds no entry.
  * @dependencies READS: the page address; WRITES: the browser history
@@ -11,17 +11,8 @@
  * #endregion moduleContract
  */
 
-import { type Route, readRoute, routeOf } from "../route.js";
+import { type Route, routeOf } from "../route.js";
 import type { Step } from "../types.js";
-
-// #region FUNC_readAddress
-/**
- * @purpose Read the console place of one page query text.
- */
-export function readAddress(search: string): Route {
-	return readRoute(search);
-}
-// #endregion FUNC_readAddress
 
 // #region FUNC_writeAddress
 /**
