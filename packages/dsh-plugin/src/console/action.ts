@@ -184,7 +184,7 @@ function applyAccepted(
 	const target = proposal.target as Note["id"];
 	if (proposal.op === "supersede")
 		noteCheckedTx(tx, acceptedSupersede(proposal, data));
-	if (proposal.op === "hide") hideTx(tx, { id: target });
+	else if (proposal.op === "hide") hideTx(tx, { id: target });
 	else if (proposal.op === "review")
 		reviewTx(tx, { id: target, reviewAt: data.review_at ?? null });
 	else if (proposal.op === "amend")
