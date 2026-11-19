@@ -103,6 +103,7 @@ function buildInput(
 }
 // #endregion FUNC_buildInput
 
+// #region FUNC_readyInputs
 /** Each candidate range of one scope with its current build input. */
 function readyInputs(
 	memory: AgentMemory,
@@ -113,6 +114,7 @@ function readyInputs(
 		return result ? [result] : [];
 	});
 }
+// #endregion FUNC_readyInputs
 
 // #region FUNC_publishRounds
 /**

@@ -16,7 +16,6 @@ import type { Range } from "../src/types/tree.js";
 
 const range = (start: number, level: number): Range => ({ start, level });
 
-/** @purpose Compare the sparse fold with the dense pair rules. */
 function referenceFold(
 	positions: readonly number[],
 	total: number,

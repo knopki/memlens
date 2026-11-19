@@ -70,9 +70,12 @@ export function nodeFromRow(row: Record<string, unknown>): Node {
 }
 // #endregion FUNC_nodeFromRow
 
+// #region FUNC_nullable
+/** @purpose Read one nullable text column, so an absent cell gives null. */
 export function nullable(value: unknown): string | null {
 	return value === null || value === undefined ? null : String(value);
 }
+// #endregion FUNC_nullable
 
 // #region FUNC_parseRefs
 /** @purpose Read the JSON refs value of one row, so a damaged value never fails a read. */

@@ -31,14 +31,12 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Give a temporary directory for one store. */
 function temp(): string {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-lock-"));
 	dirs.push(dir);
 	return dir;
 }
 
-/** @purpose Count the rows of one statement. */
 function count(store: Store, sql: string, ...params: string[]): number {
 	const row = store
 		.handle()
@@ -47,7 +45,6 @@ function count(store: Store, sql: string, ...params: string[]): number {
 	return Number(row?.c ?? 0);
 }
 
-/** @purpose Stop the thread of a test for a time, without a lock. */
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -227,7 +224,6 @@ function writerScript(input: {
 }
 // #endregion FUNC_test_child
 
-/** @purpose Name the fields that each note write of these tests uses. */
 const BASE = {
 	scope: "p:locks" as ScopeKey,
 	kind: "note" as const,

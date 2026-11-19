@@ -123,7 +123,6 @@ export function childLine(child: BuildChild): string {
 }
 // #endregion FUNC_childLine
 
-/** One child of a catalog range: the scope key, the date span, and the text. */
 function scopeChild(key: ScopeKey, child: BuildChild): string {
 	if (child.kind === "record")
 		return `[${key}] ${child.ts.slice(0, 10)}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;

@@ -136,7 +136,6 @@ function subject(root: Context): Agent {
 }
 // #endregion FUNC_subject
 
-/** @purpose Give the resolved inputs of a worker with plain values. */
 function workerInputs(): {
 	compaction: CompactionConfig;
 	store: StoreConfig;
@@ -294,7 +293,6 @@ async function failure(
 }
 // #endregion FUNC_failure
 
-/** @purpose Insert one note in the default scope at a fixed time. */
 function insert(
 	testCase: Case,
 	body: string,

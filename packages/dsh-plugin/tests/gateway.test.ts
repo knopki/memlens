@@ -124,7 +124,6 @@ function subject(root: Context): Agent {
 }
 // #endregion FUNC_subject
 
-/** @purpose Give the resolved inputs of a worker with plain values. */
 function workerInputs(): {
 	compaction: CompactionConfig;
 	store: StoreConfig;
@@ -252,7 +251,6 @@ async function failure(
 }
 // #endregion FUNC_failure
 
-/** @purpose Name the records of one view answer. */
 interface ViewAnswer {
 	readonly profile: string;
 	readonly revision: string;

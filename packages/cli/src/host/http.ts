@@ -44,6 +44,7 @@ export type Handler = (
 	options: HostOptions,
 ) => unknown | Promise<unknown>;
 
+// #region FUNC_text
 /** @purpose Give one text field of the request, so a value of a wrong type gives a Usage error. */
 export function text(fields: Fields, key: string): string {
 	const value = fields[key];
@@ -52,6 +53,7 @@ export function text(fields: Fields, key: string): string {
 		throw new MemlensError("Usage", `The field ${key} must be text.`);
 	return value;
 }
+// #endregion FUNC_text
 
 // #region FUNC_requestUrl
 /**
@@ -78,6 +80,7 @@ export function requestUrl(request: IncomingMessage): URL {
 }
 // #endregion FUNC_requestUrl
 
+// #region FUNC_setHeaders
 /** @purpose Set the headers of each console answer. */
 export function setHeaders(response: ServerResponse): void {
 	response.setHeader("Cache-Control", "no-store");
@@ -87,7 +90,9 @@ export function setHeaders(response: ServerResponse): void {
 		"default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
 	);
 }
+// #endregion FUNC_setHeaders
 
+// #region FUNC_methodAllowed
 /** @purpose Tell whether the method fits the route, so a wrong method gives 405. */
 export function methodAllowed(
 	pathname: string,
@@ -95,6 +100,7 @@ export function methodAllowed(
 ): boolean {
 	return pathname === "/api/action" ? method === "POST" : method === "GET";
 }
+// #endregion FUNC_methodAllowed
 
 // #region FUNC_readBody
 /**

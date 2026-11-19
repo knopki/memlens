@@ -33,6 +33,8 @@ import {
 } from "./config-types.js";
 import { validateScopeKey } from "./scope.js";
 
+// #region FUNC_expectRecord
+/** @purpose Refuse a value that is not a table, so each reader works on one shape. */
 export function expectRecord(
 	value: unknown,
 	where: string,
@@ -42,7 +44,10 @@ export function expectRecord(
 	}
 	return value as Record<string, unknown>;
 }
+// #endregion FUNC_expectRecord
 
+// #region FUNC_expectKeys
+/** @purpose Refuse a key outside the named set, so a typo in the file fails at load. */
 export function expectKeys(
 	record: Record<string, unknown>,
 	allowed: readonly string[],
@@ -54,13 +59,17 @@ export function expectKeys(
 		}
 	}
 }
+// #endregion FUNC_expectKeys
 
+// #region FUNC_expectString
+/** @purpose Refuse a value that is not text, so a reader holds no unknown type. */
 export function expectString(value: unknown, where: string): string {
 	if (typeof value !== "string") {
 		throw new MemlensError("Data", `${where} is not a string`);
 	}
 	return value;
 }
+// #endregion FUNC_expectString
 
 function expectCount(value: unknown, where: string): number {
 	if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
@@ -103,6 +112,7 @@ function expectScopeKey(
 	return key as ScopeKey;
 }
 
+// #region FUNC_readStore
 /** @purpose Read the store section of the base layer. An absent section gives the defaults. */
 export function readStore(value: unknown, defaultPath: Path): StoreConfig {
 	if (value === undefined) return { path: defaultPath, idle: 300 };
@@ -117,7 +127,9 @@ export function readStore(value: unknown, defaultPath: Path): StoreConfig {
 			record.idle === undefined ? 300 : expectCount(record.idle, "store.idle"),
 	};
 }
+// #endregion FUNC_readStore
 
+// #region FUNC_readProfiles
 /** @purpose Read each named profile of the base layer. An absent or empty table gives no profile. */
 export function readProfiles(value: unknown): Record<string, ProfileConfig> {
 	const records = value === undefined ? {} : expectRecord(value, "profile");
@@ -127,6 +139,7 @@ export function readProfiles(value: unknown): Record<string, ProfileConfig> {
 	}
 	return profile;
 }
+// #endregion FUNC_readProfiles
 
 function readProfile(value: unknown, where: string): ProfileConfig {
 	const record = expectRecord(value, where);
@@ -152,6 +165,7 @@ function readProfile(value: unknown, where: string): ProfileConfig {
 	return profile;
 }
 
+// #region FUNC_readPatchStore
 /** @purpose Read the store section of a patch or a preset layer. */
 export function readPatchStore(value: unknown): Partial<StoreConfig> {
 	const record = expectRecord(value, "patch.store");
@@ -163,6 +177,7 @@ export function readPatchStore(value: unknown): Partial<StoreConfig> {
 		store.idle = expectCount(record.idle, "patch.store.idle");
 	return store;
 }
+// #endregion FUNC_readPatchStore
 
 function readFullBudget(value: unknown, where: string): Budget {
 	const partial = readBudget(value, where);
@@ -172,6 +187,8 @@ function readFullBudget(value: unknown, where: string): Budget {
 	};
 }
 
+// #region FUNC_readBudget
+/** @purpose Read the budget fields of one layer, and keep an absent field absent. */
 export function readBudget(value: unknown, where: string): Partial<Budget> {
 	if (value === undefined) return {};
 	const record = expectRecord(value, where);
@@ -183,7 +200,10 @@ export function readBudget(value: unknown, where: string): Partial<Budget> {
 		budget.directions = expectCount(record.directions, `${where}.directions`);
 	return budget;
 }
+// #endregion FUNC_readBudget
 
+// #region FUNC_readScopeDefault
+/** @purpose Read the scopes rules and the default key, and refuse a rule outside the grammar. */
 export function readScopeDefault(value: unknown): ScopeDefault {
 	if (value === undefined) return { ...DEFAULT_SCOPE_DEFAULT, rules: [] };
 	const where = "scope_default";
@@ -203,6 +223,7 @@ export function readScopeDefault(value: unknown): ScopeDefault {
 				: expectScopeKey(record.default, `${where}.default`, false),
 	};
 }
+// #endregion FUNC_readScopeDefault
 
 function readRule(value: unknown, index: number): Rule {
 	const where = `scope_default.rules[${index}]`;
@@ -231,6 +252,8 @@ function readRule(value: unknown, index: number): Rule {
 	};
 }
 
+// #region FUNC_readNudge
+/** @purpose Read the nudge section into its complete shape with the default counters and texts. */
 export function readNudge(value: unknown): NudgeConfig {
 	const partial = value === undefined ? {} : readPartialNudge(value, "nudge");
 	return {
@@ -239,7 +262,10 @@ export function readNudge(value: unknown): NudgeConfig {
 		text: partial.text ?? { ...NUDGE_TEXTS },
 	};
 }
+// #endregion FUNC_readNudge
 
+// #region FUNC_readPartialNudge
+/** @purpose Read the nudge fields of a patch or a preset layer. */
 export function readPartialNudge(
 	value: unknown,
 	where: string,
@@ -254,6 +280,7 @@ export function readPartialNudge(
 	if (record.text !== undefined) partial.text = readNudgeText(record.text);
 	return partial;
 }
+// #endregion FUNC_readPartialNudge
 
 function readNudgeText(value: unknown): Record<"tool_calls" | "turns", string> {
 	const record = expectRecord(value, "nudge.text");
@@ -272,6 +299,8 @@ function readNudgeText(value: unknown): Record<"tool_calls" | "turns", string> {
 	return result;
 }
 
+// #region FUNC_readCompaction
+/** @purpose Read the compaction section into its complete shape with the default route and limits. */
 export function readCompaction(value: unknown): CompactionConfig {
 	if (value === undefined) return { ...DEFAULT_COMPACTION };
 	const record = expectRecord(value, "compaction");
@@ -303,7 +332,10 @@ export function readCompaction(value: unknown): CompactionConfig {
 				: expectCount(record.maxCallsPerHour, "compaction.maxCallsPerHour"),
 	};
 }
+// #endregion FUNC_readCompaction
 
+// #region FUNC_readPartialCompaction
+/** @purpose Read the compaction fields of a patch layer, so the preset holds no route. */
 export function readPartialCompaction(
 	value: unknown,
 	where: string,
@@ -331,7 +363,10 @@ export function readPartialCompaction(
 	}
 	return partial;
 }
+// #endregion FUNC_readPartialCompaction
 
+// #region FUNC_readReview
+/** @purpose Read the review period of each note kind, and keep an absent kind at its default. */
 export function readReview(value: unknown): ReviewConfig {
 	if (value === undefined) {
 		return { ...DEFAULT_REVIEW_DAYS };
@@ -346,3 +381,4 @@ export function readReview(value: unknown): ReviewConfig {
 	}
 	return result;
 }
+// #endregion FUNC_readReview

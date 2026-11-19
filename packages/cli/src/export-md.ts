@@ -66,7 +66,6 @@ export function encodeScopeFilename(scope: ScopeKey): string {
 }
 // #endregion FUNC_encodeScopeFilename
 
-/** @purpose Keep one encoded stem within the byte limit, so each export suffix fits. */
 function stemWithinLimit(stem: string): string {
 	if (stem.length <= FILENAME_LIMIT - SUFFIX_ROOM) return stem;
 	const hash = createHash("sha1").update(stem).digest("hex").slice(0, 8);
@@ -117,12 +116,10 @@ function renderRecord(record: MarkdownRecord): string {
 	return `## #${record.pos}\n\n\`\`\`yaml\n${block}\n\`\`\`\n\n${record.body}\n${longform}`;
 }
 
-/** Quote one YAML scalar only when its text needs it. */
 function yamlScalar(value: string): string {
 	return /^[-A-Za-z0-9_.:/ ]+$/.test(value) ? value : JSON.stringify(value);
 }
 
-/** Render one YAML flow list of scalars. */
 function yamlList(values: readonly string[]): string {
 	if (values.length === 0) return "[]";
 	return `[${values.map((value) => yamlScalar(value)).join(", ")}]`;

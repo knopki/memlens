@@ -33,7 +33,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Open one empty store in a temporary directory. */
 function newStore(): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-view-"));
 	dirs.push(dir);
@@ -53,7 +52,6 @@ const INSERT_NOTE = `INSERT INTO notes
 	(id, scope, pos, state, kind, body, longform, refs, ts, created_at, modified_at, review_at, v, v_content)
 	VALUES (?, ?, ?, ?, 'note', ?, ?, '[]', ?, ?, ?, NULL, ?, ?)`;
 
-/** @purpose Add one note row by raw SQL, with a version that names the slot and the body. */
 function addNote(store: Store, row: Row): void {
 	const ts = row.ts ?? T0;
 	const version = `v-${row.pos}-${row.body.length}`;
@@ -79,7 +77,6 @@ const INSERT_NODE = `INSERT INTO nodes
 	(scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-/** @purpose Add one node row by raw SQL. */
 function addNode(
 	store: Store,
 	node: Pick<Node, "level" | "start" | "summary" | "a_key" | "b_key"> & {
@@ -102,20 +99,16 @@ function addNode(
 		);
 }
 
-/** @purpose Give the validity key of one live leaf: the version and the state. */
 const leafKey = (pos: number, body: string): string =>
 	`v-${pos}-${body.length}|live`;
 
-/** @purpose Give the body of one fixture note. */
 const body = (pos: number): string => `body ${pos}`;
 
-/** @purpose Write one live note for each position of a range. */
 function addLive(store: Store, count: number): void {
 	for (let pos = 0; pos < count; pos += 1)
 		addNote(store, { pos, body: body(pos) });
 }
 
-/** @purpose Add the leaf pair node over slots 0 and 1. */
 function addPair(store: Store, summary = "pair"): void {
 	addNode(store, {
 		level: 1,

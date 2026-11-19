@@ -81,7 +81,6 @@ export async function exportCommand(
 }
 // #endregion FUNC_exportCommand
 
-/** The encoded scope name without its extension. */
 function encodeStem(scope: ScopeKey): string {
 	return encodeScopeFilename(scope).slice(0, -".md".length);
 }

@@ -119,7 +119,6 @@ function bar(
 	);
 }
 
-/** The node and the candidate levels of the view, in ascending order. */
 function levels(model: View): number[] {
 	return [
 		...new Set([
@@ -129,7 +128,6 @@ function levels(model: View): number[] {
 	].sort((a, b) => a - b);
 }
 
-/** The number of the nodes of one level, or of the dirty nodes of that level. */
 function nodeCount(model: View, level: number, dirty = false): number {
 	return model.nodes.filter(
 		(item) => item.node.level === level && (!dirty || !item.clean),

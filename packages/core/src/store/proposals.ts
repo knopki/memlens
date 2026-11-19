@@ -241,6 +241,7 @@ export function dismiss(store: Store, id: string, reason?: string): void {
 }
 // #endregion FUNC_dismiss
 
+// #region FUNC_proposalFromRow
 /**
  * @purpose Read one stored proposal row into its public shape.
  * @invariants The closed value maps to its status name.
@@ -260,3 +261,4 @@ function proposalFromRow(row: Record<string, SQLOutputValue>): Proposal {
 		status,
 	};
 }
+// #endregion FUNC_proposalFromRow

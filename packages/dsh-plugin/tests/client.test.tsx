@@ -51,6 +51,7 @@ import { MemoryView } from "../src/client/view.js";
 
 /** The renderer of the console package. The plugin holds no react-dom of its own. */
 const requireUi = createRequire(import.meta.url);
+
 const { renderToStaticMarkup } = requireUi(
 	"../../ui/node_modules/react-dom/server.js",
 ) as { renderToStaticMarkup: (node: ReactNode) => string };

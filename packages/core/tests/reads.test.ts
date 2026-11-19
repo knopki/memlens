@@ -34,7 +34,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Open one empty store in a temporary directory. */
 function newStore(): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-reads-"));
 	dirs.push(dir);
@@ -57,7 +56,6 @@ const INSERT_NOTE = `INSERT INTO notes
 	(id, scope, pos, state, kind, body, longform, refs, ts, created_at, modified_at, review_at, v, v_content)
 	VALUES (?, ?, ?, ?, ?, ?, ?, '[]', ?, ?, ?, ?, ?, ?)`;
 
-/** @purpose Add one note row by raw SQL. */
 function addNote(store: Store, row: Row): void {
 	const ts = row.ts ?? "2026-11-01T00:00:00.000Z";
 	const version = `v-${row.scope}-${row.pos}`;
@@ -81,7 +79,6 @@ function addNote(store: Store, row: Row): void {
 		);
 }
 
-/** @purpose Add one node row by raw SQL. */
 function addNode(
 	store: Store,
 	scope: string,
@@ -110,11 +107,9 @@ function addNode(
 		);
 }
 
-/** @purpose Give the validity key of one live leaf. */
 const leafKey = (scope: string, pos: number): string =>
 	`v-${scope}-${pos}|live`;
 
-/** @purpose Give one search hit. */
 const hit = (over: Partial<IndexHit>): IndexHit => ({
 	addr: `x:a#${over.pos ?? 0}`,
 	scope: "x:a",

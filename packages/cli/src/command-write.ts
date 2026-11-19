@@ -107,6 +107,7 @@ export async function noteCommand(
 }
 // #endregion FUNC_noteCommand
 
+// #region FUNC_resolveRowTarget
 /** Resolve an address to one visible note row. */
 function resolveRowTarget(
 	runtime: Runtime,
@@ -130,7 +131,9 @@ function resolveRowTarget(
 		throw new MemlensError("Data", `No note of ${scope} is at ${address.pos}.`);
 	return { scope, record };
 }
+// #endregion FUNC_resolveRowTarget
 
+// #region FUNC_supersedeIds
 /** Resolve each --supersedes target to its row id. */
 function supersedeIds(
 	runtime: Runtime,
@@ -142,6 +145,7 @@ function supersedeIds(
 		.filter((raw) => raw !== "")
 		.map((raw) => resolveRowTarget(runtime, raw, fallback).record.id);
 }
+// #endregion FUNC_supersedeIds
 
 // #region FUNC_forgetCommand
 /**
@@ -331,6 +335,7 @@ export async function amendCommand(
 }
 // #endregion FUNC_amendCommand
 
+// #region FUNC_reviewFlag
 /** Parse --review or --for: <number>d or never. The fallback gives the days of a kind. */
 function reviewFlag(
 	flags: ParsedArgs["flags"],
@@ -347,6 +352,7 @@ function reviewFlag(
 		);
 	return addDaysAtTime(Date.now(), Number(raw.slice(0, -1)));
 }
+// #endregion FUNC_reviewFlag
 
 // #region FUNC_tsFlag
 /**

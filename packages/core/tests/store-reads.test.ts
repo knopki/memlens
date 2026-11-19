@@ -42,7 +42,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Open one empty store in a temporary directory. */
 function newStore(language = "en"): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-"));
 	dirs.push(dir);
@@ -68,7 +67,6 @@ const INSERT_NOTE = `INSERT INTO notes
 	(id, scope, pos, state, kind, body, longform, refs, ts, created_at, modified_at, review_at, v, v_content)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-/** @purpose Add one note row by raw SQL. */
 function addNote(store: Store, row: Row): void {
 	store
 		.handle()
@@ -91,7 +89,6 @@ function addNote(store: Store, row: Row): void {
 		);
 }
 
-/** @purpose Write one FTS row for a note, by the rowid of the content table. */
 function indexNote(
 	store: Store,
 	id: string,
@@ -108,7 +105,6 @@ function indexNote(
 	);
 }
 
-/** @purpose Add one node row by raw SQL. */
 function addNode(
 	store: Store,
 	scope: string,

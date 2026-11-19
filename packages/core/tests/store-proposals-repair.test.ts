@@ -35,7 +35,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Open one empty store in a temporary directory. */
 function open(): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-"));
 	dirs.push(dir);
@@ -44,7 +43,6 @@ function open(): Store {
 	return store;
 }
 
-/** @purpose Add one raw note row of the test scope and its index row. */
 function addNote(store: Store, id: string, body: string, state = "live"): void {
 	const db = store.handle();
 	const next = db
@@ -64,7 +62,6 @@ function addNote(store: Store, id: string, body: string, state = "live"): void {
 		).run(row?.n, body);
 }
 
-/** @purpose Add raw journal rows of the test store. */
 function addJournal(store: Store, count: number): void {
 	const stmt = store
 		.handle()
@@ -75,7 +72,6 @@ function addJournal(store: Store, count: number): void {
 		stmt.run(new Date().toISOString());
 }
 
-/** @purpose Read one proposal row. */
 function proposalRow(store: Store, id: string) {
 	return store
 		.handle()
@@ -83,14 +79,12 @@ function proposalRow(store: Store, id: string) {
 		.get(id);
 }
 
-/** @purpose Give the count of one table. */
 function rows(store: Store, table: "notes" | "nodes" | "journal"): number {
 	return Number(
 		store.handle().prepare(`SELECT count(*) AS c FROM ${table}`).get()?.c ?? 0,
 	);
 }
 
-/** @purpose Give the count of the indexed rows. */
 function indexedRows(store: Store): number {
 	return Number(
 		store.handle().prepare("SELECT count(*) AS c FROM fts_docsize").get()?.c ??

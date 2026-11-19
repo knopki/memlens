@@ -139,6 +139,7 @@ export async function openCommand(
 }
 // #endregion FUNC_openCommand
 
+// #region FUNC_openPos
 /** One note answer: the entry object and its text form. */
 function openPos(
 	runtime: Runtime,
@@ -163,7 +164,9 @@ function openPos(
 	}`;
 	return { value: entry, text };
 }
+// #endregion FUNC_openPos
 
+// #region FUNC_openRangeAddress
 /** One range answer: the children object and its text form. */
 function openRangeAddress(
 	runtime: Runtime,
@@ -185,6 +188,7 @@ function openRangeAddress(
 		.join("\n");
 	return { value: children, text };
 }
+// #endregion FUNC_openRangeAddress
 
 // #region FUNC_scopesCommand
 /**

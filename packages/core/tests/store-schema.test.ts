@@ -24,14 +24,12 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Give a temporary directory and the path of one database in it. */
 function storePath(): string {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-"));
 	dirs.push(dir);
 	return join(dir, "memlens.db");
 }
 
-/** @purpose List the table names of one database. */
 function tables(db: DatabaseSync): string[] {
 	return db
 		.prepare(
@@ -41,7 +39,6 @@ function tables(db: DatabaseSync): string[] {
 		.map((row) => String(row.name));
 }
 
-/** @purpose Read the stored schema version. It is undefined when the row is absent. */
 function version(db: DatabaseSync): string | undefined {
 	const row = db
 		.prepare("SELECT value FROM meta WHERE key = 'schema_version'")
@@ -49,7 +46,6 @@ function version(db: DatabaseSync): string | undefined {
 	return row === undefined ? undefined : String(row.value);
 }
 
-/** @purpose Read the note bodies in slot order. */
 function bodies(db: DatabaseSync): string[] {
 	return db
 		.prepare("SELECT body FROM notes ORDER BY n")
@@ -57,7 +53,6 @@ function bodies(db: DatabaseSync): string[] {
 		.map((row) => String(row.body));
 }
 
-/** @purpose Add one note row and its index row, as the write path does. */
 function addNote(db: DatabaseSync, pos: number, body: string): void {
 	db.prepare(
 		"INSERT INTO notes (id, scope, pos, state, kind, body, ts, created_at, modified_at, v, v_content) VALUES (?, 'p:x', ?, 'live', 'note', ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'a', 'a')",
@@ -69,7 +64,6 @@ function addNote(db: DatabaseSync, pos: number, body: string): void {
 	);
 }
 
-/** @purpose Give the schema text of each object, so two stores compare in one value. */
 function schemaOf(db: DatabaseSync): string[] {
 	return db
 		.prepare(
@@ -82,7 +76,6 @@ function schemaOf(db: DatabaseSync): string[] {
 		);
 }
 
-/** @purpose Match the refusal of a recorded schema version. */
 function versionRefused(error: unknown): boolean {
 	return (
 		error instanceof MemlensError &&

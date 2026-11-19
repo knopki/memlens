@@ -308,9 +308,12 @@ function contentRow(
 }
 // #endregion FUNC_contentRow
 
+// #region FUNC_digestOf
+/** @purpose Hash the text of the given lines, so a trailer states the content of the file. */
 export function digestOf(lines: readonly string[]): string {
 	return createHash("sha256").update(lines.join("\n")).digest("hex");
 }
+// #endregion FUNC_digestOf
 
 // #region FUNC_parseObject
 /** @purpose Read one JSON line as an object. */
@@ -368,6 +371,8 @@ function refsOfInput(value: unknown): string[] {
 	return textRefs(value, "The refs of a note are not text.");
 }
 
+// #region FUNC_refsOfRow
+/** @purpose Read the refs text of one stored row, and refuse a damaged cell. */
 export function refsOfRow(value: unknown): string[] {
 	let parsed: unknown;
 	try {
@@ -377,6 +382,7 @@ export function refsOfRow(value: unknown): string[] {
 	}
 	return textRefs(parsed, "A note row holds invalid refs.");
 }
+// #endregion FUNC_refsOfRow
 
 function textRefs(value: unknown, message: string): string[] {
 	if (!Array.isArray(value) || value.some((item) => typeof item !== "string"))

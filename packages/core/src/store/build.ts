@@ -38,6 +38,7 @@ type Half = {
 	preview: string | null;
 } | null;
 
+// #region FUNC_half
 /** @purpose Read one ready child or detect an unready child. */
 function half(view: View, level: number, start: number): Half {
 	const live = view.notes.filter(
@@ -58,7 +59,9 @@ function half(view: View, level: number, start: number): Half {
 		? { key: node.built_v, text: node.summary, preview: null }
 		: null;
 }
+// #endregion FUNC_half
 
+// #region FUNC_snapshot
 /** @purpose Capture the current children and the dates of their live leaves. */
 function snapshot(view: View, level: number, start: number): BuildRead | null {
 	const live = view.notes.filter(
@@ -84,6 +87,7 @@ function snapshot(view: View, level: number, start: number): BuildRead | null {
 		fits: !a.preview && !b.preview && joinText(a.text ?? "", b.text ?? "").fits,
 	};
 }
+// #endregion FUNC_snapshot
 
 // #region FUNC_readBuild
 /** @purpose Capture the ready children of one covered range in one read transaction. */

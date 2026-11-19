@@ -438,7 +438,6 @@ describe("Memlens configuration that cannot be read", () => {
 	});
 });
 
-/** @purpose Give one base file that names its store, so a default fallback would move the store. */
 function baseWithStore(store: string): string {
 	return DEFAULT_CONFIG_TOML.replace(
 		"[store]\nidle = 300",
@@ -446,7 +445,6 @@ function baseWithStore(store: string): string {
 	);
 }
 
-/** @purpose Give one base file with a path rule, so the agent scope follows the real config. */
 function baseWithScope(store: string): string {
 	return `${baseWithStore(store).replace("rules = []\n", "")}
 [[scope_default.rules]]

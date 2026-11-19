@@ -52,20 +52,17 @@ const ERROR_MS = 8000;
 /** The wait between two reads of the host runtime state, in milliseconds. */
 const RUNTIME_MS = 5000;
 
-/** The note kind of a text, or an empty text. */
 function kindOf(value: string): NoteKind | "" {
 	return (NOTE_KINDS as readonly string[]).includes(value)
 		? (value as NoteKind)
 		: "";
 }
 
-/** The language code of a text, with English as the fallback. */
 function languageOf(code: string): Lang {
 	const short = code.slice(0, 2) as Lang;
 	return LANGS.includes(short) ? short : "en";
 }
 
-/** The theme choice of a text, with the system setting as the fallback. */
 function themeOf(code: string): Choice {
 	return code === "light" || code === "dark" ? code : "system";
 }

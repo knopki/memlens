@@ -89,6 +89,7 @@ export function totalOf(view: View): Pos {
 }
 // #endregion FUNC_totalOf
 
+// #region FUNC_indexOf
 /** @purpose Index one view for a render, so each lookup costs a map read or a binary search. */
 function indexOf(view: View): Index {
 	const notes = new Map<Pos, Note>();
@@ -107,6 +108,7 @@ function indexOf(view: View): Index {
 		total: totalOf(view),
 	};
 }
+// #endregion FUNC_indexOf
 
 function liveInIndex(index: Index, from: Pos, to: Pos): boolean {
 	const first = lowerBound(index.slots, from);

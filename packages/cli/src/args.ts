@@ -37,7 +37,6 @@ export interface ParsedArgs {
 	readonly flags: Readonly<Flags>;
 }
 
-/** Build one Usage error, so the parse rejects invalid text in one place. */
 function usageError(message: string): never {
 	debug("Usage rejected", { event: "usage", message });
 	throw new MemlensError("Usage", message);

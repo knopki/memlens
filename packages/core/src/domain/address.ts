@@ -89,6 +89,7 @@ export function parseAddress(raw: string): ParsedAddress | null {
 }
 // #endregion FUNC_parseAddress
 
+// #region FUNC_parseRange
 /** Parse a string of the form N or N-M. Returns null on failure. */
 function parseRange(s: string): { start: Pos; end: Pos | null } | null {
 	const dashIdx = s.indexOf("-");
@@ -104,6 +105,7 @@ function parseRange(s: string): { start: Pos; end: Pos | null } | null {
 	if (pos === null) return null;
 	return { start: pos, end: null };
 }
+// #endregion FUNC_parseRange
 
 function parseNonNegInt(s: string): number | null {
 	if (!/^\d+$/.test(s)) return null;

@@ -5,10 +5,13 @@
  *  - The module contract of each source file.
  *  - The files of one call, so a hook checks the staged files only.
  *  - The pairing and the name of each region marker.
+ *  - The place of each contract: a contract stands inside a region pair.
  *  - The blank lines around a marker, a doc comment, and a top-level declaration.
  *  - NOT: the code style inside a construct.
  * @invariants
  *  - A region marker touches its own entity and no blank line stands inside the pair.
+ *  - A doc block with `@purpose` stands inside a region pair, and the module contract is the one
+ *    block that carries its own region.
  *  - A blank line separates each construct from its neighbor.
  * @keywords region, marker, blank line, lint, grace, layout
  * #endregion moduleContract
@@ -33,7 +36,10 @@ function sources(root) {
 				continue;
 			}
 			files.push(...sources(path));
-		} else if (entry.endsWith(".ts") && !entry.endsWith(".d.ts")) {
+		} else if (
+			(entry.endsWith(".ts") || entry.endsWith(".tsx")) &&
+			!entry.endsWith(".d.ts")
+		) {
 			files.push(path);
 		}
 	}
@@ -94,6 +100,31 @@ function inspect(file) {
 	});
 
 	if (open.length > 0) add(lines.length, `unclosed region ${open.join(", ")}`);
+
+	const inside = new Array(lines.length).fill(false);
+	let depth = 0;
+	lines.forEach((line, index) => {
+		const marker = REGION.exec(line);
+		if (marker) {
+			inside[index] = true;
+			depth += marker[1] === "region" ? 1 : -1;
+			return;
+		}
+		inside[index] = depth > 0;
+	});
+	for (let index = 0; index < lines.length; index++) {
+		if (!lines[index].trim().startsWith("/**")) continue;
+		let end = index;
+		while (end < lines.length && !lines[end].includes("*/")) end += 1;
+		const block = lines.slice(index, end + 1).join("\n");
+		if (block.includes("#region moduleContract")) {
+			index = end;
+			continue;
+		}
+		if (block.includes("@purpose") && !inside[index])
+			add(index, "a contract stands outside a region");
+		index = end;
+	}
 	const first = lines.findIndex((line) => DECLARATION.test(line));
 	const head = lines.slice(0, first === -1 ? lines.length : first).join("\n");
 	if (!head.includes("#region moduleContract")) add(0, "no module contract");
@@ -104,7 +135,11 @@ function inspect(file) {
 
 const given = process.argv
 	.slice(2)
-	.filter((path) => path.endsWith(".ts") && !path.endsWith(".d.ts"));
+	.filter(
+		(path) =>
+			(path.endsWith(".ts") || path.endsWith(".tsx")) &&
+			!path.endsWith(".d.ts"),
+	);
 const checked = given.length > 0 ? given : [];
 if (given.length === 0) {
 	for (const pkg of PACKAGES) {

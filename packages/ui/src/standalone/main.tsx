@@ -52,7 +52,9 @@ function themeOf(code: string): Choice {
 // #endregion FUNC_themeOf
 
 const storage = createLocalStorage();
+
 const lang = langOf(storage.read(LANG_KEY, navigator.language));
+
 const theme = themeOf(storage.read(THEME_KEY, "system"));
 
 const initial: ConsoleState = {
@@ -105,6 +107,7 @@ const api: ConsoleApi = {
 };
 
 applyTheme(theme);
+
 const root = document.getElementById("app");
 if (!root) throw new Error("Console root is absent");
 createRoot(root).render(<App api={api} />);

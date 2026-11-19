@@ -59,6 +59,7 @@ interface CompactJob {
 	readonly joined: number;
 }
 
+// #region FUNC_buildInput
 /** Read the current build input for one candidate range. */
 function buildInput(
 	store: Runtime["store"],
@@ -104,14 +105,15 @@ function buildInput(
 		},
 	};
 }
+// #endregion FUNC_buildInput
 
-/** The scope of the compaction: --scope, or the active scope of the working directory. */
 function compactScope(args: ParsedArgs, io: CommandIo): ScopeKey {
 	const base = loadCliBaseConfig(io.env);
 	const raw = flagValue(args.flags, "scope") ?? cliActiveScope(base, io.cwd);
 	return normalizeScopeKey(raw) as ScopeKey;
 }
 
+// #region FUNC_compactRuntime
 /** Open the runtime for the compaction of one scope, with the profile check. */
 async function compactRuntime(
 	args: ParsedArgs,
@@ -123,6 +125,7 @@ async function compactRuntime(
 		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
 	return runtime;
 }
+// #endregion FUNC_compactRuntime
 
 // #region FUNC_compactCommand
 /**
@@ -188,7 +191,6 @@ export async function prepareCompact(
 }
 // #endregion FUNC_prepareCompact
 
-/** Each candidate range of one scope with its current build input. */
 function readyInputs(store: Runtime["store"], scope: ScopeKey) {
 	return candidates(store, scope).flatMap((range) => {
 		const result = buildInput(store, scope, range);
@@ -196,6 +198,7 @@ function readyInputs(store: Runtime["store"], scope: ScopeKey) {
 	});
 }
 
+// #region FUNC_publishRounds
 /** Publish each fitting join and copy in rounds until one round publishes nothing. */
 function publishRounds(
 	store: Runtime["store"],
@@ -246,8 +249,8 @@ function publishRounds(
 	}
 	return { published, joined };
 }
+// #endregion FUNC_publishRounds
 
-/** Strip the input block tags from one batch task, so the job reads as plain text. */
 function unwrapIds(text: string): string {
 	return text.replace(/<input id="(#[^"]+)">/g, "$1");
 }
@@ -294,6 +297,7 @@ async function compactJob(
 }
 // #endregion FUNC_compactJob
 
+// #region FUNC_canonical
 /** @purpose Render one build input with sorted keys, so an input check ignores the field order. */
 function canonical(value: unknown): string {
 	return JSON.stringify(value, (_key, item) =>
@@ -306,6 +310,7 @@ function canonical(value: unknown): string {
 			: item,
 	);
 }
+// #endregion FUNC_canonical
 
 // #region FUNC_applyAnswers
 /**
@@ -435,6 +440,7 @@ export function parseAnswers(text: string): readonly Answer[] {
 }
 // #endregion FUNC_parseAnswers
 
+// #region FUNC_parseAnswerFile
 /** Read one answer file and check the form of each line. */
 function parseAnswerFile(path: string): readonly Answer[] {
 	let text: string;
@@ -451,3 +457,4 @@ function parseAnswerFile(path: string): readonly Answer[] {
 			: error;
 	}
 }
+// #endregion FUNC_parseAnswerFile

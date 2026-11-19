@@ -25,7 +25,6 @@ import {
 
 const debug = debuglog("memlens:commands");
 
-/** The total of the per-scope live counts. */
 function liveTotal(counts: ReadonlyMap<string, number>): number {
 	return [...counts.values()].reduce((sum, count) => sum + count, 0);
 }

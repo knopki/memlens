@@ -274,7 +274,6 @@ export function newestScope(
 }
 // #endregion FUNC_newestScope
 
-/** Order the scope marks by the last write, the newest first, then by the scope key. */
 function newerFirst(
 	a: { readonly lastWrite: string; readonly scope: ScopeKey },
 	b: { readonly lastWrite: string; readonly scope: ScopeKey },

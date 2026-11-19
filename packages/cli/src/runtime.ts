@@ -67,6 +67,7 @@ export interface Runtime {
 	close(): Promise<void>;
 }
 
+// #region FUNC_loadCliBaseConfig
 /** Read the base layer: the file of the config directory, or the built-in fallback. */
 export function loadCliBaseConfig(
 	env: Record<string, string | undefined>,
@@ -81,7 +82,10 @@ export function loadCliBaseConfig(
 	});
 	return layer;
 }
+// #endregion FUNC_loadCliBaseConfig
 
+// #region FUNC_readCliFile
+/** @purpose Read one configuration file, and give null when the file is absent. */
 export function readCliFile(path: string): string | null {
 	try {
 		return readFileSync(path, "utf8");
@@ -89,6 +93,7 @@ export function readCliFile(path: string): string | null {
 		return null;
 	}
 }
+// #endregion FUNC_readCliFile
 
 // #region FUNC_openRuntime
 /**
@@ -130,6 +135,7 @@ export async function openRuntime(options: {
 }
 // #endregion FUNC_openRuntime
 
+// #region FUNC_resolveForProfile
 /** Resolve the configuration for one profile name, without a patch and without a preset. */
 export function resolveForProfile(
 	base: BaseConfig,
@@ -137,7 +143,9 @@ export function resolveForProfile(
 ): ResolvedConfig {
 	return resolveConfig(base, {}, { profile });
 }
+// #endregion FUNC_resolveForProfile
 
+// #region FUNC_profileLists
 /**
  * @purpose Tell a listed scope from a scope that needs a proposal.
  * @invariants A listed glob matches the scope. A catalog key is never listed.
@@ -148,7 +156,9 @@ export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
 		runtime.config.profile.scopes.some((glob) => globMatches(glob, scope))
 	);
 }
+// #endregion FUNC_profileLists
 
+// #region FUNC_cliScopeResult
 /**
  * @purpose Resolve the scope of a directory from the rules and the automatic list.
  * @invariants A matching rule takes precedence over the automatic list.
@@ -193,6 +203,7 @@ export function cliScopeResult(
 	});
 	return { key: automatic.key, rule: null, source: automatic.source };
 }
+// #endregion FUNC_cliScopeResult
 
 // #region FUNC_selectedRemote
 /**
@@ -249,7 +260,9 @@ function repositoryName(
 }
 // #endregion FUNC_repositoryName
 
+// #region FUNC_cliActiveScope
 /** The active scope key of one directory. */
 export function cliActiveScope(base: BaseConfig, cwd: string): ScopeKey {
 	return cliScopeResult(base, cwd).key;
 }
+// #endregion FUNC_cliActiveScope

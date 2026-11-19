@@ -97,7 +97,6 @@ function literalWord(
 }
 // #endregion FUNC_literalWord
 
-/** Compose the LIKE pattern of one literal word. */
 function likePattern(word: string): string {
 	const escaped = word.replace(/[\\%_]/g, (char) => `\\${char}`);
 	return `%${escaped}%`;

@@ -258,6 +258,7 @@ export async function compactionPass(
 }
 // #endregion FUNC_compactionPass
 
+// #region FUNC_callBatch
 /** Ask for the lines of one batch. A rejected call gives an empty answer. */
 async function callBatch(
 	batch: readonly BuildInput[],
@@ -274,7 +275,9 @@ async function callBatch(
 		return "";
 	}
 }
+// #endregion FUNC_callBatch
 
+// #region FUNC_runBatch
 /**
  * Publish the good lines of one batch call, then retry the unresolved ranges in halved batches.
  *
@@ -308,3 +311,4 @@ async function runBatch(
 	for (let index = 0; index < unresolved.length; index += size)
 		await runBatch(unresolved.slice(index, index + size), model, publish);
 }
+// #endregion FUNC_runBatch

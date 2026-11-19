@@ -134,11 +134,14 @@ export function foldClock(
 }
 // #endregion FUNC_foldClock
 
+// #region FUNC_setClock
+/** @purpose Write the clock text of one imported file into the meta table. */
 export function setClock(db: DatabaseSync, value: string): void {
 	db.prepare(
 		"INSERT INTO meta (key, value) VALUES ('clock', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
 	).run(value);
 }
+// #endregion FUNC_setClock
 
 function copyContent(target: Row, source: Row): void {
 	target.scope = source.scope;

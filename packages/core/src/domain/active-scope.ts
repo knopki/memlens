@@ -14,7 +14,7 @@
  *  - Each match gives a valid scope key, or falls through to the next rule or the default.
  *  - The automatic list applies after the rules: the git remote, the repository name, the
  *    workspace name, the directory name, then the fallback key of the caller.
- *  - The remote key keeps the full path after the host, in lowercase.
+ *  - The remote key keeps the full path after the host, and the case stays as given.
  *  - The visible list holds only scope keys that a profile glob matches, in the given order.
  *  - The join adds the literal key of the active scope when no profile glob matches it.
  * @usecases
@@ -99,7 +99,7 @@ export function repoName(remote: string): string {
  * @invariants A rule matches `git_remote` with a glob, `path` with a glob, or `workspace` with an id.
  * @invariants The rules go in order, and the first match gives the key and its rule index.
  * @invariants A rule with no subject input gives no match, and the key part `{repo}` takes the
- * remote repository name in lowercase.
+ * repository name of the remote, sanitized, and the name keeps its case.
  * @invariants A substituted key outside the scope grammar gives no match, and the next rule applies.
  * @ensures No matching rule gives the key of `default` and a null rule index.
  * @param scopeDefault - The rules and the default key from the configuration.
@@ -226,7 +226,7 @@ function selected(key: ScopeKey, source: AutomaticSource): AutomaticScope {
  * @invariants The key holds the path after the host, so a nested group stays complete.
  * @invariants A local remote gives no key, and a path with no organization gives no key.
  * @param remote - The origin URL of the repository.
- * @returns The `project:` key in lowercase, or null when the remote gives no organization.
+ * @returns The `project:` key, or null when the remote gives no organization.
  */
 function remoteScope(remote: string): ScopeKey | null {
 	const text = remote.trim();

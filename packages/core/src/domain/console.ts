@@ -172,7 +172,9 @@ function readStoreConsole(
 	debugModel(config.defaultProfile, set.selected, model, kind);
 	return model;
 }
+// #endregion FUNC_readStoreConsole
 
+// #region FUNC_debugModel
 /** @purpose Write one debug line with the counts of the console model. */
 function debugModel(
 	profile: string,
@@ -192,8 +194,8 @@ function debugModel(
 		next: `${model.reviewNext.length}/${model.reviewNextTotal}`,
 	});
 }
+// #endregion FUNC_debugModel
 
-/** @purpose Load one view for each scope of the read. */
 function loadViews(
 	store: Store,
 	keys: readonly ScopeKey[],
@@ -201,7 +203,6 @@ function loadViews(
 	return new Map(keys.map((key) => [key, loadView(store.handle(), key)]));
 }
 
-/** @purpose Give the top line of each scope, or null when the scope holds no live note. */
 function topLines(
 	keys: readonly ScopeKey[],
 	views: ReadonlyMap<ScopeKey, View>,
@@ -209,6 +210,7 @@ function topLines(
 	return new Map(keys.map((key) => [key, topLineOf(requireView(views, key))]));
 }
 
+// #region FUNC_directionModel
 /** @purpose Join the top line text of each scope into its direction line. */
 function directionModel(
 	lines: readonly DirectionLine[],
@@ -219,7 +221,9 @@ function directionModel(
 		return { ...line, summary: top === null ? null : textOfLine(top) };
 	});
 }
+// #endregion FUNC_directionModel
 
+// #region FUNC_budgetsOf
 /** @purpose Give the used and the allowed line count of the two console budgets. */
 function budgetsOf(
 	config: ResolvedConfig,
@@ -231,8 +235,8 @@ function budgetsOf(
 		directions: { used: lines.length, limit: config.budget.directions },
 	};
 }
+// #endregion FUNC_budgetsOf
 
-/** @purpose Give each scope panel of the console. */
 function scopePanels(
 	keys: readonly ScopeKey[],
 	views: ReadonlyMap<ScopeKey, View>,
@@ -241,6 +245,7 @@ function scopePanels(
 	return keys.map((key) => scopePanel(key, views, config));
 }
 
+// #region FUNC_recordRows
 /** @purpose Give each record line of the visible scopes. */
 function recordRows(
 	keys: readonly ScopeKey[],
@@ -251,7 +256,9 @@ function recordRows(
 		requireView(views, key).notes.map((row) => recordOf(row, links)),
 	);
 }
+// #endregion FUNC_recordRows
 
+// #region FUNC_nodeRows
 /** @purpose Give each node row of the visible scopes with its validity. */
 function nodeRows(
 	store: Store,
@@ -266,7 +273,9 @@ function nodeRows(
 		})),
 	);
 }
+// #endregion FUNC_nodeRows
 
+// #region FUNC_candidateRows
 /** @purpose Give each build candidate of the visible scopes. */
 function candidateRows(
 	keys: readonly ScopeKey[],
@@ -280,7 +289,9 @@ function candidateRows(
 		})),
 	);
 }
+// #endregion FUNC_candidateRows
 
+// #region FUNC_catalogLines
 /** @purpose Give one catalog leaf for each direction line. */
 function catalogLines(
 	lines: readonly DirectionLine[],
@@ -300,7 +311,9 @@ function catalogLines(
 			: { ...top, range };
 	});
 }
+// #endregion FUNC_catalogLines
 
+// #region FUNC_contextOf
 /** @purpose Name each input of one context render. */
 function contextOf(
 	scope: ScopeKey,
@@ -325,8 +338,9 @@ function contextOf(
 			: { customPromptAppend: config.customPromptAppend }),
 	};
 }
-// #endregion FUNC_readStoreConsole
+// #endregion FUNC_contextOf
 
+// #region FUNC_scopePanel
 /** @purpose Give one scope panel of the console from the rows of one store. */
 function scopePanel(
 	key: ScopeKey,
@@ -345,6 +359,7 @@ function scopePanel(
 		frontier: hereLines(view, config.budget.here),
 	};
 }
+// #endregion FUNC_scopePanel
 
 // #region FUNC_candidatesOf
 /**
@@ -379,6 +394,7 @@ export function candidatesOf(view: View): readonly Range[] {
 }
 // #endregion FUNC_candidatesOf
 
+// #region FUNC_scopeSet
 /** @purpose Give the visible scope keys of one console read, and the selected key. */
 function scopeSet(
 	config: ResolvedConfig,
@@ -400,8 +416,8 @@ function scopeSet(
 	}
 	return { keys, selected: scope };
 }
+// #endregion FUNC_scopeSet
 
-/** @purpose Give one view of the read, or refuse the read when the scope is absent. */
 function requireView(views: ReadonlyMap<ScopeKey, View>, key: ScopeKey): View {
 	const view = views.get(key);
 	if (view === undefined)
@@ -409,6 +425,7 @@ function requireView(views: ReadonlyMap<ScopeKey, View>, key: ScopeKey): View {
 	return view;
 }
 
+// #region FUNC_supersedesOf
 /** @purpose Build the reverse supersede map of the visible scopes: each source names its targets. */
 function supersedesOf(
 	store: Store,
@@ -430,7 +447,14 @@ function supersedesOf(
 	}
 	return links;
 }
+// #endregion FUNC_supersedesOf
 
+// #region FUNC_recordOf
+/**
+ * @purpose Give one console record row from one note row and the reverse supersede map.
+ * @invariants The order key joins the modified time and the id, so a host sorts the rows.
+ * @invariants `supersedes` holds the ids of the notes that this note replaced.
+ */
 function recordOf(row: Note, links: ReadonlyMap<string, string[]>) {
 	return {
 		id: row.id,
@@ -454,5 +478,4 @@ function recordOf(row: Note, links: ReadonlyMap<string, string[]>) {
 		preset: row.preset,
 	};
 }
-
-/** @purpose Give the tree node shape of the console from one node row. */
+// #endregion FUNC_recordOf

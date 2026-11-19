@@ -166,12 +166,15 @@ export function toNote(row: RawNote): Note {
 }
 // #endregion FUNC_toNote
 
+// #region FUNC_rowById
 /** @purpose Read one row by its id, or undefined when the store holds no such row. */
 export function rowById(db: DatabaseSync, id: string): RawNote | undefined {
 	const row = db.prepare(SELECT_ROW).get(id);
 	return row === undefined ? undefined : (row as unknown as RawNote);
 }
+// #endregion FUNC_rowById
 
+// #region FUNC_requireRow
 /** @purpose Read one row by its id, or refuse the write when the row is absent. */
 export function requireRow(db: DatabaseSync, id: string): RawNote {
 	const row = rowById(db, id);
@@ -179,12 +182,16 @@ export function requireRow(db: DatabaseSync, id: string): RawNote {
 		throw new MemlensError("Data", "A local target does not exist.");
 	return row;
 }
+// #endregion FUNC_requireRow
 
+// #region FUNC_requireNote
 /** @purpose Read one note by its id, or refuse the call when the row is absent. */
 export function requireNote(db: DatabaseSync, id: string): Note {
 	return toNote(requireRow(db, id));
 }
+// #endregion FUNC_requireNote
 
+// #region FUNC_ftsRowOf
 /** @purpose Name the index values of one stored note row. */
 export function ftsRowOf(row: RawNote): FtsRow {
 	return {
@@ -194,7 +201,9 @@ export function ftsRowOf(row: RawNote): FtsRow {
 		cleared: row.cleared,
 	};
 }
+// #endregion FUNC_ftsRowOf
 
+// #region FUNC_findDuplicate
 /** @purpose Give the live note with the same comparison fields, so a caller can answer with it. */
 export function findDuplicate(
 	db: DatabaseSync,
@@ -208,7 +217,9 @@ export function findDuplicate(
 		.prepare(SELECT_DUPLICATE)
 		.get(scope, body, kind, longform, reviewAt) as RawNote | undefined;
 }
+// #endregion FUNC_findDuplicate
 
+// #region FUNC_checkedScope
 /** @purpose Normalize one scope key, or refuse the write when the key is not valid. */
 export function checkedScope(raw: string): ScopeKey {
 	const scope = normalizeScopeKey(raw);
@@ -216,7 +227,9 @@ export function checkedScope(raw: string): ScopeKey {
 		throw new MemlensError("Data", "The scope key is not valid.");
 	return scope;
 }
+// #endregion FUNC_checkedScope
 
+// #region FUNC_splitForWrite
 /** @purpose Normalize one body and move its overflow into the longform. */
 export function splitForWrite(
 	raw: string,
@@ -227,7 +240,9 @@ export function splitForWrite(
 } {
 	return splitBody(normalizeBody(raw), existing);
 }
+// #endregion FUNC_splitForWrite
 
+// #region FUNC_checkedReason
 /** @purpose Keep a journal reason within its limit, or refuse the write. */
 export function checkedReason(reason: string | undefined): string | undefined {
 	if (reason === undefined) return undefined;
@@ -235,3 +250,4 @@ export function checkedReason(reason: string | undefined): string | undefined {
 		throw new MemlensError("Data", "The reason exceeds 200 characters.");
 	return reason;
 }
+// #endregion FUNC_checkedReason

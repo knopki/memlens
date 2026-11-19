@@ -110,10 +110,6 @@ interface Harness {
 	readonly host: Memlens;
 }
 
-/**
- * @purpose Build one harness root with a real system-prompt service and a real store.
- * @param store - The store path of the environment, or none for the default path.
- */
 function newHarness(includeRuntimeContext = true, store?: string): Harness {
 	if (store === undefined) delete process.env.MEMLENS_STORE;
 	else process.env.MEMLENS_STORE = store;
@@ -129,7 +125,6 @@ interface Mounted {
 	readonly key: RegistrationScope;
 }
 
-/** @purpose Mount one agent with its preset scope and its session. */
 function mount(
 	harness: Harness,
 	options: {
@@ -168,12 +163,10 @@ function mount(
 	return { agent, key };
 }
 
-/** @purpose Register the memory context of one mounted agent. */
 function register(harness: Harness, mounted: Mounted): void {
 	registerMemoryContext(mounted.agent, harness.host.forAgent(mounted.agent));
 }
 
-/** @purpose Give the Memlens section text of one agent scope, or undefined. */
 async function sectionOf(
 	harness: Harness,
 	key: RegistrationScope,
@@ -184,7 +177,6 @@ async function sectionOf(
 	)?.text;
 }
 
-/** @purpose Fire one session event at the listeners of the root. */
 function fire(
 	harness: Harness,
 	agent: Agent,
@@ -196,7 +188,6 @@ function fire(
 	emit("session/event", agent.session, { type, data });
 }
 
-/** @purpose Write one live note through the core write path, and give its id. */
 function write(
 	store: Store,
 	scope: "project:alpha" | "project:beta",
@@ -214,7 +205,6 @@ function write(
 	return result.value.id;
 }
 
-/** @purpose Give one runtime context message of the harness form. */
 function snapshotMessage(sections: readonly { name: string; text: string }[]) {
 	return { source: { kind: "runtime-context", form: "snapshot", sections } };
 }

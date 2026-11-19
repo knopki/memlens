@@ -17,10 +17,12 @@ import type { Node } from "./types.js";
 
 const debug = debuglog("memlens:nodes");
 
+// #region FUNC_widthOf
 /** The width that one level covers: level 1 covers two slots, each level doubles the range. */
 export function widthOf(level: number): number {
 	return 1 << level;
 }
+// #endregion FUNC_widthOf
 
 // #region FUNC_deleteCovering
 /**
@@ -137,6 +139,7 @@ export function validNode(db: DatabaseSync, node: Node): boolean {
 }
 // #endregion FUNC_validNode
 
+// #region FUNC_halfValidInStore
 /** @purpose Check one half of a node against its child range and key. */
 function halfValidInStore(
 	db: DatabaseSync,
@@ -155,6 +158,7 @@ function halfValidInStore(
 		return !liveInStore(db, scope, halfStart, halfStart + halfWidth);
 	return nodeKeyOf(db, scope, halfLevel, halfStart) === key;
 }
+// #endregion FUNC_halfValidInStore
 
 // #region FUNC_liveInStore
 /**

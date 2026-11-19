@@ -148,6 +148,7 @@ export function noteTx(tx: Tx, input: NoteInput): Note {
 }
 // #endregion FUNC_noteTx
 
+// #region FUNC_targetsOf
 /** @purpose Read each supersede target, or refuse the write when a target is absent or outside the scope. */
 function targetsOf(
 	db: DatabaseSync,
@@ -166,7 +167,9 @@ function targetsOf(
 		return row;
 	});
 }
+// #endregion FUNC_targetsOf
 
+// #region FUNC_insertNoteRow
 /** @purpose Write one note row at its slot, and give its stored shape. */
 function insertNoteRow(
 	tx: Tx,
@@ -205,7 +208,9 @@ function insertNoteRow(
 		);
 	return requireRow(tx.db, data.id);
 }
+// #endregion FUNC_insertNoteRow
 
+// #region FUNC_hideSuperseded
 /** @purpose Hide each supersede target and keep its link to the new note. */
 function hideSuperseded(
 	tx: Tx,
@@ -224,6 +229,7 @@ function hideSuperseded(
 		tx.journal("supersede", target.id, target.scope);
 	}
 }
+// #endregion FUNC_hideSuperseded
 
 // #region FUNC_noteCheckedTx
 /**

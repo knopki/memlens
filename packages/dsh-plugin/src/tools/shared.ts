@@ -165,10 +165,12 @@ interface Target {
 	readonly row: Note;
 }
 
+// #region FUNC_blocks
 /** The text answer of one tool call, as the model reads it. */
 export function blocks(text: string): ContentBlock[] {
 	return [{ type: "text", text }];
 }
+// #endregion FUNC_blocks
 
 // #region FUNC_listedInProfile
 /**

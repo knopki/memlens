@@ -55,9 +55,11 @@ export function addDaysAtTime(d: Date | number, days: number): string {
 }
 // #endregion FUNC_addDaysAtTime
 
+// #region FUNC_compareIso
 /**
  * Compare two ISO 8601 times as text. Returns negative, zero, or positive.
  */
 export function compareIso(a: string, b: string): number {
 	return a < b ? -1 : a > b ? 1 : 0;
 }
+// #endregion FUNC_compareIso

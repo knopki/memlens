@@ -305,6 +305,7 @@ export function storePath(
 }
 // #endregion FUNC_storePath
 
+// #region FUNC_expandTilde
 /** Expand a leading tilde to the home directory of the environment. */
 export function expandTilde(
 	path: Path,
@@ -316,7 +317,9 @@ export function expandTilde(
 		return join(home, path.slice(2));
 	return path;
 }
+// #endregion FUNC_expandTilde
 
+// #region FUNC_xdgDirs
 /** The config and data directories under the XDG roots of the environment. */
 export function xdgDirs(env: Record<string, string | undefined>): {
 	configDir: Path;
@@ -333,6 +336,7 @@ export function xdgDirs(env: Record<string, string | undefined>): {
 		dataDir: join(dataRoot, "memlens"),
 	};
 }
+// #endregion FUNC_xdgDirs
 
 // #region FUNC_globMatches
 /**

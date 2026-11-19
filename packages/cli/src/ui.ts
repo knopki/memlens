@@ -180,6 +180,7 @@ async function route(
 }
 // #endregion FUNC_route
 
+// #region FUNC_serveAsset
 /** @return True when the request names one static asset and the answer holds it. */
 async function serveAsset(
 	url: URL,
@@ -192,3 +193,4 @@ async function serveAsset(
 	response.end(await readFile(new URL(`./ui/${asset[0]}`, import.meta.url)));
 	return true;
 }
+// #endregion FUNC_serveAsset

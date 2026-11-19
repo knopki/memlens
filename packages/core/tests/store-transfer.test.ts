@@ -30,7 +30,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Create one real store and keep it for the teardown. */
 function makeStore(): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-transfer-"));
 	dirs.push(dir);
@@ -39,7 +38,6 @@ function makeStore(): Store {
 	return store;
 }
 
-/** @purpose Give one fixture a valid version text. */
 function version(tick: number, store = "fixture-store"): string {
 	return formatVersion({
 		physical: 1_700_000_000_000 + tick,
@@ -48,7 +46,6 @@ function version(tick: number, store = "fixture-store"): string {
 	});
 }
 
-/** @purpose Set the stored clock text of a fixture store. */
 function setClock(store: Store, value: string): void {
 	store
 		.handle()
@@ -131,7 +128,6 @@ function addNote(db: DatabaseSync, fixture: Fixture): void {
 }
 // #endregion FUNC_test_addNote
 
-/** @purpose Dump each note row as a plain object in id order. */
 function dump(store: Store): Record<string, unknown>[] {
 	return store
 		.handle()
@@ -140,7 +136,6 @@ function dump(store: Store): Record<string, unknown>[] {
 		.map((row) => ({ ...row }));
 }
 
-/** @purpose Remove the rowid and the local slot from each dumped row. */
 function withoutLocal(
 	rows: readonly Record<string, unknown>[],
 ): Record<string, unknown>[] {

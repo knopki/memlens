@@ -130,16 +130,15 @@ export interface WorkerInputs {
 	readonly store: StoreConfig;
 }
 
-/** Count each rejection reason of one pass into the summary map. */
 function count(map: Map<string, number>, reasons: readonly string[]): void {
 	for (const reason of reasons) map.set(reason, (map.get(reason) ?? 0) + 1);
 }
 
-/** State whether the inputs name a complete model route. */
 function hasRoute(compaction: CompactionConfig): boolean {
 	return Boolean(compaction.provider.trim() && compaction.model.trim());
 }
 
+// #region FUNC_completeLines
 /**
  * @purpose Keep the whole output lines of a stopped stream.
  * @invariants A part without its newline can be cut, so the worker drops the last part. The core
@@ -149,6 +148,7 @@ function completeLines(text: string): string {
 	const cut = text.lastIndexOf("\n");
 	return cut === -1 ? "" : text.slice(0, cut + 1);
 }
+// #endregion FUNC_completeLines
 
 // #region CLASS_MemoryWorker
 /**

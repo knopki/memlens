@@ -30,7 +30,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Open one empty store in a temporary directory. */
 function newStore(): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-context-"));
 	dirs.push(dir);
@@ -50,7 +49,6 @@ const INSERT_NOTE = `INSERT INTO notes
 	(id, scope, pos, state, kind, body, longform, refs, ts, created_at, modified_at, review_at, v, v_content)
 	VALUES (?, ?, ?, ?, 'note', ?, NULL, '[]', ?, ?, ?, NULL, ?, ?)`;
 
-/** @purpose Add one note row by raw SQL. */
 function addNote(store: Store, row: Row): void {
 	const scope = row.scope ?? "project:a";
 	const ts = row.ts ?? `2026-11-${String(row.pos + 1).padStart(2, "0")}`;
@@ -72,7 +70,6 @@ function addNote(store: Store, row: Row): void {
 		);
 }
 
-/** @purpose Add one node row by raw SQL. */
 function addNode(
 	store: Store,
 	node: Pick<Node, "level" | "start" | "summary" | "a_key" | "b_key"> & {
@@ -100,15 +97,12 @@ function addNode(
 		);
 }
 
-/** @purpose Give the validity key of one live leaf. */
 const leafKey = (scope: string, pos: number): string =>
 	`v-${scope}-${pos}|live`;
 
-/** @purpose Give the view of one scope of the store. */
 const viewOf = (store: Store, scope = "project:a"): View =>
 	loadView(store.handle(), scope as ScopeKey);
 
-/** @purpose Write one live note for each position of a range. */
 function addLive(store: Store, count: number, scope = "project:a"): void {
 	for (let pos = 0; pos < count; pos += 1)
 		addNote(store, { scope, pos, body: `body ${pos}` });

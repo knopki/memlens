@@ -159,6 +159,7 @@ function applyProposal(
 }
 // #endregion FUNC_applyProposal
 
+// #region FUNC_applyAccepted
 /** @purpose Apply the payload of one accepted proposal inside its transaction. */
 function applyAccepted(
 	proposal: Proposal,
@@ -185,7 +186,9 @@ function applyAccepted(
 			...(data.scope ? { scope: data.scope } : {}),
 		});
 }
+// #endregion FUNC_applyAccepted
 
+// #region FUNC_acceptedNote
 /** The new note of one accepted note proposal. */
 function acceptedNote(proposal: Proposal, data: ProposalPayload): NoteInput {
 	return {
@@ -201,7 +204,9 @@ function acceptedNote(proposal: Proposal, data: ProposalPayload): NoteInput {
 		...(data.supersedes?.length ? { supersedes: data.supersedes } : {}),
 	};
 }
+// #endregion FUNC_acceptedNote
 
+// #region FUNC_acceptedSupersede
 /** The new note of one accepted supersede proposal. */
 function acceptedSupersede(proposal: Proposal, payload: unknown): NoteInput {
 	const data = payload as {
@@ -223,6 +228,7 @@ function acceptedSupersede(proposal: Proposal, payload: unknown): NoteInput {
 		...(data.longform ? { longform: data.longform } : {}),
 	};
 }
+// #endregion FUNC_acceptedSupersede
 
 // #region FUNC_applyScopeAction
 /**

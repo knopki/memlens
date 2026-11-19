@@ -214,6 +214,7 @@ export function openRange(
 }
 // #endregion FUNC_openRange
 
+// #region FUNC_unalignedChildren
 /** @purpose Give one line for a range that matches no node geometry. */
 function unalignedChildren(
 	scope: ScopeKey,
@@ -229,7 +230,9 @@ function unalignedChildren(
 		],
 	};
 }
+// #endregion FUNC_unalignedChildren
 
+// #region FUNC_halfChildren
 /** @purpose Give one line for each non-empty half of an aligned range. */
 function halfChildren(
 	scope: ScopeKey,
@@ -253,7 +256,9 @@ function halfChildren(
 	}
 	return children;
 }
+// #endregion FUNC_halfChildren
 
+// #region FUNC_recordLine
 /** @purpose Render one live note as a record line. */
 function recordLine(scope: ScopeKey, note: Note): OpenLine {
 	return {
@@ -265,7 +270,9 @@ function recordLine(scope: ScopeKey, note: Note): OpenLine {
 		chars: note.body.length,
 	};
 }
+// #endregion FUNC_recordLine
 
+// #region FUNC_nodeLine
 /** @purpose Render one half as its clean node, or as a temporary line. */
 function nodeLine(
 	scope: ScopeKey,
@@ -285,6 +292,7 @@ function nodeLine(
 		chars: node.summary.length,
 	};
 }
+// #endregion FUNC_nodeLine
 
 /** One due record of a review. */
 export interface DueRecord {
@@ -396,7 +404,6 @@ export function scopeLines(
 }
 // #endregion FUNC_scopeLines
 
-/** @purpose Give the greatest text of a non-empty list, so a date compare stays one rule. */
 function latestOf(values: readonly string[]): string {
 	return [...values].sort().at(-1) ?? "";
 }
@@ -428,6 +435,7 @@ function line(
 	};
 }
 
+// #region FUNC_storeReviewList
 /** @purpose Collect the live notes of the scopes that pass the kind test and the review test. */
 function storeReviewList(
 	store: Store,
@@ -462,6 +470,7 @@ function storeReviewList(
 	);
 	return list;
 }
+// #endregion FUNC_storeReviewList
 
 // #region FUNC_loadRangeView
 /**

@@ -105,7 +105,6 @@ export function hereLines(view: View, budget: Lines): string {
 }
 // #endregion FUNC_hereLines
 
-/** @purpose Render one here line of a slice line. */
 function lineText(line: SliceLine): string {
 	if (line.kind === "record")
 		return `#${line.pos} ${line.from.slice(0, 10)} ${line.body}`;
@@ -114,7 +113,6 @@ function lineText(line: SliceLine): string {
 	return text ? `${head} ${text}` : head;
 }
 
-/** The idle age of the newest write of a scope, in whole days. */
 function idleAge(latest: string, now: IsoTime): number {
 	const value = Date.parse(latest);
 	return Number.isNaN(value)
@@ -122,6 +120,7 @@ function idleAge(latest: string, now: IsoTime): number {
 		: Math.max(0, Math.floor((Date.parse(now) - value) / 86_400_000));
 }
 
+// #region FUNC_ageSpan
 /**
  * @purpose Give the idle time of one scope, or the range of the idle times of a range of scopes.
  * @invariants One value gives one text, as 3d. Two values give 0..3d. Less than one day gives 0d.
@@ -131,6 +130,7 @@ function ageSpan(days: readonly number[]): string {
 	const high = Math.max(...days);
 	return low === high ? `${low}d` : `${low}..${high}d`;
 }
+// #endregion FUNC_ageSpan
 
 // #region FUNC_directionLines
 /**
@@ -185,6 +185,7 @@ export function renderContext(input: ContextInput): string {
 }
 // #endregion FUNC_renderContext
 
+// #region FUNC_fillTemplate
 /** @purpose Replace each template placeholder with one value of the render. */
 function fillTemplate(
 	input: ContextInput,
@@ -197,8 +198,8 @@ function fillTemplate(
 		.replaceAll("{{directions}}", parts.directions)
 		.replaceAll("{{here}}", parts.here);
 }
+// #endregion FUNC_fillTemplate
 
-/** @purpose Escape one scope key for one quoted attribute value of the template. */
 function attribute(text: string): string {
 	return text.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }

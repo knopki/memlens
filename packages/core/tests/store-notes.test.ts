@@ -28,7 +28,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Create one empty store, and remove it after the test run. */
 function fresh(): { store: Store; dir: string } {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-notes-"));
 	const store = new Store(dir);
@@ -45,13 +44,11 @@ const BASE = {
 	preset: "preset-1",
 };
 
-/** @purpose Give one accepted note write its id, or stop the test. */
 function idOf(result: WriteResult<Note>): string {
 	if (!result.ok) assert.fail(result.reason);
 	return result.value.id;
 }
 
-/** @purpose Count the rows of one query under the alias `c`. */
 function count(
 	store: Store,
 	sql: string,
@@ -64,12 +61,10 @@ function count(
 	return Number(row?.c ?? 0);
 }
 
-/** @purpose Count the index rows that hold one term. */
 function ftsCount(store: Store, term: string): number {
 	return count(store, "SELECT count(*) AS c FROM fts WHERE fts MATCH ?", term);
 }
 
-/** @purpose List the ids of one scope in slot order. */
 function order(store: Store, scope: ScopeKey): readonly string[] {
 	return store
 		.handle()
@@ -78,7 +73,6 @@ function order(store: Store, scope: ScopeKey): readonly string[] {
 		.map((row) => String(row.id));
 }
 
-/** @purpose Read the raw fields of one note row. */
 function row(store: Store, id: string): Record<string, unknown> {
 	const value = store
 		.handle()
@@ -87,7 +81,6 @@ function row(store: Store, id: string): Record<string, unknown> {
 	return value ?? {};
 }
 
-/** @purpose Add one node row over slot zero of the test scope. */
 function addNode(db: DatabaseSync, summary: string): void {
 	db.prepare(
 		"INSERT INTO nodes (scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key) VALUES ('p:test', 1, 0, ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'v1', NULL, NULL)",
@@ -345,7 +338,6 @@ describe("review", () => {
 });
 // #endregion FUNC_test_review
 
-/** @purpose Read one field of a raw row as a string. */
 function field(item: Record<string, unknown>, key: string): string {
 	return String(item[key]);
 }

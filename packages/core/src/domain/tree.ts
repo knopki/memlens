@@ -56,6 +56,7 @@ type MergePick = {
 	reduction: number;
 };
 
+// #region FUNC_lowerBound
 /** @purpose Give the index of the first live position at or above one slot, so a caller finds a range edge. */
 export function lowerBound(positions: readonly Pos[], pos: Pos): number {
 	let start = 0;
@@ -67,7 +68,9 @@ export function lowerBound(positions: readonly Pos[], pos: Pos): number {
 	}
 	return start;
 }
+// #endregion FUNC_lowerBound
 
+// #region FUNC_upperBound
 /** The index above the last live position at or below one slot. */
 function upperBound(positions: readonly Pos[], pos: Pos): number {
 	let start = 0;
@@ -79,6 +82,7 @@ function upperBound(positions: readonly Pos[], pos: Pos): number {
 	}
 	return start;
 }
+// #endregion FUNC_upperBound
 
 // #region FUNC_liveCount
 /**

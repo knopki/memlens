@@ -74,13 +74,16 @@ export function resolveScope(
 }
 // #endregion FUNC_resolveScope
 
+// #region FUNC_noteKind
 /** @purpose Give the note kind of one field, or a Usage error. */
 export function noteKind(raw: string): NoteKind {
 	if (!(NOTE_KINDS as readonly string[]).includes(raw))
 		throw new MemlensError("Usage", "The kind is unknown.");
 	return raw as NoteKind;
 }
+// #endregion FUNC_noteKind
 
+// #region FUNC_targetRecord
 /** @purpose Give the one note row that a target address names. */
 export function targetRecord(
 	runtime: Runtime,
@@ -95,3 +98,4 @@ export function targetRecord(
 	if (!row) throw new MemlensError("Data", "The note does not exist.");
 	return row;
 }
+// #endregion FUNC_targetRecord

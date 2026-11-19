@@ -151,7 +151,6 @@ function renderSlice(memory: AgentMemory): string {
 }
 // #endregion FUNC_renderSlice
 
-/** @purpose Give the top line text of one scope, or null when the scope shows no live note. */
 function topLineText(memory: AgentMemory, scope: ScopeKey): string | null {
 	const line = topLineOf(loadView(memory.store.handle(), scope));
 	return line === null ? null : textOfLine(line);

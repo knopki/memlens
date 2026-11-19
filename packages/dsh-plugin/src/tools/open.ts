@@ -119,7 +119,6 @@ interface EntryText {
 	readonly longformOffset: number;
 }
 
-/** The text answer of one record. */
 function entryText(entry: EntryText): string {
 	const head = `${entry.addr}  ${entry.ts.slice(0, 10)}  review ${entry.review_at ?? "never"}`;
 	const document =

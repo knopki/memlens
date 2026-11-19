@@ -132,6 +132,7 @@ export interface TextInputProps {
 	readonly spellCheck?: boolean;
 	readonly id?: string;
 	readonly className?: string;
+
 	/** The key handler of the field. A shell uses it for the Enter key. */
 	readonly onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }

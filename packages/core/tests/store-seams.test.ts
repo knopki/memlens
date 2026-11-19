@@ -23,7 +23,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Create one store and give the test its handle. */
 function store(): { db: DatabaseSync; dir: string } {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-"));
 	dirs.push(dir);
@@ -33,7 +32,6 @@ function store(): { db: DatabaseSync; dir: string } {
 const INSERT =
 	"INSERT INTO notes (id, scope, pos, state, kind, body, ts, created_at, modified_at, v, v_content) VALUES (?, ?, ?, 'live', 'note', ?, ?, ?, ?, ?, ?)";
 
-/** @purpose Add one note row with a minimal field set. */
 function add(db: DatabaseSync, id: string, ts: string, v: string): void {
 	const pos = insertSlot(db, "p:x", ts, id);
 	db.prepare(INSERT).run(id, "p:x", pos, `body-${id}`, ts, ts, ts, v, v);

@@ -27,7 +27,6 @@ afterAll(() => {
 	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** @purpose Create one real store and keep it for the teardown. */
 function makeStore(): Store {
 	const dir = mkdtempSync(join(tmpdir(), "memlens-transfer-cleared-"));
 	dirs.push(dir);

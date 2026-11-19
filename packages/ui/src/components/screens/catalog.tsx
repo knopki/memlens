@@ -72,17 +72,14 @@ function CatalogLine({
 }
 // #endregion COMPONENT_CatalogLine
 
-/** The range that one catalog line covers. */
 function catalogRange(line: SliceLine): Range {
 	return line.kind === "record" ? { start: line.pos, level: 0 } : line.range;
 }
 
-/** The target of one catalog line, as the selection names it. */
 function catalogTarget(line: SliceLine): string {
 	return rangeId(catalogRange(line));
 }
 
-/** The name of one catalog range for a human: the scope keys it covers, or its range id. */
 function catalogName(model: View, range: Range): string {
 	const covered = model.catalogScopes.slice(
 		range.start,
