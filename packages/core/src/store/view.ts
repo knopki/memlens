@@ -2,8 +2,8 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Assemble the rows of one scope into the frontier lines, so a read renders without a projection.
- * @scope The note rows and the node rows of one scope, the validity test against those rows, the join text,
- * and the slice lines. NOT: compaction, the model call, the write path, and the store lock.
+ * @scope The note rows and the node rows of one scope, the validity test, the candidate ranges, the join text,
+ * and the slice lines. NOT: model calls, node publication, and the store lock.
  * @invariants A read of the view uses the one handle of the caller and opens no long transaction.
  * @dependencies USES API: node:sqlite
  * @usecases Slice: console => loads the view of one scope => gets the frontier lines
@@ -91,7 +91,7 @@ export function totalOf(view: View): Pos {
 
 // #region FUNC_indexOf
 /** @purpose Index one view for a render, so each lookup costs a map read or a binary search. */
-function indexOf(view: View): Index {
+export function indexOf(view: View): Index {
 	const notes = new Map<Pos, Note>();
 	const live: Note[] = [];
 	for (const note of view.notes) {
@@ -165,6 +165,49 @@ export function nodeValid(view: View, node: Node): boolean {
 	return validOf(indexOf(view), node);
 }
 // #endregion FUNC_nodeValid
+
+// #region FUNC_nodeRowsOf
+/** @purpose Give each indexed node row with its validity against the same scope rows. */
+export function nodeRowsOf(index: Index): {
+	readonly scope: ScopeKey;
+	readonly node: Node;
+	readonly clean: boolean;
+}[] {
+	return [...index.nodes.values()].map((node) => ({
+		scope: node.scope,
+		node,
+		clean: validOf(index, node),
+	}));
+}
+// #endregion FUNC_nodeRowsOf
+
+// #region FUNC_candidatesOf
+/**
+ * @purpose List covered ranges that lack a valid node, so compaction has work.
+ * @invariants Each range covers a live slot. The caller sets the result order.
+ */
+export function candidatesOf(index: Index): Range[] {
+	const top = Math.max(1, Math.ceil(Math.log2(index.total)));
+	const result: Range[] = [];
+	for (let level = 1; level <= top; level++) {
+		const width = 2 ** level;
+		let previous = -1;
+		for (const pos of index.slots) {
+			const start = Math.floor(pos / width) * width;
+			if (start === previous) continue;
+			previous = start;
+			const node = index.nodes.get(nodeKey(level, start));
+			if (node === undefined || !validOf(index, node))
+				result.push({ level, start });
+		}
+	}
+	debug("Candidates listed", {
+		slots: index.slots.length,
+		count: result.length,
+	});
+	return result;
+}
+// #endregion FUNC_candidatesOf
 
 // #region FUNC_nodeAt
 /** @purpose Give the node row of one range, or undefined when the store holds none. */

@@ -12,7 +12,15 @@ import { due } from "../domain/tree.js";
 import type { ScopeKey } from "../types/primitives.js";
 import type { Range } from "../types/tree.js";
 import type { Store } from "./store.js";
-import { joinText, loadView, nodeAt, nodeValid, type View } from "./view.js";
+import {
+	candidatesOf,
+	indexOf,
+	joinText,
+	loadView,
+	nodeAt,
+	nodeValid,
+	type View,
+} from "./view.js";
 
 const debug = debuglog("memlens:build");
 
@@ -174,29 +182,14 @@ export function publishJoin(
 /** @purpose List covered ranges without valid cache rows, with older coverage first. */
 export function candidates(store: Store, scope: ScopeKey): readonly Range[] {
 	return store.read((db) => {
-		const view = loadView(db, scope);
-		const last = view.notes.at(-1);
-		if (!last) return [];
-		const top = Math.max(1, Math.ceil(Math.log2(last.pos + 1)));
-		const ranges = new Map<string, Range>();
-		for (const note of view.notes)
-			if (note.state === "live")
-				for (let level = 1; level <= top; level++) {
-					const start = Math.floor(note.pos / 2 ** level) * 2 ** level;
-					ranges.set(`${level}:${start}`, { level, start });
-				}
-		const result = [...ranges.values()]
-			.filter((range) => {
-				const node = nodeAt(view, range.level, range.start);
-				return !node || !nodeValid(view, node);
-			})
-			.sort(
-				(a, b) =>
-					due(last.pos + 1, { start: b.start, level: b.level - 1 }) -
-						due(last.pos + 1, { start: a.start, level: a.level - 1 }) ||
-					a.level - b.level ||
-					a.start - b.start,
-			);
+		const index = indexOf(loadView(db, scope));
+		const result = candidatesOf(index).sort(
+			(a, b) =>
+				due(index.total, { start: b.start, level: b.level - 1 }) -
+					due(index.total, { start: a.start, level: a.level - 1 }) ||
+				a.level - b.level ||
+				a.start - b.start,
+		);
 		debug("Candidates listed", { scope, count: result.length });
 		return result;
 	});

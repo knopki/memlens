@@ -40,21 +40,78 @@ export function topRangeOf(total: Pos): Range | null {
 }
 // #endregion FUNC_topRangeOf
 
-function priority(total: Pos, a: Range, b: Range): number {
-	return (
-		due(total, { start: b.start, level: b.level - 1 }) -
-			due(total, { start: a.start, level: a.level - 1 }) ||
-		a.level - b.level ||
-		a.start - b.start
-	);
-}
+type FoldBlock = {
+	range: Range;
+	live: boolean;
+	previous: FoldBlock | null;
+	next: FoldBlock | null;
+	pick: MergePick | null;
+};
 
 type MergePick = {
-	index: number;
+	left: FoldBlock;
+	right: FoldBlock;
 	range: Range;
 	jump: number;
-	reduction: number;
+	due: number;
 };
+
+// #region CLASS_MergeQueue
+/**
+ * @purpose Select the next pair without a full frontier scan after each merge.
+ * @invariants The heap orders pairs by neighbour cost, then the existing candidate priority.
+ * A block owns its current pick. A replaced pick stays in the heap until the next pop discards it.
+ */
+class MergeQueue {
+	private readonly heap: MergePick[] = [];
+
+	private compare(a: MergePick, b: MergePick): number {
+		return (
+			a.jump - b.jump ||
+			b.due - a.due ||
+			a.range.level - b.range.level ||
+			a.range.start - b.range.start
+		);
+	}
+
+	push(pick: MergePick): void {
+		let index = this.heap.length;
+		this.heap.push(pick);
+		while (index > 0) {
+			const parent = Math.floor((index - 1) / 2);
+			const above = this.heap[parent];
+			if (!above || this.compare(above, pick) <= 0) break;
+			this.heap[index] = above;
+			index = parent;
+		}
+		this.heap[index] = pick;
+	}
+
+	pop(): MergePick | null {
+		while (this.heap.length) {
+			const first = this.heap[0];
+			const last = this.heap.pop();
+			if (!first || !last) return null;
+			if (this.heap.length) {
+				let index = 0;
+				while (index * 2 + 1 < this.heap.length) {
+					let child = index * 2 + 1;
+					const left = this.heap[child];
+					const right = this.heap[child + 1];
+					if (left && right && this.compare(right, left) < 0) child++;
+					const below = this.heap[child];
+					if (!below || this.compare(last, below) <= 0) break;
+					this.heap[index] = below;
+					index = child;
+				}
+				this.heap[index] = last;
+			}
+			if (first.left.pick === first) return first;
+		}
+		return null;
+	}
+}
+// #endregion CLASS_MergeQueue
 
 // #region FUNC_lowerBound
 /** @purpose Give the index of the first live position at or above one slot, so a caller finds a range edge. */
@@ -70,38 +127,11 @@ export function lowerBound(positions: readonly Pos[], pos: Pos): number {
 }
 // #endregion FUNC_lowerBound
 
-// #region FUNC_upperBound
-/** The index above the last live position at or below one slot. */
-function upperBound(positions: readonly Pos[], pos: Pos): number {
-	let start = 0;
-	let end = positions.length;
-	while (start < end) {
-		const middle = Math.floor((start + end) / 2);
-		if ((positions[middle] ?? Infinity) <= pos) start = middle + 1;
-		else end = middle;
-	}
-	return start;
-}
-// #endregion FUNC_upperBound
-
-// #region FUNC_liveCount
-/**
- * @purpose Count the live leaves of one range from the sorted positions.
- * @invariants The count is the slice of the positions inside the range.
- */
-function liveCount(positions: readonly Pos[], range: Range): number {
-	return (
-		upperBound(positions, range.start + 2 ** range.level - 1) -
-		lowerBound(positions, range.start)
-	);
-}
-// #endregion FUNC_liveCount
-
 // #region FUNC_sparseBlocks
 /**
  * @purpose Tile empty gaps without allocating every assigned position.
  * @invariants Blocks tile [0, total) in position order with no gap or overlap.
- * Every block start is a multiple of 2^level. Empty gaps need no dense prefix.
+ * Every block start is a multiple of 2^level. Each live position gives a leaf. Empty gaps need no dense prefix.
  */
 function sparseBlocks(positions: readonly Pos[], total: Pos): Range[] {
 	const blocks: Range[] = [];
@@ -124,52 +154,43 @@ function sparseBlocks(positions: readonly Pos[], total: Pos): Range[] {
 }
 // #endregion FUNC_sparseBlocks
 
-// #region FUNC_selectMerge
+// #region FUNC_queueMerge
 /**
- * @purpose Select the best sibling pair while preserving the greatest live leaf.
+ * @purpose Refresh one sibling pair after a merge changes a block or an outer neighbour.
  * @invariants A pair has adjacent blocks of equal level and a start divisible by the parent width.
  * No pair covers the greatest live position. Node readiness does not restrict a merge.
- * Minimize the sum of max(0, parentLevel - 1 - neighbourLevel) over existing outer neighbours.
- * Resolve ties with the order from candidates.
+ * The cost is the sum of max(0, parentLevel - 1 - neighbourLevel) over existing outer neighbours.
  */
-function selectMerge(
-	positions: readonly Pos[],
-	blocks: readonly Range[],
+function queueMerge(
+	queue: MergeQueue,
+	left: FoldBlock | null,
 	highest: Pos,
 	total: Pos,
-): MergePick | null {
-	let best: MergePick | null = null;
-	for (let index = 0; index + 1 < blocks.length; index += 1) {
-		const left = blocks[index];
-		const right = blocks[index + 1];
-		if (!left || !right || left.level !== right.level) continue;
-		const range = { start: left.start, level: left.level + 1 };
-		if (
-			right.start !== left.start + 2 ** left.level ||
-			left.start % 2 ** range.level !== 0 ||
-			contains(range, highest)
-		)
-			continue;
-		const jump = [blocks[index - 1], blocks[index + 2]].reduce(
-			(sum, neighbour) =>
-				sum + (neighbour ? Math.max(0, range.level - 1 - neighbour.level) : 0),
-			0,
-		);
-		const reduction =
-			Number(liveCount(positions, left) > 0) +
-			Number(liveCount(positions, right) > 0) -
-			Number(liveCount(positions, range) > 0);
-		if (
-			!best ||
-			jump < best.jump ||
-			(jump === best.jump && priority(total, range, best.range) < 0)
-		) {
-			best = { index, range, jump, reduction };
-		}
-	}
-	return best;
+): void {
+	if (!left) return;
+	left.pick = null;
+	const right = left.next;
+	if (!right || left.range.level !== right.range.level) return;
+	const range = { start: left.range.start, level: left.range.level + 1 };
+	if (
+		right.range.start !== left.range.start + 2 ** left.range.level ||
+		left.range.start % 2 ** range.level !== 0 ||
+		contains(range, highest)
+	)
+		return;
+	const cost = (block: FoldBlock | null) =>
+		block ? Math.max(0, range.level - 1 - block.range.level) : 0;
+	const pick = {
+		left,
+		right,
+		range,
+		jump: cost(left.previous) + cost(right.next),
+		due: due(total, { start: range.start, level: range.level - 1 }),
+	};
+	left.pick = pick;
+	queue.push(pick);
 }
-// #endregion FUNC_selectMerge
+// #endregion FUNC_queueMerge
 
 // #region FUNC_foldPositions
 /**
@@ -187,16 +208,42 @@ export function foldPositions(
 	budget: Lines,
 ): readonly Range[] {
 	if (!positions.length) return [];
+	if (positions.length <= budget)
+		return positions.map((start) => ({ start, level: 0 }));
 	const highest = positions[positions.length - 1] ?? 0;
-	const blocks = sparseBlocks(positions, total);
+	let liveIndex = 0;
+	const blocks: FoldBlock[] = sparseBlocks(positions, total).map((range) => {
+		const live = range.start === positions[liveIndex];
+		if (live) liveIndex++;
+		return { range, live, previous: null, next: null, pick: null };
+	});
+	for (const [index, block] of blocks.entries()) {
+		block.previous = blocks[index - 1] ?? null;
+		block.next = blocks[index + 1] ?? null;
+	}
+	const queue = new MergeQueue();
+	for (const block of blocks) queueMerge(queue, block, highest, total);
 	let count = positions.length;
 	while (count > budget) {
-		const best = selectMerge(positions, blocks, highest, total);
+		const best = queue.pop();
 		if (!best) break;
-		blocks.splice(best.index, 2, best.range);
-		count -= best.reduction;
+		const { left, right } = best;
+		count -= Number(left.live && right.live);
+		left.range = best.range;
+		left.live ||= right.live;
+		left.next = right.next;
+		if (left.next) left.next.previous = left;
+		right.pick = null;
+		// Only these pairs can have a different child or outer neighbour.
+		queueMerge(queue, left.previous?.previous ?? null, highest, total);
+		queueMerge(queue, left.previous, highest, total);
+		queueMerge(queue, left, highest, total);
+		queueMerge(queue, left.next, highest, total);
 	}
-	const visible = blocks.filter((range) => liveCount(positions, range) > 0);
+	const visible: Range[] = [];
+	for (let block = blocks[0] ?? null; block; block = block.next) {
+		if (block.live) visible.push(block.range);
+	}
 	return visible.slice(Math.max(0, visible.length - Math.max(1, budget)));
 }
 // #endregion FUNC_foldPositions

@@ -16,13 +16,14 @@ import {
 	type DirectionLine,
 	directionsData,
 	liveCounts,
-	nodesOf,
 } from "../store/reads.js";
 import type { Store } from "../store/store.js";
 import type { Node, Note } from "../store/types.js";
 import {
+	candidatesOf,
+	indexOf,
 	loadView,
-	nodeValid,
+	nodeRowsOf,
 	sliceOf,
 	textOfLine,
 	topLineOf,
@@ -142,11 +143,20 @@ function readStoreConsole(
 	const known = [...liveCounts(store).keys()];
 	const set = scopeSet(config, known, scope);
 	const views = loadViews(store, set.keys);
+	const indexes = new Map(
+		[...views].map(([key, view]) => [key, indexOf(view)]),
+	);
 	const hereView = requireView(views, set.selected);
 	const data = directionsData(store, set.keys, config.budget.directions);
 	const tops = topLines(set.keys, views);
 	const lines = directionModel(data.lines, tops);
-	const next = upcomingRecords(store, [set.selected], time, NEXT_LIMIT, kind);
+	const next = upcomingRecords(
+		hereView,
+		[set.selected],
+		time,
+		NEXT_LIMIT,
+		kind,
+	);
 	const frontier = sliceOf(hereView, config.budget.here);
 	const model: ConsoleModel = {
 		profile: config.defaultProfile,
@@ -159,12 +169,20 @@ function readStoreConsole(
 		),
 		budgets: budgetsOf(config, lines, frontier),
 		records: recordRows(set.keys, views, supersedesOf(store, set.keys)),
-		nodes: nodeRows(store, set.keys, views),
-		candidates: candidateRows(set.keys, views),
+		nodes: [...indexes.values()].flatMap(nodeRowsOf),
+		candidates: [...indexes].flatMap(([key, index]) =>
+			candidatesOf(index)
+				.sort((a, b) => a.level - b.level || a.start - b.start)
+				.map((range) => ({
+					scope: key,
+					range: { start: range.start, level: range.level },
+					ready: true,
+				})),
+		),
 		catalog: catalogLines(lines, tops),
 		catalogScopes: lines.map((line) => line.scope),
 		frontier,
-		review: dueRecords(store, [set.selected], time, kind),
+		review: dueRecords(hereView, [set.selected], time, kind),
 		reviewNext: next.records,
 		reviewNextTotal: next.total,
 		revision: store.rev(),
@@ -258,39 +276,6 @@ function recordRows(
 }
 // #endregion FUNC_recordRows
 
-// #region FUNC_nodeRows
-/** @purpose Give each node row of the visible scopes with its validity. */
-function nodeRows(
-	store: Store,
-	keys: readonly ScopeKey[],
-	views: ReadonlyMap<ScopeKey, View>,
-): ConsoleModel["nodes"] {
-	return keys.flatMap((key) =>
-		nodesOf(store, key).map((node) => ({
-			scope: key,
-			node,
-			clean: nodeValid(requireView(views, key), node),
-		})),
-	);
-}
-// #endregion FUNC_nodeRows
-
-// #region FUNC_candidateRows
-/** @purpose Give each build candidate of the visible scopes. */
-function candidateRows(
-	keys: readonly ScopeKey[],
-	views: ReadonlyMap<ScopeKey, View>,
-): ConsoleModel["candidates"] {
-	return keys.flatMap((key) =>
-		candidatesOf(requireView(views, key)).map((range) => ({
-			scope: key,
-			range,
-			ready: true,
-		})),
-	);
-}
-// #endregion FUNC_candidateRows
-
 // #region FUNC_catalogLines
 /** @purpose Give one catalog leaf for each direction line. */
 function catalogLines(
@@ -360,39 +345,6 @@ function scopePanel(
 	};
 }
 // #endregion FUNC_scopePanel
-
-// #region FUNC_candidatesOf
-/**
- * @purpose List the ranges of one view that lack a valid node, so a compaction has work.
- * @invariants Each level from one to the top of the extent gives one range for each live slot.
- * A range with a valid node row is no candidate. The order is the level, then the start.
- */
-export function candidatesOf(view: View): readonly Range[] {
-	const slots = view.notes
-		.filter((row) => row.state === "live")
-		.map((row) => row.pos);
-	const last = view.notes[view.notes.length - 1];
-	if (last === undefined) return [];
-	const top = Math.max(1, Math.ceil(Math.log2(last.pos + 1)));
-	const ranges = new Map<string, Range>();
-	for (const pos of slots) {
-		for (let level = 1; level <= top; level += 1) {
-			const start = Math.floor(pos / 2 ** level) * 2 ** level;
-			ranges.set(`${level}:${start}`, { start, level });
-		}
-	}
-	const result = [...ranges.values()]
-		.filter((range) => {
-			const node = view.nodes.find(
-				(row) => row.level === range.level && row.start === range.start,
-			);
-			return node === undefined || !nodeValid(view, node);
-		})
-		.sort((a, b) => a.level - b.level || a.start - b.start);
-	debug("Candidates listed", { slots: slots.length, count: result.length });
-	return result;
-}
-// #endregion FUNC_candidatesOf
 
 // #region FUNC_scopeSet
 /** @purpose Give the visible scope keys of one console read, and the selected key. */

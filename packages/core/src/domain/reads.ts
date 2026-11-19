@@ -309,17 +309,17 @@ export interface DueRecord {
 /**
  * @purpose List the due records of the supplied scopes, so a review answers without a log scan.
  * @invariants A record is due when its review time is now or earlier. A null scope list takes each scope
- * of the supplied list, in scope order.
+ * of the source, in scope order.
  * A record with no review value is never due. A null kind keeps each kind.
  * Order by the review value, then the scope, then the position.
  */
 export function dueRecords(
-	source: ReadSource,
+	source: ReadSource | View,
 	scopes: readonly ScopeKey[] | null,
 	now: IsoTime,
 	kind: NoteKind | null = null,
 ): readonly DueRecord[] {
-	const due = storeReviewList(
+	const due = reviewList(
 		source,
 		scopes,
 		(row) => row.review_at !== null && row.review_at <= now,
@@ -344,13 +344,13 @@ export interface UpcomingPage {
  * Order by the review value, then the scope, then the position.
  */
 export function upcomingRecords(
-	source: ReadSource,
+	source: ReadSource | View,
 	scopes: readonly ScopeKey[] | null,
 	now: IsoTime,
 	limit: number,
 	kind: NoteKind | null = null,
 ): UpcomingPage {
-	const next = storeReviewList(
+	const next = reviewList(
 		source,
 		scopes,
 		(row) => row.review_at !== null && row.review_at > now,
@@ -435,18 +435,26 @@ function line(
 	};
 }
 
-// #region FUNC_storeReviewList
+// #region FUNC_reviewList
 /** @purpose Collect the live notes of the scopes that pass the kind test and the review test. */
-function storeReviewList(
-	store: Store,
+function reviewList(
+	source: ReadSource | View,
 	scopes: readonly ScopeKey[] | null,
 	keep: (row: Note) => boolean,
 	kind: NoteKind | null,
 ): DueRecord[] {
-	const visible = scopes ?? [...liveCounts(store).keys()];
+	const visible =
+		scopes ??
+		("notes" in source ? [source.scope] : [...liveCounts(source).keys()]);
 	const list: DueRecord[] = [];
 	for (const scope of visible) {
-		for (const row of scopeNotes(store, scope))
+		const rows =
+			"notes" in source
+				? source.scope === scope
+					? source.notes
+					: []
+				: scopeNotes(source, scope);
+		for (const row of rows)
 			if (
 				row.state === "live" &&
 				(kind === null || row.kind === kind) &&
@@ -470,7 +478,7 @@ function storeReviewList(
 	);
 	return list;
 }
-// #endregion FUNC_storeReviewList
+// #endregion FUNC_reviewList
 
 // #region FUNC_loadRangeView
 /**
