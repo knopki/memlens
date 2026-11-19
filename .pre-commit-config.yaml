@@ -26,6 +26,13 @@ repos:
         files: \.(md|html)$
         pass_filenames: false
 
+      - id: arch-export
+        name: architecture export
+        entry: sh -c 'pnpm run arch:export && git diff --exit-code docs/arch/README.md'
+        language: system
+        files: ^docs/arch/
+        pass_filenames: false
+
       - id: typecheck
         name: typecheck
         entry: pnpm run typecheck

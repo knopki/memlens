@@ -120,18 +120,6 @@ function idleAge(latest: string, now: IsoTime): number {
 		: Math.max(0, Math.floor((Date.parse(now) - value) / 86_400_000));
 }
 
-// #region FUNC_ageSpan
-/**
- * @purpose Give the idle time of one scope, or the range of the idle times of a range of scopes.
- * @invariants One value gives one text, as 3d. Two values give 0..3d. Less than one day gives 0d.
- */
-function ageSpan(days: readonly number[]): string {
-	const low = Math.min(...days);
-	const high = Math.max(...days);
-	return low === high ? `${low}d` : `${low}..${high}d`;
-}
-// #endregion FUNC_ageSpan
-
 // #region FUNC_directionLines
 /**
  * @purpose Render the directions block: the older scopes, then the budgeted scopes, oldest first.
@@ -149,8 +137,7 @@ export function directionLines(
 	const head = older.length ? `[${older.join(",")}]` : null;
 	const text = lines
 		.map((line) => {
-			const span = ageSpan([idleAge(line.lastWrite, now)]);
-			const prefix = `[${line.scope}] ${span}`;
+			const prefix = `[${line.scope}] ${idleAge(line.lastWrite, now)}d`;
 			return line.summary ? `${prefix} ${line.summary}` : prefix;
 		})
 		.join("\n");

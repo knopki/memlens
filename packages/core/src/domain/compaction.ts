@@ -41,9 +41,6 @@ const debug = debuglog("memlens:compaction");
 /** The local waits between failed compaction attempts, in seconds. A restart clears them. */
 export const RETRY_WAITS: readonly number[] = [10, 60, 300];
 
-/** The default line count of one compaction batch. The configuration holds the same value. */
-export const COMPACTION_BATCH = DEFAULT_COMPACTION_BATCH;
-
 /** The counts of one compaction pass. */
 export interface PassResult {
 	readonly built: number;
@@ -136,7 +133,7 @@ export async function compactionPass(
 	model: MergeModel,
 	run: Partial<CompactionRun> = {},
 ): Promise<PassResult> {
-	const batch = run.batch ?? COMPACTION_BATCH;
+	const batch = run.batch ?? DEFAULT_COMPACTION_BATCH;
 	if (!Number.isInteger(batch) || batch < 1)
 		throw new RangeError("Invalid compaction batch size");
 	const result = {

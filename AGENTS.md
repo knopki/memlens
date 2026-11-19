@@ -27,8 +27,9 @@ The code contracts own the implemented rules within one module. Read the module 
 entity contract before a change.
 
 The LikeC4 model in `docs/arch` shows the same parts as diagrams. The generated README holds every
-view as a Mermaid diagram. Run `pnpm run arch` for the live preview. Update the model with each
-architecture change, and `pnpm run lint:docs` checks it.
+view as a Mermaid diagram. Run `pnpm run arch` for the live preview.
+Update the model during planning, before you change the architecture.
+Run `pnpm run lint:docs` to check it. Run `pnpm run arch:export` to update the diagrams.
 
 The design files belong to the planning stage. Agree their text with the customer before the code
 that follows it. Do not write them after the implementation as a record of finished work. A change
