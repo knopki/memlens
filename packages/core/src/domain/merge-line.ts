@@ -34,26 +34,37 @@ into the two lines it was made from.
 You write one step of the tree: one line from the one or two children of <input>.
 
 Your line is a signpost, not an archive. The reader scans many lines and opens one only when its words show
-what is inside. The notes hold the facts, and the search index finds their exact words, so your line does
-not carry the facts. Your line carries the thread list. A thread with no name at your level is invisible to
-a browsing reader: that is the only loss. Your line merges again into the line above, and that call reads
-your line alone, so a thread you drop is dropped at every level above.
+why: what the work below decided, what it broke or fixed, what it still owes. The notes hold the facts, and
+the search index finds their exact words, so your line does not carry the facts. Your line carries the
+threads that make a reader descend. A thread with no name at your level is invisible to a browsing reader:
+that is the only loss. Your line merges again into the line above, and that call reads your line alone, so
+a thread you drop is dropped at every level above.
 
 A line is a map of its children, not a join of them. One thread, one plain clause: the subject, then what
-is now true of it. A wider range holds more threads at less detail, never one bigger event. A list of
-keywords names nothing: the reader cannot tell what happened or whether to descend.
+is now true of it. The clause is whole or the thread is absent: a lone word, a bare id, or a cut quotation
+names nothing, and it makes a reader descend for a reason that is not there. A narrow range keeps most
+facts of its children. A wider range holds fewer threads at the same wholeness, never more threads by
+breaking them.
 
-Write for the eye that scans, and treat the limit as a ceiling, not a target:
-1. Name every thread in a plain clause the reader understands at one look.
-2. The user's own words for an order, a decision, a correction, or a preference, as close to verbatim as
-   the space allows. Record what the user said, not that they said something.
-3. What failed and why, and what stays open.
-4. Least of all, routine steps: what was done to what, and the outcome.
+What earns a place, in this order:
+1. A decision, a correction, or a preference, paraphrased: what changed for whom. A quotation belongs to
+   the note it came from; your line holds its meaning, not its words.
+2. What failed, why, and what stays open.
+3. A change that outlives the session: what works now that did not, or what stopped working.
+
+Bookkeeping of the work stays in the notes and never enters a line: rebase and merge details, commit
+numbers, CI and lint runs, build steps. Name the work and its effect, not its log.
+
+When the clauses do not fit the space, drop threads in this order until they do:
+1. Routine steps with a closed outcome.
+2. Threads of the older child that ended without follow-up.
+3. Detail of a kept thread, never its identity.
+The right child is the newer one. When two threads compete for the last place, the newer thread keeps its
+clause and the older thread goes.
 
 Keep a name, a number, an id, a path, or an error text only when the reader must act on its exact form.
 Otherwise let the notes hold it. Put a date in the text only when the date itself is the fact: the date
-span sits beside your line. Scale the detail to the width: from two children keep most facts; a wide range
-keeps one clause per thread. A line lands among lines about other subjects, so name the subject:
+span sits beside your line. A line lands among lines about other subjects, so name the subject:
 "billing: …", not "it". Never make anything look further along than it was. If told the line is too long,
 shorten it.
 
@@ -191,7 +202,7 @@ export function batchTask(
 		return `<input id="${address(input.range)}">\n${lines}\n</input>`;
 	});
 	return `Merge each of the ${inputs.length} inputs below into one line of at most ${target} characters (about ${Math.round(target / 6)} words).
-One line holds a map of its input, not a join of the children's sentences: one plain clause for each thread, the user's own words for a decision or a preference, what failed and why, what stays open. The line must be shorter than the input it stands for.
+One line holds a map of its input, not a join of the children's sentences: one whole clause for each thread it keeps, a decision or a preference paraphrased, what failed and why, what stays open. The line must be shorter than the input it stands for.
 Answer one line for each input, in the form "#a-b: line", and nothing else.
 ${blocks.join("\n")}`;
 }
