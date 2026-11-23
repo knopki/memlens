@@ -86,9 +86,10 @@ directions = 20
 # The key of a profile without a session context.
 default = "project:misc"
 
-# The glob matches the remote URL without its scheme, for example
-# github.com/your-org/memlens.git. The part {repo} takes the repository
-# name of the remote in lowercase.
+# The rules match the canonical remote: the host and the path, with no
+# scheme, no user part, no `.git` suffix, and no trailing slash. The glob
+# matches the whole text. The part {repo} takes the repository name of
+# the remote.
 [[scope_default.rules]]
 match = "git_remote"
 glob = "github.com/your-org/*"
@@ -175,14 +176,17 @@ Each rule is one table with the key `match`:
 
 | `match` value | Extra keys    | The glob or id matches                      |
 | ------------- | ------------- | ------------------------------------------- |
-| `git_remote`  | `glob`, `key` | The remote URL without its scheme, for example `github.com/your-org/memlens.git`. |
+| `git_remote`  | `glob`, `key` | The canonical remote: the host and the path, for example `github.com/your-org/memlens`. The glob matches the whole text. |
 | `path`        | `glob`, `key` | The working directory.                      |
 | `workspace`   | `id`, `key`   | The workspace id of the harness.            |
 
-In a `git_remote` key, the part `{repo}` takes the repository name of the remote in lowercase.
+In a `git_remote` key, the part `{repo}` takes the repository name of the remote.
 
 A context without a matching rule gets its key from the automatic list. The list runs: the git
 remote, the repository name, the workspace name, the directory name, then the key of `default`.
+
+Run `memlens scope` in a directory. The answer gives the inputs, the verdict of each rule, and the
+key.
 
 ### The nudge section
 

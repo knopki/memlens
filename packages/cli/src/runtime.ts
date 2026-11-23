@@ -15,10 +15,11 @@
  *  - Each runtime owns one row store and the visible scopes of its selected profile.
  *  - Scope rules take precedence over the automatic list: the Git remote, the repository name,
  *    the directory name, and the fallback key of `scope_default.default`.
+ *  - The rules read the canonical remote, and the automatic list reads the Git form.
  *  - The Git remote is origin when it exists, and the first remote otherwise.
  * @usecases
  *  - Open: command => gives --store and a profile name => gets one runtime and closes it
- *  - Scope: command => gives one directory => gets the key, its rule, and its source
+ *  - Scope: command => gives one directory => gets the key, its rule, and the verdict of each rule
  * @dependencies USES API: @memlens/core; READS: config.toml, the store directory
  * @keywords runtime, config, store, open, profiles, visible, cli
  * #endregion moduleContract
@@ -31,18 +32,20 @@ import { debuglog } from "node:util";
 import type {
 	BaseConfig,
 	ResolvedConfig,
+	RuleTrace,
 	ScopeKey,
 	ScopeSubject,
 } from "@memlens/core";
 import {
-	activeScope,
 	automaticScope,
 	expandTilde,
 	globMatches,
 	isCatalogKey,
 	liveCounts,
 	loadBaseConfig,
+	normalizeRemote,
 	resolveConfig,
+	resolveScope,
 	Store,
 	storePath,
 	visibleScopes,
@@ -152,17 +155,41 @@ export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
 }
 // #endregion FUNC_profileLists
 
+/** One active scope of a directory, with the collected inputs and the verdict of each rule. */
+export interface CliScopeResult {
+	readonly key: ScopeKey;
+
+	/** The index of the first matching rule, or null when no rule matched. */
+	readonly rule: number | null;
+
+	/** The word `rule`, or the name of the automatic step that gave the key. */
+	readonly source: string;
+
+	/** The remote URL in its Git form, or null. */
+	readonly remote: string | null;
+
+	/** The canonical form of the remote, or null. */
+	readonly canonical: string | null;
+
+	/** The working directory of the command. */
+	readonly dir: string;
+
+	/** The repository name, or null outside a repository. */
+	readonly repo: string | null;
+
+	/** One entry for each rule, in the order of the rules. */
+	readonly trace: readonly RuleTrace[];
+}
+
 // #region FUNC_cliScopeResult
 /**
  * @purpose Resolve the scope of a directory from the rules and the automatic list.
  * @invariants A matching rule takes precedence over the automatic list.
+ * @invariants The rules read the canonical remote, and the automatic list reads the Git form.
  * @invariants A Git worktree uses the name of the main repository.
  * @invariants The remote is origin when it exists, and the first remote otherwise.
  */
-export function cliScopeResult(
-	base: BaseConfig,
-	cwd: string,
-): { key: ScopeKey; rule: number | null; source: string } {
+export function cliScopeResult(base: BaseConfig, cwd: string): CliScopeResult {
 	const git = (...args: string[]): string | null => {
 		try {
 			return (
@@ -177,15 +204,30 @@ export function cliScopeResult(
 		}
 	};
 	const remote = selectedRemote(git);
+	const canonical = remote === null ? null : normalizeRemote(remote);
 	const subject: ScopeSubject = {
-		gitRemote: remote === null ? null : normalizedRemote(remote),
+		gitRemote: canonical,
 		path: cwd,
 		workspace: null,
 		workspaceName: null,
 		repo: repositoryName(git),
 	};
-	const result = activeScope(base.scope_default, subject);
-	if (result.rule !== null) return { ...result, source: "rule" };
+	const resolution = resolveScope(base.scope_default, subject);
+	const inputs = {
+		remote,
+		canonical,
+		dir: cwd,
+		repo: subject.repo ?? null,
+		trace: resolution.trace,
+	};
+	if (resolution.rule !== null) {
+		return {
+			...inputs,
+			key: resolution.key,
+			rule: resolution.rule,
+			source: "rule",
+		};
+	}
 	const automatic = automaticScope(
 		{ ...subject, gitRemote: remote },
 		base.scope_default.default,
@@ -195,7 +237,12 @@ export function cliScopeResult(
 		key: automatic.key,
 		source: automatic.source,
 	});
-	return { key: automatic.key, rule: null, source: automatic.source };
+	return {
+		...inputs,
+		key: automatic.key,
+		rule: null,
+		source: automatic.source,
+	};
 }
 // #endregion FUNC_cliScopeResult
 
@@ -219,20 +266,6 @@ function selectedRemote(
 	return name === undefined ? null : git("remote", "get-url", name);
 }
 // #endregion FUNC_selectedRemote
-
-// #region FUNC_normalizedRemote
-/**
- * @purpose Write one remote URL in the `host/path` form, so a rule glob matches it.
- * @invariants The scheme and the user part are removed.
- * @param remote - The remote URL in its Git form.
- * @returns The normalized remote URL.
- */
-function normalizedRemote(remote: string): string {
-	return remote
-		.replace(/^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?/i, "")
-		.replace(/^[^@/]+@([^:]+):/, "$1/");
-}
-// #endregion FUNC_normalizedRemote
 
 // #region FUNC_repositoryName
 /**

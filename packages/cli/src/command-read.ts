@@ -14,7 +14,13 @@
  */
 
 import { debuglog } from "node:util";
-import type { IndexHit, Note, ScopeKey } from "@memlens/core";
+import type {
+	IndexHit,
+	Note,
+	RuleTrace,
+	RuleVerdict,
+	ScopeKey,
+} from "@memlens/core";
 import {
 	filterHits,
 	loadRangeView,
@@ -40,6 +46,7 @@ import {
 	scopeList,
 } from "./commands.js";
 import {
+	type CliScopeResult,
 	cliActiveScope,
 	cliScopeResult,
 	loadCliBaseConfig,
@@ -221,26 +228,63 @@ export async function scopesCommand(
 /**
  * Give the active scope of the directory.
  *
- * @purpose Apply the rules of scope_default to the working directory, so a user sees where a
- *   session writes.
- * @invariants The answer holds the key and the rule that gave it, or the source of the key. The
- * command opens no store.
+ * @purpose Show the inputs, the verdict of each rule, and the key, so a user sees why a session
+ *   writes where it writes.
+ * @invariants The answer holds the inputs of the subject, one line for each rule, then the key and
+ *   its source. The command opens no store.
  */
 export function scopeCommand(io: CommandIo): string {
 	const base = loadCliBaseConfig(io.env);
 	const result = cliScopeResult(base, io.cwd);
-	const rule =
-		result.rule === null
-			? result.source
-			: describeRule(base.scope_default.rules[result.rule] ?? null);
 	debug("Scope resolved", {
 		event: "scope",
 		key: result.key,
 		rule: result.rule,
+		source: result.source,
 	});
-	return `${result.key}\nrule: ${rule}`;
+	return renderScope(result);
 }
 // #endregion FUNC_scopeCommand
+
+const VERDICT_WORDS: Record<RuleVerdict, string> = {
+	matched: "matched",
+	"no-input": "no input",
+	"no-match": "no match",
+	"invalid-key": "invalid key",
+};
+
+function renderScope(result: CliScopeResult): string {
+	const lines = [
+		...inputLines(result),
+		"",
+		"rules",
+		...(result.trace.length === 0 ? ["  (none)"] : result.trace.map(ruleLine)),
+		"",
+		`scope  ${result.key}`,
+		`from   ${result.rule === null ? `automatic ${result.source}` : `rule ${result.rule}`}`,
+	];
+	return lines.join("\n");
+}
+
+function inputLines(result: CliScopeResult): string[] {
+	const labels = ["remote", "canonical", "dir", "repo"];
+	const values = [
+		result.remote ?? "-",
+		result.canonical ?? "-",
+		result.dir,
+		result.repo ?? "-",
+	];
+	const width = Math.max(...labels.map((label) => label.length));
+	return labels.map(
+		(label, index) => `${label.padEnd(width)}  ${values[index] ?? ""}`,
+	);
+}
+
+function ruleLine(entry: RuleTrace, index: number): string {
+	const verdict = VERDICT_WORDS[entry.verdict];
+	const result = entry.key === null ? verdict : `${verdict} ${entry.key}`;
+	return `  [${index}] ${describeRule(entry.rule)} -> ${result}`;
+}
 
 function describeRule(rule: unknown): string {
 	if (typeof rule !== "object" || rule === null) return "unknown";

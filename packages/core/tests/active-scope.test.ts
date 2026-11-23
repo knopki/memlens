@@ -8,7 +8,9 @@ import { describe, expect, it } from "vitest";
 import {
 	activeScope,
 	automaticScope,
+	normalizeRemote,
 	repoName,
+	resolveScope,
 	type ScopeSubject,
 	visibleScopes,
 	withActiveScope,
@@ -30,6 +32,86 @@ describe("repoName", () => {
 
 	it("strips the git suffix of an ssh remote and keeps the case", () => {
 		expect(repoName("git@github.com:knopki/OptMem.git")).toBe("OptMem");
+	});
+});
+
+describe("normalizeRemote", () => {
+	it("takes the host and the path from an scp remote", () => {
+		expect(normalizeRemote("git@github.com:knopki/yascheduler.git")).toBe(
+			"github.com/knopki/yascheduler",
+		);
+	});
+
+	it("takes the host and the path from an https remote", () => {
+		expect(normalizeRemote("https://github.com/knopki/yascheduler.git")).toBe(
+			"github.com/knopki/yascheduler",
+		);
+	});
+
+	it("removes the user part of an ssh url", () => {
+		expect(normalizeRemote("ssh://git@github.com/knopki/yascheduler")).toBe(
+			"github.com/knopki/yascheduler",
+		);
+	});
+
+	it("removes a trailing slash", () => {
+		expect(normalizeRemote("https://github.com/knopki/yascheduler/")).toBe(
+			"github.com/knopki/yascheduler",
+		);
+	});
+
+	it("keeps a local remote as its path", () => {
+		expect(normalizeRemote("/srv/git/Local-Repo.git")).toBe(
+			"/srv/git/Local-Repo",
+		);
+	});
+});
+
+describe("resolveScope", () => {
+	it("gives the verdict of each rule", () => {
+		const resolution = resolveScope(SCOPE_DEFAULT, {
+			gitRemote: "github.com/other/repo",
+			path: "/home/u/acme/x",
+		});
+		expect(resolution.trace.map((entry) => entry.verdict)).toEqual([
+			"no-match",
+			"matched",
+			"no-input",
+		]);
+		expect(resolution).toMatchObject({ key: "project:acme/x", rule: 1 });
+	});
+
+	it("matches a rule of the canonical remote", () => {
+		const rules: Rule[] = [
+			{
+				match: "git_remote",
+				glob: "github.com/knopki/yascheduler",
+				key: "project:absolidix/{repo}",
+			},
+		];
+		const resolution = resolveScope(
+			{ rules, default: "project:misc" },
+			{
+				gitRemote: normalizeRemote("git@github.com:knopki/yascheduler.git"),
+			},
+		);
+		expect(resolution.key).toBe("project:absolidix/yascheduler");
+		expect(resolution.trace[0]?.verdict).toBe("matched");
+	});
+
+	it("tells an invalid key from a glob miss", () => {
+		const rules: Rule[] = [
+			{ match: "git_remote", glob: "*", key: "project:{repo}" },
+		];
+		const resolution = resolveScope(
+			{ rules, default: "project:misc" },
+			{ gitRemote: "" },
+		);
+		expect(resolution.trace[0]).toMatchObject({
+			verdict: "invalid-key",
+			key: null,
+		});
+		expect(resolution).toMatchObject({ key: "project:misc", rule: null });
 	});
 });
 

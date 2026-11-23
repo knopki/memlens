@@ -37,6 +37,11 @@ Feature: Configuration and the active scope
     Then the active scope key is the key of that rule
     And the source list stays complete
 
+  Scenario: The rules read the canonical remote
+    Given one rule of scope_default with the glob `github.com/acme/*`
+    When the session starts in a clone with the remote `git@github.com:acme/api.git`
+    Then the active scope key is the key of that rule
+
   Scenario: The fallback chain of the active scope key
     Given no matching rule of scope_default
     When the session starts in a Git repository with a remote

@@ -6,8 +6,9 @@
  * @purpose Resolve one active scope key for one working context, so each session writes the scope
  * of its directory and workspace.
  * @scope
- *  - Rule matching, the automatic fallback list, the repository name of a remote, the visible scope
- *    list of a profile, and the join of the active scope into the globs of a profile.
+ *  - Rule matching, the trace of the rules, the canonical form of a remote, the automatic fallback
+ *    list, the repository name of a remote, the visible scope list of a profile, and the join of the
+ *    active scope into the globs of a profile.
  *  - NOT: reading the git configuration, the file system, or the harness state. The caller collects
  *    the subject.
  * @invariants
@@ -15,10 +16,14 @@
  *  - The automatic list applies after the rules: the git remote, the repository name, the
  *    workspace name, the directory name, then the fallback key of the caller.
  *  - The remote key keeps the full path after the host, and the case stays as given.
+ *  - The canonical remote holds the host and the path. It holds no scheme, no user part, no `.git`
+ *    suffix, and no trailing slash.
+ *  - The trace holds one entry for each rule, in the order of the rules.
  *  - The visible list holds only scope keys that a profile glob matches, in the given order.
  *  - The join adds the literal key of the active scope when no profile glob matches it.
  * @usecases
  *  - Active scope: caller => gives the rules and the subject => gets the key and the rule index
+ *  - Scope trace: caller => gives the rules and the subject => gets the verdict of each rule
  *  - Automatic scope: caller => gives the subject => gets the key and the source name
  *  - Session scopes: caller => gives the profile globs and the active key => gets the joined globs
  * @keywords active, scope, rule, git_remote, path, workspace, repo, automatic, source, visible, join
@@ -64,6 +69,32 @@ export interface ActiveScope {
 	rule: number | null;
 }
 
+/** The reason why one rule gave its key or no key. */
+export type RuleVerdict = "matched" | "no-input" | "no-match" | "invalid-key";
+
+/** The result of one rule on one subject. */
+export interface RuleTrace {
+	/** The rule of the configuration. */
+	readonly rule: Rule;
+
+	/** The reason of the result. */
+	readonly verdict: RuleVerdict;
+
+	/** The key of a matched rule, and null for each other verdict. */
+	readonly key: ScopeKey | null;
+}
+
+/** The active scope key, the rule that gave it, and the verdict of each rule. */
+export interface ScopeResolution {
+	readonly key: ScopeKey;
+
+	/** The index of the rule in the list, or null when the default key applies. */
+	readonly rule: number | null;
+
+	/** One entry for each rule, in the order of the rules. */
+	readonly trace: readonly RuleTrace[];
+}
+
 /** The step of the automatic list that gave the key. */
 export type AutomaticSource =
 	| "git_remote"
@@ -93,15 +124,69 @@ export function repoName(remote: string): string {
 }
 // #endregion FUNC_repoName
 
-// #region FUNC_activeScope
+// #region FUNC_normalizeRemote
+/**
+ * @purpose Give one canonical form of a remote URL, so one rule matches each clone of a repository.
+ * @invariants The scheme, the user part, the `.git` suffix, and a trailing slash are removed.
+ * @invariants The case stays as given, and a local remote keeps its path.
+ * @param remote - The remote URL in its Git form, for example `git@github.com:knopki/optmem.git`.
+ * @returns The host and the path, for example `github.com/knopki/optmem`.
+ */
+export function normalizeRemote(remote: string): string {
+	const text = remote
+		.trim()
+		.replace(/^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?/i, "")
+		.replace(/^[^@/]+@([^:]+):/, "$1/")
+		.replace(/\/+$/, "")
+		.replace(/\.git$/i, "");
+	debug("Remote normalized", { event: "normalize-remote", remote, text });
+	return text;
+}
+// #endregion FUNC_normalizeRemote
+
+// #region FUNC_resolveScope
 /**
  * @purpose Apply the ordered rules to one subject, so one context maps to one scope key.
  * @invariants A rule matches `git_remote` with a glob, `path` with a glob, or `workspace` with an id.
  * @invariants The rules go in order, and the first match gives the key and its rule index.
- * @invariants A rule with no subject input gives no match, and the key part `{repo}` takes the
- * repository name of the remote, sanitized, and the name keeps its case.
- * @invariants A substituted key outside the scope grammar gives no match, and the next rule applies.
+ * @invariants A rule with no subject input gives no key, and the key part `{repo}` takes the
+ *   repository name of the remote, sanitized, with its case.
+ * @invariants A substituted key outside the scope grammar gives no key, and the next rule applies.
  * @ensures No matching rule gives the key of `default` and a null rule index.
+ * @param scopeDefault - The rules and the default key from the configuration.
+ * @param subject - The collected inputs of the context.
+ * @returns The key, the index of the first matching rule, and the verdict of each rule.
+ */
+export function resolveScope(
+	scopeDefault: ScopeDefault,
+	subject: ScopeSubject,
+): ScopeResolution {
+	const trace = scopeDefault.rules.map((rule) => oneTrace(rule, subject));
+	const index = trace.findIndex((entry) => entry.key !== null);
+	const entry = index < 0 ? null : (trace[index] ?? null);
+	const key = entry?.key ?? null;
+	if (entry === null || key === null) {
+		debug("Active scope default", {
+			event: "active-scope",
+			key: scopeDefault.default,
+			rule: null,
+		});
+		return { key: scopeDefault.default, rule: null, trace };
+	}
+	debug("Active scope matched", {
+		event: "active-scope",
+		key,
+		rule: index,
+		match: entry.rule.match,
+	});
+	return { key, rule: index, trace };
+}
+// #endregion FUNC_resolveScope
+
+// #region FUNC_activeScope
+/**
+ * @purpose Give the key of one context to a caller that needs no trace, so the plugin reads one value.
+ * @invariants The result holds the key and the index of the first matching rule, or a null index.
  * @param scopeDefault - The rules and the default key from the configuration.
  * @param subject - The collected inputs of the context.
  * @returns The key and the index of the first matching rule, or the default key.
@@ -110,23 +195,8 @@ export function activeScope(
 	scopeDefault: ScopeDefault,
 	subject: ScopeSubject,
 ): ActiveScope {
-	for (const [index, rule] of scopeDefault.rules.entries()) {
-		const key = ruleKey(rule, subject);
-		if (key === null) continue;
-		debug("Active scope matched", {
-			event: "active-scope",
-			key,
-			rule: index,
-			match: rule.match,
-		});
-		return { key, rule: index };
-	}
-	debug("Active scope default", {
-		event: "active-scope",
-		key: scopeDefault.default,
-		rule: null,
-	});
-	return { key: scopeDefault.default, rule: null };
+	const { key, rule } = resolveScope(scopeDefault, subject);
+	return { key, rule };
 }
 // #endregion FUNC_activeScope
 
@@ -296,28 +366,29 @@ function dirName(path: string | null | undefined): string | null {
 	return trimmed.slice(index + 1);
 }
 
-function ruleKey(rule: Rule, subject: ScopeSubject): ScopeKey | null {
+function oneTrace(rule: Rule, subject: ScopeSubject): RuleTrace {
 	if (rule.match === "git_remote") {
-		if (subject.gitRemote === null || subject.gitRemote === undefined)
-			return null;
-		if (!globMatches(rule.glob, subject.gitRemote)) return null;
-		const key = rule.key.replaceAll(
-			"{repo}",
-			repoName(subject.gitRemote),
-		) as ScopeKey;
-		return validateScopeKey(key) ? key : null;
+		const remote = subject.gitRemote;
+		if (remote === null || remote === undefined)
+			return { rule, verdict: "no-input", key: null };
+		if (!globMatches(rule.glob, remote))
+			return { rule, verdict: "no-match", key: null };
+		const key = rule.key.replaceAll("{repo}", repoName(remote)) as ScopeKey;
+		return validateScopeKey(key)
+			? { rule, verdict: "matched", key }
+			: { rule, verdict: "invalid-key", key: null };
 	}
 	if (rule.match === "path") {
-		if (subject.path === null || subject.path === undefined) return null;
-		if (!globMatches(rule.glob, subject.path)) return null;
-		return rule.key;
+		const path = subject.path;
+		if (path === null || path === undefined)
+			return { rule, verdict: "no-input", key: null };
+		return globMatches(rule.glob, path)
+			? { rule, verdict: "matched", key: rule.key }
+			: { rule, verdict: "no-match", key: null };
 	}
-	if (
-		subject.workspace === null ||
-		subject.workspace === undefined ||
-		subject.workspace !== rule.id
-	) {
-		return null;
-	}
-	return rule.key;
+	const workspace = subject.workspace;
+	if (workspace === null || workspace === undefined)
+		return { rule, verdict: "no-input", key: null };
+	if (workspace !== rule.id) return { rule, verdict: "no-match", key: null };
+	return { rule, verdict: "matched", key: rule.key };
 }

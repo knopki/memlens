@@ -21,6 +21,7 @@ import {
 	expandTilde,
 	loadBaseConfig,
 	MemlensError,
+	normalizeRemote,
 	type PatchConfig,
 	type ScopeKey,
 	storePath,
@@ -157,10 +158,7 @@ export function pluginActiveScope(
 	const remote =
 		git("remote", "get-url", "origin") ??
 		(firstRemote ? git("remote", "get-url", firstRemote) : null);
-	const gitRemote =
-		remote
-			?.replace(/^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?/i, "")
-			.replace(/^[^@/]+@([^:]+):/, "$1/") ?? null;
+	const gitRemote = remote === null ? null : normalizeRemote(remote);
 	const common = git("rev-parse", "--path-format=absolute", "--git-common-dir");
 	const root = common === null ? null : git("rev-parse", "--show-toplevel");
 	const repo =

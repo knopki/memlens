@@ -97,6 +97,11 @@ async function run(env: TestEnv, ...argv: string[]): Promise<Answer> {
 	}
 }
 
+/** Check the key and the source at the end of the scope answer. */
+function expectScope(answer: Answer, key: string, from: string): void {
+	expect(answer.out).toContain(`scope  ${key}\nfrom   ${from}`);
+}
+
 /** One base configuration with one profile over one scope set. */
 function baseConfig(profile: string, scopes: string): string {
 	return `
@@ -241,9 +246,7 @@ describe("@memlens/cli commands", () => {
 		const nested = join(repo, "nested");
 		mkdirSync(nested);
 		test.io = { ...test.io, cwd: nested };
-		expect((await run(test, "scope")).out).toContain(
-			"project:My-Repo\nrule: git",
-		);
+		expectScope(await run(test, "scope"), "project:My-Repo", "automatic git");
 		expect((await run(test, "note", "Automatic scope")).out).toContain(
 			"saved project:My-Repo#0",
 		);
@@ -282,9 +285,7 @@ describe("@memlens/cli commands", () => {
 			worktree,
 		]);
 		test.io = { ...test.io, cwd: worktree };
-		expect((await run(test, "scope")).out).toContain(
-			"project:main-repo\nrule: git",
-		);
+		expectScope(await run(test, "scope"), "project:main-repo", "automatic git");
 	});
 
 	it("matches Git remote rules before the repository scope", async () => {
@@ -302,12 +303,58 @@ describe("@memlens/cli commands", () => {
 			"origin",
 			"git@github.com:knopki/Remote-Name.git",
 		]);
-		expect((await run(test, "scope")).out).toContain(
-			"project:Remote-Name\nrule: git_remote",
-		);
+		expectScope(await run(test, "scope"), "project:Remote-Name", "rule 0");
 		expect((await run(test, "note", "Remote rule")).out).toContain(
 			"saved project:Remote-Name#0",
 		);
+	});
+
+	it("matches a Git remote rule with no .git suffix", async () => {
+		const config = WORK_CONFIG.replace(
+			"[scope_default]",
+			'[scope_default]\nrules = [{ match = "git_remote", glob = "github.com/knopki/yascheduler", key = "project:absolidix/yascheduler" }]',
+		);
+		const test = makeEnv(config);
+		execFileSync("git", ["init", "-q", test.home]);
+		execFileSync("git", [
+			"-C",
+			test.home,
+			"remote",
+			"add",
+			"origin",
+			"git@github.com:knopki/yascheduler.git",
+		]);
+		expectScope(
+			await run(test, "scope"),
+			"project:absolidix/yascheduler",
+			"rule 0",
+		);
+	});
+
+	it("shows the inputs and the verdict of each rule", async () => {
+		const config = WORK_CONFIG.replace(
+			"[scope_default]",
+			'[scope_default]\nrules = [{ match = "git_remote", glob = "github.com/other/*", key = "project:x/y" }]',
+		);
+		const test = makeEnv(config);
+		execFileSync("git", ["init", "-q", test.home]);
+		execFileSync("git", [
+			"-C",
+			test.home,
+			"remote",
+			"add",
+			"origin",
+			"git@github.com:knopki/yascheduler.git",
+		]);
+		const answer = await run(test, "scope");
+		expect(answer.out).toContain(
+			"remote     git@github.com:knopki/yascheduler.git",
+		);
+		expect(answer.out).toContain("canonical  github.com/knopki/yascheduler");
+		expect(answer.out).toContain(
+			"[0] git_remote github.com/other/* -> no match",
+		);
+		expectScope(answer, "project:knopki/yascheduler", "automatic git_remote");
 	});
 
 	it("uses a configured path rule before the repository scope", async () => {
@@ -318,9 +365,7 @@ describe("@memlens/cli commands", () => {
 			),
 		);
 		execFileSync("git", ["init", "-q", test.home]);
-		expect((await run(test, "scope")).out).toContain(
-			"project:chosen\nrule: path *",
-		);
+		expectScope(await run(test, "scope"), "project:chosen", "rule 0");
 		expect((await run(test, "note", "Rule scope")).out).toContain(
 			"saved project:chosen#0",
 		);
@@ -331,9 +376,7 @@ describe("@memlens/cli commands", () => {
 		const hidden = join(test.home, ".hidden");
 		mkdirSync(hidden);
 		test.io = { ...test.io, cwd: hidden };
-		expect((await run(test, "scope")).out).toContain(
-			"project:.hidden\nrule: path",
-		);
+		expectScope(await run(test, "scope"), "project:.hidden", "automatic path");
 	});
 
 	it("replaces each forbidden sign of a directory name", async () => {
@@ -341,17 +384,13 @@ describe("@memlens/cli commands", () => {
 		const spaced = join(test.home, "my notes");
 		mkdirSync(spaced);
 		test.io = { ...test.io, cwd: spaced };
-		expect((await run(test, "scope")).out).toContain(
-			"project:my_notes\nrule: path",
-		);
+		expectScope(await run(test, "scope"), "project:my_notes", "automatic path");
 	});
 
 	it("uses the configured default at the file system root", async () => {
 		const test = makeEnv(WORK_CONFIG);
 		test.io = { ...test.io, cwd: "/" };
-		expect((await run(test, "scope")).out).toContain(
-			"user:notes\nrule: default",
-		);
+		expectScope(await run(test, "scope"), "user:notes", "automatic default");
 	});
 
 	it("answers a profile that the base file does not name", async () => {
@@ -390,8 +429,10 @@ describe("@memlens/cli commands", () => {
 			"git@github.com:knopki/Remote-Name.git",
 		]);
 		test.io = { ...test.io, cwd: repo };
-		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/Remote-Name\nrule: git_remote",
+		expectScope(
+			await run(test, "scope"),
+			"project:knopki/Remote-Name",
+			"automatic git_remote",
 		);
 	});
 
@@ -409,8 +450,10 @@ describe("@memlens/cli commands", () => {
 			"ssh://git@github.com/knopki/Upstream-Name.git",
 		]);
 		test.io = { ...test.io, cwd: repo };
-		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/Upstream-Name\nrule: git_remote",
+		expectScope(
+			await run(test, "scope"),
+			"project:knopki/Upstream-Name",
+			"automatic git_remote",
 		);
 		execFileSync("git", [
 			"-C",
@@ -420,8 +463,10 @@ describe("@memlens/cli commands", () => {
 			"origin",
 			"git@github.com:knopki/Origin-Name.git",
 		]);
-		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/Origin-Name\nrule: git_remote",
+		expectScope(
+			await run(test, "scope"),
+			"project:knopki/Origin-Name",
+			"automatic git_remote",
 		);
 	});
 
@@ -439,8 +484,10 @@ describe("@memlens/cli commands", () => {
 			"git@server:knopki/Custom-Name.git",
 		]);
 		test.io = { ...test.io, cwd: repo };
-		expect((await run(test, "scope")).out).toContain(
-			"project:knopki/Custom-Name\nrule: git_remote",
+		expectScope(
+			await run(test, "scope"),
+			"project:knopki/Custom-Name",
+			"automatic git_remote",
 		);
 	});
 
@@ -458,8 +505,10 @@ describe("@memlens/cli commands", () => {
 			"/srv/git/Local-Repo.git",
 		]);
 		test.io = { ...test.io, cwd: repo };
-		expect((await run(test, "scope")).out).toContain(
-			"project:Local-Repo\nrule: git",
+		expectScope(
+			await run(test, "scope"),
+			"project:Local-Repo",
+			"automatic git",
 		);
 	});
 
@@ -468,8 +517,10 @@ describe("@memlens/cli commands", () => {
 		const directory = join(test.home, "Plain-Directory");
 		mkdirSync(directory);
 		test.io = { ...test.io, cwd: directory };
-		expect((await run(test, "scope")).out).toContain(
-			"project:Plain-Directory\nrule: path",
+		expectScope(
+			await run(test, "scope"),
+			"project:Plain-Directory",
+			"automatic path",
 		);
 		expect((await run(test, "note", "Directory note")).out).toContain(
 			"saved project:Plain-Directory#0",
@@ -663,7 +714,7 @@ describe("@memlens/cli commands", () => {
 		test.io = { ...test.io, cwd: directory };
 		const scope = await run(test, "scope");
 		expect(scope.code).toBe(0);
-		expect(scope.out).toContain("project:plain-directory\nrule: path");
+		expectScope(scope, "project:plain-directory", "automatic path");
 		const slice = await run(test, "slice", "--scope", "project:acme/x");
 		expect(slice.code).toBe(0);
 		expect(slice.out).toContain("<memory>");

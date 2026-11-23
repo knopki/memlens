@@ -18,7 +18,12 @@ export const NAME = "memlens";
 export {
 	activeScope,
 	automaticScope,
+	normalizeRemote,
+	type RuleTrace,
+	type RuleVerdict,
 	repoName,
+	resolveScope,
+	type ScopeResolution,
 	type ScopeSubject,
 	visibleScopes,
 	withActiveScope,
