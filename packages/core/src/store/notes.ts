@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Give each note write one transaction, so the row, the index, the nodes, and the journal change together.
- * @scope The note, amend, hide, redact, and review operations of the SQLite store.
+ * @scope The note, amend, move, hide, redact, and review operations of the SQLite store.
  *  NOT: the row helpers, the reads, the imports, the proposals, and the compaction.
  * @invariants One publish call owns one transaction.
  * @invariants The index changes before the content row, because the external-content table needs the old values.
@@ -347,6 +347,65 @@ export function amendTx(tx: Tx, input: AmendInput): Note {
 	return requireNote(tx.db, old.id);
 }
 // #endregion FUNC_amendTx
+
+// #region FUNC_move
+/**
+ * @purpose Move the notes of one scope together, so a bulk correction needs one transaction.
+ * @invariants A cleared row stays at its source address. Every other state keeps its content and identity.
+ * @invariants Each moved row takes the transaction version and one journal entry with op move.
+ * @invariants Equal scopes and an empty source change no row. A dry run reads one snapshot only.
+ * @returns The moved count and the original positions of the cleared rows.
+ */
+export function move(
+	store: Store,
+	source: ScopeKey,
+	destination: ScopeKey,
+	options: { readonly dryRun?: boolean } = {},
+): { readonly moved: number; readonly skipped: readonly number[] } {
+	const src = checkedScope(source);
+	const dst = checkedScope(destination);
+	if (src === dst) return { moved: 0, skipped: [] };
+	const run = (db: DatabaseSync, tx?: Tx) => {
+		const rows = db
+			.prepare(
+				"SELECT id, ts, pos, cleared FROM notes WHERE scope = ? ORDER BY ts, id",
+			)
+			.all(src);
+		const skipped: number[] = [];
+		let moved = 0;
+		const now = new Date().toISOString();
+		for (const row of rows) {
+			if (Number(row.cleared) === 1) {
+				skipped.push(Number(row.pos));
+				continue;
+			}
+			if (tx !== undefined) {
+				const id = String(row.id);
+				const pos = openSlot(db, dst, String(row.ts), id);
+				deleteCovering(db, src, Number(row.pos));
+				db.prepare(
+					"UPDATE notes SET scope = ?, pos = ?, modified_at = ?, v = ?, v_content = ? WHERE id = ?",
+				).run(dst, pos, now, tx.version, tx.version, id);
+				deleteShifted(db, dst, pos);
+				tx.journal("move", id, dst);
+			}
+			moved++;
+		}
+		debug("Scope move", {
+			event: "move",
+			source: src,
+			destination: dst,
+			moved,
+			skipped: skipped.length,
+			dryRun: tx === undefined,
+		});
+		return { moved, skipped };
+	};
+	return options.dryRun === true
+		? store.read((db) => run(db))
+		: store.publish((tx) => run(tx.db, tx)).value;
+}
+// #endregion FUNC_move
 
 // #region FUNC_hide
 /**

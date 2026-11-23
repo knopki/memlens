@@ -128,6 +128,111 @@ default = "user:notes"
 const WORK_CONFIG = baseConfig("work", '["project:*"]');
 
 describe("@memlens/cli commands", () => {
+	it("previews and moves a scope, reports cleared rows, and repeats without writes", async () => {
+		const test = makeEnv(WORK_CONFIG);
+		const src = "project:source";
+		const dst = "project:destination";
+		for (const [index, body] of [
+			"movecanary first",
+			"movecanary second",
+			"cleared fact",
+		].entries()) {
+			expect(
+				(
+					await run(
+						test,
+						"note",
+						body,
+						"--scope",
+						src,
+						"--ts",
+						`2026-01-0${index + 1}T00:00:00.000Z`,
+					)
+				).code,
+			).toBe(0);
+		}
+		expect(
+			(await run(test, "note", "movecanary first", "--scope", dst)).code,
+		).toBe(0);
+		expect((await run(test, "redact", `${src}#2`, "--yes")).code).toBe(0);
+		const dir = join(test.home, "data", "memlens");
+		const db = new DatabaseSync(join(dir, "memlens.db"));
+		try {
+			const snapshot = () =>
+				["notes", "nodes", "journal", "meta"].map((table) =>
+					db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all(),
+				);
+			const before = snapshot();
+			const preview = await run(test, "move", src, dst, "--dry-run");
+			expect(preview.code).toBe(0);
+			expect(preview.out).toBe(
+				`would move 2 notes from ${src} to ${dst}\nskipped cleared ${src}#2\n`,
+			);
+			expect(snapshot()).toEqual(before);
+			const moved = await run(test, "move", src, dst);
+			expect(moved.code).toBe(0);
+			expect(moved.out).toBe(
+				`moved 2 notes from ${src} to ${dst}\nskipped cleared ${src}#2\n`,
+			);
+			expect(
+				(await run(test, "find", "movecanary", "--scope", src, "--json")).out,
+			).toBe("[]\n");
+			const hits = JSON.parse(
+				(await run(test, "find", "movecanary", "--scope", dst, "--json")).out,
+			);
+			expect(hits).toHaveLength(3);
+			expect((await run(test, "check")).code).toBe(0);
+			const after = snapshot();
+			expect((await run(test, "move", src, dst)).out).toBe(
+				`moved 0 notes from ${src} to ${dst}\nskipped cleared ${src}#2\n`,
+			);
+			expect((await run(test, "move", dst, dst)).out).toBe(
+				`moved 0 notes from ${dst} to ${dst}\n`,
+			);
+			expect(snapshot()).toEqual(after);
+		} finally {
+			db.close();
+		}
+	});
+
+	it("moves into a new scope and allows an empty source", async () => {
+		const test = makeEnv(WORK_CONFIG);
+		expect(
+			(await run(test, "note", "A misplaced fact", "--scope", "project:old"))
+				.code,
+		).toBe(0);
+		expect((await run(test, "move", "project:old", "project:new")).out).toBe(
+			"moved 1 notes from project:old to project:new\n",
+		);
+		expect((await run(test, "move", "project:old", "project:new")).out).toBe(
+			"moved 0 notes from project:old to project:new\n",
+		);
+	});
+
+	it("validates move arguments and both profile scopes before a write", async () => {
+		const test = makeEnv(WORK_CONFIG);
+		for (const args of [
+			[],
+			["project:src"],
+			["project:src", "project:dst", "extra"],
+			["project:src", "project:dst", "--scope", "project:x"],
+		]) {
+			expect((await run(test, "move", ...args)).code).toBe(2);
+		}
+		for (const [src, dst] of [
+			["user:other", "project:dst"],
+			["project:src", "user:other"],
+		] as const) {
+			expect((await run(test, "move", src, dst)).code).toBe(3);
+		}
+		for (const [src, dst] of [
+			["bad", "project:dst"],
+			["project:src", "bad"],
+		] as const) {
+			expect((await run(test, "move", src, dst)).code).toBe(1);
+		}
+	});
+
 	it("uses the repository scope for scope, note, and slice", async () => {
 		const test = makeEnv();
 		const repo = join(test.home, "My-Repo");

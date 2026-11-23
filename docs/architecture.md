@@ -195,6 +195,7 @@ memlens review [--scope key]... [--limit 50] [--json]
 memlens review --mark <target>,<target> [--scope key] [--for 180d]
 memlens redact <target> [--scope key] [--reason "text"] [--yes]
 memlens amend <target> [--scope key] [--body "text"] [--longform file.md] [--kind kind] [--supersedes 12,14]
+memlens move <src> <dst> [--dry-run]
 memlens scopes [--json]
 memlens scope
 memlens slice [--profile name] [--scope key] [--json]
@@ -212,6 +213,16 @@ memlens ui [--port 7788] [--allow-delete]
 
 The CLI selects the scope of a command from the first matching scope rule, then the Git repository
 name, then the configured default.
+
+The command `move` moves all note rows with content from one scope to another in one transaction.
+Hidden and deleted rows with content move too, and each row keeps its state and `id`.
+Each moved row takes its destination slot from `(ts, id)`.
+The write updates `modified_at`, `v`, and `v_content`, deletes the affected nodes, and records one journal entry with op `move` per note.
+
+Cleared rows stay in the source, and the command reports each source address.
+The command reports the moved count and both scopes.
+The flag `--dry-run` reports the counts and the cleared addresses without a write.
+Equal source and destination scopes give a moved count of zero without a write.
 
 The command `compact` gives the merge inputs of one scope as one job, and the flag `--answer`
 applies one answer file after the store rechecks each input. The command `export` writes JSONL of

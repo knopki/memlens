@@ -47,7 +47,7 @@ for ASD-STE100 rule 1.8. The project approves each technical noun in this table.
 | nudge                | The reminder that the harness gives the agent to write a note. The `[nudge]` section gives the counts and the text.                                                          |
 | review               | The check of a note by a human. The `review` op records it, and `review_at` gives the time of the next check.                                                                |
 | review period        | The number of days after a write when the record is due for review. The `review` section of the config gives it.                                                             |
-| modified_at          | The time of the latest write of the record. It moves on a write, an amend, a hide, a redact, and a supersedes. A review leaves it.                                           |
+| modified_at          | The time of the latest write of the record. It moves on a write, an amend, a move, a hide, a redact, and a supersedes. A review leaves it.                                           |
 | «Линза»              | The Russian name of the project. `memlens` joins memory and lens, and the lens gives the zoom into the tree.                                                                 |
 | frontier             | The visible lines of the tree from the oldest level to the newest record. It tiles its range.                                                                                |
 | level                | One row of the tree. A level has a fixed width, and one level covers 2^k leaves.                                                                                             |

@@ -24,16 +24,16 @@ the decisions.
 
 ## Files
 
-| File                   | Capability                        | Scenarios |
-| ---------------------- | --------------------------------- | --------- |
-| addresses.feature     | Address forms and active scope    | 4         |
-| agent-tools.feature   | The memory tools                  | 13        |
-| compaction.feature    | Batch compaction                  | 8         |
-| config.feature        | Configuration and active scope    | 5         |
-| console.feature       | Console surfaces in the harness   | 9         |
-| memory-context.feature | The memory snapshot              | 8         |
-| nudge.feature         | The nudge counters                | 5         |
-| proposals.feature     | Subagent modes and proposals      | 17        |
-| schema.feature        | The store schema and its version  | 2         |
-| store.feature         | The row store and the tree        | 10        |
-| transfer.feature      | JSONL transfer and store merge    | 6         |
+| File                   | Capability                       |
+| ---------------------- | -------------------------------- |
+| addresses.feature      | Address forms and active scope   |
+| agent-tools.feature    | The memory tools                 |
+| compaction.feature     | Batch compaction                 |
+| config.feature         | Configuration and active scope   |
+| console.feature        | Console surfaces in the harness  |
+| memory-context.feature | The memory snapshot              |
+| nudge.feature          | The nudge counters               |
+| proposals.feature      | Subagent modes and proposals     |
+| schema.feature         | The store schema and its version |
+| store.feature          | The row store and the tree       |
+| transfer.feature       | JSONL transfer and store merge   |

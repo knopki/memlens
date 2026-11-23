@@ -2,8 +2,8 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Prove that each note write keeps the row, the index, the nodes, the journal, and the clock in step.
- * @scope The duplicate check, the slot order, the scope move, the index removal, the redaction, and the review fields.
- * @keywords test, note, amend, hide, redact, review, fts, slot
+ * @scope The duplicate check, the slot order, the single and the bulk scope move, the index removal, the redaction, and the review fields.
+ * @keywords test, note, amend, move, hide, redact, review, fts, slot
  * #endregion moduleContract
  */
 
@@ -14,7 +14,9 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, it } from "vitest";
 import { ulid } from "../src/domain/ulid.js";
-import { amend, hide, note, redact, review } from "../src/store/notes.js";
+import { amend, hide, move, note, redact, review } from "../src/store/notes.js";
+import { check } from "../src/store/repair.js";
+import { search } from "../src/store/search.js";
 import { Store } from "../src/store/store.js";
 import type { Note, WriteResult } from "../src/store/types.js";
 import type { ScopeKey } from "../src/types/primitives.js";
@@ -81,10 +83,30 @@ function row(store: Store, id: string): Record<string, unknown> {
 	return value ?? {};
 }
 
-function addNode(db: DatabaseSync, summary: string): void {
+function addNode(
+	db: DatabaseSync,
+	summary: string,
+	scope = "p:test",
+	start = 0,
+): void {
 	db.prepare(
-		"INSERT INTO nodes (scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key) VALUES ('p:test', 1, 0, ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'v1', NULL, NULL)",
-	).run(summary);
+		"INSERT INTO nodes (scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key) VALUES (?, 1, ?, ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'v1', NULL, NULL)",
+	).run(scope, start, summary);
+}
+
+function stable(item: Record<string, unknown>): Record<string, unknown> {
+	const copy = { ...item };
+	for (const key of ["scope", "pos", "modified_at", "v", "v_content"])
+		delete copy[key];
+	return copy;
+}
+
+function slots(store: Store, scope: ScopeKey): readonly number[] {
+	return store
+		.handle()
+		.prepare("SELECT pos FROM notes WHERE scope = ? ORDER BY pos")
+		.all(scope)
+		.map((item) => Number(item.pos));
 }
 
 // #region FUNC_test_dedup
@@ -337,6 +359,343 @@ describe("review", () => {
 	});
 });
 // #endregion FUNC_test_review
+
+// #region FUNC_test_move
+/**
+ * @purpose Prove that one bulk move keeps the key order, the fields, the index, the nodes, and the clock.
+ * @invariants A failed row rolls back each moved row of the same call.
+ */
+describe("move", () => {
+	const src = "p:src" as ScopeKey;
+	const dst = "p:dst" as ScopeKey;
+
+	it("places each moved note at its key rank, with the id as the tie break", () => {
+		const { store } = fresh();
+		const january = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact of January.",
+			ts: "2026-01-01T00:00:00.000Z",
+		});
+		const local = note(store, {
+			...BASE,
+			scope: dst,
+			body: "A fact of the destination.",
+			ts: "2026-01-15T00:00:00.000Z",
+		});
+		const tieB = note(store, {
+			...BASE,
+			scope: src,
+			body: "The first fact of one moment.",
+			id: "01J0Z0000000000000000000B",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		const tieC = note(store, {
+			...BASE,
+			scope: src,
+			body: "The second fact of one moment.",
+			id: "01J0Z0000000000000000000C",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		const result = move(store, src, dst);
+		assert.equal(result.moved, 3);
+		assert.deepEqual(result.skipped, []);
+		assert.deepEqual(order(store, dst), [
+			idOf(january),
+			idOf(local),
+			idOf(tieB),
+			idOf(tieC),
+		]);
+		assert.deepEqual(slots(store, dst), [0, 1, 2, 3]);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM notes WHERE scope = ?", src),
+			0,
+		);
+	});
+
+	it("keeps the state and the fields outside the move", () => {
+		const { store } = fresh();
+		const live = note(store, {
+			...BASE,
+			scope: src,
+			body: "A live fact.",
+			ts: "2026-03-01T00:00:00.000Z",
+			review_at: "2026-12-01",
+			refs: ["p:src#0"],
+		});
+		const hidden = note(store, {
+			...BASE,
+			scope: src,
+			body: "A hidden fact.",
+			ts: "2026-04-01T00:00:00.000Z",
+		});
+		const deleted = note(store, {
+			...BASE,
+			scope: src,
+			body: "A deleted fact with its content.",
+			ts: "2026-05-01T00:00:00.000Z",
+		});
+		hide(store, idOf(hidden), "No longer true.");
+		// The schema allows a deleted row that still holds its content.
+		store
+			.handle()
+			.prepare("UPDATE notes SET state = 'deleted' WHERE id = ?")
+			.run(idOf(deleted));
+		const before = row(store, idOf(live));
+		const result = move(store, src, dst);
+		assert.equal(result.moved, 3);
+		assert.equal(row(store, idOf(live)).scope, dst);
+		assert.deepEqual(stable(row(store, idOf(live))), stable(before));
+		assert.equal(row(store, idOf(hidden)).state, "hidden");
+		const clearedState = row(store, idOf(deleted));
+		assert.equal(clearedState.state, "deleted");
+		assert.equal(clearedState.cleared, 0);
+		assert.equal(clearedState.body, "A deleted fact with its content.");
+		const versions = [idOf(live), idOf(hidden), idOf(deleted)].map((id) =>
+			field(row(store, id), "v"),
+		);
+		assert.equal(new Set(versions).size, 1);
+		assert.notEqual(versions[0], field(before, "v"));
+		assert.equal(field(row(store, idOf(live)), "v_content"), versions[0]);
+	});
+
+	it("finds each moved note in the new scope only, with a clean store", () => {
+		const { store } = fresh();
+		const created = note(store, {
+			...BASE,
+			scope: src,
+			body: "A movecanary fact.",
+		});
+		assert.equal(search(store, "movecanary", src, 10).length, 1);
+		move(store, src, dst);
+		assert.deepEqual(search(store, "movecanary", src, 10), []);
+		const found = search(store, "movecanary", dst, 10);
+		assert.deepEqual(
+			found.map((hit) => hit.id),
+			[idOf(created)],
+		);
+		assert.equal(found[0]?.scope, dst);
+		assert.deepEqual(
+			search(store, "movecanary", null, 10).map((hit) => hit.id),
+			[idOf(created)],
+		);
+		assert.deepEqual(check(store), []);
+	});
+
+	it("drops the covered nodes of both scopes and writes one move entry per row", () => {
+		const { store } = fresh();
+		const db = store.handle();
+		const first = note(store, {
+			...BASE,
+			scope: src,
+			body: "The first fact.",
+			ts: "2026-01-01T00:00:00.000Z",
+		});
+		const second = note(store, {
+			...BASE,
+			scope: src,
+			body: "The second fact.",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		const third = note(store, {
+			...BASE,
+			scope: src,
+			body: "The third fact.",
+			ts: "2026-03-01T00:00:00.000Z",
+		});
+		note(store, {
+			...BASE,
+			scope: dst,
+			body: "A settled fact of the destination.",
+			ts: "2026-09-01T00:00:00.000Z",
+		});
+		addNode(db, "A summary of the source head.", src, 0);
+		addNode(db, "A summary of the source tail.", src, 2);
+		addNode(db, "A summary of the destination.", dst, 0);
+		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 3);
+		assert.equal(move(store, src, dst).moved, 3);
+		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 0);
+		const entries = store
+			.handle()
+			.prepare(
+				"SELECT target, scope FROM journal WHERE op = 'move' ORDER BY seq",
+			)
+			.all();
+		assert.deepEqual(
+			entries.map((entry) => [String(entry.target), String(entry.scope)]),
+			[
+				[idOf(first), dst],
+				[idOf(second), dst],
+				[idOf(third), dst],
+			],
+		);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'amend'"),
+			0,
+		);
+	});
+
+	it("drops a covering node when the destination has no notes", () => {
+		const { store } = fresh();
+		note(store, { ...BASE, scope: src, body: "A fact to move." });
+		addNode(store.handle(), "A stale summary of the destination.", dst);
+		assert.equal(move(store, src, dst).moved, 1);
+		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 0);
+		assert.deepEqual(check(store), []);
+	});
+
+	it("keeps each cleared note at its address and reports its position", () => {
+		const { store } = fresh();
+		const head = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact of January.",
+			ts: "2026-01-01T00:00:00.000Z",
+		});
+		const cleared = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact to clear.",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		const tail = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact of March.",
+			ts: "2026-03-01T00:00:00.000Z",
+		});
+		redact(store, idOf(cleared), "Operator request.");
+		const result = move(store, src, dst);
+		assert.equal(result.moved, 2);
+		assert.deepEqual(result.skipped, [1]);
+		assert.deepEqual(order(store, dst), [idOf(head), idOf(tail)]);
+		assert.deepEqual(order(store, src), [idOf(cleared)]);
+		const kept = row(store, idOf(cleared));
+		assert.equal(kept.scope, src);
+		assert.equal(kept.pos, 1);
+		assert.equal(kept.cleared, 1);
+		assert.equal(kept.body, "");
+	});
+
+	it("counts the candidates of a dry run and writes no row", () => {
+		const { store } = fresh();
+		const head = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact to move.",
+			ts: "2026-01-01T00:00:00.000Z",
+		});
+		const cleared = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact to clear.",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		const tail = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact to move too.",
+			ts: "2026-03-01T00:00:00.000Z",
+		});
+		redact(store, idOf(cleared), "Operator request.");
+		const rev = store.rev();
+		const result = move(store, src, dst, { dryRun: true });
+		assert.equal(result.moved, 2);
+		assert.deepEqual(result.skipped, [1]);
+		assert.equal(store.rev(), rev);
+		assert.deepEqual(order(store, src), [
+			idOf(head),
+			idOf(cleared),
+			idOf(tail),
+		]);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM notes WHERE scope = ?", dst),
+			0,
+		);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'move'"),
+			0,
+		);
+	});
+
+	it("writes nothing for the same scope, an empty source, or a second move", () => {
+		const { store } = fresh();
+		note(store, { ...BASE, scope: src, body: "A fact that stays for now." });
+		const rev = store.rev();
+		assert.deepEqual(move(store, src, src), { moved: 0, skipped: [] });
+		assert.deepEqual(move(store, "p:empty" as ScopeKey, dst), {
+			moved: 0,
+			skipped: [],
+		});
+		assert.equal(store.rev(), rev);
+		assert.deepEqual(move(store, src, dst), { moved: 1, skipped: [] });
+		const after = store.rev();
+		assert.deepEqual(move(store, src, dst), { moved: 0, skipped: [] });
+		assert.equal(store.rev(), after);
+	});
+
+	it("rolls back each moved row when one row fails", () => {
+		const { store } = fresh();
+		const first = note(store, {
+			...BASE,
+			scope: src,
+			body: "The first fact.",
+			ts: "2026-01-01T00:00:00.000Z",
+		});
+		const second = note(store, {
+			...BASE,
+			scope: src,
+			body: "The second fact.",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		const rev = store.rev();
+		store
+			.handle()
+			.exec(
+				`CREATE TRIGGER move_stop BEFORE UPDATE OF scope ON notes WHEN NEW.id = '${idOf(second)}' BEGIN SELECT RAISE(ABORT, 'move stop'); END`,
+			);
+		assert.throws(() => move(store, src, dst), /move stop/);
+		assert.deepEqual(order(store, src), [idOf(first), idOf(second)]);
+		assert.deepEqual(slots(store, src), [0, 1]);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM notes WHERE scope = ?", dst),
+			0,
+		);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'move'"),
+			0,
+		);
+		assert.equal(store.rev(), rev);
+	});
+
+	it("keeps the key order when the destination holds a gap", () => {
+		const { store } = fresh();
+		const december = note(store, {
+			...BASE,
+			scope: dst,
+			body: "A fact of December.",
+			ts: "2025-12-01T00:00:00.000Z",
+		});
+		const january = note(store, {
+			...BASE,
+			scope: dst,
+			body: "A fact of January.",
+			ts: "2026-01-01T00:00:00.000Z",
+		});
+		amend(store, { id: idOf(december), scope: "p:else" as ScopeKey });
+		assert.deepEqual(slots(store, dst), [1]);
+		const february = note(store, {
+			...BASE,
+			scope: src,
+			body: "A fact of February.",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		assert.equal(move(store, src, dst).moved, 1);
+		assert.deepEqual(order(store, dst), [idOf(january), idOf(february)]);
+		assert.deepEqual(slots(store, dst), [1, 2]);
+	});
+});
+// #endregion FUNC_test_move
 
 function field(item: Record<string, unknown>, key: string): string {
 	return String(item[key]);

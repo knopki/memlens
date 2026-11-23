@@ -56,6 +56,25 @@ describe("slots", () => {
 		assert.equal(nextSlot(db, "p:x"), 3);
 	});
 
+	it("keeps key order when an earlier slot is empty", () => {
+		const { db } = store();
+		add(db, "a", "2026-01-01T00:00:00.000Z", "v1");
+		add(db, "b", "2026-02-01T00:00:00.000Z", "v2");
+		db.prepare("DELETE FROM notes WHERE id = 'a'").run();
+		add(db, "c", "2026-03-01T00:00:00.000Z", "v3");
+		assert.deepEqual(
+			db
+				.prepare("SELECT id, pos FROM notes WHERE scope = 'p:x' ORDER BY pos")
+				.all()
+				.map((row) => [row.id, row.pos]),
+			[
+				["b", 1],
+				["c", 2],
+			],
+		);
+		db.close();
+	});
+
 	it("breaks a ts tie by id", () => {
 		const { db } = store();
 		add(db, "y", "2026-01-01T00:00:00.000Z", "v1");

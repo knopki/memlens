@@ -35,8 +35,8 @@ export function nextSlot(db: DatabaseSync, scope: ScopeKey): number {
 
 // #region FUNC_rankFor
 /**
- * @purpose Count the rows of a scope that order before one key.
- * @invariants The count covers each state, because each row holds its slot.
+ * @purpose Give the slot after the preceding key, so a gap cannot change the key order.
+ * @invariants Each state holds its slot. A gap before the preceding key stays empty.
  */
 export function rankFor(
 	db: DatabaseSync,
@@ -46,7 +46,7 @@ export function rankFor(
 ): number {
 	const row = db
 		.prepare(
-			"SELECT COUNT(*) AS rank FROM notes WHERE scope = ? AND (ts < ? OR (ts = ? AND id < ?))",
+			"SELECT COALESCE(MAX(pos) + 1, 0) AS rank FROM notes WHERE scope = ? AND (ts < ? OR (ts = ? AND id < ?))",
 		)
 		.get(scope, ts, ts, id);
 	return Number(row?.rank ?? 0);

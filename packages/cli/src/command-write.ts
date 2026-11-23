@@ -6,7 +6,7 @@
  * @purpose Save, correct, hide, redact, and review notes from the terminal, so a user curates the
  *   memory without a session.
  * @scope
- *  - The commands note, amend, forget, redact, and review.
+ *  - The commands note, amend, move, forget, redact, and review.
  *  - NOT: the store rules, the argument parse, and the exit code mapping.
  * @invariants
  *  - The command note takes --scope, or the active scope of the directory with no flag. A target
@@ -28,6 +28,7 @@ import {
 	hide,
 	linkSupersedes,
 	MemlensError,
+	move,
 	NOTE_KINDS,
 	normalizeScopeKey,
 	note,
@@ -36,6 +37,7 @@ import {
 	resolveTarget,
 	review,
 	toIso,
+	validateScopeKey,
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import {
@@ -325,6 +327,41 @@ export async function amendCommand(
 	}
 }
 // #endregion FUNC_amendCommand
+
+// #region FUNC_moveCommand
+/**
+ * @purpose Move a scope from the terminal, so a user corrects many notes with one command.
+ * @invariants Both scope keys must match the profile, including an empty destination or source.
+ * @invariants The answer names both scopes, the moved count, and each cleared source address.
+ */
+export async function moveCommand(
+	args: ParsedArgs,
+	io: CommandIo,
+): Promise<string> {
+	const source = normalizeScopeKey(args.positional[0] ?? "") as ScopeKey;
+	const destination = normalizeScopeKey(args.positional[1] ?? "") as ScopeKey;
+	if (!validateScopeKey(source) || !validateScopeKey(destination))
+		throw new MemlensError("Data", "The scope key is not valid.");
+	const runtime = await openCommandRuntime(args, io);
+	try {
+		for (const scope of [source, destination]) {
+			if (!profileLists(runtime, scope))
+				throw new MemlensError(
+					"NotAllowed",
+					`The scope ${scope} is not listed.`,
+				);
+		}
+		const dryRun = args.flags["dry-run"] === true;
+		const result = move(runtime.store, source, destination, { dryRun });
+		return [
+			`${dryRun ? "would move" : "moved"} ${result.moved} notes from ${source} to ${destination}`,
+			...result.skipped.map((pos) => `skipped cleared ${source}#${pos}`),
+		].join("\n");
+	} finally {
+		await runtime.close();
+	}
+}
+// #endregion FUNC_moveCommand
 
 // #region FUNC_reviewFlag
 /** Parse --review or --for: <number>d or never. The fallback gives the days of a kind. */

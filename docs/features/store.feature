@@ -10,7 +10,8 @@
 # packages/core/tests/context.test.ts,
 # packages/core/tests/active-scope.test.ts,
 # packages/core/tests/isolation.test.ts,
-# packages/dsh-plugin/tests/memory-context.test.ts
+# packages/dsh-plugin/tests/memory-context.test.ts,
+# packages/cli/tests/commands.test.ts
 # Decisions: ADR-0004, ADR-0006, ADR-0008, ADR-0020
 Feature: The row store
   The store keeps the memory as note rows in one SQLite database.
@@ -92,3 +93,24 @@ Feature: The row store
     When the store redacts the note
     Then the note holds no content
     And the node row, the search index entry, and the proposals of the note are absent
+
+  Scenario: An operator moves the notes of one scope into another
+    Given three notes with content in the source scope
+    And one note in the destination scope
+    When the operator runs the move command between these scopes
+    Then the destination holds all four notes in their key order
+    And each note keeps its id and state
+    And the source holds no note with content
+
+  Scenario: An operator previews a scope move
+    Given notes with content in the source scope
+    When the operator runs the move command with --dry-run
+    Then the command reports the count and both scopes
+    And the store keeps its earlier state
+
+  Scenario: A scope move leaves cleared rows in the source
+    Given one note with content and one cleared row in the source scope
+    When the operator runs the move command to another scope
+    Then the destination holds the note with content
+    And the source keeps the cleared row
+    And the command reports the address of the cleared row

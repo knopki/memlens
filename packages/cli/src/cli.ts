@@ -44,6 +44,7 @@ import { exportCommand, importCommand } from "./command-transfer.js";
 import {
 	amendCommand,
 	forgetCommand,
+	moveCommand,
 	noteCommand,
 	redactCommand,
 	reviewCommand,
@@ -65,6 +66,7 @@ const USAGE = `Usage: ${NAME} <command> [flags]
   review --mark <target>,<target> [--scope key] [--for 180d]
   redact <target> [--scope key] [--reason "text"] [--yes]
   amend <target> [--scope key] [--body "text"] [--longform file.md] [--kind kind] [--supersedes 12,14]
+  move <src> <dst> [--dry-run]
   scopes [--json]
   scope
   slice [--profile name] [--scope key] [--json]
@@ -140,6 +142,10 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 			positional: ["target"],
 			flags: { scope: 1, body: 1, longform: 1, kind: 1, supersedes: 1 },
 		},
+	},
+	move: {
+		run: moveCommand,
+		spec: { positional: ["src", "dst"], flags: { "dry-run": 0 } },
 	},
 	scopes: { run: scopesCommand, spec: { positional: [], flags: { json: 0 } } },
 	scope: {

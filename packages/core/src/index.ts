@@ -145,6 +145,7 @@ export {
 	amend,
 	hide,
 	linkSupersedes,
+	move,
 	note,
 	noteTx,
 	redact,
