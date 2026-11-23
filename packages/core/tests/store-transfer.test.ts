@@ -4,12 +4,11 @@
  * @purpose Prove the transfer text, the five merge channels, and the convergence of two stores.
  * @scope Export and import into real SQLite stores and raw SQL fixtures.
  * @invariants Each test builds its own store directory and removes it at the end.
- * @keywords test, transfer, jsonl, merge, digest, tombstone, convergence
+ * @keywords test, transfer, jsonl, merge, tombstone, convergence
  * #endregion moduleContract
  */
 
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -192,6 +191,7 @@ describe("transfer of a full store", () => {
 		});
 		setClock(source, version(5));
 		const lines = exportLines(source);
+		assert.equal(lines.length, 5);
 		const result = importLines(target, lines);
 		assert.equal(result.applied, 4);
 		assert.equal(result.merged, 0);
@@ -248,26 +248,56 @@ describe("transfer of a full store", () => {
 // #region FUNC_test_validation
 /**
  * @purpose Prove that a malformed file fails before the store writes one row.
- * @invariants A bad format, a bad digest, and a repeated id each raise a data error.
+ * @invariants A bad format, an invalid note, and a repeated id each raise a data error.
  */
 describe("file validation", () => {
-	/** @purpose Close one file with a fresh count and digest. */
-	function seal(header: string, notes: readonly string[]): string[] {
-		const digest = createHash("sha256")
-			.update([header, ...notes].join("\n"))
-			.digest("hex");
-		return [header, ...notes, JSON.stringify({ count: notes.length, digest })];
-	}
-
 	it("refuses another format number", () => {
-		const file = [JSON.stringify({ format: 2 }), JSON.stringify({ count: 0 })];
+		const file = [JSON.stringify({ format: 2 })];
 		assert.throws(
 			() => importLines(makeStore(), file),
 			(error) => error instanceof MemlensError && error.code === "Data",
 		);
 	});
 
-	it("refuses a digest that does not match", () => {
+	it("imports an empty store from its header alone", () => {
+		const file = exportLines(makeStore());
+		assert.equal(file.length, 1);
+		assert.equal(JSON.parse(file[0] ?? "{}").format, 1);
+		const target = makeStore();
+		const result = importLines(target, file);
+		assert.equal(result.applied, 0);
+		assert.deepEqual(dump(target), []);
+	});
+
+	it("refuses a file without a header", () => {
+		assert.throws(
+			() => importLines(makeStore(), []),
+			/The transfer file has no header\./,
+		);
+	});
+
+	it("imports an edited scope when its content version wins", () => {
+		const store = makeStore();
+		addNote(store.handle(), {
+			id: "n1",
+			ts: "2026-01-01T00:00:00.000Z",
+			body: "alpha",
+			v: version(1),
+		});
+		const file = exportLines(store);
+		const note = JSON.parse(file[1] ?? "{}");
+		note.scope = "p:destination";
+		note.v = version(2);
+		note.v_content = version(2);
+		file[1] = JSON.stringify(note);
+		assert.equal(importLines(store, file).merged, 1);
+		const [row] = dump(store);
+		assert.equal(row?.id, "n1");
+		assert.equal(row?.scope, "p:destination");
+		assert.equal(row?.body, "alpha");
+	});
+
+	it("refuses an invalid final note before any write", () => {
 		const source = makeStore();
 		addNote(source.handle(), {
 			id: "n1",
@@ -276,13 +306,13 @@ describe("file validation", () => {
 			v: version(1),
 		});
 		const file = exportLines(source);
-		const note = JSON.parse(file[1] ?? "{}");
-		note.body = "tampered";
-		file[1] = JSON.stringify(note);
+		file.push("{");
+		const target = makeStore();
 		assert.throws(
-			() => importLines(makeStore(), file),
-			(error) => error instanceof MemlensError && error.code === "Data",
+			() => importLines(target, file),
+			/The transfer note is not JSON\./,
 		);
+		assert.deepEqual(dump(target), []);
 	});
 
 	it("refuses a repeated id inside one file", () => {
@@ -295,7 +325,7 @@ describe("file validation", () => {
 		});
 		const file = exportLines(source);
 		const note = file[1] ?? "{}";
-		const repeated = seal(file[0] ?? "", [note, note]);
+		const repeated = [file[0] ?? "", note, note];
 		assert.throws(
 			() => importLines(makeStore(), repeated),
 			(error) => error instanceof MemlensError && error.code === "Data",

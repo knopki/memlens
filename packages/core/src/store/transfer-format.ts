@@ -2,14 +2,12 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Read and write the portable note text of one transfer file, so an import validates the whole file first.
- * @scope The JSONL header, note line, and trailer; the field parsers; the row shapes.
+ * @scope The JSONL header and note lines; the field parsers; the row shapes.
  *  NOT: the merge channels and the write of the store.
- * @dependencies USES API: node:crypto
- * @keywords transfer, jsonl, export, parse, digest, row, tombstone, header, trailer
+ * @keywords transfer, jsonl, export, parse, row, tombstone, header
  * #endregion moduleContract
  */
 
-import { createHash } from "node:crypto";
 import { debuglog } from "node:util";
 import { MemlensError } from "../types/errors.js";
 import {
@@ -126,57 +124,29 @@ export function rowLine(row: Record<string, unknown>): string {
 // #region FUNC_parseTransfer
 /**
  * @purpose Read and validate the complete file before the store sees one write.
- * @invariants The header names format 1. The trailer count and digest must match the note lines.
+ * @invariants The header names format 1. Each later line holds one note.
  * @invariants One file holds at most 200000 note lines and no duplicate id.
  * @returns The note rows in file order, and each version that the clock must receive.
  */
 export function parseTransfer(input: readonly string[]): ParsedFile {
 	const lines = [...input];
 	while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
-	if (lines.length < 2)
-		throw new MemlensError(
-			"Data",
-			"The transfer file has no header and trailer.",
-		);
+	if (lines.length === 0)
+		throw new MemlensError("Data", "The transfer file has no header.");
 	const header = parseObject(lines[0], "header");
 	if (header.format !== FORMAT)
 		throw new MemlensError("Data", `The transfer format is not ${FORMAT}.`);
-	const trailer = parseObject(lines[lines.length - 1], "trailer");
-	const noteLines = lines.slice(1, -1);
+	const noteLines = lines.slice(1);
 	if (noteLines.length > MAX_ROWS)
 		throw new MemlensError(
 			"Data",
 			`The transfer file holds more than ${MAX_ROWS} note lines.`,
 		);
-	verifyTrailer(lines, trailer, noteLines.length);
 	const rows = parseRows(noteLines);
 	debug("Transfer parsed", { event: "parse", rows: rows.length });
 	return { rows, versions: versionsOf(header, rows) };
 }
 // #endregion FUNC_parseTransfer
-
-// #region FUNC_verifyTrailer
-/** @purpose Refuse a trailer whose digest or count does not match the note lines. */
-function verifyTrailer(
-	lines: readonly string[],
-	trailer: Record<string, unknown>,
-	count: number,
-): void {
-	if (
-		typeof trailer.digest !== "string" ||
-		trailer.digest !== digestOf(lines.slice(0, -1))
-	)
-		throw new MemlensError(
-			"Data",
-			"The transfer digest does not match the lines.",
-		);
-	if (Number(trailer.count) !== count)
-		throw new MemlensError(
-			"Data",
-			"The transfer count does not match the note lines.",
-		);
-}
-// #endregion FUNC_verifyTrailer
 
 // #region FUNC_parseRows
 /** @purpose Read each note line, and refuse a duplicate id. */
@@ -307,13 +277,6 @@ function contentRow(
 	};
 }
 // #endregion FUNC_contentRow
-
-// #region FUNC_digestOf
-/** @purpose Hash the text of the given lines, so a trailer states the content of the file. */
-export function digestOf(lines: readonly string[]): string {
-	return createHash("sha256").update(lines.join("\n")).digest("hex");
-}
-// #endregion FUNC_digestOf
 
 // #region FUNC_parseObject
 /** @purpose Read one JSON line as an object. */

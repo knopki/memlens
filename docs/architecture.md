@@ -215,7 +215,7 @@ name, then the configured default.
 
 The command `compact` gives the merge inputs of one scope as one job, and the flag `--answer`
 applies one answer file after the store rechecks each input. The command `export` writes JSONL of
-full note rows with a header and a trailer. Proposals, summaries, and slots never travel. The
+full note rows with a header. Proposals, summaries, and slots never travel. The
 command `import` merges by `id`, by channel. Content and review merge by version.
 Lifecycle merges by maximum. Cleared merges by latch. The supersede link merges by the first
 write. A repeated import changes no

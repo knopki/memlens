@@ -20,7 +20,6 @@ import { nullable } from "./rows.js";
 import { insertSlot, nextSlot } from "./slots.js";
 import type { Store, Tx } from "./store.js";
 import {
-	digestOf,
 	FORMAT,
 	type LocalRow,
 	type ParsedRow,
@@ -80,7 +79,7 @@ interface Statements {
 // #region FUNC_exportLines
 /**
  * @purpose Give one portable text that carries the complete note state of a store or of one scope.
- * @invariants Line one is the header. The last line is the trailer.
+ * @invariants Line one is the header. Each later line holds one note.
  * @invariants The lines hold the note rows by `(scope, pos)`.
  * @invariants A deleted or cleared note travels as a tombstone with no content.
  * @ensures An import reproduces each note field of a full row.
@@ -115,10 +114,8 @@ export function exportLines(
 		version: snapshot.clock,
 	});
 	const notes = snapshot.rows.map(rowLine);
-	const digest = digestOf([header, ...notes]);
-	const trailer = JSON.stringify({ count: notes.length, digest });
 	debug("Export complete", { event: "export", rows: notes.length });
-	return [header, ...notes, trailer];
+	return [header, ...notes];
 }
 // #endregion FUNC_exportLines
 

@@ -16,7 +16,8 @@ Feature: Transfer and store merge
     Given notes in the live, hidden, and deleted states in the first store
     When the second store imports the export of the first store
     Then the second store holds the same note rows
-    And the file starts with a header line and ends with a trailer line
+    And the file starts with a header line
+    And each line after the header holds one note
     And the file holds no slot, no proposal, and no summary
 
   Scenario: A repeated import changes no row
