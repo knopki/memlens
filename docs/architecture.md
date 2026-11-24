@@ -151,6 +151,10 @@ The plugin registers the memory tools in the context of each agent.
 A write carries the time of the note, and the write time is the default. The store ranks the note by
 that time.
 
+The store keeps each time in UTC. A write reads a day alone as the start of that day in the zone of
+the process. A day in a view is the day of that time in that zone, and a tool answer gives that day.
+A date-only `since` or `until` of a find covers that whole day.
+
 The profile mode selects the set of a subagent. The mode `propose` gives the child `memory_find`,
 `memory_open`, `memory_note`, and `memory_map`. The mode `read` gives the reading tools only, and
 the mode `off` gives no memory tool and no slice.

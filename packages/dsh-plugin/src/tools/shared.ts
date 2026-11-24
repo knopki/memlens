@@ -22,9 +22,9 @@ import {
 	type Note,
 	type NoteKind,
 	normalizeScopeKey,
+	parseNoteTime,
 	resolveTarget as resolveCoreTarget,
 	type ScopeKey,
-	toIso,
 	validateScopeKey,
 	visibleScopes,
 } from "@memlens/core";
@@ -244,14 +244,14 @@ export function reviewTime(
  * @purpose Give the time of one note in the stored form, so a call names the moment of the note.
  * @invariants An absent value gives undefined, and the store takes the write time.
  * @invariants A value that is not a date gives a Usage error.
- * @param ts - The time of the tool call as ISO 8601 text, or none.
+ * @param ts - The time of the tool call as ISO 8601 text, a day as YYYY-MM-DD, or none.
  * @returns The time as ISO 8601 UTC with Z, or undefined.
  */
 export function noteTime(ts: string | undefined): string | undefined {
 	if (ts === undefined) return undefined;
-	const time = Date.parse(ts);
-	if (Number.isNaN(time))
+	const time = parseNoteTime(ts);
+	if (time === null)
 		throw new MemlensError("Usage", `The time ${ts} is not a date.`);
-	return toIso(time);
+	return time;
 }
 // #endregion FUNC_noteTime

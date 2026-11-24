@@ -12,7 +12,7 @@
  */
 
 import type { DueRecord, NoteKind } from "@memlens/core";
-import { NOTE_KINDS } from "@memlens/core/view";
+import { dayOf, NOTE_KINDS } from "@memlens/core/view";
 import { type JSX, useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
 import { kindName } from "../../model/format.js";
@@ -67,7 +67,7 @@ function ReviewTable({
 					/>,
 					item.body,
 					kindName(t, item.kind),
-					item.review_at?.slice(0, 10) ?? t("none"),
+					item.review_at ? dayOf(item.review_at) : t("none"),
 					<RecordActions
 						key="actions"
 						api={api}

@@ -9,6 +9,7 @@ import {
 	addDaysAtTime,
 	compareIso,
 	nowIso,
+	parseNoteTime,
 	toIso,
 } from "../src/domain/time.js";
 
@@ -65,5 +66,23 @@ describe("compareIso", () => {
 		expect(
 			compareIso("2026-11-10T11:00:00.000Z", "2026-11-10T10:00:00.000Z"),
 		).toBeGreaterThan(0);
+	});
+});
+
+describe("parseNoteTime", () => {
+	it("gives the stored form of a time with a zone", () => {
+		expect(parseNoteTime("2025-05-03T00:00:00+03:00")).toBe(
+			"2025-05-02T21:00:00.000Z",
+		);
+	});
+
+	it("reads a day alone as the start of that day in the zone of the process", () => {
+		expect(parseNoteTime("2025-05-03")).toBe(
+			new Date(2025, 4, 3).toISOString(),
+		);
+	});
+
+	it("gives null for a text that is not a time", () => {
+		expect(parseNoteTime("yesterday")).toBeNull();
 	});
 });

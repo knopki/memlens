@@ -161,7 +161,7 @@ export function noteTool(
 			ts: {
 				type: "string",
 				description:
-					"The time of the note, as ISO 8601. Give a past moment for a note that records what happened then. The default is the write time.",
+					"The time of the note, as ISO 8601. A day alone is that day in the local zone. Give a past moment for a note that records what happened then. The default is the write time.",
 			},
 		},
 		output: {

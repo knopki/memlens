@@ -7,6 +7,8 @@
  * #endregion moduleContract
  */
 
+import { dayOf } from "./day.js";
+
 // #region FUNC_dateSpan
 /**
  * @purpose Put one period into the date form of the view, so a range line names its span once.
@@ -14,8 +16,8 @@
  * 2026-11-28..12-03. Another year gives the two complete dates. A time of day leaves the span.
  */
 export function dateSpan(from: string, to: string): string {
-	const first = from.slice(0, 10);
-	const last = to.slice(0, 10);
+	const first = dayOf(from);
+	const last = dayOf(to);
 	if (!first || !last) return `${first}..${last}`;
 	if (first === last) return first;
 	const [yearA, monthA] = first.split("-");

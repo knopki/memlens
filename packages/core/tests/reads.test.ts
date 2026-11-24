@@ -3,6 +3,7 @@
  * @modulecontract
  * @purpose Verify the read answers of find filters, open, review, and the scope list.
  * @scope The pure filters over hit lists, and the store reads over rows written by raw SQL.
+ * @invariants The file pins the zone to Europe/Moscow before the import.
  * @keywords test, read, find, open, review, scope, store
  * #endregion moduleContract
  */
@@ -10,7 +11,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
+import { dayOf } from "../src/domain/day.js";
 import {
 	dueRecords,
 	FIND_DEFAULT_LIMIT,
@@ -28,6 +30,10 @@ import { Store } from "../src/store/store.js";
 import { loadView } from "../src/store/view.js";
 import type { ScopeKey } from "../src/types/primitives.js";
 import type { IndexHit } from "../src/types/store.js";
+
+vi.hoisted(() => {
+	process.env.TZ = "Europe/Moscow";
+});
 
 const dirs: string[] = [];
 afterAll(() => {
@@ -181,6 +187,26 @@ describe("filterHits", () => {
 		expect(
 			filterHits(hits, { due: true }, "2026-11-10").map((item) => item.pos),
 		).toEqual([2]);
+	});
+
+	it("compares a date-only bound with the day of the zone of the process", () => {
+		const hits = [
+			hit({ pos: 0, ts: "2026-11-02T21:30:00.000Z" }),
+			hit({ pos: 1, ts: "2026-11-03T12:00:00.000Z" }),
+			hit({ pos: 2, ts: "2026-11-03T20:59:00.000Z" }),
+			hit({ pos: 3, ts: "2026-11-03T21:00:00.000Z" }),
+		];
+		// The day 2026-11-03 in Moscow starts at 21:00 in UTC of the day before.
+		const day = { since: "2026-11-03", until: "2026-11-03" };
+
+		expect(filterHits(hits, day, "2026-11-10").map((item) => item.pos)).toEqual(
+			[0, 1, 2],
+		);
+		expect(
+			filterHits(hits, { since: "2026-11-03T12:00" }, "2026-11-10").map(
+				(item) => item.pos,
+			),
+		).toEqual([1, 2, 3]);
 	});
 });
 
@@ -468,10 +494,12 @@ describe("dueRecords and scopeLines", () => {
 
 	it("lists each scope with its live count and its last write date", () => {
 		const store = fixture();
+		// The fixture writes each note at midnight in UTC, and the line shows that day in the zone.
+		const day = dayOf("2026-11-01T00:00:00.000Z");
 		expect(scopeLines(store, null)).toEqual([
-			{ key: "x:a", notes: 3, lastSeen: "2026-11-01" },
-			{ key: "x:b", notes: 1, lastSeen: "2026-11-05" },
-			{ key: "x:c", notes: 1, lastSeen: "2026-11-01" },
+			{ key: "x:a", notes: 3, lastSeen: day },
+			{ key: "x:b", notes: 1, lastSeen: dayOf("2026-11-05T00:00:00.000Z") },
+			{ key: "x:c", notes: 1, lastSeen: day },
 		]);
 		expect(
 			scopeLines(store, ["x:c" as ScopeKey]).map((line) => line.key),

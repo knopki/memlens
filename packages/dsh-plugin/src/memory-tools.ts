@@ -3,11 +3,13 @@
  * @purpose Give one agent its memory tools, so the model reads and writes the memory through the store rules.
  * @scope
  *  - The tool set of each agent mode, the registration in the agent scope, and the parent report of a child.
+ *  - The day form of each time of an answer.
  *  - NOT: the tool schemas and their answers, the store rules, the memory context, and the console.
  * @invariants
  *  - The main agent gets six tools. A propose child gets four, a read child gets three, and an off child gets none.
  *  - No child gets memory_forget or memory_review.
  *  - Each registration unwinds with the agent context, and a late report reads no closed store.
+ *  - Each time of an answer is a day in the zone of the process.
  * @usecases
  *  - Child write: subagent => gives one note => gets a proposal id for its parent
  *  - Parent report: child disposal => reads its open proposals => injects one line for each into the parent
@@ -21,6 +23,7 @@ import type { Agent } from "@deepseek-ai/dsh-agent";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import type { ToolDefinition } from "@deepseek-ai/dsh-tools";
 import {
+	dayOf,
 	MemlensError,
 	type Proposal,
 	pending,
@@ -47,6 +50,34 @@ const TOOL_NAMES = [
 ] as const;
 
 type ToolName = (typeof TOOL_NAMES)[number];
+
+/** The keys of the times in a tool answer. */
+const TIMES = new Set(["next", "review_at", "ts", "ts_from", "ts_to"]);
+
+/** Replace each time of an answer with its day, by key. */
+function dates<T>(value: T): T {
+	if (Array.isArray(value)) return value.map(dates) as T;
+	if (value === null || typeof value !== "object") return value;
+	return Object.fromEntries(
+		Object.entries(value as object).map(([key, item]) => [
+			key,
+			TIMES.has(key) && item ? dayOf(String(item)) : dates(item),
+		]),
+	) as T;
+}
+
+// #region FUNC_inDays
+/**
+ * @purpose Give the model a day in the zone of the process for each time of an answer, so a write and its answer show the same day.
+ */
+function inDays(definition: ToolDefinition): ToolDefinition {
+	const { execute } = definition;
+	return {
+		...definition,
+		execute: (args, exec) => execute(args, exec).then(dates),
+	};
+}
+// #endregion FUNC_inDays
 
 // #region FUNC_payloadOf
 /**
@@ -190,7 +221,7 @@ export function registerMemoryTools(
 	}
 	return agent.ctx.effect(() => {
 		const disposers = names.map((name) =>
-			tools.register(toolOf(name, agent, memory, child)),
+			tools.register(inDays(toolOf(name, agent, memory, child))),
 		);
 		debug("Tools registered", {
 			event: "register",

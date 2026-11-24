@@ -25,6 +25,7 @@ import {
 } from "../store/view.js";
 import type { IsoTime, NoteKind, ScopeKey } from "../types/primitives.js";
 import { renderAddress } from "./address-form.js";
+import { dayOf } from "./day.js";
 
 const debug = debuglog("memlens:reads");
 
@@ -108,7 +109,8 @@ export interface OpenChildren {
  * @purpose Apply the find filters to complete hits, so the tools and the CLI share one answer.
  * @invariants Keep the hit order. Cap the hits at 50 for each scope, then apply the total limit.
  * A due hit has a review value of now or earlier. A negative limit gives no hit. The default limit is 10.
- * @invariants Since and until compare against the ts text, and a date-only bound covers that whole day.
+ * @invariants Since and until compare against the ts text, and a date-only bound covers that whole
+ * day in the zone of the process.
  * @invariants A kind filter keeps the records of one kind.
  */
 export function filterHits(
@@ -120,12 +122,15 @@ export function filterHits(
 	const kinds = filter.kinds ? new Set(filter.kinds) : null;
 	const limit = Math.max(0, filter.limit ?? FIND_DEFAULT_LIMIT);
 	const perScope = new Map<ScopeKey, number>();
+	// A bound of 10 characters is a day, so it compares the day of the zone and not the UTC text.
+	const boundOf = (ts: string, bound: string): string =>
+		bound.length === 10 ? dayOf(ts) : ts.slice(0, bound.length);
 	const result = hits.filter((hit) => {
 		if (scopes !== null && !scopes.has(hit.scope)) return false;
 		if (kinds !== null && !kinds.has(hit.kind)) return false;
-		if (filter.since && hit.ts.slice(0, filter.since.length) < filter.since)
+		if (filter.since && boundOf(hit.ts, filter.since) < filter.since)
 			return false;
-		if (filter.until && hit.ts.slice(0, filter.until.length) > filter.until)
+		if (filter.until && boundOf(hit.ts, filter.until) > filter.until)
 			return false;
 		if (filter.due && (hit.review_at === null || hit.review_at > now))
 			return false;
@@ -395,7 +400,7 @@ export function scopeLines(
 			{
 				key: scope,
 				notes: counts.get(scope) ?? notes.length,
-				lastSeen: latest.slice(0, 10),
+				lastSeen: dayOf(latest),
 			},
 		];
 	});

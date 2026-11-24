@@ -84,6 +84,7 @@ export {
 	POLICY,
 	renderContext,
 } from "./domain/context.js";
+export { dayOf } from "./domain/day.js";
 export {
 	answerLine,
 	batchTask,
@@ -129,6 +130,7 @@ export {
 	addDaysAtTime,
 	compareIso,
 	nowIso,
+	parseNoteTime,
 	toIso,
 } from "./domain/time.js";
 export {

@@ -14,6 +14,7 @@ import { debuglog } from "node:util";
 import type { ScopeKey } from "../types/primitives.js";
 import type { BuildChild, BuildInput } from "../types/tree.js";
 import { dateSpan } from "./date-span.js";
+import { dayOf } from "./day.js";
 import { cutAtWord, LINE_LIMIT } from "./tree.js";
 
 const debug = debuglog("memlens:merge-line");
@@ -126,7 +127,7 @@ export type LineBuild =
  */
 export function childLine(child: BuildChild): string {
 	if (child.kind === "record")
-		return `#${child.pos} ${child.ts.slice(0, 10)}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
+		return `#${child.pos} ${dayOf(child.ts)}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
 	if (child.pos !== undefined)
 		return `#${child.pos} ${dateSpan(child.ts_from, child.ts_to)}\n${child.summary}`;
 	const end = child.range.start + 2 ** child.range.level - 1;
@@ -136,7 +137,7 @@ export function childLine(child: BuildChild): string {
 
 function scopeChild(key: ScopeKey, child: BuildChild): string {
 	if (child.kind === "record")
-		return `[${key}] ${child.ts.slice(0, 10)}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
+		return `[${key}] ${dayOf(child.ts)}\n${child.body}${child.preview ? `\n${child.preview}` : ""}`;
 	return `[${key}] ${dateSpan(child.ts_from, child.ts_to)}\n${child.summary}`;
 }
 

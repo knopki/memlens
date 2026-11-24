@@ -25,7 +25,7 @@ import {
 	validateJsonSchemaValue,
 } from "@deepseek-ai/dsh-tools";
 import {
-	directionLines,
+	dayOf,
 	directionsData,
 	FIND_DEFAULT_LIMIT,
 	liveCounts,
@@ -386,7 +386,7 @@ describe("memory tools of one agent", () => {
 			await call(main, "memory_open", { target: older.addr }),
 		).toMatchObject({
 			body: "A fact of the past.",
-			ts: "2026-01-02T03:04:05.000Z",
+			ts: dayOf("2026-01-02T03:04:05.000Z"),
 		});
 		expect(
 			await call(main, "memory_open", { target: "user:notes#1" }),
@@ -414,6 +414,48 @@ describe("memory tools of one agent", () => {
 		expect(answer.hits[0]?.scope).toBe("user:notes");
 		expect(answer.hits[0]?.body).toBe("A decision about the cache.");
 		expect(answer.hits[0]?.addr).toMatch(/^user:notes#\d+$/);
+	});
+
+	it("finds a note of the first hours of a day, and shows that day", async () => {
+		const main = subject("main", "all");
+		// The note is at 00:00 in Moscow, and the store keeps 21:00 of the day before in UTC.
+		const saved = (await call(main, "memory_note", {
+			body: "A note at midnight.",
+			ts: "2025-05-03T00:00:00+03:00",
+		})) as { addr: string };
+		const day = dayOf("2025-05-02T21:00:00.000Z");
+		const args = { query: "midnight", since: day, until: day };
+
+		const answer = (await call(main, "memory_find", args)) as {
+			hits: unknown[];
+		};
+
+		expect(answer.hits).toHaveLength(1);
+		expect(render(main, "memory_find", args, answer)).toBe(
+			`${saved.addr}  ${day}  note  A note at midnight.`,
+		);
+		const opened = (await call(main, "memory_open", {
+			target: saved.addr,
+		})) as { ts: string; review_at: string };
+		expect(opened.ts).toBe(day);
+		expect(render(main, "memory_open", {}, opened).split("\n")[0]).toBe(
+			`${saved.addr}  ${day}  review ${opened.review_at}`,
+		);
+	});
+
+	it("gives the model back the day that the model wrote", async () => {
+		const main = subject("main", "all");
+
+		for (const ts of ["2000-01-02", "2000-01-02T00:00:00"]) {
+			const saved = (await call(main, "memory_note", {
+				body: "A note of the day.",
+				ts,
+			})) as { addr: string };
+			const opened = (await call(main, "memory_open", {
+				target: saved.addr,
+			})) as { ts: string };
+			expect(opened.ts).toBe("2000-01-02");
+		}
 	});
 
 	it("keeps the find limit", async () => {
@@ -467,11 +509,10 @@ describe("memory tools of one agent", () => {
 		]);
 	});
 
-	it("maps the scope lines as the directions block", async () => {
+	it("maps each scope with its newest day and its summary", async () => {
 		seed("user:notes", "The note of the active scope.");
 		seed("project:memlens", "The note of the project scope.");
 		const main = subject("main", "tight");
-		const now = nowIso();
 		const scopes = visibleScopes(main.config.profile.scopes, [
 			...liveCounts(host.store).keys(),
 		]);
@@ -498,17 +539,12 @@ describe("memory tools of one agent", () => {
 		expect(answer.lines.slice(1).map((line) => line.keys[0])).toEqual(
 			data.lines.map((line) => line.scope),
 		);
-		const head = data.rest.length > 0;
-		const rebuilt = answer.lines
-			.map((line, index) =>
-				head && index === 0
-					? `[${line.keys.join(",")}]`
-					: `[${line.keys[0]}] ${Math.max(0, Math.floor((Date.parse(now) - Date.parse(line.ts_to)) / 86_400_000))}d${
-							line.text === "" ? "" : ` ${line.text}`
-						}`,
-			)
-			.join("\n");
-		expect(rebuilt).toBe(directionLines(tops, data.rest, now));
+		expect(answer.lines.slice(1).map((line) => line.ts_to)).toEqual(
+			data.lines.map((line) => dayOf(line.newestTs)),
+		);
+		expect(answer.lines.slice(1).map((line) => line.text)).toEqual(
+			tops.map((line) => line.summary),
+		);
 	});
 
 	it("maps the frontier of one scope as the here block", async () => {
@@ -649,7 +685,15 @@ describe("memory tools of one agent", () => {
 			reviewIn: "10d",
 		})) as { reviewed: number; next: string };
 		expect(marked.reviewed).toBe(1);
-		expect(marked.next.length).toBeGreaterThan(0);
+		expect(marked.next).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(
+			render(
+				main,
+				"memory_review",
+				{ reviewed: [due.pos], scope: "user:notes", reviewIn: "10d" },
+				marked,
+			),
+		).toBe(`reviewed 1 records, next ${marked.next}`);
 		const empty = (await call(main, "memory_review", {})) as {
 			due: unknown[];
 		};

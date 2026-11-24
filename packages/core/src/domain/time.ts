@@ -6,6 +6,7 @@
  * @purpose Format and compare ISO 8601 UTC times, so stored times use one format that sorts as text.
  * @scope
  *  - Formatting of at, ts, and review_at as ISO 8601 UTC with Z.
+ *  - Reading of the time of a note from the text of a write.
  *  - The date span of the view text: the shared year and month appear once.
  *  - NOT: time zones, local time, or a clock display.
  * @invariants
@@ -15,6 +16,7 @@
  */
 
 import { debuglog } from "node:util";
+import { DAY } from "./day.js";
 
 const debug = debuglog("memlens:time");
 
@@ -29,6 +31,19 @@ export function nowIso(): string {
 	return result;
 }
 // #endregion FUNC_nowIso
+
+// #region FUNC_parseNoteTime
+/**
+ * @purpose Read the time of one note into the stored form, so the CLI and the tools parse one text in one way.
+ * @invariants A day alone is the start of that day in the zone of the process.
+ */
+export function parseNoteTime(text: string): string | null {
+	const time = Date.parse(DAY.test(text) ? `${text}T00:00:00` : text);
+	const result = Number.isNaN(time) ? null : toIso(time);
+	debug("Note time read", { event: "note_time", text, result });
+	return result;
+}
+// #endregion FUNC_parseNoteTime
 
 // #region FUNC_toIso
 /**

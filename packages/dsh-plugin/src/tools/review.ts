@@ -105,11 +105,17 @@ export function reviewTool(memory: AgentMemory): ToolDefinition {
 										addr: { type: "string", required: true },
 										scope: { type: "string", required: true },
 										pos: { type: "number", required: true },
-										ts: { type: "string", required: true },
+										ts: {
+											type: "string",
+											description: "The day of the note, as YYYY-MM-DD.",
+											required: true,
+										},
 										kind: { type: "string", required: true },
 										body: { type: "string", required: true },
 										review_at: {
 											oneOf: [{ type: "string" }, { type: "null" }],
+											description:
+												"The day of the next review, as YYYY-MM-DD, or null.",
 											required: true,
 										},
 									},
@@ -122,7 +128,12 @@ export function reviewTool(memory: AgentMemory): ToolDefinition {
 						additionalProperties: false,
 						properties: {
 							reviewed: { type: "number", required: true },
-							next: { type: "string", required: true },
+							next: {
+								type: "string",
+								description:
+									"The day of the next review, as YYYY-MM-DD. An empty value means never.",
+								required: true,
+							},
 						},
 					},
 				],
@@ -136,7 +147,7 @@ export function reviewTool(memory: AgentMemory): ToolDefinition {
 							: value.due
 									.map(
 										(row) =>
-											`${row.addr}  ${row.review_at?.slice(0, 10) ?? "never"}  ${row.kind}  ${row.body}`,
+											`${row.addr}  ${row.review_at ?? "never"}  ${row.kind}  ${row.body}`,
 									)
 									.join("\n"),
 				),

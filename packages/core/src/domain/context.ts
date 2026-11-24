@@ -5,8 +5,8 @@
  * @scope The template, the policy text, the direction and frontier lines.
  * NOT: the nudge, the harness registration, snapshot persistence, and refresh triggers.
  * @invariants
- * - The text is a pure function of its inputs: the same rows and scopes give the same
- * text, and a process restart gives the same text.
+ * - The text is a pure function of its inputs and of the zone of the process. The same rows and
+ * scopes give the same text, and a process restart gives the same text.
  * - The text holds no review date and no catalog key. It names no review tool: the agent reads a
  * memory and does not plan the review of one.
  * @keywords context, slice, snapshot, directions, frontier, policy, template
@@ -20,6 +20,7 @@ import { sliceOf } from "../store/view.js";
 import type { IsoTime, ScopeKey } from "../types/primitives.js";
 import type { Lines, SliceLine } from "../types/tree.js";
 import { dateSpan } from "./date-span.js";
+import { dayOf } from "./day.js";
 
 const debug = debuglog("memlens:context");
 
@@ -107,7 +108,7 @@ export function hereLines(view: View, budget: Lines): string {
 
 function lineText(line: SliceLine): string {
 	if (line.kind === "record")
-		return `#${line.pos} ${line.from.slice(0, 10)} ${line.body}`;
+		return `#${line.pos} ${dayOf(line.from)} ${line.body}`;
 	const head = `#${line.range.start}-${line.range.start + 2 ** line.range.level - 1} ${dateSpan(line.from, line.to)}`;
 	const text = line.kind === "summary" ? line.summary : line.text;
 	return text ? `${head} ${text}` : head;

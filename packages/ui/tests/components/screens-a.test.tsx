@@ -178,16 +178,16 @@ const childrenSelection: Selection = {
 		children: [
 			{
 				addr: "project:alpha#0",
-				ts_from: "2026-11-01T00:00:00Z",
-				ts_to: "2026-11-01T12:00:00Z",
+				ts_from: "2026-11-01T12:00:00Z",
+				ts_to: "2026-11-01T15:00:00Z",
 				text: "first child",
 				built: true,
 				chars: 11,
 			},
 			{
 				addr: "project:alpha#1",
-				ts_from: "2026-11-02T00:00:00Z",
-				ts_to: "2026-11-02T12:00:00Z",
+				ts_from: "2026-11-02T12:00:00Z",
+				ts_to: "2026-11-02T15:00:00Z",
 				text: "",
 				built: false,
 				chars: 0,

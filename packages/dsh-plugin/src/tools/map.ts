@@ -163,8 +163,16 @@ export function mapTool(memory: AgentMemory): ToolDefinition {
 											items: { type: "string" },
 											required: true,
 										},
-										ts_from: { type: "string", required: true },
-										ts_to: { type: "string", required: true },
+										ts_from: {
+											type: "string",
+											description: "The first day of the range, as YYYY-MM-DD.",
+											required: true,
+										},
+										ts_to: {
+											type: "string",
+											description: "The last day of the range, as YYYY-MM-DD.",
+											required: true,
+										},
 										text: { type: "string", required: true },
 									},
 								},
@@ -185,8 +193,16 @@ export function mapTool(memory: AgentMemory): ToolDefinition {
 									additionalProperties: false,
 									properties: {
 										addr: { type: "string", required: true },
-										ts_from: { type: "string", required: true },
-										ts_to: { type: "string", required: true },
+										ts_from: {
+											type: "string",
+											description: "The first day of the range, as YYYY-MM-DD.",
+											required: true,
+										},
+										ts_to: {
+											type: "string",
+											description: "The last day of the range, as YYYY-MM-DD.",
+											required: true,
+										},
 										text: { type: "string", required: true },
 										built: { type: "boolean", required: true },
 										chars: { type: "number", required: true },
@@ -204,7 +220,7 @@ export function mapTool(memory: AgentMemory): ToolDefinition {
 								.map((line) =>
 									line.keys.length > 1
 										? `[${line.keys.join(",")}]`
-										: `[${line.keys[0] ?? ""}]  ${line.ts_to.slice(0, 10)}  ${line.text}`,
+										: `[${line.keys[0] ?? ""}]  ${line.ts_to}  ${line.text}`,
 								)
 								.join("\n")
 						: value.lines

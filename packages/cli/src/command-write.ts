@@ -24,6 +24,7 @@ import type { DueRecord, Note, NoteKind, ScopeKey } from "@memlens/core";
 import {
 	addDaysAtTime,
 	amend,
+	dayOf,
 	dueRecords,
 	hide,
 	linkSupersedes,
@@ -33,10 +34,10 @@ import {
 	normalizeScopeKey,
 	note,
 	nowIso,
+	parseNoteTime,
 	redact,
 	resolveTarget,
 	review,
-	toIso,
 	validateScopeKey,
 } from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
@@ -201,7 +202,7 @@ export async function reviewCommand(
 // #endregion FUNC_reviewCommand
 
 function renderDue(record: DueRecord): string {
-	return `${record.addr}  ${record.review_at?.slice(0, 10)}  ${record.kind}  ${record.body}`;
+	return `${record.addr}  ${record.review_at ? dayOf(record.review_at) : "never"}  ${record.kind}  ${record.body}`;
 }
 
 async function reviewMark(
@@ -222,7 +223,9 @@ async function reviewMark(
 			runtime.config.review[record.kind],
 		);
 		review(runtime.store, record.id, reviewAt);
-		answers.push(`reviewed ${scope}#${record.pos} -> ${reviewAt}`);
+		answers.push(
+			`reviewed ${scope}#${record.pos} -> ${reviewAt === null ? "never" : dayOf(reviewAt)}`,
+		);
 	}
 	return answers.join("\n");
 }
@@ -391,10 +394,10 @@ function reviewFlag(
 function tsFlag(flags: ParsedArgs["flags"]): string {
 	const raw = flagValue(flags, "ts");
 	if (raw === null) return nowIso();
-	const time = Date.parse(raw);
-	if (Number.isNaN(time))
+	const time = parseNoteTime(raw);
+	if (time === null)
 		throw new MemlensError("Usage", "The flag --ts needs an ISO 8601 time.");
-	return toIso(time);
+	return time;
 }
 // #endregion FUNC_tsFlag
 

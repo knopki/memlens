@@ -19,6 +19,7 @@ import {
 	POLICY,
 	renderContext,
 } from "../src/domain/context.js";
+import { dayOf } from "../src/domain/day.js";
 import { Store } from "../src/store/store.js";
 import type { Node } from "../src/store/types.js";
 import { loadView, sliceOf, type View } from "../src/store/view.js";
@@ -118,19 +119,27 @@ describe("hereLines", () => {
 		);
 	});
 
+	it("shows the day of the time in the zone of the process", () => {
+		const store = newStore();
+		// 00:00 on 2025-05-03 in Moscow is 21:00 on 2025-05-02 in UTC.
+		const ts = "2025-05-02T21:00:00.000Z";
+		addNote(store, { pos: 0, body: "body 0", ts });
+		expect(hereLines(viewOf(store), 4)).toBe(`#0 ${dayOf(ts)} body 0`);
+	});
+
 	it("keeps the date of the period and drops the time of day", () => {
 		const store = newStore();
-		addNote(store, { pos: 0, body: "body 0", ts: "2026-11-01T08:38:36.760Z" });
-		addNote(store, { pos: 1, body: "body 1", ts: "2026-11-02T09:00:00.000Z" });
-		addNote(store, { pos: 2, body: "body 2", ts: "2026-11-03T08:38:36.760Z" });
+		addNote(store, { pos: 0, body: "body 0", ts: "2026-11-01T12:38:36.760Z" });
+		addNote(store, { pos: 1, body: "body 1", ts: "2026-11-02T12:00:00.000Z" });
+		addNote(store, { pos: 2, body: "body 2", ts: "2026-11-03T12:38:36.760Z" });
 		addNode(store, {
 			level: 1,
 			start: 0,
 			summary: "first pair",
 			a_key: leafKey("project:a", 0),
 			b_key: leafKey("project:a", 1),
-			ts_from: "2026-11-01T08:38:36.760Z",
-			ts_to: "2026-11-02T09:00:00.000Z",
+			ts_from: "2026-11-01T12:38:36.760Z",
+			ts_to: "2026-11-02T12:00:00.000Z",
 		});
 		expect(hereLines(viewOf(store), 2)).toBe(
 			"#0-1 2026-11-01..02 first pair\n#2 2026-11-03 body 2",

@@ -22,6 +22,7 @@ import type {
 	ScopeKey,
 } from "@memlens/core";
 import {
+	dayOf,
 	filterHits,
 	loadRangeView,
 	MemlensError,
@@ -100,7 +101,7 @@ export async function findCommand(
 // #endregion FUNC_findCommand
 
 function renderHit(hit: IndexHit): string {
-	return `${hit.addr}  ${hit.ts.slice(0, 10)}  ${hit.kind}  ${hit.body}`;
+	return `${hit.addr}  ${dayOf(hit.ts)}  ${hit.kind}  ${hit.body}`;
 }
 
 // #region FUNC_openCommand
@@ -163,7 +164,7 @@ function openPos(
 		mode,
 		countFlag(args.flags, "offset", 0),
 	);
-	const text = `${entry.addr}  ${entry.ts.slice(0, 10)}  ${entry.kind}  review ${entry.review_at ?? "never"}\n${entry.body}${
+	const text = `${entry.addr}  ${dayOf(entry.ts)}  ${entry.kind}  review ${entry.review_at ? dayOf(entry.review_at) : "never"}\n${entry.body}${
 		entry.longform === undefined
 			? ""
 			: `\n--- longform ${entry.longformChars} chars, next offset ${entry.longformOffset} ---\n${entry.longform}`

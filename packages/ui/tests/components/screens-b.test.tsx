@@ -47,7 +47,7 @@ const DUE: DueRecord = {
 	ts: "2026-11-01T11:00:00Z",
 	kind: "task",
 	body: "the due note",
-	review_at: "2026-11-02T08:00:00Z",
+	review_at: "2026-11-02T12:00:00Z",
 };
 
 /** One note of the next list. */
@@ -56,7 +56,7 @@ const NEXT: DueRecord = {
 	addr: "project:alpha#2",
 	pos: 2,
 	body: "the next note",
-	review_at: "2026-12-01T08:00:00Z",
+	review_at: "2026-12-01T12:00:00Z",
 };
 
 /** One proposal that waits for a human. */

@@ -115,7 +115,7 @@ interface EntryText {
 }
 
 function entryText(entry: EntryText): string {
-	const head = `${entry.addr}  ${entry.ts.slice(0, 10)}  review ${entry.review_at ?? "never"}`;
+	const head = `${entry.addr}  ${entry.ts}  review ${entry.review_at ?? "never"}`;
 	const document =
 		entry.longform === undefined
 			? ""
@@ -160,7 +160,11 @@ export function openTool(memory: AgentMemory): ToolDefinition {
 							addr: { type: "string", required: true },
 							pos: { type: "number", required: true },
 							id: { type: "string", required: true },
-							ts: { type: "string", required: true },
+							ts: {
+								type: "string",
+								description: "The day of the note, as YYYY-MM-DD.",
+								required: true,
+							},
 							scope: { type: "string", required: true },
 							body: { type: "string", required: true },
 							longform: { type: "string" },
@@ -169,6 +173,8 @@ export function openTool(memory: AgentMemory): ToolDefinition {
 							longformTruncated: { type: "boolean", required: true },
 							review_at: {
 								oneOf: [{ type: "string" }, { type: "null" }],
+								description:
+									"The day of the next review, as YYYY-MM-DD, or null.",
 								required: true,
 							},
 							refs: {
@@ -191,8 +197,16 @@ export function openTool(memory: AgentMemory): ToolDefinition {
 									additionalProperties: false,
 									properties: {
 										addr: { type: "string", required: true },
-										ts_from: { type: "string", required: true },
-										ts_to: { type: "string", required: true },
+										ts_from: {
+											type: "string",
+											description: "The first day of the range, as YYYY-MM-DD.",
+											required: true,
+										},
+										ts_to: {
+											type: "string",
+											description: "The last day of the range, as YYYY-MM-DD.",
+											required: true,
+										},
 										text: { type: "string", required: true },
 										built: { type: "boolean", required: true },
 										chars: { type: "number", required: true },

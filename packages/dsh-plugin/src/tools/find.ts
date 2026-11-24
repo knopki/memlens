@@ -114,12 +114,18 @@ export function findTool(memory: AgentMemory): ToolDefinition {
 								scope: { type: "string", required: true },
 								pos: { type: "number", required: true },
 								id: { type: "string", required: true },
-								ts: { type: "string", required: true },
+								ts: {
+									type: "string",
+									description: "The day of the note, as YYYY-MM-DD.",
+									required: true,
+								},
 								kind: { type: "string", required: true },
 								body: { type: "string", required: true },
 								longformChars: { type: "number", required: true },
 								review_at: {
 									oneOf: [{ type: "string" }, { type: "null" }],
+									description:
+										"The day of the next review, as YYYY-MM-DD, or null.",
 									required: true,
 								},
 							},
@@ -133,8 +139,7 @@ export function findTool(memory: AgentMemory): ToolDefinition {
 						? "No hit."
 						: value.hits
 								.map(
-									(hit) =>
-										`${hit.addr}  ${hit.ts.slice(0, 10)}  ${hit.kind}  ${hit.body}`,
+									(hit) => `${hit.addr}  ${hit.ts}  ${hit.kind}  ${hit.body}`,
 								)
 								.join("\n"),
 				),

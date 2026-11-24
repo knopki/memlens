@@ -13,7 +13,7 @@
  */
 
 import type { IndexHit, NoteKind } from "@memlens/core";
-import { NOTE_KINDS } from "@memlens/core/view";
+import { dayOf, NOTE_KINDS } from "@memlens/core/view";
 import {
 	type JSX,
 	type ReactNode,
@@ -203,7 +203,7 @@ function HitRow({ api, hit }: HitRowProps): JSX.Element {
 			</span>
 			<span className="kind">{kindName(api.t, hit.kind)}</span>
 			<span className="tx">{highlighted(hit.body, api.state.query)}</span>
-			<span className="when">{hit.ts.slice(0, 10)}</span>
+			<span className="when">{dayOf(hit.ts)}</span>
 		</Button>
 	);
 }
