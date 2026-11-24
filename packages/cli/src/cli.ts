@@ -47,6 +47,7 @@ import {
 	moveCommand,
 	noteCommand,
 	redactCommand,
+	restoreCommand,
 	reviewCommand,
 } from "./command-write.js";
 import type { CommandAnswer, CommandIo } from "./commands.js";
@@ -62,6 +63,7 @@ const USAGE = `Usage: ${NAME} <command> [flags]
   find <words> [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
   open <target> [--scope key] [--no-longform] [--offset N] [--json]
   forget <target> [--scope key] [--reason "text"]
+  restore <target> [--scope key] [--reason "text"]
   review [--scope key]... [--limit 50] [--json]
   review --mark <target>,<target> [--scope key] [--for 180d]
   redact <target> [--scope key] [--reason "text"] [--yes]
@@ -123,6 +125,10 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 	},
 	forget: {
 		run: forgetCommand,
+		spec: { positional: ["target"], flags: { scope: 1, reason: 1 } },
+	},
+	restore: {
+		run: restoreCommand,
 		spec: { positional: ["target"], flags: { scope: 1, reason: 1 } },
 	},
 	review: {

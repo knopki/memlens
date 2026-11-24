@@ -10,7 +10,7 @@
 
 import type { NoteKind, ScopeKey, Ulid } from "../types/primitives.js";
 
-/** The lifecycle state. It never moves backwards. */
+/** The lifecycle state. */
 export type NoteState = "live" | "hidden" | "deleted";
 
 /** The public status of one proposal. */

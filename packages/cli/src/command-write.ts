@@ -6,15 +6,16 @@
  * @purpose Save, correct, hide, redact, and review notes from the terminal, so a user curates the
  *   memory without a session.
  * @scope
- *  - The commands note, amend, move, forget, redact, and review.
+ *  - The commands note, amend, move, forget, restore, redact, and review.
  *  - NOT: the store rules, the argument parse, and the exit code mapping.
  * @invariants
  *  - The command note takes --scope, or the active scope of the directory with no flag. A target
  *    command takes the scope in the address or in --scope.
- *  - Each target scope must be visible in the profile, or the command gives NotAllowed.
+ *  - Each target scope must be visible in the profile, or the command gives NotAllowed. The
+ *    command restore takes each valid scope, because only the CLI restores.
  *  - Each supersedes address must resolve to a record id before the write.
  * @dependencies USES API: @memlens/core; WRITES: the store directory
- * @keywords note, amend, forget, redact, review, write, cli
+ * @keywords note, amend, forget, restore, redact, review, write, cli
  * #endregion moduleContract
  */
 
@@ -37,6 +38,7 @@ import {
 	parseNoteTime,
 	redact,
 	resolveTarget,
+	restore,
 	review,
 	validateScopeKey,
 } from "@memlens/core";
@@ -170,6 +172,44 @@ export async function forgetCommand(
 	}
 }
 // #endregion FUNC_forgetCommand
+
+// #region FUNC_restoreCommand
+/**
+ * @purpose Let an operator undo a hide outside the profile scope list.
+ */
+export async function restoreCommand(
+	args: ParsedArgs,
+	io: CommandIo,
+): Promise<string> {
+	const runtime = await openCommandRuntime(args, io);
+	try {
+		const record = resolveTarget(
+			runtime.store,
+			flagValue(args.flags, "scope"),
+			args.positional[0] ?? "",
+			(raw) => {
+				const scope = normalizeScopeKey(raw) as ScopeKey;
+				if (!validateScopeKey(scope))
+					throw new MemlensError("Data", "The scope key is not valid.");
+				return scope;
+			},
+		);
+		restore(
+			runtime.store,
+			record.id,
+			flagValue(args.flags, "reason") ?? "cli restore",
+		);
+		debug("Record restored", {
+			event: "restore",
+			scope: record.scope,
+			pos: record.pos,
+		});
+		return `restored ${record.scope}#${record.pos}`;
+	} finally {
+		await runtime.close();
+	}
+}
+// #endregion FUNC_restoreCommand
 
 // #region FUNC_reviewCommand
 /**

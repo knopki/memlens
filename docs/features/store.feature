@@ -29,7 +29,7 @@ Feature: The row store
     And the April note takes slot 3
     And two notes of one `ts` order by `id`
 
-  Scenario: A tombstone keeps its slot and no path restores it
+  Scenario: A hidden note keeps its slot and an import cannot restore it
     Given a note at slot 0 of one scope
     When a hide hides the note
     Then the note keeps slot 0

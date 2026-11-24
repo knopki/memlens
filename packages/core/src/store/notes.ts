@@ -2,13 +2,13 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Give each note write one transaction, so the row, the index, the nodes, and the journal change together.
- * @scope The note, amend, move, hide, redact, and review operations of the SQLite store.
+ * @scope The note, amend, move, hide, restore, redact, and review operations of the SQLite store.
  *  NOT: the row helpers, the reads, the imports, the proposals, and the compaction.
  * @invariants One publish call owns one transaction.
  * @invariants The index changes before the content row, because the external-content table needs the old values.
  * @invariants A write that changes a covered slot deletes each node over that slot and over the moved tail.
  * @dependencies USES API: node:sqlite
- * @keywords note, amend, hide, redact, review, fts, journal, slot, supersede
+ * @keywords note, amend, hide, restore, redact, review, fts, journal, slot, supersede
  * #endregion moduleContract
  */
 
@@ -447,6 +447,41 @@ export function hideTx(
 	return requireNote(tx.db, id);
 }
 // #endregion FUNC_hideTx
+
+// #region FUNC_restore
+/**
+ * @purpose Let an operator undo a hide without a new note.
+ * @invariants Only a hidden row restores. The slot and the content stay fixed.
+ */
+export function restore(store: Store, id: Ulid, reason?: string): Note {
+	return store.publish((tx) => {
+		const checked = checkedReason(reason);
+		const old = requireRow(tx.db, id);
+		if (old.state !== "hidden" || old.cleared === 1)
+			throw new MemlensError(
+				"Data",
+				"A note that is not hidden cannot restore.",
+			);
+		const now = new Date().toISOString();
+		ftsSet(tx.db, old.n, null, { ...old, state: "live" });
+		tx.db
+			.prepare(
+				"UPDATE notes SET state = 'live', v = ?, modified_at = ? WHERE id = ?",
+			)
+			.run(tx.version, now, id);
+		deleteCovering(tx.db, old.scope, old.pos);
+		tx.journal("restore", id, old.scope, checked);
+		debug("Note restore", {
+			event: "restore",
+			id,
+			scope: old.scope,
+			slot: old.pos,
+			hasReason: checked !== undefined,
+		});
+		return requireNote(tx.db, id);
+	}).value;
+}
+// #endregion FUNC_restore
 
 // #region FUNC_redact
 /**

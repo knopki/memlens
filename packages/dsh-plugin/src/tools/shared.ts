@@ -2,8 +2,8 @@
  * #region moduleContract
  * @purpose Give each tool module one copy of the tool types and one copy of the store helpers.
  * @scope The input and output types of the tools, the profile check, the target read, the note time,
- *  and the review time.
- *  NOT: the tool schemas, the registration, and the parent report.
+ *  the review time, and the target echoes.
+ *  NOT: the full tool schemas, the registration, and the parent report.
  * @invariants A scope field of an input is key text, and the helper normalizes it before the profile check.
  * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-llm
  * @keywords memlens, tool, type, scope, profile, target, review, address
@@ -23,6 +23,7 @@ import {
 	type NoteKind,
 	normalizeScopeKey,
 	parseNoteTime,
+	renderAddress,
 	resolveTarget as resolveCoreTarget,
 	type ScopeKey,
 	validateScopeKey,
@@ -47,8 +48,25 @@ export interface MemoryNoteInput {
 	ts?: string | undefined;
 }
 
+/** The short target fields that identify an affected note. */
+export type NoteEcho = Pick<Note, "ts" | "kind" | "body"> & { addr: Address };
+
+/** The shared schema fields of a target echo. */
+export const ECHO_FIELDS = {
+	addr: { type: "string", required: true },
+	ts: { type: "string", required: true },
+	kind: { type: "string", enum: [...NOTE_KINDS], required: true },
+	body: { type: "string", required: true },
+} as const;
+
 export type MemoryNoteOutput =
-	| { addr: Address; id: string; state: "live" }
+	| {
+			addr: Address;
+			id: string;
+			state: "live";
+			moved?: string;
+			superseded?: NoteEcho[];
+	  }
 	| { id: string; proposed: true };
 
 export interface MemoryFindInput {
@@ -121,7 +139,9 @@ export interface MemoryForgetInput {
 	reason: string;
 }
 
-export type MemoryForgetOutput = Record<string, never>;
+export interface MemoryForgetOutput {
+	records: (NoteEcho & { action: "hidden" | "proposed" })[];
+}
 
 export interface MemoryReviewInput {
 	scope?: string | undefined;
@@ -164,6 +184,25 @@ export function blocks(text: string): ContentBlock[] {
 	return [{ type: "text", text }];
 }
 // #endregion FUNC_blocks
+
+// #region FUNC_noteEcho
+/** @purpose Identify one target from its already read row. */
+export function noteEcho(row: Note): NoteEcho {
+	return {
+		addr: renderAddress(row.scope, row.pos, null),
+		ts: row.ts,
+		kind: row.kind,
+		body: row.body,
+	};
+}
+// #endregion FUNC_noteEcho
+
+// #region FUNC_renderEcho
+/** @purpose Show one target on one line after the tool converts its time to a day. */
+export function renderEcho(row: NoteEcho): string {
+	return `${row.addr}  ${row.ts}  ${row.kind}  ${row.body.replace(/[\r\n]+/g, " ")}`;
+}
+// #endregion FUNC_renderEcho
 
 // #region FUNC_listedInProfile
 /**

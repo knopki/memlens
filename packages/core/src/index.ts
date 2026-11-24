@@ -156,6 +156,7 @@ export {
 	note,
 	noteTx,
 	redact,
+	restore,
 	review,
 } from "./store/notes.js";
 export {

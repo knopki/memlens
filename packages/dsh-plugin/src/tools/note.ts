@@ -2,7 +2,7 @@
  * #region moduleContract
  * @purpose Write one note, or store one proposal when a child or an invisible scope cannot write it.
  * @scope The memory_note schema, the scope choice, the supersede targets, the note time, the review time, and
- *  the proposal payload.
+ *  the proposal payload, the target echoes, and the moved addresses.
  *  NOT: the row rules, the proposal table, and the console.
  * @invariants A child gives a proposal with its session id. A supersede target outside the profile gives NotAllowed.
  * @invariants A call may name the moment of the note, and the store ranks the note by that time.
@@ -26,10 +26,13 @@ import type { AgentMemory } from "../service.js";
 import {
 	blocks,
 	debug,
+	ECHO_FIELDS,
 	listedInProfile,
 	type MemoryNoteInput,
 	type MemoryNoteOutput,
+	noteEcho,
 	noteTime,
+	renderEcho,
 	resolveTarget,
 	reviewTime,
 } from "./shared.js";
@@ -105,12 +108,26 @@ function noteAnswer(
 			state: "live",
 		};
 	}
-	debug("Note saved", { event: "note", scope, pos: saved.value.pos });
-	return {
-		addr: renderAddress(scope, saved.value.pos, null),
+	const pos = saved.value.pos;
+	const last = Number(
+		memory.store
+			.handle()
+			.prepare("SELECT MAX(pos) AS last FROM notes WHERE scope = ?")
+			.get(scope)?.last,
+	);
+	debug("Note saved", { event: "note", scope, pos });
+	const answer: MemoryNoteOutput = {
+		addr: renderAddress(scope, pos, null),
 		id: saved.value.id,
 		state: "live",
 	};
+	if (pos < last)
+		answer.moved = `moved: notes #${pos}..#${last - 1} of ${scope} are now #${pos + 1}..#${last}. Re-read with memory_map, or find a note with memory_find.`;
+	if (targets.length > 0)
+		answer.superseded = targets.map((row) =>
+			noteEcho({ ...row, pos: row.pos >= pos ? row.pos + 1 : row.pos }),
+		);
+	return answer;
 }
 // #endregion FUNC_noteAnswer
 
@@ -174,6 +191,15 @@ export function noteTool(
 							addr: { type: "string", required: true },
 							id: { type: "string", required: true },
 							state: { type: "string", const: "live", required: true },
+							moved: { type: "string" },
+							superseded: {
+								type: "array",
+								items: {
+									type: "object",
+									additionalProperties: false,
+									properties: ECHO_FIELDS,
+								},
+							},
 						},
 					},
 					{
@@ -190,7 +216,13 @@ export function noteTool(
 				blocks(
 					"proposed" in value
 						? `Proposed to your parent: ${args.body} (proposal ${value.id})`
-						: `saved ${value.addr}`,
+						: [
+								`saved ${value.addr}`,
+								...(value.superseded ?? []).map(
+									(row) => `superseded ${renderEcho(row)}`,
+								),
+								...(value.moved ? [value.moved] : []),
+							].join("\n"),
 				),
 		},
 		presentResult(_args, result) {

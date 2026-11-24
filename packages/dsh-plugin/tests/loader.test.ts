@@ -111,6 +111,38 @@ it("restores a live agent through the built host entry", async () => {
 			{} as Parameters<typeof find.execute>[1],
 		),
 	).toMatchObject({ hits: [{ body: "Built entry restart." }] });
+	const args = {
+		body: "Earlier correction.",
+		ts: "2000-01-02",
+		supersedes: [0],
+	};
+	const correction = await note.execute(
+		args,
+		{} as Parameters<typeof note.execute>[1],
+	);
+	const forget = root.tools.get("memory_forget", key);
+	if (!forget) throw new Error("The forget tool is absent.");
+	const targets = { targets: [0], reason: "Wrong correction." };
+	const hidden = await forget.execute(
+		targets,
+		{} as Parameters<typeof forget.execute>[1],
+	);
+	const transcript = [
+		...note.output.render(args, correction as never),
+		...forget.output.render(targets, hidden as never),
+	]
+		.map((block) =>
+			block.type === "text"
+				? block.text.replace(/\d{4}-\d{2}-\d{2}/g, "<day>")
+				: "",
+		)
+		.join("\n");
+	expect(transcript).toMatchInlineSnapshot(`
+		"saved project:Loader-Workspace#0
+		superseded project:Loader-Workspace#1  <day>  note  Built entry restart.
+		moved: notes #0..#0 of project:Loader-Workspace are now #1..#1. Re-read with memory_map, or find a note with memory_find.
+		hidden project:Loader-Workspace#0  <day>  note  Earlier correction."
+	`);
 });
 
 it("loads both built entries and unloads the shared store", async () => {

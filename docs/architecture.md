@@ -55,6 +55,15 @@ A note keeps the immutable key `(ts, id)`, and its slot is the rank of that key 
 of its scope. A write of a past moment lands before the notes of a later moment. An insert in the middle
 shifts the later slots by one. A numeric address is not stable in time.
 
+After a successful insert before the tail, `memory_note` appends one line to its answer:
+
+```text
+moved: notes #p..#q of {scope} are now #p+1..#q+1. Re-read with memory_map, or find a note with memory_find.
+```
+
+The values replace the placeholders. The old range starts at the new slot and ends one below the new maximum slot.
+The tool reads `MAX(pos)` once after the insert, across all states of that scope.
+
 The `id` is a ULID, and it is the only cross-store identity.
 
 An address is `pos` or `scope#pos`. An `addr` from a tool answer holds the scope, so the agent need
@@ -151,6 +160,9 @@ The plugin registers the memory tools in the context of each agent.
 A write carries the time of the note, and the write time is the default. The store ranks the note by
 that time.
 
+The answers of `memory_forget` and `memory_note` with `supersedes` echo each target: address, note day, kind, and body.
+The echo uses the target rows that the tool already reads. A proposed forget identifies its action as a proposal.
+
 The store keeps each time in UTC. A write reads a day alone as the start of that day in the zone of
 the process. A day in a view is the day of that time in that zone, and a tool answer gives that day.
 A date-only `since` or `until` of a find covers that whole day.
@@ -195,6 +207,7 @@ memlens note "<body>" [--scope key] [--longform file.md] [--kind kind] [--supers
 memlens find "<words>" [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
 memlens open <target> [--scope key] [--no-longform] [--offset N]
 memlens forget <target> [--scope key] [--reason "text"]
+memlens restore <target> [--scope key] [--reason "text"]
 memlens review [--scope key]... [--limit 50] [--json]
 memlens review --mark <target>,<target> [--scope key] [--for 180d]
 memlens redact <target> [--scope key] [--reason "text"] [--yes]
@@ -217,6 +230,10 @@ memlens ui [--port 7788] [--allow-delete]
 
 The CLI selects the scope of a command from the first matching scope rule, then the Git repository
 name, then the configured default.
+
+Only the CLI exposes `restore`: it returns a hidden note to `live` and bypasses the profile scope list.
+The slot stays fixed. One transaction restores FTS, deletes the covering nodes, and journals `restore` with a reason.
+The default reason is `cli restore`. A target in any other state gives a `Data` error.
 
 The command `move` moves all note rows with content from one scope to another in one transaction.
 Hidden and deleted rows with content move too, and each row keeps its state and `id`.

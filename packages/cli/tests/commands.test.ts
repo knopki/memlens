@@ -602,6 +602,68 @@ describe("@memlens/cli commands", () => {
 		expect(hidden.out).toContain("hidden project:acme/x#0");
 	});
 
+	it("restores a hidden note outside the profile scope list", async () => {
+		const plain = makeEnv();
+		const dir = join(plain.home, "store");
+		await run(
+			plain,
+			"note",
+			"Muted fact",
+			"--scope",
+			"user:other",
+			"--store",
+			dir,
+		);
+		await run(plain, "forget", "user:other#0", "--store", dir);
+		const restricted = makeEnv(WORK_CONFIG);
+		expect(
+			(await run(restricted, "forget", "user:other#0", "--store", dir)).code,
+		).toBe(3);
+		const restored = await run(
+			restricted,
+			"restore",
+			"user:other#0",
+			"--reason",
+			"Operator request.",
+			"--store",
+			dir,
+		);
+		expect(restored.code).toBe(0);
+		expect(restored.out).toBe("restored user:other#0\n");
+		const found = await run(plain, "find", "Muted", "--store", dir);
+		expect(found.out).toContain("user:other#0");
+		const journal = JSON.parse(
+			(await run(plain, "journal", "--json", "--store", dir)).out,
+		);
+		expect(journal.at(-1)).toMatchObject({
+			op: "restore",
+			scope: "user:other",
+			reason: "Operator request.",
+		});
+	});
+
+	it("restores with the flag --scope and the default reason", async () => {
+		const test = makeEnv();
+		await run(test, "note", "Muted fact", "--scope", "project:acme/x");
+		const refused = await run(test, "restore", "project:acme/x#0");
+		expect(refused.code).toBe(1);
+		await run(test, "forget", "project:acme/x#0");
+		const restored = await run(
+			test,
+			"restore",
+			"0",
+			"--scope",
+			"project:acme/x",
+		);
+		expect(restored.code).toBe(0);
+		expect(restored.out).toBe("restored project:acme/x#0\n");
+		const journal = JSON.parse((await run(test, "journal", "--json")).out);
+		expect(journal.at(-1)).toMatchObject({
+			op: "restore",
+			reason: "cli restore",
+		});
+	});
+
 	it("changes the kind and adds a supersedes link on amend", async () => {
 		const test = makeEnv();
 		const dir = join(test.home, "store");

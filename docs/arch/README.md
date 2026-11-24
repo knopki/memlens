@@ -269,7 +269,7 @@ graph LR
   MemlensPluginTools -. "`validates the fields and the rank`" .-> MemlensCoreStore
   MemlensCoreStore -. "`one transaction: note row, slot shift, 
 node delete`" .-> MemlensDb
-  MemlensPluginTools -. "`returns the note address`" .-> Agent
+  MemlensPluginTools -. "`returns addresses and target echoes`" .-> Agent
   classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
   class MemlensPluginTools,MemlensCoreStore,MemlensDb primary
   linkStyle 0,1,2,3 stroke:#8D8D8D,stroke-dasharray:8 4

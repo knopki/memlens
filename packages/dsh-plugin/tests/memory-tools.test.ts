@@ -28,6 +28,7 @@ import {
 	dayOf,
 	directionsData,
 	FIND_DEFAULT_LIMIT,
+	hide,
 	liveCounts,
 	loadView,
 	type Note,
@@ -35,6 +36,7 @@ import {
 	nowIso,
 	pending,
 	type ResolvedConfig,
+	redact,
 	sliceOf,
 	textOfLine,
 	topLineOf,
@@ -382,6 +384,9 @@ describe("memory tools of one agent", () => {
 		})) as { addr: string };
 
 		expect(older.addr).toBe("user:notes#0");
+		expect(render(main, "memory_note", {}, older)).toBe(
+			"saved user:notes#0\nmoved: notes #0..#0 of user:notes are now #1..#1. Re-read with memory_map, or find a note with memory_find.",
+		);
 		expect(
 			await call(main, "memory_open", { target: older.addr }),
 		).toMatchObject({
@@ -391,6 +396,23 @@ describe("memory tools of one agent", () => {
 		expect(
 			await call(main, "memory_open", { target: "user:notes#1" }),
 		).toMatchObject({ body: "A fact of the write time." });
+	});
+
+	it("includes hidden and cleared tail slots in the moved range of only that scope", async () => {
+		seed("user:notes", "January.", null, "2026-01-01T12:00:00Z");
+		const hidden = seed("user:notes", "March.", null, "2026-03-01T12:00:00Z");
+		const cleared = seed("user:notes", "April.", null, "2026-04-01T12:00:00Z");
+		hide(host.store, hidden.id);
+		redact(host.store, cleared.id, "test");
+		for (let i = 0; i < 5; i++) seed("global:prefs", `Foreign ${i}.`);
+		const main = subject("main", "all");
+		const answer = await call(main, "memory_note", {
+			body: "February.",
+			ts: "2026-02-01T12:00:00Z",
+		});
+		expect(render(main, "memory_note", {}, answer)).toBe(
+			"saved user:notes#1\nmoved: notes #1..#2 of user:notes are now #2..#3. Re-read with memory_map, or find a note with memory_find.",
+		);
 	});
 
 	it("refuses a note time that is not a date", async () => {
@@ -616,7 +638,7 @@ describe("memory tools of one agent", () => {
 		);
 	});
 
-	it("hides a record and gives the empty object", async () => {
+	it("hides a record and echoes its address, day, kind, and body", async () => {
 		const record = seed("user:notes", "The record to forget.");
 		const main = subject("main", "all");
 
@@ -625,7 +647,20 @@ describe("memory tools of one agent", () => {
 			reason: "The note is wrong.",
 		});
 
-		expect(answer).toEqual({});
+		expect(answer).toEqual({
+			records: [
+				{
+					addr: `user:notes#${record.pos}`,
+					ts: dayOf(record.ts),
+					kind: "note",
+					body: record.body,
+					action: "hidden",
+				},
+			],
+		});
+		expect(render(main, "memory_forget", {}, answer)).toBe(
+			`hidden user:notes#${record.pos}  ${dayOf(record.ts)}  note  ${record.body}`,
+		);
 		expect(pending(host.store)).toHaveLength(0);
 		const open = (await call(main, "memory_open", {
 			target: record.pos,
@@ -638,16 +673,37 @@ describe("memory tools of one agent", () => {
 		expect(hidden.state).toBe("hidden");
 	});
 
-	it("proposes a hide for a foreign scope and gives the empty object", async () => {
+	it("distinguishes a proposed hide from a hidden record in its echoes", async () => {
 		const record = seed("global:prefs", "The foreign record.");
+		const local = seed("user:notes", "The local record.");
 		const narrow = subject("narrow", "narrow");
 
 		const answer = await call(narrow, "memory_forget", {
-			targets: [`global:prefs#${record.pos}`],
+			targets: [local.pos, `global:prefs#${record.pos}`],
 			reason: "The note is wrong.",
 		});
 
-		expect(answer).toEqual({});
+		expect(answer).toEqual({
+			records: [
+				{
+					addr: `user:notes#${local.pos}`,
+					ts: dayOf(local.ts),
+					kind: "note",
+					body: local.body,
+					action: "hidden",
+				},
+				{
+					addr: `global:prefs#${record.pos}`,
+					ts: dayOf(record.ts),
+					kind: "note",
+					body: record.body,
+					action: "proposed",
+				},
+			],
+		});
+		expect(render(narrow, "memory_forget", {}, answer)).toBe(
+			`hidden user:notes#${local.pos}  ${dayOf(local.ts)}  note  ${local.body}\nproposed global:prefs#${record.pos}  ${dayOf(record.ts)}  note  ${record.body}`,
+		);
 		const open = pending(host.store);
 		expect(open).toHaveLength(1);
 		expect(open[0]?.op).toBe("hide");
@@ -896,10 +952,19 @@ describe("memory tools of one agent", () => {
 
 		const answer = (await call(main, "memory_note", {
 			body: "The note that replaces both targets.",
+			ts: "2026-11-01T12:00:00Z",
 			supersedes: [first.pos, `user:notes#${second.pos}`],
 		})) as { state: string };
 
 		expect(answer.state).toBe("live");
+		expect(render(main, "memory_note", {}, answer)).toBe(
+			[
+				"saved user:notes#1",
+				`superseded user:notes#0  ${dayOf(first.ts)}  note  ${first.body}`,
+				`superseded user:notes#2  ${dayOf(second.ts)}  note  ${second.body}`,
+				"moved: notes #1..#1 of user:notes are now #2..#2. Re-read with memory_map, or find a note with memory_find.",
+			].join("\n"),
+		);
 		const states = host.store
 			.handle()
 			.prepare("SELECT state FROM notes WHERE id IN (?, ?)")

@@ -1,9 +1,10 @@
 /**
+ * Each target echo names the action as hidden or proposed.
+ *
  * #region moduleContract
  * @purpose Hide each target of the profile, or store one hide proposal for an invisible scope.
  * @scope The memory_forget schema, the target read, the hide, and the hide proposal.
  *  NOT: the row rules and the console decision.
- * @invariants The answer is the empty object, and a proposal gives the same answer.
  * @dependencies USES API: @memlens/core, @deepseek-ai/dsh-tools
  * @keywords memlens, tool, forget, hide, proposal, scope
  * #endregion moduleContract
@@ -16,16 +17,18 @@ import type { AgentMemory } from "../service.js";
 import {
 	blocks,
 	debug,
+	ECHO_FIELDS,
 	listedInProfile,
 	type MemoryForgetInput,
 	type MemoryForgetOutput,
+	noteEcho,
+	renderEcho,
 	resolveTarget,
 } from "./shared.js";
 
 // #region FUNC_forgetAnswer
 /**
  * @purpose Hide each target of the profile, or propose one hide for an invisible scope.
- * @invariants The answer holds no count, and a proposed hide gives the same empty answer.
  */
 function forgetAnswer(
 	agent: Agent,
@@ -36,6 +39,7 @@ function forgetAnswer(
 		input.scope === undefined
 			? memory.scope
 			: (normalizeScopeKey(input.scope) as ScopeKey);
+	const records: MemoryForgetOutput["records"] = [];
 	for (const target of input.targets) {
 		const resolved = resolveTarget(
 			memory,
@@ -45,6 +49,7 @@ function forgetAnswer(
 		);
 		if (listedInProfile(memory, resolved.scope)) {
 			hide(memory.store, resolved.id, input.reason);
+			records.push({ ...noteEcho(resolved), action: "hidden" });
 			continue;
 		}
 		propose(memory.store, {
@@ -53,12 +58,13 @@ function forgetAnswer(
 			target: resolved.id,
 			payload: { session: agent.id },
 		});
+		records.push({ ...noteEcho(resolved), action: "proposed" });
 	}
 	debug("Forget answered", {
 		event: "forget",
 		targets: input.targets.length,
 	});
-	return {};
+	return { records };
 }
 // #endregion FUNC_forgetAnswer
 
@@ -90,9 +96,34 @@ export function forgetTool(agent: Agent, memory: AgentMemory): ToolDefinition {
 			},
 		},
 		output: {
-			schema: { type: "object", additionalProperties: false },
-			render: () =>
-				blocks("Done. A target outside the profile waits for a human."),
+			schema: {
+				type: "object",
+				additionalProperties: false,
+				properties: {
+					records: {
+						type: "array",
+						required: true,
+						items: {
+							type: "object",
+							additionalProperties: false,
+							properties: {
+								...ECHO_FIELDS,
+								action: {
+									type: "string",
+									enum: ["hidden", "proposed"],
+									required: true,
+								},
+							},
+						},
+					},
+				},
+			},
+			render: (_args, value) =>
+				blocks(
+					value.records
+						.map((row) => `${row.action} ${renderEcho(row)}`)
+						.join("\n"),
+				),
 		},
 		async execute(args) {
 			return forgetAnswer(agent, memory, args);

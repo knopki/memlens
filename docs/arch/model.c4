@@ -8,7 +8,7 @@ model {
 
   human = actor 'Operator' {
     description '
-      The owner of the profile. The operator reviews, amends, hides, and redacts notes.
+      The owner of the profile. The operator reviews, amends, hides, restores, and redacts notes.
     '
     -> memlens.ui 'reviews notes in the console'
     -> memlens.cli 'runs terminal commands'

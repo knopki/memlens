@@ -24,7 +24,7 @@ views 'Use cases' {
     agent -> memlens.plugin.tools 'calls memory_note'
     memlens.plugin.tools -> memlens.core.store 'validates the fields and the rank'
     memlens.core.store -> memlens.db 'one transaction: note row, slot shift, node delete'
-    agent <- memlens.plugin.tools 'returns the note address'
+    agent <- memlens.plugin.tools 'returns addresses and target echoes'
   }
 
   dynamic view compaction-pass {

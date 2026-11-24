@@ -2,8 +2,8 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Prove that each note write keeps the row, the index, the nodes, the journal, and the clock in step.
- * @scope The duplicate check, the slot order, the single and the bulk scope move, the index removal, the redaction, and the review fields.
- * @keywords test, note, amend, move, hide, redact, review, fts, slot
+ * @scope The duplicate check, the slot order, the single and the bulk scope move, the index removal, the restore, the redaction, and the review fields.
+ * @keywords test, note, amend, move, hide, restore, redact, review, fts, slot
  * #endregion moduleContract
  */
 
@@ -12,9 +12,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { afterAll, describe, it } from "vitest";
+import { afterAll, describe, it, vi } from "vitest";
 import { ulid } from "../src/domain/ulid.js";
-import { amend, hide, move, note, redact, review } from "../src/store/notes.js";
+import {
+	amend,
+	hide,
+	move,
+	note,
+	redact,
+	restore,
+	review,
+} from "../src/store/notes.js";
 import { check } from "../src/store/repair.js";
 import { search } from "../src/store/search.js";
 import { Store } from "../src/store/store.js";
@@ -301,6 +309,134 @@ describe("hide", () => {
 	});
 });
 // #endregion FUNC_test_hide
+
+// #region FUNC_test_restore
+/**
+ * @purpose Prove that a restore returns a hidden note to the view and refuses each other state.
+ */
+describe("restore", () => {
+	it("returns a hidden note with its slot, content, index, and one journal entry", () => {
+		const { store } = fresh();
+		const created = note(store, {
+			...BASE,
+			body: "restorecanaryzzq",
+			review_at: "2026-12-01",
+			ts: "2026-01-01T00:00:00.000Z",
+		});
+		const id = idOf(created);
+		note(store, {
+			...BASE,
+			body: "A later fact.",
+			ts: "2026-02-01T00:00:00.000Z",
+		});
+		hide(store, id, "No longer true.");
+		addNode(store.handle(), "A stale summary of the first slot.");
+		assert.equal(ftsCount(store, "restorecanaryzzq"), 0);
+		const before = row(store, id);
+		vi.setSystemTime(new Date("2026-01-03T00:00:00.000Z"));
+		const restored = restore(store, id, "Operator request.");
+		vi.useRealTimers();
+		assert.equal(restored.state, "live");
+		assert.equal(restored.pos, 0);
+		assert.equal(restored.body, "restorecanaryzzq");
+		assert.equal(restored.review_at, "2026-12-01");
+		assert.equal(restored.reviewed_at, null);
+		assert.notEqual(restored.v, before.v);
+		assert.equal(restored.modified_at, "2026-01-03T00:00:00.000Z");
+		assert.equal(ftsCount(store, "restorecanaryzzq"), 1);
+		assert.equal(count(store, "SELECT count(*) AS c FROM fts_docsize"), 2);
+		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 0);
+		assert.deepEqual(slots(store, BASE.scope), [0, 1]);
+		const entry = store
+			.handle()
+			.prepare(
+				"SELECT op, target, scope, reason FROM journal ORDER BY seq DESC LIMIT 1",
+			)
+			.get();
+		assert.deepEqual(
+			{ ...entry },
+			{
+				op: "restore",
+				target: id,
+				scope: BASE.scope,
+				reason: "Operator request.",
+			},
+		);
+		assert.deepEqual(check(store), []);
+	});
+
+	it("keeps the supersede link and the content of the restored note", () => {
+		const { store } = fresh();
+		const older = note(store, { ...BASE, body: "restorecanaryzzq" });
+		const next = note(store, {
+			...BASE,
+			body: "The replacing fact.",
+			supersedes: [idOf(older)],
+		});
+		const restored = restore(store, idOf(older), "Operator request.");
+		assert.equal(restored.state, "live");
+		assert.equal(restored.superseded_by, idOf(next));
+		assert.equal(restored.body, "restorecanaryzzq");
+		assert.equal(ftsCount(store, "restorecanaryzzq"), 1);
+	});
+
+	it("refuses each target that is not hidden and moves no clock", () => {
+		const { store } = fresh();
+		const live = idOf(note(store, { ...BASE, body: "A live fact." }));
+		const deleted = idOf(note(store, { ...BASE, body: "A deleted fact." }));
+		hide(store, deleted, "No longer true.");
+		store
+			.handle()
+			.prepare("UPDATE notes SET state = 'deleted' WHERE id = ?")
+			.run(deleted);
+		const cleared = idOf(note(store, { ...BASE, body: "A cleared fact." }));
+		redact(store, cleared, "Operator request.");
+		const rev = store.rev();
+		for (const id of [live, deleted, cleared, "01J0Z0000000000000000000Z"])
+			assert.throws(() => restore(store, id, "Operator request."), isData);
+		assert.equal(store.rev(), rev);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM notes WHERE state = 'live'"),
+			1,
+		);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'restore'"),
+			0,
+		);
+	});
+
+	it("rolls back a failed restore and keeps the clock", () => {
+		const { store } = fresh();
+		const created = note(store, { ...BASE, body: "restorecanaryzzq" });
+		const id = idOf(created);
+		hide(store, id, "No longer true.");
+		addNode(store.handle(), "A summary of the first slot.");
+		const rev = store.rev();
+		store
+			.handle()
+			.exec(
+				`CREATE TRIGGER restore_stop BEFORE UPDATE OF state ON notes WHEN NEW.id = '${id}' BEGIN SELECT RAISE(ABORT, 'restore stop'); END`,
+			);
+		assert.throws(
+			() => restore(store, id, "Operator request."),
+			/restore stop/,
+		);
+		assert.equal(row(store, id).state, "hidden");
+		assert.equal(ftsCount(store, "restorecanaryzzq"), 0);
+		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 1);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'restore'"),
+			0,
+		);
+		assert.equal(store.rev(), rev);
+	});
+});
+
+/** Tell a Data refusal from another error. */
+function isData(error: unknown): boolean {
+	return error instanceof Error && "code" in error && error.code === "Data";
+}
+// #endregion FUNC_test_restore
 
 // #region FUNC_test_redact
 /**
