@@ -90,14 +90,14 @@ function catalogName(scopes: readonly ScopeKey[], range: Range): string {
  * @invariants The list holds one line for each catalog range of the model. The detail panel holds
  * the two halves of the open range. It holds the hint text when no range is open.
  */
-export function Catalog({ api }: ScreenProps): JSX.Element {
+export function Catalog({ api }: ScreenProps): JSX.Element | null {
 	const state = useSyncExternalStore(
 		api.subscribe,
 		() => api.state,
 		() => api.state,
 	);
 	const model = state.model;
-	if (!model) return <></>;
+	if (!model) return null;
 	const scopes = model.catalogScopes ?? [];
 	const lines = model.catalog ?? [];
 	const selection = state.selection;

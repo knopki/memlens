@@ -299,7 +299,7 @@ describe("migration", () => {
 		// The step leaves no extra table, and the schema matches a store of a newer build.
 		assert.deepEqual(
 			schemaOf(upgraded),
-			schemaOf(openDatabase(path + ".fresh", "en")),
+			schemaOf(openDatabase(`${path}.fresh`, "en")),
 		);
 		// The open sets the journal mode before the schema work, so a rename step leaves no lock.
 		assert.equal(

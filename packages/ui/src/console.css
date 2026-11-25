@@ -393,7 +393,7 @@
 	grid-template-columns: minmax(0, 176px) 92px minmax(0, 1fr) 84px;
 	font-family: inherit;
 }
-.ml-console .hit .id {
+.ml-console .line.hit .id {
 	display: flex;
 	min-width: 0;
 	font-family: var(--ml-mono);
@@ -451,8 +451,7 @@
 }
 .ml-console .field input,
 .ml-console .field select,
-.ml-console .field textarea,
-.ml-console dialog textarea {
+.ml-console .field textarea {
 	padding: 6px 9px;
 	border: 1px solid var(--ml-field-border);
 	border-radius: 7px;
@@ -462,8 +461,7 @@
 	text-transform: none;
 	letter-spacing: normal;
 }
-.ml-console .field textarea,
-.ml-console dialog textarea {
+.ml-console .field textarea {
 	max-height: 50vh;
 	min-height: 127px;
 	font-family: var(--ml-mono);
@@ -522,7 +520,7 @@
 .ml-console dialog::backdrop {
 	background: var(--ml-backdrop);
 }
-.ml-console dialog .head {
+.ml-console dialog .dlg-head {
 	padding: 14px 16px;
 	border-bottom: 1px solid var(--ml-line);
 	font-weight: 600;

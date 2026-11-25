@@ -21,14 +21,14 @@ import type { ScreenProps } from "../screen-props.js";
  * @invariants Quote the whole slice as text: the page scrolls, and the slice holds no height limit
  *   and no inner scroll.
  */
-export function Overview({ api }: ScreenProps): JSX.Element {
+export function Overview({ api }: ScreenProps): JSX.Element | null {
 	const state = useSyncExternalStore(
 		api.subscribe,
 		() => api.state,
 		() => api.state,
 	);
 	const model = state.model;
-	if (!model) return <></>;
+	if (!model) return null;
 	return (
 		<>
 			<p className="sub">{api.t("ovText")}</p>
