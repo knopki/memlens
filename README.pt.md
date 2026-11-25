@@ -9,17 +9,17 @@ sabe. Um arquivo SQLite guarda as notas, e uma árvore de resumos fica acima del
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Uma pirâmide de tiras de papel dobradas: oito em baixo, quatro por cima, depois duas e uma folha limpa no topo.">
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="O console do memlens. A barra lateral lista as telas e os escopos. A página mostra sete escopos com as suas contagens, e o trecho montado abaixo deles.">
-</picture>
-
 ## O problema
 
 Um agente esquece entre sessões. Uma sessão nova começa sem nenhum fato das sessões antigas. Uma
 conversa mais longa não é memória: cada token custa, e o modelo ainda perde o começo. A perda
 aparece em um projeto que dura semanas: o agente pergunta de novo por uma decisão, e repete um erro
 que você já corrigiu.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="O console do memlens. A barra lateral lista as telas e os escopos. A página mostra sete escopos com as suas contagens, e o trecho montado abaixo deles.">
+</picture>
 
 ## A ideia
 

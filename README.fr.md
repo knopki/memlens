@@ -9,17 +9,17 @@ sait déjà. Un fichier SQLite tient les notes, et un arbre de résumés se dres
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Une pyramide de bandes de papier pliées : huit en bas, quatre au-dessus, puis deux, et une feuille nette au sommet.">
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="La console memlens. La barre latérale liste les écrans et les portées. La page montre sept portées avec leurs compteurs, et l'extrait assemblé en dessous.">
-</picture>
-
 ## Le problème
 
 Un agent oublie d'une session à l'autre. Une nouvelle session démarre sans aucun fait des anciennes.
 Un long chat n'est pas une mémoire : chaque jeton coûte, et le modèle perd quand même le début. La
 perte se voit sur un projet qui dure des semaines : l'agent redemande une décision, et il répète une
 erreur que tu as déjà corrigée.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="La console memlens. La barre latérale liste les écrans et les portées. La page montre sept portées avec leurs compteurs, et l'extrait assemblé en dessous.">
+</picture>
 
 ## L'idée
 

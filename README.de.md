@@ -10,17 +10,17 @@ darüber.
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Eine Pyramide aus gefalteten Papierstreifen: unten acht, darüber vier, dann zwei und zuoberst ein sauberes Blatt.">
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="Die memlens-Konsole. Die Leiste listet die Bildschirme und die Scopes. Die Seite zeigt sieben Scopes mit ihren Anzahlen und den zusammengestellten Auszug darunter.">
-</picture>
-
 ## Das Problem
 
 Ein Agent vergisst zwischen den Sitzungen. Eine neue Sitzung beginnt ohne einen Fakt aus den alten
 Sitzungen. Ein längerer Chat ist kein Gedächtnis: Jedes Token kostet, und das Modell verliert den
 Anfang trotzdem. Der Verlust zeigt sich an einem Projekt, das Wochen dauert: Der Agent fragt erneut
 nach einer Entscheidung, und er wiederholt einen Fehler, den du schon behoben hast.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="Die memlens-Konsole. Die Leiste listet die Bildschirme und die Scopes. Die Seite zeigt sieben Scopes mit ihren Anzahlen und den zusammengestellten Auszug darunter.">
+</picture>
 
 ## Die Idee
 
