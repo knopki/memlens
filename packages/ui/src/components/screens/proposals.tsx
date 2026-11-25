@@ -53,14 +53,14 @@ function Decision({ api, item }: DecisionProps): JSX.Element {
  * @invariants A proposal of another scope stays out of the table, and a line below the table
  *   states its count.
  */
-export function Proposals({ api }: ScreenProps): JSX.Element {
+export function Proposals({ api }: ScreenProps): JSX.Element | null {
 	const state = useSyncExternalStore(
 		api.subscribe,
 		() => api.state,
 		() => api.state,
 	);
 	const model = state.model;
-	if (!model) return <></>;
+	if (!model) return null;
 	const t = api.t;
 	const all = model.proposals ?? [];
 	const proposals = all.filter((item) => item.scope === model.scope);

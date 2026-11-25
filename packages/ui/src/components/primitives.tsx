@@ -573,7 +573,7 @@ export function Dialog({
 			}}
 			onClose={onClose}
 		>
-			<div className="head">
+			<div className="dlg-head">
 				<span className="t">{title}</span>
 			</div>
 			<form
