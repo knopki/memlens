@@ -1,5 +1,7 @@
 # memlens
 
+English | [中文](https://github.com/knopki/memlens/blob/HEAD/README.zh.md) | [Deutsch](https://github.com/knopki/memlens/blob/HEAD/README.de.md) | [Español](https://github.com/knopki/memlens/blob/HEAD/README.es.md) | [Français](https://github.com/knopki/memlens/blob/HEAD/README.fr.md) | [日本語](https://github.com/knopki/memlens/blob/HEAD/README.ja.md) | [Português](https://github.com/knopki/memlens/blob/HEAD/README.pt.md) | [Русский](https://github.com/knopki/memlens/blob/HEAD/README.ru.md)
+
 **Long-term memory for an agent.** The agent starts each session with a map of what it already
 knows. One SQLite file holds the notes, and a tree of summaries stands above them.
 
@@ -278,8 +280,6 @@ build, the tests, and the work rules of the repository.
 | [docs/features](https://github.com/knopki/memlens/blob/HEAD/docs/features/README.md)   | Cross-module behavior as scenarios.   |
 | [docs/arch/README.md](https://github.com/knopki/memlens/blob/HEAD/docs/arch/README.md) | The architecture model as diagrams.   |
 | [AGENTS.md](https://github.com/knopki/memlens/blob/HEAD/AGENTS.md)                     | Work rules for agents.                |
-
-English · [Русский](https://github.com/knopki/memlens/blob/HEAD/README.ru.md) · [中文](https://github.com/knopki/memlens/blob/HEAD/README.zh.md). The translations follow the English text.
 
 ## License
 
