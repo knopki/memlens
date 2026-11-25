@@ -136,7 +136,7 @@ proposition expirée sans humain.
 
 ### Version
 
-La version minimale acceptée est DeepSeek Harness `0.2.2-rc.3`. Le manifeste accepte `>=0.2.2-rc.3`.
+La version minimale acceptée est DeepSeek Harness `0.2.2-rc.3`. Le manifeste accepte `>=0.2.2-rc.3 <0.3.0-0`.
 
 -----
 

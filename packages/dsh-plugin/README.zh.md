@@ -110,7 +110,7 @@ dsh plugin --profile web add @memlens/dsh-plugin
 
 ### 版本
 
-可接受的最低版本是 DeepSeek Harness `0.2.2-rc.3`。包清单接受 `>=0.2.2-rc.3`。
+可接受的最低版本是 DeepSeek Harness `0.2.2-rc.3`。包清单接受 `>=0.2.2-rc.3 <0.3.0-0`。
 
 -----
 

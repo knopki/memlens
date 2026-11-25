@@ -133,7 +133,7 @@ expirada sem intervenção humana.
 
 ### Versão
 
-A versão mínima aceita é DeepSeek Harness `0.2.2-rc.3`. O manifesto aceita `>=0.2.2-rc.3`.
+A versão mínima aceita é DeepSeek Harness `0.2.2-rc.3`. O manifesto aceita `>=0.2.2-rc.3 <0.3.0-0`.
 
 -----
 

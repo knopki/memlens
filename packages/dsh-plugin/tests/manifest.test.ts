@@ -3,6 +3,7 @@
  * @purpose Check the manifest, the patch file, the locales, the language bar, and the icon that the
  *   harness loads.
  * @invariants Each peer dependency has a development mirror. Both entry points exist after the build.
+ * @invariants The harness supplies every peer except zod at run time, so each of them is optional.
  * @invariants The patch holds the host entry id. The manifest exports the host and the preset paths.
  * @invariants The language list comes from @memlens/ui. The locale directory and the README bar hold
  * one entry per language of that list, and no other entry.
@@ -33,6 +34,7 @@ interface Manifest {
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
+	peerDependenciesMeta?: Record<string, { optional?: boolean }>;
 	engines?: { node?: string; dsh?: string };
 	dsh?: { manifestVersion?: number; bundle?: { patch?: string } };
 }
@@ -50,14 +52,14 @@ const manifest = JSON.parse(
 
 /** The service packages that the host entry imports at run time. */
 const DSH_PEERS: Record<string, string> = {
-	"@deepseek-ai/dsh-agent": ">=0.2.2-rc.3 <0.3.0",
-	"@deepseek-ai/dsh-llm": ">=0.2.2-rc.3 <0.3.0",
-	"@deepseek-ai/dsh-scope": ">=0.2.2-rc.3 <0.3.0",
-	"@deepseek-ai/dsh-session": ">=0.2.2-rc.3 <0.3.0",
-	"@deepseek-ai/dsh-system-prompt": ">=0.2.2-rc.3 <0.3.0",
-	"@deepseek-ai/dsh-tools": ">=0.2.2-rc.3 <0.3.0",
-	"@deepseek-ai/dsh-typert-protocol": ">=0.2.2-rc.3 <0.3.0",
-	"@deepseek-ai/dsh-typert-registry": ">=0.2.2-rc.3 <0.3.0",
+	"@deepseek-ai/dsh-agent": ">=0.2.2-rc.3 <0.3.0-0",
+	"@deepseek-ai/dsh-llm": ">=0.2.2-rc.3 <0.3.0-0",
+	"@deepseek-ai/dsh-scope": ">=0.2.2-rc.3 <0.3.0-0",
+	"@deepseek-ai/dsh-session": ">=0.2.2-rc.3 <0.3.0-0",
+	"@deepseek-ai/dsh-system-prompt": ">=0.2.2-rc.3 <0.3.0-0",
+	"@deepseek-ai/dsh-tools": ">=0.2.2-rc.3 <0.3.0-0",
+	"@deepseek-ai/dsh-typert-protocol": ">=0.2.2-rc.3 <0.3.0-0",
+	"@deepseek-ai/dsh-typert-registry": ">=0.2.2-rc.3 <0.3.0-0",
 };
 
 /** Read one export target as an object with the type and the default paths. */
@@ -174,8 +176,11 @@ describe("plugin manifest", () => {
 	});
 
 	it("mirrors each host peer in the development dependencies", () => {
-		expect(manifest.peerDependencies?.["@deepseek-ai/cordis"]).toBe("^4.0.2");
+		expect(manifest.peerDependencies?.["@deepseek-ai/cordis"]).toBe("^4.1.0");
 		expect(manifest.devDependencies?.["@deepseek-ai/cordis"]).toBe("4.1.0");
+		expect(manifest.peerDependencies?.["@deepseek-ai/schemastery"]).toBe(
+			"^3.18.2",
+		);
 		expect(manifest.peerDependencies?.zod).toBe("^4.6.6");
 		expect(manifest.devDependencies?.zod).toBe("4.6.6");
 
@@ -183,6 +188,14 @@ describe("plugin manifest", () => {
 			expect(manifest.peerDependencies?.[name]).toBe(range);
 			expect(manifest.devDependencies?.[name]).toBe("0.2.2-rc.3");
 		}
+	});
+
+	it("marks every peer except zod as optional", () => {
+		for (const name of Object.keys(manifest.peerDependencies ?? {})) {
+			if (name === "zod") continue;
+			expect(manifest.peerDependenciesMeta?.[name]?.optional, name).toBe(true);
+		}
+		expect(manifest.peerDependenciesMeta?.zod).toBe(undefined);
 	});
 
 	it("keeps the loader as a development dependency only", () => {
@@ -194,8 +207,8 @@ describe("plugin manifest", () => {
 		).toBe(undefined);
 	});
 
-	it("supports DeepSeek Harness 0.2.2-rc.3 and later", () => {
-		expect(manifest.engines?.dsh).toBe(">=0.2.2-rc.3");
+	it("accepts the DeepSeek Harness 0.2 line only", () => {
+		expect(manifest.engines?.dsh).toBe(">=0.2.2-rc.3 <0.3.0-0");
 		expect(manifest.engines?.node).toBeTruthy();
 	});
 });

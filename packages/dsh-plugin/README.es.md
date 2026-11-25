@@ -135,7 +135,7 @@ caducada sin ninguna persona.
 
 ### Versión
 
-La versión mínima aceptada es DeepSeek Harness `0.2.2-rc.3`. El manifiesto acepta `>=0.2.2-rc.3`.
+La versión mínima aceptada es DeepSeek Harness `0.2.2-rc.3`. El manifiesto acepta `>=0.2.2-rc.3 <0.3.0-0`.
 
 -----
 
