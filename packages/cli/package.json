@@ -18,7 +18,7 @@
 	"scripts": {
 		"build": "rm -rf dist && node build.mjs",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"test": "vitest run"
+		"test": "env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_OBJECT_DIRECTORY vitest run"
 	},
 	"devDependencies": {
 		"@memlens/core": "workspace:*",

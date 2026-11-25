@@ -36,7 +36,7 @@
 	"scripts": {
 		"build": "rm -rf lib && node build.mjs && tsc -p tsconfig.build.json",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
-		"test": "node build.mjs && vitest run",
+		"test": "node build.mjs && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_OBJECT_DIRECTORY vitest run",
 		"prepare": "node build.mjs && tsc -p tsconfig.build.json"
 	},
 	"devDependencies": {
