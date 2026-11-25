@@ -208,7 +208,7 @@ The binary `memlens` runs without the harness and takes one command.
 ```text
 memlens note "<body>" [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never] [--ts iso]
 memlens find "<words>" [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
-memlens open <target> [--scope key] [--no-longform] [--offset N]
+memlens open <target> [--scope key] [--no-longform] [--json]
 memlens forget <target> [--scope key] [--reason "text"]
 memlens restore <target> [--scope key] [--reason "text"]
 memlens review [--scope key]... [--limit 50] [--json]
@@ -273,7 +273,7 @@ An error carries a code and a message, and the exit code follows the kind.
 | ---------------- | ------------------------------------------------------------------------------------ |
 | `body`           | 384 characters required, 512 characters accepted                                     |
 | `longform`       | 16 384 characters                                                                    |
-| `memory_open`    | The longform: 8 192 characters for `head`, 16 384 for `all`, and the answer continues with `offset` |
+| `memory_open`    | The longform: 2 048 characters for `head`, 16 384 for `all`, and the answer continues with `offset` |
 | Node             | Target 512 characters, limit 640 characters, a cut with a flag                        |
 | Input of a merge | Two children. At level 1 a leaf gives its body and its longform.                   |
 | Budget           | The profile gives `here` and `directions` in lines                                    |

@@ -112,14 +112,17 @@ interface EntryText {
 	readonly longform?: string;
 	readonly longformChars: number;
 	readonly longformOffset: number;
+	readonly longformTruncated: boolean;
 }
 
 function entryText(entry: EntryText): string {
 	const head = `${entry.addr}  ${entry.ts}  review ${entry.review_at ?? "never"}`;
 	const document =
-		entry.longform === undefined
+		entry.longformChars === 0
 			? ""
-			: `\n--- longform ${entry.longformChars} chars, next offset ${entry.longformOffset} ---\n${entry.longform}`;
+			: entry.longformTruncated
+				? `\n--- longform ${entry.longformChars} chars, next offset ${entry.longformOffset} ---\n${entry.longform ?? ""}`
+				: `\n--- longform ${entry.longformChars} chars ---\n${entry.longform ?? ""}`;
 	return `${head}\n${entry.body}${document}`;
 }
 

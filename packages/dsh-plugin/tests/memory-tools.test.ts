@@ -29,6 +29,7 @@ import {
 	directionsData,
 	FIND_DEFAULT_LIMIT,
 	hide,
+	LONGFORM_HEAD,
 	liveCounts,
 	loadView,
 	type Note,
@@ -463,6 +464,56 @@ describe("memory tools of one agent", () => {
 		expect(render(main, "memory_open", {}, opened).split("\n")[0]).toBe(
 			`${saved.addr}  ${day}  review ${opened.review_at}`,
 		);
+	});
+
+	it("gives a short longform with no offset hint", async () => {
+		const main = subject("main", "all");
+		const saved = (await call(main, "memory_note", {
+			body: "A short document.",
+			longform: "x".repeat(100),
+		})) as { addr: string };
+
+		const opened = (await call(main, "memory_open", {
+			target: saved.addr,
+		})) as { longformChars: number };
+		const text = render(main, "memory_open", {}, opened);
+
+		expect(opened.longformChars).toBe(100);
+		expect(text).toContain("--- longform 100 chars ---");
+		expect(text).not.toContain("next offset");
+	});
+
+	it("gives the head of a long document and the next offset", async () => {
+		const main = subject("main", "all");
+		const saved = (await call(main, "memory_note", {
+			body: "A long document.",
+			longform: "y".repeat(5000),
+		})) as { addr: string };
+
+		const opened = (await call(main, "memory_open", {
+			target: saved.addr,
+		})) as { longform: string; longformOffset: number };
+		const text = render(main, "memory_open", {}, opened);
+
+		expect(opened.longform).toHaveLength(LONGFORM_HEAD);
+		expect(opened.longformOffset).toBe(LONGFORM_HEAD);
+		expect(text).toContain(
+			`--- longform 5000 chars, next offset ${LONGFORM_HEAD} ---`,
+		);
+	});
+
+	it("gives no longform section for a note without a document", async () => {
+		const main = subject("main", "all");
+		const saved = (await call(main, "memory_note", {
+			body: "A plain note.",
+		})) as { addr: string };
+
+		const opened = (await call(main, "memory_open", {
+			target: saved.addr,
+		})) as { longformChars: number };
+
+		expect(opened.longformChars).toBe(0);
+		expect(render(main, "memory_open", {}, opened)).not.toContain("longform");
 	});
 
 	it("gives the model back the day that the model wrote", async () => {

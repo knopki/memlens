@@ -61,7 +61,7 @@ const USAGE = `Usage: ${NAME} <command> [flags]
 
   note <body> [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never] [--ts iso]
   find <words> [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
-  open <target> [--scope key] [--no-longform] [--offset N] [--json]
+  open <target> [--scope key] [--no-longform] [--json]
   forget <target> [--scope key] [--reason "text"]
   restore <target> [--scope key] [--reason "text"]
   review [--scope key]... [--limit 50] [--json]
@@ -120,7 +120,7 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 		run: openCommand,
 		spec: {
 			positional: ["target"],
-			flags: { scope: 1, "no-longform": 0, offset: 1, json: 0 },
+			flags: { scope: 1, "no-longform": 0, json: 0 },
 		},
 	},
 	forget: {

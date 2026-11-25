@@ -62,7 +62,7 @@ export const FIND_DEFAULT_LIMIT = 10;
 export const FIND_MAX_PER_SCOPE = 50;
 
 /** The character count of the head of a longform. */
-export const LONGFORM_HEAD = 8192;
+export const LONGFORM_HEAD = 2048;
 
 /** The character count of a complete longform answer. */
 export const LONGFORM_ALL = 16_384;
@@ -152,7 +152,7 @@ export function filterHits(
 // #region FUNC_openNote
 /**
  * @purpose Give one note with the visible part of its document.
- * @invariants The mode head gives 8192 characters at most, and all gives 16384.
+ * @invariants The mode head gives 2048 characters at most, and all gives 16384.
  * The offset cuts the document from its start. The answer reports the next offset and the rest flag.
  * The mode none omits the document text and keeps the full length.
  */

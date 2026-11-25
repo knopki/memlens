@@ -110,8 +110,8 @@ function renderHit(hit: IndexHit): string {
  *
  * @purpose Show one note with its document, or the children of one range, so a user reads the
  *   content behind one line.
- * @invariants The flag --no-longform omits the document text. The default mode gives the first 8192
- *   characters of the longform, and --offset continues it.
+ * @invariants The flag --no-longform omits the document text. The default mode gives the whole
+ *   longform.
  */
 export async function openCommand(
 	args: ParsedArgs,
@@ -157,18 +157,13 @@ function openPos(
 	record: Note,
 	args: ParsedArgs,
 ): { value: unknown; text: string; scope: ScopeKey } {
-	const mode = args.flags["no-longform"] === true ? "none" : "head";
-	const entry = openNote(
-		record.scope,
-		record,
-		mode,
-		countFlag(args.flags, "offset", 0),
-	);
-	const text = `${entry.addr}  ${dayOf(entry.ts)}  ${record.kind}  review ${entry.review_at ? dayOf(entry.review_at) : "never"}\n${entry.body}${
-		entry.longform === undefined
+	const mode = args.flags["no-longform"] === true ? "none" : "all";
+	const entry = openNote(record.scope, record, mode);
+	const document =
+		entry.longformChars === 0
 			? ""
-			: `\n--- longform ${entry.longformChars} chars, next offset ${entry.longformOffset} ---\n${entry.longform}`
-	}`;
+			: `\n--- longform ${entry.longformChars} chars ---\n${entry.longform ?? ""}`;
+	const text = `${entry.addr}  ${dayOf(entry.ts)}  ${record.kind}  review ${entry.review_at ? dayOf(entry.review_at) : "never"}\n${entry.body}${document}`;
 	return { value: entry, text, scope: record.scope };
 }
 

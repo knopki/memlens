@@ -576,6 +576,49 @@ describe("@memlens/cli commands", () => {
 		},
 	);
 
+	it("gives the whole longform and no offset hint", async () => {
+		const test = makeEnv();
+		const file = join(test.home, "doc.md");
+		const longform = "doc ".repeat(500);
+		writeFileSync(file, longform);
+		const saved = await run(
+			test,
+			"note",
+			"A decision",
+			"--scope",
+			"project:acme/x",
+			"--longform",
+			file,
+		);
+		expect(saved.code).toBe(0);
+
+		const opened = await run(test, "open", "project:acme/x#0");
+
+		expect(opened.code).toBe(0);
+		expect(opened.out).toContain(`--- longform ${longform.length} chars ---`);
+		expect(opened.out).toContain("doc doc doc");
+		expect(opened.out).not.toContain("next offset");
+		const offset = await run(
+			test,
+			"open",
+			"project:acme/x#0",
+			"--offset",
+			"10",
+		);
+		expect(offset.code).toBe(2);
+		expect(offset.err).toContain("--offset");
+	});
+
+	it("gives no longform section for a note without a document", async () => {
+		const test = makeEnv();
+		await run(test, "note", "A plain fact", "--scope", "project:acme/x");
+
+		const opened = await run(test, "open", "project:acme/x#0");
+
+		expect(opened.code).toBe(0);
+		expect(opened.out).not.toContain("longform");
+	});
+
 	it("writes a note of a past time with the flag --ts", async () => {
 		const test = makeEnv();
 		await run(test, "note", "Later fact", "--scope", "project:acme/x");
