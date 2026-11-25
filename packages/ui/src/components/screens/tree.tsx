@@ -5,7 +5,7 @@
  * @scope The frontier list, the line rows, the legend, the children panel, and the inspector. NOT:
  * the host calls and the address.
  * @invariants A range line opens its children, and a note line opens its record. A temporary line
- * shows its period only.
+ * shows the text of its range.
  * @invariants The live count of the scope comes from the scope panel. The range title comes from the
  * open children, so the screen reads no record row and no node row.
  * @keywords tree, frontier, line, range, note, inspector, react
@@ -53,7 +53,7 @@ function FrontierLine({
 	return (
 		<Button
 			className={className}
-			title={text || api.t("notBuilt")}
+			title={text || dateSpan(line.from, line.to)}
 			onClick={() => void api.call.openTarget(target)}
 		>
 			<span className="id">{target}</span>
@@ -66,7 +66,7 @@ function FrontierLine({
 // #region COMPONENT_ChildLine
 /**
  * @purpose Show one child line of an open range and open that child.
- * @invariants A child without a summary takes the pending class and shows its period.
+ * @invariants A child without a summary takes the pending class.
  */
 interface ChildLineProps {
 	readonly api: ConsoleApi;
@@ -77,12 +77,12 @@ function ChildLine({ api, line }: ChildLineProps): JSX.Element {
 	return (
 		<Button
 			className={line.built ? "line" : "line pending"}
-			title={line.built ? line.text : api.t("notBuilt")}
+			title={line.text || dateSpan(line.ts_from, line.ts_to)}
 			onClick={() => void api.call.openTarget(line.addr)}
 		>
 			<span className="id">{line.addr}</span>
 			<span className="tx">
-				{line.built ? line.text : dateSpan(line.ts_from, line.ts_to)}
+				{line.text || dateSpan(line.ts_from, line.ts_to)}
 			</span>
 		</Button>
 	);
@@ -93,7 +93,7 @@ function ChildLine({ api, line }: ChildLineProps): JSX.Element {
 /**
  * @purpose Show the frontier of the selected scope beside the inspector.
  * @invariants A range line opens its children, and a note line opens its record. A temporary line
- * shows its period only.
+ * shows the text of its range.
  * @invariants The live count of the scope comes from the scope panel. The range title comes from the
  * open children, so the screen reads no record row and no node row.
  */

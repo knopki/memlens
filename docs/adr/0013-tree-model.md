@@ -26,9 +26,10 @@ the level, and the start. A pair merges though its node is missing or dirty, and
 takes the place of the two lines. The render calls no model. Empty ranges do not render and do not
 count against the budget.
 
-A temporary line holds the period from its first live record to its last live record, and no text. A
-non-empty slice ends with the greatest live position as a record. No merge covers that position. When
-no pair merges and the slice is above its budget, the oldest lines leave the slice.
+A temporary line holds the period from its first live record to its last live record. The render
+joins the text of its two children and cuts the result at the line limit. A non-empty slice ends
+with the greatest live position as a record. No merge covers that position. When no pair merges and
+the slice is above its budget, the oldest lines leave the slice.
 
 ## Alternatives
 

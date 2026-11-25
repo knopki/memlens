@@ -314,19 +314,35 @@ export class ConsoleReader {
 		const range = { start, level };
 		if (width !== 2 ** level || start % width !== 0) {
 			const period = this.period(range, end + 1);
+			const rows = this.statement(
+				"SELECT substr(CAST(body || CASE WHEN longform IS NOT NULL AND longform != '' THEN char(10) || longform ELSE '' END AS BLOB), 1, ?) AS text FROM notes WHERE scope = ? AND pos >= ? AND pos <= ? AND state = 'live' ORDER BY pos LIMIT ?",
+			).all(LINE_LIMIT * 4, this.scope, start, end, LINE_LIMIT) as unknown as {
+				readonly text: Uint8Array;
+			}[];
+			const joined = cutAtWord(
+				rows
+					.map((row) =>
+						Buffer.from(row.text).toString("utf8").slice(0, LINE_LIMIT),
+					)
+					.join("; "),
+				LINE_LIMIT,
+			);
 			const text = dateSpan(period.from, period.to);
 			return {
 				text,
-				children: [
-					{
-						addr: renderAddress(this.scope, start, null),
-						ts_from: period.from,
-						ts_to: period.to,
-						text: "",
-						built: false,
-						chars: 0,
-					},
-				],
+				children:
+					rows.length === 0
+						? []
+						: [
+								{
+									addr: renderAddress(this.scope, start, null),
+									ts_from: period.from,
+									ts_to: period.to,
+									text: joined,
+									built: false,
+									chars: joined.length,
+								},
+							],
 			};
 		}
 		const selected = this.line(range);
@@ -357,7 +373,11 @@ export class ConsoleReader {
 			const period = row
 				? { from: String(row.first), to: String(row.last) }
 				: this.period(half);
-			const text = row ? String(row.text) : "";
+			const text = row
+				? String(row.text)
+				: half.level > 0
+					? cutAtWord(this.rangeText(half), LINE_LIMIT)
+					: "";
 			children.push({
 				addr: renderAddress(
 					this.scope,

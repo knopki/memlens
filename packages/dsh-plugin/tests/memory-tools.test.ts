@@ -582,6 +582,44 @@ describe("memory tools of one agent", () => {
 		]);
 	});
 
+	it("gives the text of a range without a node", async () => {
+		seed("user:notes", "The first record.", null, "2026-01-01T00:00:00.000Z");
+		seed("user:notes", "The second record.", null, "2026-01-02T00:00:00.000Z");
+		seed("user:notes", "The third record.", null, "2026-01-03T00:00:00.000Z");
+		const main = subject("main", "all");
+
+		const answer = (await call(main, "memory_open", {
+			target: "0-3",
+		})) as {
+			kind: string;
+			children: {
+				addr: string;
+				ts_from: string;
+				ts_to: string;
+				text: string;
+				built: boolean;
+			}[];
+		};
+
+		expect(answer.kind).toBe("children");
+		expect(answer.children.map((line) => line.text)).toEqual([
+			"The first record.; The second record.",
+			"The third record.",
+		]);
+		expect(answer.children.map((line) => line.built)).toEqual([false, false]);
+		expect(answer.children.map((line) => line.ts_from)).toEqual([
+			"2026-01-01",
+			"2026-01-03",
+		]);
+		expect(answer.children.map((line) => line.ts_to)).toEqual([
+			"2026-01-02",
+			"2026-01-03",
+		]);
+		const text = render(main, "memory_open", { target: "0-3" }, answer);
+		expect(text).toContain("The first record.; The second record.");
+		expect(text).not.toContain("(no summary yet)");
+	});
+
 	it("maps each scope with its newest day and its summary", async () => {
 		seed("user:notes", "The note of the active scope.");
 		seed("project:memlens", "The note of the project scope.");
@@ -648,6 +686,33 @@ describe("memory tools of one agent", () => {
 		expect(answer.lines.map((line) => line.text)).toEqual(
 			slice.map((line) => textOfLine(line)),
 		);
+	});
+
+	it("gives the text of a map line without a summary", async () => {
+		for (let pos = 0; pos < 21; pos += 1) {
+			const day = String(pos + 1).padStart(2, "0");
+			seed(
+				"user:notes",
+				`Record ${pos}.`,
+				null,
+				`2026-01-${day}T00:00:00.000Z`,
+			);
+		}
+		const main = subject("main", "all");
+
+		const answer = (await call(main, "memory_map", {
+			scope: "user:notes",
+		})) as {
+			lines: { addr: string; text: string; built: boolean }[];
+		};
+
+		expect(answer.lines).toHaveLength(20);
+		expect(answer.lines[0]?.addr).toBe("user:notes#0-1");
+		expect(answer.lines[0]?.text).toBe("Record 0.; Record 1.");
+		expect(answer.lines[0]?.built).toBe(false);
+		const text = render(main, "memory_map", { scope: "user:notes" }, answer);
+		expect(text).toContain("Record 0.; Record 1.");
+		expect(text).not.toContain("(no summary yet)");
 	});
 
 	it("refuses a foreign scope on each read tool", async () => {

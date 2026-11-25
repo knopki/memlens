@@ -334,9 +334,9 @@ describe("openRange", () => {
 					addr: "x:a#2-3",
 					ts_from: "2026-11-03T00:00:00.000Z",
 					ts_to: "2026-11-03T00:00:00.000Z",
-					text: "",
+					text: "third",
 					built: false,
-					chars: 0,
+					chars: 5,
 				},
 			],
 		});
@@ -351,9 +351,9 @@ describe("openRange", () => {
 			addr: "x:a#0-1",
 			ts_from: "2026-11-01T00:00:00.000Z",
 			ts_to: "2026-11-02T00:00:00.000Z",
-			text: "",
+			text: "changed; second",
 			built: false,
-			chars: 0,
+			chars: 15,
 		});
 	});
 
@@ -377,12 +377,13 @@ describe("openRange", () => {
 				addr: "x:a#1",
 				ts_from: "2026-11-02T00:00:00.000Z",
 				ts_to: "2026-11-02T00:00:00.000Z",
-				text: "",
+				text: "second",
 				built: false,
-				chars: 0,
+				chars: 6,
 			},
 		]);
 		expect(openRange("x:a" as ScopeKey, view, 8, 9).children).toEqual([]);
+		expect(openRange("x:a" as ScopeKey, view, 2, 3).children).toEqual([]);
 	});
 });
 

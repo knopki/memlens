@@ -83,8 +83,6 @@ const en = {
 	inspector: "Inspector",
 	selectLine: "Select a line.",
 	children: "Children",
-	noSummary: "No summary yet.",
-	notBuilt: "no summary yet",
 	id: "id",
 	time: "time",
 	kind: "kind",

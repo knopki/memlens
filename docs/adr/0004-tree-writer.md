@@ -11,8 +11,8 @@ agent loop. A derived work list is not durable.
 
 A binary tree over `pos` keeps the view under the budget. The fold merges the minimum number of
 pairs. It runs only while the rendered line count exceeds the budget, and it stops at once when the
-count fits. A range without a valid node gives a temporary line with its dates and no text. The
-render calls no model and waits for no compaction.
+count fits. A range without a valid node gives a temporary line with its dates and the text of its
+two children. The render calls no model and waits for no compaction.
 
 The compaction runs outside the agent loop. It derives the candidates from the dirty non-empty
 ranges up to the root. A range with no node row is a candidate. The store keeps no queue, no job

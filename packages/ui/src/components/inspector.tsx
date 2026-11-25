@@ -40,11 +40,7 @@ export function Inspector({
 	if (result.kind !== "entry")
 		return (
 			<Panel title={title} className="ins">
-				{rangeText ? (
-					<div className="quote">{rangeText}</div>
-				) : (
-					<p className="muted">{api.t("noSummary")}</p>
-				)}
+				{rangeText ? <div className="quote">{rangeText}</div> : null}
 			</Panel>
 		);
 	return (

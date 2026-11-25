@@ -21,11 +21,13 @@ import {
 	nodeAt,
 	nodeValid,
 	notesInRange,
+	textOfRange,
 	type View,
 } from "../store/view.js";
 import type { IsoTime, NoteKind, ScopeKey } from "../types/primitives.js";
 import { renderAddress } from "./address-form.js";
 import { dayOf } from "./day.js";
+import { cutAtWord, LINE_LIMIT, noteText } from "./tree.js";
 
 const debug = debuglog("memlens:reads");
 
@@ -195,8 +197,10 @@ export function openNote(
 /**
  * @purpose Give the non-empty child lines of one range of positions.
  * @invariants An aligned range splits into its two halves. Each non-empty half gives one line.
- * A record half gives its body. A clean node half gives its summary. Another half gives a temporary line.
- * A range that matches no node geometry gives one line that holds the first pos.
+ * A record half gives its body. A clean node half gives its summary. Another half gives a temporary
+ * line with the text of its two children.
+ * A range that matches no node geometry gives one line with the text of its live notes, or no line
+ * when it holds none.
  */
 export function openRange(
 	scope: ScopeKey,
@@ -227,15 +231,38 @@ function unalignedChildren(
 	start: number,
 	end: number,
 ): OpenChildren {
-	debug("Range opened", { event: "open_range", start, end, lines: 1 });
+	const notes = notesInRange(view, start, end + 1);
+	debug("Range opened", {
+		event: "open_range",
+		start,
+		end,
+		lines: notes.length === 0 ? 0 : 1,
+	});
 	return {
 		kind: "children",
-		children: [
-			line(scope, period(notesInRange(view, start, end + 1)), start, null),
-		],
+		children:
+			notes.length === 0
+				? []
+				: [
+						line(
+							scope,
+							period(notes),
+							start,
+							null,
+							notesText(notes, LINE_LIMIT),
+						),
+					],
 	};
 }
 // #endregion FUNC_unalignedChildren
+
+/** Give the text of a list of live notes, as one range line shows it. */
+function notesText(notes: readonly Note[], limit: number): string {
+	return cutAtWord(
+		notes.map((note) => noteText(note.body, note.longform, limit)).join("; "),
+		limit,
+	);
+}
 
 // #region FUNC_halfChildren
 /** @purpose Give one line for each non-empty half of an aligned range. */
@@ -278,7 +305,7 @@ function recordLine(scope: ScopeKey, note: Note): OpenLine {
 // #endregion FUNC_recordLine
 
 // #region FUNC_nodeLine
-/** @purpose Render one half as its clean node, or as a temporary line. */
+/** @purpose Render one half as its clean node, or as a temporary line with the text of its children. */
 function nodeLine(
 	scope: ScopeKey,
 	view: View,
@@ -287,7 +314,13 @@ function nodeLine(
 ): OpenLine {
 	const node = nodeAt(view, half.level, half.start);
 	if (node === undefined || !nodeValid(view, node))
-		return line(scope, period(notes), half.start, half);
+		return line(
+			scope,
+			period(notes),
+			half.start,
+			half,
+			textOfRange(view, half),
+		);
 	return {
 		addr: renderAddress(scope, node.start, node.start + 2 ** node.level - 1),
 		ts_from: node.ts_from,
@@ -422,11 +455,13 @@ function period(notes: readonly { readonly ts: string }[]): {
 	return { from: first?.ts ?? "", to: last?.ts ?? "" };
 }
 
+/** Give one line without a summary, with its dates and an optional text. */
 function line(
 	scope: ScopeKey,
 	dates: { from: string; to: string },
 	pos: number,
 	half: { readonly start: number; readonly level: number } | null,
+	text = "",
 ): OpenLine {
 	return {
 		addr: half
@@ -434,9 +469,9 @@ function line(
 			: renderAddress(scope, pos, null),
 		ts_from: dates.from,
 		ts_to: dates.to,
-		text: "",
+		text,
 		built: false,
-		chars: 0,
+		chars: text.length,
 	};
 }
 

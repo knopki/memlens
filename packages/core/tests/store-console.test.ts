@@ -310,6 +310,22 @@ it("keeps the longform text and the unicode text of a temporary line", () => {
 	});
 });
 
+it("keeps the joined text of an unaligned range with a longform", () => {
+	const store = newStore();
+	const scope: ScopeKey = "project:l";
+	addNote(store, scope, 0, "first");
+	addNote(store, scope, 1, "тело", "док".repeat(800));
+	addNote(store, scope, 2, "third");
+	addNote(store, scope, 3, "fourth");
+	addNote(store, scope, 4, "пятый", "док");
+	expectSameChildren(store, scope);
+	const text =
+		new ConsoleReader(store.handle(), scope).children(1, 2).children[0]?.text ??
+		"";
+	expect(text.startsWith("тело\nдок")).toBe(true);
+	expect(text.length).toBeLessThanOrEqual(LINE_LIMIT);
+});
+
 it("keeps the text after an embedded NUL of a temporary line", () => {
 	const store = newStore();
 	const scope: ScopeKey = "project:n";

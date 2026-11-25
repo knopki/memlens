@@ -56,7 +56,7 @@ function CatalogLine({
 	return (
 		<Button
 			className={className}
-			title={text || api.t("notBuilt")}
+			title={text || dateSpan(line.from, line.to)}
 			onClick={() => {
 				if (scope) void api.call.openScopeTree(scope);
 				else void api.call.openCatalog(range);

@@ -619,6 +619,37 @@ describe("@memlens/cli commands", () => {
 		expect(opened.out).not.toContain("longform");
 	});
 
+	it("opens a range in days and with the text of each half", async () => {
+		const test = makeEnv();
+		for (const [index, body] of [
+			"First fact",
+			"Second fact",
+			"Third fact",
+		].entries()) {
+			const saved = await run(
+				test,
+				"note",
+				body,
+				"--scope",
+				"project:acme/x",
+				"--ts",
+				`2026-01-0${index + 1}T00:00:00Z`,
+			);
+			expect(saved.code).toBe(0);
+		}
+
+		const opened = await run(test, "open", "project:acme/x#0-3");
+		expect(opened.code).toBe(0);
+		expect(opened.out).toContain("First fact; Second fact");
+		expect(opened.out).toContain("Third fact");
+		expect(opened.out).not.toContain("T00");
+		expect(opened.out).not.toContain("no summary yet");
+
+		const empty = await run(test, "open", "project:acme/x#8-9");
+		expect(empty.code).toBe(0);
+		expect(empty.out).toContain("The range holds no record.");
+	});
+
 	it("writes a note of a past time with the flag --ts", async () => {
 		const test = makeEnv();
 		await run(test, "note", "Later fact", "--scope", "project:acme/x");

@@ -226,7 +226,7 @@ export function mapTool(memory: AgentMemory): ToolDefinition {
 						: value.lines
 								.map(
 									(line) =>
-										`${line.addr}  ${line.ts_from}..${line.ts_to}  ${line.built ? line.text : "(no summary yet)"}`,
+										`${line.addr}  ${line.ts_from}..${line.ts_to}  ${line.text}`,
 								)
 								.join("\n"),
 				),

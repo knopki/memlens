@@ -230,12 +230,36 @@ describe("tree screen", () => {
 		expect(markup).toContain('<span class="tx">first note</span>');
 		expect(markup).toContain('title="range summary"');
 		expect(markup).toContain('<div class="quote">range summary</div>');
-		expect(markup).not.toContain("No summary yet.");
 		expect(markup).toContain('<div class="column">');
 		expect(markup).toContain("Children · project:alpha#0-1");
 		expect(markup).toContain('<span class="id">project:alpha#1</span>');
 		expect(markup).toContain('class="btn line pending"');
 		expect(markup).toContain('<span class="tx">2026-11-02</span>');
+	});
+
+	it("shows the text of a child without a summary", () => {
+		const selection = {
+			target: "project:alpha#0-1",
+			result: {
+				kind: "children",
+				text: "range summary",
+				children: [
+					{
+						addr: "project:alpha#1",
+						ts_from: "2026-11-02T12:00:00Z",
+						ts_to: "2026-11-02T15:00:00Z",
+						text: "joined child",
+						built: false,
+						chars: 12,
+					},
+				],
+			},
+		} as Selection;
+		const markup = renderToStaticMarkup(
+			<TreeView api={apiOf(stateOf({ screen: "tree", selection }))} />,
+		);
+		expect(markup).toContain('class="btn line pending"');
+		expect(markup).toContain('<span class="tx">joined child</span>');
 	});
 
 	it("shows a temporary frontier line in the inspector", () => {

@@ -19,6 +19,7 @@ import {
 	joinBody,
 	LINE_LIMIT,
 	lowerBound,
+	noteText,
 	topRangeOf,
 } from "../domain/tree.js";
 import type { ScopeKey } from "../types/primitives.js";
@@ -89,9 +90,21 @@ export function totalOf(view: View): Pos {
 }
 // #endregion FUNC_totalOf
 
+/** Each index of one view, so a read builds it once for its halves and its lines. */
+const indexes = new WeakMap<View, Index>();
+
 // #region FUNC_indexOf
 /** @purpose Index one view for a render, so each lookup costs a map read or a binary search. */
 export function indexOf(view: View): Index {
+	const cached = indexes.get(view);
+	if (cached !== undefined) return cached;
+	const index = buildIndexOf(view);
+	indexes.set(view, index);
+	return index;
+}
+// #endregion FUNC_indexOf
+
+function buildIndexOf(view: View): Index {
 	const notes = new Map<Pos, Note>();
 	const live: Note[] = [];
 	for (const note of view.notes) {
@@ -108,7 +121,6 @@ export function indexOf(view: View): Index {
 		total: totalOf(view),
 	};
 }
-// #endregion FUNC_indexOf
 
 function liveInIndex(index: Index, from: Pos, to: Pos): boolean {
 	const first = lowerBound(index.slots, from);
@@ -256,8 +268,7 @@ function rangeText(index: Index, range: Range, limit: number): string {
 	if (range.level === 0) {
 		const note = index.notes.get(range.start);
 		if (note === undefined || note.state !== "live") return "";
-		const text = note.longform ? `${note.body}\n${note.longform}` : note.body;
-		return text.slice(0, limit);
+		return noteText(note.body, note.longform, limit);
 	}
 	const node = index.nodes.get(nodeKey(range.level, range.start));
 	if (node !== undefined && validOf(index, node))
@@ -270,6 +281,17 @@ function rangeText(index: Index, range: Range, limit: number): string {
 	);
 }
 // #endregion FUNC_rangeText
+
+// #region FUNC_textOfRange
+/** @purpose Give the text of one range, as the slice renders it. */
+export function textOfRange(
+	view: View,
+	range: Range,
+	limit = LINE_LIMIT,
+): string {
+	return cutAtWord(rangeText(indexOf(view), range, limit), limit);
+}
+// #endregion FUNC_textOfRange
 
 // #region FUNC_joinText
 /**

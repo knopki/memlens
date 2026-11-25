@@ -49,8 +49,6 @@ export const zh: Table = {
 	inspector: "检查器",
 	selectLine: "请选择一行。",
 	children: "子节点",
-	noSummary: "尚无摘要。",
-	notBuilt: "尚无摘要",
 	id: "id",
 	time: "时间",
 	kind: "种类",

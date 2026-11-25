@@ -50,8 +50,6 @@ export const ja: Table = {
 	inspector: "インスペクター",
 	selectLine: "行を選択してください。",
 	children: "子",
-	noSummary: "要約はまだありません。",
-	notBuilt: "要約はまだありません",
 	id: "id",
 	time: "時刻",
 	kind: "種類",

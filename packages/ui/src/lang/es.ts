@@ -50,8 +50,6 @@ export const es: Table = {
 	inspector: "Inspector",
 	selectLine: "Seleccione una línea.",
 	children: "Hijos",
-	noSummary: "Aún no hay resumen.",
-	notBuilt: "aún sin resumen",
 	id: "id",
 	time: "hora",
 	kind: "tipo",

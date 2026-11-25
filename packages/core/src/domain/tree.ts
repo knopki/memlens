@@ -27,6 +27,17 @@ export function cutAtWord(text: string, limit: number): string {
 }
 // #endregion FUNC_cutAtWord
 
+// #region FUNC_noteText
+/** @purpose Give the text of one note, so each render shows the body and the document in one form. */
+export function noteText(
+	body: string,
+	longform: string | null,
+	limit = LINE_LIMIT,
+): string {
+	return (longform ? `${body}\n${longform}` : body).slice(0, limit);
+}
+// #endregion FUNC_noteText
+
 // #region FUNC_topRangeOf
 /**
  * @purpose Keep the root extent tied to all assigned positions, without a tree.

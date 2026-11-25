@@ -185,12 +185,15 @@ function openRangeAddress(
 		start,
 		end,
 	);
-	const text = children.children
-		.map(
-			(line) =>
-				`${line.addr}  ${line.ts_from}..${line.ts_to}  ${line.built ? line.text : "(no summary yet)"}`,
-		)
-		.join("\n");
+	const text =
+		children.children.length === 0
+			? "The range holds no record."
+			: children.children
+					.map(
+						(line) =>
+							`${line.addr}  ${dayOf(line.ts_from)}..${dayOf(line.ts_to)}  ${line.text}`,
+					)
+					.join("\n");
 	return { value: children, text, scope };
 }
 
