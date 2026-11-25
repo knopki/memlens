@@ -127,7 +127,7 @@ proposal with no human.
 
 ### Version
 
-The lowest accepted version is DeepSeek Harness `0.2.2-rc.3`. The manifest accepts `>=0.2.2-rc.3`.
+The lowest accepted version is DeepSeek Harness `0.2.2-rc.3`. The manifest accepts `>=0.2.2-rc.3 <0.3.0-0`.
 
 -----
 

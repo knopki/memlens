@@ -133,7 +133,7 @@ abgelaufenen Vorschlag ohne Menschen.
 ### Version
 
 Die niedrigste akzeptierte Version ist DeepSeek Harness `0.2.2-rc.3`. Das Manifest akzeptiert
-`>=0.2.2-rc.3`.
+`>=0.2.2-rc.3 <0.3.0-0`.
 
 -----
 
