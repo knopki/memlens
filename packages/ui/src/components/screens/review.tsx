@@ -87,14 +87,14 @@ function ReviewTable({
  * @purpose List the due notes of the selected scope and the next notes.
  * @invariants A kind choice reloads the view with that one kind.
  */
-export function Review({ api }: ScreenProps): JSX.Element {
+export function Review({ api }: ScreenProps): JSX.Element | null {
 	const state = useSyncExternalStore(
 		api.subscribe,
 		() => api.state,
 		() => api.state,
 	);
 	const model = state.model;
-	if (!model) return <></>;
+	if (!model) return null;
 	const t = api.t;
 	const due = model.review ?? [];
 	const next = model.reviewNext ?? [];

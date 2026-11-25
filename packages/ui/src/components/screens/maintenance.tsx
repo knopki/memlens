@@ -30,7 +30,7 @@ import { CompactionPanel } from "./compaction.js";
  * @invariants The standalone host gives no runtime, so the runtime panel stays out.
  * @invariants The runtime watch runs only while this screen is mounted.
  */
-export function Maintenance({ api }: ScreenProps): JSX.Element {
+export function Maintenance({ api }: ScreenProps): JSX.Element | null {
 	const { t, state } = api;
 	const { watchRuntime } = api.call;
 	useEffect(() => {
@@ -40,7 +40,7 @@ export function Maintenance({ api }: ScreenProps): JSX.Element {
 		};
 	}, [watchRuntime]);
 	const model = state.model;
-	if (!model) return <></>;
+	if (!model) return null;
 	const totals = model.totals;
 	const candidates = model.candidates ?? [];
 	return (

@@ -97,14 +97,14 @@ function ChildLine({ api, line }: ChildLineProps): JSX.Element {
  * @invariants The live count of the scope comes from the scope panel. The range title comes from the
  * open children, so the screen reads no record row and no node row.
  */
-export function TreeView({ api }: ScreenProps): JSX.Element {
+export function TreeView({ api }: ScreenProps): JSX.Element | null {
 	const state = useSyncExternalStore(
 		api.subscribe,
 		() => api.state,
 		() => api.state,
 	);
 	const model = state.model;
-	if (!model) return <></>;
+	if (!model) return null;
 	const lines = model.frontier ?? [];
 	const live = model.scopes.find((item) => item.key === state.scope)?.live ?? 0;
 	const selection = state.selection;
