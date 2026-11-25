@@ -11,6 +11,8 @@
  * @invariants Both faces read the same descriptors, so the descriptor ids and the wire names are
  *   equal.
  * @invariants The wire carries a text field as text, so the console operations keep their rules.
+ * @invariants A view input names one screen. The view result holds the fields of that screen only,
+ *   so a screen answer carries no document of another screen.
  * @invariants The wire input of each method holds the surface identity, because the transport
  *   carries no query string.
  * @usecases
@@ -25,7 +27,7 @@ import type {
 	TypertCodec,
 	TypertRemoteContribution,
 } from "@deepseek-ai/dsh-typert-protocol";
-import { NOTE_KINDS } from "@memlens/core/view";
+import { CONSOLE_SCREENS, NOTE_KINDS } from "@memlens/core/view";
 import { z } from "zod";
 
 /** The npm package that owns the console methods. */
@@ -45,6 +47,9 @@ const noteKind = z.enum(NOTE_KINDS);
 
 /** A note kind or the empty text that the console sends when no kind narrows the read. */
 const anyKind = z.union([noteKind, z.literal("")]);
+
+/** The screen of one view request. The host defaults to the overview when the input names none. */
+const screen = z.enum(CONSOLE_SCREENS);
 
 /** A scope key. The console operations check the key against the profile of the request. */
 const scopeKey = z.string();
@@ -118,6 +123,7 @@ const inputs = {
 		profile: z.string().optional(),
 		scope: z.string().optional(),
 		kind: anyKind.optional(),
+		screen: screen.optional(),
 	}),
 	search: z.strictObject({
 		session: z.string().optional(),
@@ -259,77 +265,59 @@ const catalogLine = z.discriminatedUnion("kind", [
 	}),
 ]);
 
-/** One node row of the store. */
-const nodeRow = z.strictObject({
-	scope: scopeKey,
+/** One scope panel of the console. It holds the counts of the scope and no line of it. */
+const scopePanel = z.strictObject({
+	key: scopeKey,
+	total: z.number(),
+	live: z.number(),
+	hidden: z.number(),
+	deleted: z.number(),
+});
+
+/** The counts of the whole store for the maintenance screen. */
+const totals = z.strictObject({
+	records: z.number(),
+	nodes: z.number(),
+	candidates: z.number(),
+});
+
+/** The counts of one level of the store tree for the maintenance screen. */
+const levelRow = z.strictObject({
 	level: z.number(),
-	start: z.number(),
-	summary: z.string(),
-	ts_from: z.string(),
-	ts_to: z.string(),
-	built_v: z.string(),
-	a_key: z.string().nullable(),
-	b_key: z.string().nullable(),
+	nodes: z.number(),
+	dirty: z.number(),
+	candidates: z.number(),
 });
 
-/** One record row of the console model. */
-const recordRow = z.strictObject({
-	id: z.string(),
-	scope: scopeKey,
-	pos: z.number(),
-	order: z.string(),
-	state: z.enum(["live", "hidden", "deleted"]),
-	body: z.string(),
-	kind: noteKind,
-	ts: z.string(),
-	review_at: z.string().nullable(),
-	recorded_at: z.string(),
-	modified_at: z.string(),
-	longform: z.string().nullable(),
-	refs: z.array(z.string()),
-	supersedes: z.array(z.string()),
-	superseded_by: z.string().nullable(),
-	content_cleared: z.boolean(),
-	session: z.string(),
-	turn: z.string(),
-	preset: z.string(),
-});
-
-/** The fields of the console model, so the view result and the model keep one shape. */
+/** The fields that each console screen shares, so no host adds its own model. */
 const modelFields = {
 	profile: z.string(),
 	scope: scopeKey,
-	scopes: z.array(
-		z.strictObject({
-			key: scopeKey,
-			total: z.number(),
-			live: z.number(),
-			hidden: z.number(),
-			deleted: z.number(),
-			frontier: z.string(),
-		}),
-	),
-	here: z.string(),
-	directions: z.string(),
-	text: z.string(),
-	budgets: z.strictObject({
-		here: z.strictObject({ used: z.number(), limit: z.number() }),
-		directions: z.strictObject({ used: z.number(), limit: z.number() }),
-	}),
-	records: z.array(recordRow),
-	nodes: z.array(
-		z.strictObject({ scope: scopeKey, node: nodeRow, clean: z.boolean() }),
-	),
-	candidates: z.array(
-		z.strictObject({ scope: z.string(), range, ready: z.boolean() }),
-	),
-	catalog: z.array(catalogLine),
-	catalogScopes: z.array(scopeKey),
-	frontier: z.array(sliceLine),
-	review: z.array(dueRecord),
-	reviewNext: z.array(dueRecord),
-	reviewNextTotal: z.number(),
+	scopes: z.array(scopePanel),
 	revision: z.string(),
+	screen,
+} as const;
+
+/** The fields of the screen that the view request names, and no field of another screen. */
+const screenFields = {
+	text: z.string().optional(),
+	budgets: z
+		.strictObject({
+			here: z.strictObject({ used: z.number(), limit: z.number() }),
+			directions: z.strictObject({ used: z.number(), limit: z.number() }),
+		})
+		.optional(),
+	frontier: z.array(sliceLine).optional(),
+	catalog: z.array(catalogLine).optional(),
+	catalogScopes: z.array(scopeKey).optional(),
+	review: z.array(dueRecord).optional(),
+	reviewNext: z.array(dueRecord).optional(),
+	reviewNextTotal: z.number().optional(),
+	candidates: z
+		.array(z.strictObject({ scope: z.string(), range, ready: z.boolean() }))
+		.optional(),
+	totals: totals.optional(),
+	levels: z.array(levelRow).optional(),
 } as const;
 
 /** The answer of one action. */
@@ -354,12 +342,13 @@ const actionResult = z.union([
 const results = {
 	view: z.strictObject({
 		...modelFields,
-		proposals: z.array(proposal),
+		...screenFields,
+		proposals: z.array(proposal).optional(),
+		reviewPolicy: z.record(noteKind, z.number()).optional(),
 		profiles: z.array(z.string()),
 		path: z.string(),
 		backend: z.string(),
 		allowDelete: z.boolean(),
-		reviewPolicy: z.record(noteKind, z.number()),
 	}),
 	search: z.array(
 		z.strictObject({
@@ -390,6 +379,12 @@ const results = {
 			review_at: z.string().nullable(),
 			modified_at: z.string(),
 			refs: z.array(z.string()),
+			noteKind,
+			state: z.enum(["live", "hidden", "deleted"]),
+			session: z.string(),
+			preset: z.string(),
+			supersedes: z.array(z.string()),
+			superseded_by: z.string().nullable(),
 		}),
 		z.strictObject({
 			kind: z.literal("children"),
@@ -403,6 +398,7 @@ const results = {
 					chars: z.number(),
 				}),
 			),
+			text: z.string(),
 		}),
 	]),
 	catalog: z.array(catalogLine),

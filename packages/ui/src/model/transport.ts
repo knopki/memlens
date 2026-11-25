@@ -89,6 +89,7 @@ export function createHttpPort(
 					profile: fields.profile,
 					scope: fields.scope,
 					kind: fields.kind,
+					...(fields.screen === undefined ? {} : { screen: fields.screen }),
 				})}`,
 			),
 		search: (fields) =>

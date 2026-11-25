@@ -503,7 +503,9 @@ describe("console profile surface", () => {
 		});
 		expect("id" in saved ? saved.id : undefined).toBeTypeOf("string");
 		const view = await call(testCase, "view", { profile: "work" });
-		expect(view.records).toHaveLength(1);
+		expect(view.scopes.find((scope) => scope.key === "user:notes")?.live).toBe(
+			1,
+		);
 	});
 
 	it("answers the compaction state of a profile with no snapshot", async () => {
@@ -525,22 +527,50 @@ describe("console profile surface", () => {
 });
 
 describe("console reads", () => {
-	it("answers the view with the model, the proposals, and the policy", async () => {
+	it("answers each screen with the fields of that screen", async () => {
 		const testCase = composition();
 		insert(testCase, "alpha beta", 1);
 		await registered(testCase);
-		const view = await call(testCase, "view", { session: testCase.agent.id });
-		expect(view.profile).toBe("default");
-		expect(view.scope).toBe("user:notes");
-		expect(Array.isArray(view.scopes)).toBe(true);
-		expect(Array.isArray(view.records)).toBe(true);
-		expect(Array.isArray(view.frontier)).toBe(true);
-		expect(Array.isArray(view.catalog)).toBe(true);
-		expect(view.proposals).toEqual([]);
-		expect(view.path).toBe(testCase.memlens.path);
-		expect(view.backend).toBe("sqlite");
-		expect(view.allowDelete).toBe(true);
-		expect(view.reviewPolicy).toBeTypeOf("object");
+		const overview = await call(testCase, "view", {
+			session: testCase.agent.id,
+			screen: "overview",
+		});
+		expect(overview.profile).toBe("default");
+		expect(overview.scope).toBe("user:notes");
+		expect(overview.screen).toBe("overview");
+		expect(Array.isArray(overview.scopes)).toBe(true);
+		expect(overview.scopes[0]?.live).toBe(1);
+		expect(overview.scopes[0]).not.toHaveProperty("frontier");
+		expect(overview.text).toContain("alpha beta");
+		expect(overview.budgets?.here.limit).toBe(20);
+		expect(overview.path).toBe(testCase.memlens.path);
+		expect(overview.backend).toBe("sqlite");
+		expect(overview.allowDelete).toBe(true);
+		const tree = await call(testCase, "view", {
+			session: testCase.agent.id,
+			screen: "tree",
+		});
+		expect(Array.isArray(tree.frontier)).toBe(true);
+		const catalog = await call(testCase, "view", {
+			session: testCase.agent.id,
+			screen: "catalog",
+		});
+		expect(Array.isArray(catalog.catalog)).toBe(true);
+		expect(Array.isArray(catalog.catalogScopes)).toBe(true);
+		const proposals = await call(testCase, "view", {
+			session: testCase.agent.id,
+			screen: "proposals",
+		});
+		expect(proposals.proposals).toEqual([]);
+		const review = await call(testCase, "view", {
+			session: testCase.agent.id,
+			screen: "review",
+		});
+		expect(review.reviewPolicy).toBeTypeOf("object");
+		const defaulted = await call(testCase, "view", {
+			session: testCase.agent.id,
+		});
+		expect(defaulted.screen).toBe("overview");
 	});
 
 	it("answers search with the hits and the limit rule", async () => {
@@ -672,7 +702,9 @@ describe("console actions", () => {
 		});
 		expect(duplicate).toEqual({ duplicate: true });
 		const two = await call(testCase, "view", { session: testCase.agent.id });
-		expect(two.records).toHaveLength(1);
+		expect(two.scopes.find((scope) => scope.key === "user:notes")?.live).toBe(
+			1,
+		);
 	});
 
 	it("amends, reviews, hides, and deletes one note", async () => {

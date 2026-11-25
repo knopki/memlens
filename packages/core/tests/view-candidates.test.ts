@@ -1,7 +1,6 @@
 /**
  * #region moduleContract
- * @modulecontract
- * @purpose Check that candidate ranges and console validity agree with the current scope rows.
+ * @purpose Check that the maintenance screen counts the same candidates and dirty nodes as the view.
  * #endregion moduleContract
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -51,41 +50,62 @@ it("keeps changed ranges dirty and valid nodes out of candidates across readers"
 		const before = indexOf(loadView(store.handle(), scope));
 		expect(candidatesOf(before)).toEqual([]);
 		expect(nodeRowsOf(before).every((row) => row.clean)).toBe(true);
+		const clean = await readConsole(
+			store,
+			config,
+			scope,
+			time,
+			null,
+			"maintenance",
+		);
+		expect(clean.candidates).toEqual([]);
+		expect(clean.levels).toEqual([
+			{ level: 1, nodes: 4, dirty: 0, candidates: 0 },
+			{ level: 2, nodes: 2, dirty: 0, candidates: 0 },
+			{ level: 3, nodes: 1, dirty: 0, candidates: 0 },
+		]);
+		expect(clean.totals).toEqual({ records: 8, nodes: 7, candidates: 0 });
 		amend(store, { id: "note-0", body: "changed" });
-		const dirty = [
-			{ level: 1, start: 0 },
-			{ level: 2, start: 0 },
-			{ level: 3, start: 0 },
-		];
-		expect(candidates(store, scope)).toEqual(dirty);
-		// Keep a stale row to check its keys, not only the absence of covering nodes.
+		// Keep a stale key to check the node key, not only the missing node.
 		store
 			.handle()
 			.prepare("UPDATE notes SET v_content = 'changed' WHERE id = 'note-6'")
 			.run();
+		const dirty = [
+			{ level: 1, start: 0 },
+			{ level: 1, start: 6 },
+			{ level: 2, start: 0 },
+			{ level: 3, start: 0 },
+		];
 		const index = indexOf(loadView(store.handle(), scope));
-		const expected = [dirty[0], { level: 1, start: 6 }, dirty[1], dirty[2]];
 		expect(
 			candidatesOf(index).sort(
 				(a, b) => a.level - b.level || a.start - b.start,
 			),
-		).toEqual(expected);
-		const model = await readConsole(store, config, scope, time);
-		expect(model.candidates.map((row) => row.range)).toEqual(expected);
-		expect(model.nodes).toEqual(nodeRowsOf(index));
+		).toEqual(dirty);
+		const model = await readConsole(
+			store,
+			config,
+			scope,
+			time,
+			null,
+			"maintenance",
+		);
+		expect((model.candidates ?? []).map((row) => row.range)).toEqual(dirty);
 		expect(
-			model.nodes.map(({ node, clean }) => [node.level, node.start, clean]),
-		).toEqual([
-			[1, 2, true],
-			[1, 4, true],
-			[1, 6, false],
-			[2, 4, true],
+			(model.candidates ?? []).every((row) => row.scope === scope && row.ready),
+		).toBe(true);
+		expect(model.levels).toEqual([
+			{ level: 1, nodes: 3, dirty: 1, candidates: 2 },
+			{ level: 2, nodes: 1, dirty: 0, candidates: 1 },
+			{ level: 3, nodes: 0, dirty: 0, candidates: 1 },
 		]);
+		expect(model.totals).toEqual({ records: 8, nodes: 4, candidates: 4 });
 		expect(candidates(store, scope)).toEqual([
-			dirty[0],
-			dirty[1],
+			{ level: 1, start: 0 },
+			{ level: 2, start: 0 },
 			{ level: 1, start: 6 },
-			dirty[2],
+			{ level: 3, start: 0 },
 		]);
 		expect(candidatesOf(before)).toEqual([]);
 	} finally {

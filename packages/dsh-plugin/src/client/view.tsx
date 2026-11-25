@@ -119,13 +119,15 @@ function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 					<div className="ml-slice-head">
 						<span>{t("slice")}</span>
 						<span>
-							{t("lines", {
-								used: model.budgets.here.used,
-								limit: model.budgets.here.limit,
-							})}
+							{model.budgets
+								? t("lines", {
+										used: model.budgets.here.used,
+										limit: model.budgets.here.limit,
+									})
+								: ""}
 						</span>
 					</div>
-					<pre className="ml-slice">{model.text}</pre>
+					<pre className="ml-slice">{model.text ?? ""}</pre>
 				</>
 			) : unavailable ? (
 				<div className="status error" role="status" aria-live="polite">

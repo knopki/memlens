@@ -6,18 +6,18 @@
  * and the address.
  * @invariants A range line opens its two halves in the panel beside the list. A line over one scope
  * opens the tree of that scope.
- * @invariants The list takes the legend of the two kinds that a catalog line can hold.
+ * @invariants The list takes the legend of the two kinds that a catalog line can hold. The budget
+ *   shows only when the read holds it.
  * @keywords catalog, direction, range, scope, budget, children, react
  * #endregion moduleContract
  */
 
-import type { Range, SliceLine } from "@memlens/core";
+import type { Range, ScopeKey, SliceLine } from "@memlens/core";
 import { dateSpan } from "@memlens/core/view";
 import type { JSX } from "react";
 import { useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
 import { lineText, readRange, renderRange } from "../../model/format.js";
-import type { View } from "../../types.js";
 import { ChildrenPanel, Legend } from "../line-views.js";
 import { Button, Panel } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
@@ -30,22 +30,21 @@ import type { ScreenProps } from "../screen-props.js";
  */
 interface CatalogLineProps {
 	readonly api: ConsoleApi;
-	readonly model: View;
+	readonly scopes: readonly ScopeKey[];
 	readonly line: SliceLine;
 	readonly selected: boolean;
 }
 
 function CatalogLine({
 	api,
-	model,
+	scopes,
 	line,
 	selected,
 }: CatalogLineProps): JSX.Element {
 	const range = catalogRange(line);
-	const scope =
-		range.level === 0 ? model.catalogScopes[range.start] : undefined;
+	const scope = range.level === 0 ? scopes[range.start] : undefined;
 	const text = lineText(line);
-	const name = catalogName(model, range);
+	const name = catalogName(scopes, range);
 	const className = [
 		"line",
 		line.kind[0],
@@ -80,11 +79,8 @@ function catalogTarget(line: SliceLine): string {
 	return renderRange(null, catalogRange(line));
 }
 
-function catalogName(model: View, range: Range): string {
-	const covered = model.catalogScopes.slice(
-		range.start,
-		range.start + 2 ** range.level,
-	);
+function catalogName(scopes: readonly ScopeKey[], range: Range): string {
+	const covered = scopes.slice(range.start, range.start + 2 ** range.level);
 	return covered.join(",") || renderRange(null, range);
 }
 
@@ -102,6 +98,8 @@ export function Catalog({ api }: ScreenProps): JSX.Element {
 	);
 	const model = state.model;
 	if (!model) return <></>;
+	const scopes = model.catalogScopes ?? [];
+	const lines = model.catalog ?? [];
 	const selection = state.selection;
 	const result = selection?.result;
 	const target = selection?.target ?? "";
@@ -110,12 +108,12 @@ export function Catalog({ api }: ScreenProps): JSX.Element {
 		result?.kind === "catalog" ? (
 			<ChildrenPanel
 				api={api}
-				title={`${api.t("children")} · ${openRange ? catalogName(model, openRange) : target}`}
+				title={`${api.t("children")} · ${openRange ? catalogName(scopes, openRange) : target}`}
 				rows={result.children.map((line) => (
 					<CatalogLine
 						key={catalogTarget(line)}
 						api={api}
-						model={model}
+						scopes={scopes}
 						line={line}
 						selected={catalogTarget(line) === target}
 					/>
@@ -132,19 +130,23 @@ export function Catalog({ api }: ScreenProps): JSX.Element {
 			<div className="split keys">
 				<Panel
 					title={api.t("catLines")}
-					right={api.t("lines", {
-						used: model.budgets.directions.used,
-						limit: model.budgets.directions.limit,
-					})}
+					right={
+						model.budgets
+							? api.t("lines", {
+									used: model.budgets.directions.used,
+									limit: model.budgets.directions.limit,
+								})
+							: ""
+					}
 				>
 					<Legend api={api} kinds={["summary", "temporary"]} />
 					<div className="lines">
-						{model.catalog.length ? (
-							model.catalog.map((line) => (
+						{lines.length ? (
+							lines.map((line) => (
 								<CatalogLine
 									key={catalogTarget(line)}
 									api={api}
-									model={model}
+									scopes={scopes}
 									line={line}
 									selected={catalogTarget(line) === target}
 								/>

@@ -16,6 +16,8 @@
  */
 
 import {
+	type ConsoleChildren,
+	type ConsoleEntry,
 	type ConsoleViewAnswer,
 	consoleCatalog,
 	consoleOpen,
@@ -23,8 +25,6 @@ import {
 	consoleView,
 	type Fields,
 	type IndexHit,
-	type OpenChildren,
-	type OpenEntry,
 	profileNames,
 	type ScopeKey,
 	type SliceLine,
@@ -61,7 +61,7 @@ export const READ_ROUTES: Readonly<Record<string, Handler>> = {
 	"/api/view": viewAnswer,
 	"/api/search": (runtime, fields, scope): readonly IndexHit[] =>
 		consoleSearch(hostOf(runtime), fields, scope),
-	"/api/open": (runtime, fields, scope): OpenEntry | OpenChildren =>
+	"/api/open": (runtime, fields, scope): ConsoleEntry | ConsoleChildren =>
 		consoleOpen(hostOf(runtime), fields, scope),
 	"/api/catalog": (runtime, fields, scope): Promise<readonly SliceLine[]> =>
 		consoleCatalog(hostOf(runtime), fields, scope),

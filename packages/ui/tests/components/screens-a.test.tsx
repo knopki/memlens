@@ -60,10 +60,12 @@ const TEMPORARY_CATALOG: SliceLine = {
 
 // #region FUNC_viewOf
 /**
- * @purpose Build one console view with two scopes and three frontier lines.
+ * @purpose Build one console view of one screen with two scopes and three frontier lines.
+ * @param patch - The fields that the test changes.
  */
-function viewOf(): View {
+function viewOf(patch: Partial<View> = {}): View {
 	return {
+		screen: "overview",
 		profile: "default",
 		scope: "project:alpha",
 		scopes: [
@@ -73,7 +75,6 @@ function viewOf(): View {
 				live: 3,
 				hidden: 1,
 				deleted: 1,
-				frontier: "alpha one\nalpha two\nalpha three\nalpha four",
 			},
 			{
 				key: "project:beta",
@@ -81,57 +82,39 @@ function viewOf(): View {
 				live: 0,
 				hidden: 0,
 				deleted: 0,
-				frontier: "",
 			},
 		],
-		here: "",
-		directions: "",
+		revision: "rev-1",
 		text: "# project:alpha\nnote <b>bold</b>",
 		budgets: {
 			here: { used: 1, limit: 10 },
 			directions: { used: 2, limit: 10 },
 		},
-		records: [
-			{ scope: "project:alpha", state: "live" },
-			{ scope: "project:alpha", state: "live" },
-			{ scope: "project:alpha", state: "deleted" },
-		],
-		nodes: [],
-		candidates: [],
+		frontier: [RECORD, SUMMARY, TEMPORARY],
 		catalog: [SUMMARY, TEMPORARY_CATALOG],
 		catalogScopes: ["project:alpha", "project:beta"],
-		frontier: [RECORD, SUMMARY, TEMPORARY],
-		review: [],
-		reviewNext: [],
-		reviewNextTotal: 0,
-		revision: "rev-1",
-		proposals: [],
 		profiles: ["default"],
 		path: "/tmp/memlens.db",
 		backend: "fake",
 		allowDelete: false,
-		reviewPolicy: {
-			decision: 7,
-			preference: 30,
-			fact: 30,
-			task: 7,
-			note: 30,
-		},
-	} as unknown as View;
+		...patch,
+	};
 }
 // #endregion FUNC_viewOf
 
 // #region FUNC_stateOf
 /**
  * @purpose Build one console state from the fixed view and an optional patch.
+ * @invariants The model is the payload of the state screen, as the host answers it.
  * @param patch - The fields that the test changes.
  */
 function stateOf(patch: Partial<ConsoleState> = {}): ConsoleState {
+	const screen = patch.screen ?? "overview";
 	return {
-		model: viewOf(),
+		model: viewOf({ screen }),
 		profile: "default",
 		scope: "project:alpha",
-		screen: "overview",
+		screen,
 		lang: "en",
 		theme: "system",
 		busy: false,
@@ -175,6 +158,7 @@ const childrenSelection: Selection = {
 	target: "project:alpha#0-1",
 	result: {
 		kind: "children",
+		text: "range summary",
 		children: [
 			{
 				addr: "project:alpha#0",
@@ -214,10 +198,7 @@ describe("overview screen", () => {
 		expect(markup).toContain("<span>3 live</span>");
 		expect(markup).toContain("<span>1 hidden</span>");
 		expect(markup).toContain("<span>1 deleted</span>");
-		expect(markup).toContain("alpha one");
-		expect(markup).toContain("alpha three");
-		expect(markup).not.toContain("alpha four");
-		expect(markup).toContain('<div class="muted">No live notes.</div>');
+		expect(markup).not.toContain('class="mini"');
 		expect(markup).toContain(">Open scope</button>");
 		expect(markup).toContain('<span class="t">Assembled slice</span>');
 		expect(markup).toContain('<span class="r">1 / 10 lines</span>');
@@ -236,7 +217,7 @@ describe("tree screen", () => {
 		);
 		expect(markup).toContain("The frontier of this scope.");
 		expect(markup).toContain('<span class="t">Frontier</span>');
-		expect(markup).toContain('<span class="r">3 ranges · 2 live notes</span>');
+		expect(markup).toContain('<span class="r">3 ranges · 3 live notes</span>');
 		expect(markup).toContain('<span class="lg r">note</span>');
 		expect(markup).toContain('<span class="lg s">summary</span>');
 		expect(markup).toContain('<span class="lg t">summary pending</span>');
@@ -258,52 +239,29 @@ describe("tree screen", () => {
 	});
 
 	it("shows a temporary frontier line in the inspector", () => {
-		const selection = { ...childrenSelection, target: "project:alpha#0-3" };
+		const selection = {
+			target: "project:alpha#0-3",
+			result: { kind: "children", children: [], text: "" },
+		} as Selection;
 		const markup = renderToStaticMarkup(
 			<TreeView api={apiOf(stateOf({ screen: "tree", selection }))} />,
 		);
 		expect(markup).toContain('<div class="quote">assembled range</div>');
 	});
 
-	it("shows a nested range after its parent is closed", () => {
-		const model = {
-			...viewOf(),
-			nodes: [
-				{
-					scope: "project:alpha",
-					clean: true,
-					node: { start: 4, level: 1, summary: "nested summary" },
-				},
-			],
-		} as unknown as View;
-		const selection = { ...childrenSelection, target: "project:alpha#4-5" };
+	it("names an open range from the open answer", () => {
+		const selection = {
+			target: "project:alpha#4-5",
+			result: {
+				kind: "children",
+				text: "nested summary",
+				children: [],
+			},
+		} as Selection;
 		const markup = renderToStaticMarkup(
-			<TreeView api={apiOf(stateOf({ screen: "tree", model, selection }))} />,
+			<TreeView api={apiOf(stateOf({ screen: "tree", selection }))} />,
 		);
 		expect(markup).toContain('<div class="quote">nested summary</div>');
-	});
-
-	it("shows the current period of a dirty nested range", () => {
-		const model = {
-			...viewOf(),
-			records: [
-				{ scope: "project:alpha", state: "live", pos: 4, ts: "2026-11-03" },
-				{ scope: "project:alpha", state: "live", pos: 5, ts: "2026-11-04" },
-			],
-			nodes: [
-				{
-					scope: "project:alpha",
-					clean: false,
-					node: { start: 4, level: 1, summary: "stale summary" },
-				},
-			],
-		} as unknown as View;
-		const selection = { ...childrenSelection, target: "project:alpha#4-5" };
-		const markup = renderToStaticMarkup(
-			<TreeView api={apiOf(stateOf({ screen: "tree", model, selection }))} />,
-		);
-		expect(markup).toContain('<div class="quote">2026-11-03..04</div>');
-		expect(markup).not.toContain("stale summary");
 	});
 
 	it("shows the inspector hint when no line is open", () => {

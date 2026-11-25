@@ -14,4 +14,4 @@ export {
 } from "./domain/address-form.js";
 export { dateSpan } from "./domain/date-span.js";
 export { dayOf } from "./domain/day.js";
-export { NOTE_KINDS } from "./types/primitives.js";
+export { CONSOLE_SCREENS, NOTE_KINDS } from "./types/primitives.js";

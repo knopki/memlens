@@ -8,6 +8,8 @@
  * @invariants The page holds one console for the profiles of the base file, and the console starts
  *   on the default profile.
  * @invariants The page reads and writes no page address and no history. The address stays in memory.
+ * @invariants The body shows the screen only when the model is the payload of that screen, so a load
+ *   shows no stale screen data.
  * @invariants The page renders the stylesheet in a `style` element, so the CSS leaves with the page.
  * @invariants A store that is not open gives the stated error in the body. The page probes the host
  *   at each retry, and the view load replaces that error when the store opens.
@@ -136,7 +138,7 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 						className={screen === state.screen ? "ml-screen on" : "ml-screen"}
 						aria-current={screen === state.screen ? "page" : undefined}
 						onClick={() => {
-							api.call.navigate(screen);
+							void api.call.navigate(screen);
 						}}
 					>
 						{t(`nav${index}` as keyof Table)}
@@ -149,7 +151,11 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 						{`${t("store")}: ${state.runtime?.store?.error ?? ""}`}
 					</div>
 				) : null}
-				<Screen api={api} />
+				{model && model.screen !== state.screen ? (
+					<p className="ml-muted">{t("loading")}</p>
+				) : (
+					<Screen api={api} />
+				)}
 			</div>
 			<div
 				className={state.status.error ? "status error" : "status"}

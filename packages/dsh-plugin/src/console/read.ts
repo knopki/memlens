@@ -16,6 +16,8 @@
  */
 
 import {
+	type ConsoleChildren,
+	type ConsoleEntry,
 	type ConsoleViewAnswer,
 	consoleCatalog,
 	consoleOpen,
@@ -23,15 +25,12 @@ import {
 	consoleView,
 	type Fields,
 	type IndexHit,
-	type OpenChildren,
-	type OpenEntry,
 	type SliceLine,
-	text,
 } from "@memlens/core";
 import { type ConsoleRequest, hostOf } from "./scope.js";
 
 // #region FUNC_viewAnswer
-/** @purpose Give the console model of one scope with the host facts of the plugin. */
+/** @purpose Give the console model of one scope and one screen with the host facts of the plugin. */
 export async function viewAnswer(request: ConsoleRequest): Promise<
 	ConsoleViewAnswer & {
 		readonly profiles: string[];
@@ -60,7 +59,9 @@ export function searchAnswer(request: ConsoleRequest): readonly IndexHit[] {
 
 // #region FUNC_openAnswer
 /** @purpose Answer one open request with the field names of the Remote contract. */
-export function openAnswer(request: ConsoleRequest): OpenEntry | OpenChildren {
+export function openAnswer(
+	request: ConsoleRequest,
+): ConsoleEntry | ConsoleChildren {
 	const { memory, scope } = request;
 	return consoleOpen(hostOf(memory), alias(request.fields), scope);
 }

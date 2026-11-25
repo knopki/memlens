@@ -62,10 +62,9 @@ export function Proposals({ api }: ScreenProps): JSX.Element {
 	const model = state.model;
 	if (!model) return <></>;
 	const t = api.t;
-	const proposals = model.proposals.filter(
-		(item) => item.scope === model.scope,
-	);
-	const foreign = model.proposals.length - proposals.length;
+	const all = model.proposals ?? [];
+	const proposals = all.filter((item) => item.scope === model.scope);
+	const foreign = all.length - proposals.length;
 	return (
 		<>
 			<p className="sub">{t("propText")}</p>

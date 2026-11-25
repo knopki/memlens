@@ -19,7 +19,7 @@ import type { Agent } from "@deepseek-ai/dsh-agent";
 import { createScope } from "@deepseek-ai/dsh-scope";
 import type { TypertCodec } from "@deepseek-ai/dsh-typert-protocol";
 import { TypertRegistry } from "@deepseek-ai/dsh-typert-registry";
-import { note } from "@memlens/core";
+import { type ConsoleScreen, note } from "@memlens/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { actionRoute } from "../src/console/action.js";
 import {
@@ -64,7 +64,13 @@ afterEach(async () => {
 
 /** The payloads that the client port sends, one for each method. */
 const CLIENT_INPUTS: ConsoleInputs = {
-	view: { session: "s", profile: "default", scope: "user:notes", kind: "" },
+	view: {
+		session: "s",
+		profile: "default",
+		scope: "user:notes",
+		kind: "",
+		screen: "overview",
+	},
 	search: {
 		session: "s",
 		profile: "default",
@@ -411,9 +417,58 @@ describe("console Remote result schemas", () => {
 		expect(consoleResultSchemas.action.parse(saved)).toEqual(saved);
 	});
 
-	it("rejects a result of a drifted shape", () => {
+	it("accepts the answer of each screen", async () => {
+		const { request } = composition();
+		for (const screen of [
+			"overview",
+			"tree",
+			"catalog",
+			"search",
+			"review",
+			"proposals",
+			"maintenance",
+			"session",
+		] as const) {
+			const answer = await viewAnswer({ ...request, fields: { screen } });
+			expect(answer.screen).toBe(screen);
+			expect(consoleResultSchemas.view.parse(answer)).toEqual(answer);
+		}
+	});
+
+	it("gives each screen the fields of that screen only", async () => {
+		const { request } = composition();
+		const answerOf = (screen: ConsoleScreen) =>
+			viewAnswer({ ...request, fields: { screen } });
+		const overview = await answerOf("overview");
+		expect(overview.text).toBeTypeOf("string");
+		expect(overview.budgets).toBeDefined();
+		expect(overview.catalog).toBeUndefined();
+		expect(overview.proposals).toBeUndefined();
+		expect(overview.reviewPolicy).toBeUndefined();
+		const tree = await answerOf("tree");
+		expect(tree.frontier).toBeDefined();
+		expect(tree.text).toBeUndefined();
+		const catalog = await answerOf("catalog");
+		expect(catalog.catalog).toBeDefined();
+		expect(catalog.catalogScopes).toBeDefined();
+		const review = await answerOf("review");
+		expect(review.review).toBeDefined();
+		expect(review.reviewPolicy).toBeDefined();
+		const proposals = await answerOf("proposals");
+		expect(proposals.proposals).toBeDefined();
+		const maintenance = await answerOf("maintenance");
+		expect(maintenance.totals).toBeDefined();
+		expect(maintenance.levels).toBeDefined();
+		const session = await answerOf("session");
+		expect(session.text).toBeTypeOf("string");
+		expect(session.frontier).toBeUndefined();
+	});
+
+	it("rejects a result of a drifted shape", async () => {
 		const view = consoleResultSchemas.view;
 		expect(() => view.parse({ profile: "default" })).toThrow();
+		const answer = await viewAnswer({ ...composition().request, fields: {} });
+		expect(() => view.parse({ ...answer, records: [] })).toThrow();
 		expect(() =>
 			consoleResultSchemas.action.parse({ id: "x", unknown_field: 1 }),
 		).toThrow();

@@ -10,10 +10,11 @@
  */
 
 import type {
+	ConsoleChildren,
+	ConsoleEntry,
+	ConsoleScreen,
 	IndexHit,
 	NoteKind,
-	OpenChildren,
-	OpenEntry,
 	Range,
 	SliceLine,
 } from "@memlens/core";
@@ -72,8 +73,7 @@ export interface DialogPayload {
  * @invariants The target is the address of the amended record. It is empty for a new note.
  * @invariants The links are the supersede links of the amended record. The field holds the targets
  *   that the save adds, so a cleared field adds nothing.
- * @invariants The kind is empty when the form opens from an open entry, because an open entry holds
- * no note kind.
+ * @invariants The kind is the note kind of the opened record. A new note starts as a note.
  */
 export interface DialogState extends DialogPayload {
 	readonly mode: DialogMode;
@@ -122,11 +122,14 @@ export interface ConsoleState {
 // #region INTERFACE_ViewQuery
 /**
  * @purpose Hold the fields of one view read.
+ * @invariants The screen names the screen payload of the answer, so the host reads one screen only.
+ *   An absent screen reads the overview.
  */
 export interface ViewQuery {
 	readonly profile: string;
 	readonly scope: string;
 	readonly kind: NoteKind | "";
+	readonly screen?: ConsoleScreen;
 }
 // #endregion INTERFACE_ViewQuery
 
@@ -171,8 +174,10 @@ export interface CatalogQuery {
 // #region TYPE_OpenedTarget
 /**
  * @purpose Hold the answer of one open: a note or the children of a range.
+ * @invariants The entry holds the note kind, the state, and the links, so a surface reads them
+ *   without a second read of the scope.
  */
-export type OpenedTarget = OpenEntry | OpenChildren;
+export type OpenedTarget = ConsoleEntry | ConsoleChildren;
 // #endregion TYPE_OpenedTarget
 
 // #region TYPE_ActionFields
@@ -279,7 +284,7 @@ export interface SearchFilters {
  * @keywords action, navigate, open, search, dialog, language, theme, compaction
  */
 export interface ConsoleActions {
-	navigate(screen: Screen): void;
+	navigate(screen: Screen): Promise<void>;
 	restore(route: Route): Promise<void>;
 	openTarget(target: string): Promise<void>;
 	openInTree(target: string): Promise<void>;

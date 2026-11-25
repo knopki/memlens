@@ -5,7 +5,7 @@
  * @scope The kind filter, the two note tables, and the review periods. NOT: the reload call, the
  * transport, and the address.
  * @invariants The kind filter keeps one kind in both lists. The next list states its shown count and
- * the count before the cap.
+ * the count before the cap. The periods panel shows only when the read holds the policy.
  * @invariants A note body goes into a text node.
  * @keywords review, due, next, period, kind, note, actions, react
  * #endregion moduleContract
@@ -96,11 +96,15 @@ export function Review({ api }: ScreenProps): JSX.Element {
 	const model = state.model;
 	if (!model) return <></>;
 	const t = api.t;
+	const due = model.review ?? [];
+	const next = model.reviewNext ?? [];
+	const nextTotal = model.reviewNextTotal ?? 0;
+	const policy = model.reviewPolicy;
 	const kinds = [
 		{ value: "", label: t("allKinds") },
 		...NOTE_KINDS.map((kind) => ({ value: kind, label: kindName(t, kind) })),
 	];
-	const periods = Object.entries(model.reviewPolicy).map(
+	const periods = Object.entries(policy ?? {}).map(
 		([name, days]) =>
 			[kindName(t, name as NoteKind), t("days", { count: days })] as const,
 	);
@@ -126,23 +130,25 @@ export function Review({ api }: ScreenProps): JSX.Element {
 			<ReviewTable
 				api={api}
 				title={t("due")}
-				right={String(model.review.length)}
-				items={model.review}
+				right={String(due.length)}
+				items={due}
 				allowDelete={model.allowDelete}
 			/>
 			<ReviewTable
 				api={api}
 				title={t("next")}
-				right={`${model.reviewNext.length} / ${model.reviewNextTotal}`}
-				items={model.reviewNext}
+				right={`${next.length} / ${nextTotal}`}
+				items={next}
 				allowDelete={model.allowDelete}
 			/>
-			<Panel
-				title={t("reviewPeriods")}
-				right={String(Object.keys(model.reviewPolicy).length)}
-			>
-				<KeyValue rows={periods} />
-			</Panel>
+			{policy ? (
+				<Panel
+					title={t("reviewPeriods")}
+					right={String(Object.keys(policy).length)}
+				>
+					<KeyValue rows={periods} />
+				</Panel>
+			) : null}
 		</>
 	);
 }

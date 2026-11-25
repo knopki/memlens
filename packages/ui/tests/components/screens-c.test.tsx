@@ -24,7 +24,7 @@ import type {
 	ConsoleState,
 } from "../../src/model/console.js";
 import type { Job, View } from "../../src/types.js";
-import { entryOf, recordOf, stateOf, viewOf } from "../model/helpers.js";
+import { entryOf, stateOf, viewOf } from "../model/helpers.js";
 
 const noop = async () => undefined;
 
@@ -63,21 +63,16 @@ function apiOf(patch: Partial<ConsoleState> = {}): ConsoleApi {
 	};
 }
 
-/** One maintenance view with a budget, one node, and one candidate. */
+/** One maintenance view with a budget, one level, and one candidate. */
 function modelOf(): View {
-	return {
-		...viewOf("default", "project:alpha", [recordOf("project:alpha", 1)]),
+	return viewOf("default", "project:alpha", {
+		screen: "maintenance",
 		budgets: {
 			here: { used: 4, limit: 10 },
 			directions: { used: 2, limit: 8 },
 		},
-		nodes: [
-			{
-				scope: "project:alpha",
-				node: { level: 1 },
-				clean: true,
-			},
-		],
+		totals: { records: 4, nodes: 1, candidates: 1 },
+		levels: [{ level: 1, nodes: 1, dirty: 0, candidates: 1 }],
 		candidates: [
 			{
 				scope: "project:alpha",
@@ -85,7 +80,7 @@ function modelOf(): View {
 				ready: true,
 			},
 		],
-	} as unknown as View;
+	});
 }
 
 describe("maintenance screen", () => {
@@ -104,6 +99,13 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("Nodes by level");
 		expect(markup).toContain("Prepare a scope job");
 		expect(markup).not.toContain("Host runtime");
+	});
+
+	it("shows no budget panel without a budget field", () => {
+		const { budgets: _budgets, ...model } = modelOf();
+		const markup = renderToStaticMarkup(<Maintenance api={apiOf({ model })} />);
+		expect(markup).not.toContain("Line budgets");
+		expect(markup).toContain("Nodes by level");
 	});
 
 	it("states the host runtime fields", () => {
@@ -254,16 +256,12 @@ describe("note inspector", () => {
 	});
 
 	it("states the note body and the record actions as text", () => {
-		const record = recordOf("project:alpha", 1, "decision");
-		const model = {
-			...viewOf("default", "project:alpha", [record]),
-			allowDelete: true,
-		} as unknown as View;
-		const entry = {
-			...entryOf("project:alpha", 1),
+		const model = viewOf("default", "project:alpha", { allowDelete: true });
+		const entry = entryOf("project:alpha", 1, {
+			noteKind: "decision",
 			body: "<b>bold</b>",
 			longform: "<i>doc</i>",
-		};
+		});
 		const markup = renderToStaticMarkup(
 			<Inspector
 				api={apiOf({

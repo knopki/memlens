@@ -76,8 +76,8 @@ The frontier of the active scope: one line for each range, from the oldest to th
 export interface ContextInput {
 	readonly scope: ScopeKey;
 
-	/** The rows of the active scope. */
-	readonly here: View;
+	/** The rows or selected lines of the active scope. */
+	readonly here: View | readonly SliceLine[];
 	readonly hereBudget: Lines;
 
 	/** The budgeted scopes, from the oldest to the newest, with their top line text. */
@@ -99,8 +99,15 @@ export interface ContextInput {
  * and the span writes the shared year and month once. A range without a valid node gives the
  * address, the span, and the assembled text.
  */
-export function hereLines(view: View, budget: Lines): string {
-	const text = sliceOf(view, budget).map(lineText).join("\n");
+export function hereLines(
+	view: View | readonly SliceLine[],
+	budget: Lines,
+): string {
+	const lines =
+		"notes" in view
+			? sliceOf(view, budget)
+			: view.slice(0, Math.max(0, budget));
+	const text = lines.map(lineText).join("\n");
 	debug("Frontier rendered", { budget, chars: text.length });
 	return text;
 }

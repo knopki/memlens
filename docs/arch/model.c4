@@ -30,7 +30,7 @@ model {
       domain = component 'Domain' {
         description '
           The scope grammar, the address form, the config merge of three layers,
-          and the render of the memory context.
+          the memory context, and the console answers.
         '
       }
 
@@ -87,6 +87,7 @@ model {
       description '
         The browser client of the console. The CLI serves it standalone.
         The plugin embeds it in the host GUI. One package builds both hosts.
+        Each request names one screen.
       '
     }
 

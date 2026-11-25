@@ -110,7 +110,6 @@ function viewOf(patch: Partial<View> = {}): View {
 				live: 3,
 				hidden: 0,
 				deleted: 0,
-				frontier: "one\ntwo\nthree",
 			},
 		],
 		review: [DUE],
@@ -120,6 +119,7 @@ function viewOf(patch: Partial<View> = {}): View {
 			decision: 7,
 			preference: 30,
 			fact: 30,
+			gotcha: 30,
 			task: 7,
 			note: 30,
 		},
@@ -268,6 +268,15 @@ describe("review screen", () => {
 		expect(markup).toContain('class="btn danger">Delete</button>');
 		expect(markup).toContain('<span class="t">Review periods</span>');
 		expect(markup).toContain("<b>task</b><span>7 days</span>");
+	});
+
+	it("shows no periods panel without a policy", () => {
+		const { reviewPolicy: _policy, ...model } = viewOf();
+		const markup = renderToStaticMarkup(
+			<Review api={apiOf(stateOf({ model, screen: "review" }))} />,
+		);
+		expect(markup).not.toContain("Review periods");
+		expect(markup).toContain('<span class="t">Due</span>');
 	});
 
 	it("disables the delete action without a permission and states an empty table", () => {

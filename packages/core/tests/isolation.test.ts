@@ -52,6 +52,7 @@ describe("library isolation", () => {
 		const allowed = new Set([
 			"../domain/address-form.js",
 			"../domain/address.js",
+			"../domain/date-span.js",
 			"../domain/note-body.js",
 			"../domain/scope.js",
 			"../domain/time.js",
@@ -60,12 +61,35 @@ describe("library isolation", () => {
 		]);
 		for (const file of sourceFiles(join(root, "store"))) {
 			const text = readFileSync(file, "utf8");
-			for (const match of text.matchAll(/from\s+["']([^"']+)['"]/g)) {
-				const name = match[1] ?? "";
-				if (name.startsWith("../domain/")) {
+			// A type-only import is erased at build, so it couples no runtime.
+			for (const match of text.matchAll(
+				/import\s+(type\s+)?[^"']*?from\s+["']([^"']+)["']/g,
+			)) {
+				const typeOnly = match[1] !== undefined;
+				const name = match[2] ?? "";
+				if (!typeOnly && name.startsWith("../domain/")) {
 					expect(allowed.has(name), `${file} imports ${name}`).toBe(true);
 				}
 			}
+		}
+	});
+
+	it("keeps store queries out of the domain", () => {
+		// A statement start inside a literal marks SQL. A regular expression keeps its own exec.
+		const statement =
+			/["'`]\s*(?:SELECT\s|INSERT\s+INTO\s|PRAGMA\s|CREATE\s+TABLE\s|DROP\s+TABLE\s|DELETE\s+FROM\s|UPDATE\s+\w+\s+SET\s)/i;
+		for (const file of sourceFiles(join(root, "domain"))) {
+			const text = readFileSync(file, "utf8");
+			expect(text, `${file} names node:sqlite`).not.toMatch(
+				/["']node:sqlite["']/,
+			);
+			expect(text, `${file} prepares a statement`).not.toMatch(
+				/\.prepare\s*\(/,
+			);
+			expect(text, `${file} runs SQL on the handle`).not.toMatch(
+				/handle\(\)\s*\.exec\s*\(|\bdb\.exec\s*\(/,
+			);
+			expect(text, `${file} holds a SQL statement`).not.toMatch(statement);
 		}
 	});
 

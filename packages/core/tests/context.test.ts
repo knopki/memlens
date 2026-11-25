@@ -171,6 +171,18 @@ describe("hereLines", () => {
 		);
 	});
 
+	it("limits the array lines to the budget and keeps the view budget floor", () => {
+		const store = newStore();
+		addLive(store, 3);
+		const view = viewOf(store);
+		const lines = sliceOf(view, 3);
+		expect(hereLines(lines, 2)).toBe(
+			"#0 2026-11-01 body 0\n#1 2026-11-02 body 1",
+		);
+		expect(hereLines(lines, 0)).toBe("");
+		expect(hereLines(view, 0)).toBe("#2 2026-11-03 body 2");
+	});
+
 	it("renders a hidden note as no half and keeps no stale summary", () => {
 		const store = newStore();
 		addLive(store, 3);

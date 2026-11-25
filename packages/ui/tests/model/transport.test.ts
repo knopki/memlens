@@ -50,6 +50,21 @@ describe("console HTTP port", () => {
 		);
 	});
 
+	it("names the screen of the view", async () => {
+		const fetch = stubFetch(answer({ profile: "p" }));
+		const port = createHttpPort("/api");
+		await port.view({
+			profile: "p",
+			scope: "project:alpha",
+			kind: "",
+			screen: "tree",
+		});
+		expect(fetch).toHaveBeenCalledWith(
+			"/api/view?profile=p&scope=project%3Aalpha&kind=&screen=tree",
+			{ cache: "no-store" },
+		);
+	});
+
 	it("reads the search of the base", async () => {
 		const fetch = stubFetch(answer([]));
 		const port = createHttpPort("/api");

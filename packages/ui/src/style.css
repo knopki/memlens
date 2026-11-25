@@ -273,9 +273,6 @@ aside {
 	font-size: 17px;
 	font-weight: 600;
 }
-.ml-console .mini {
-	padding-right: 4px;
-}
 .ml-console dialog {
 	box-shadow: 0 24px 64px rgb(0 0 0 / 0.35);
 }

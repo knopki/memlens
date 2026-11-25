@@ -61,11 +61,15 @@ export {
 	type SubagentMode,
 } from "./domain/config-types.js";
 export {
+	CONSOLE_SCREENS,
 	type ConsoleModel,
+	type ConsoleScreen,
 	readConsole,
 } from "./domain/console.js";
 export {
 	allowedScope,
+	type ConsoleChildren,
+	type ConsoleEntry,
 	type ConsoleHost,
 	type ConsoleViewAnswer,
 	consoleAction,

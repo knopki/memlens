@@ -6,6 +6,8 @@
  * the host calls and the address.
  * @invariants A range line opens its children, and a note line opens its record. A temporary line
  * shows its period only.
+ * @invariants The live count of the scope comes from the scope panel. The range title comes from the
+ * open children, so the screen reads no record row and no node row.
  * @keywords tree, frontier, line, range, note, inspector, react
  * #endregion moduleContract
  */
@@ -14,7 +16,7 @@ import type { OpenLine, SliceLine } from "@memlens/core";
 import { dateSpan } from "@memlens/core/view";
 import { type JSX, useSyncExternalStore } from "react";
 import type { ConsoleApi } from "../../model/console.js";
-import { lineAddress, lineText, renderRange } from "../../model/format.js";
+import { lineAddress, lineText } from "../../model/format.js";
 import { Inspector } from "../inspector.js";
 import { ChildrenPanel, Legend } from "../line-views.js";
 import { Button, Panel } from "../primitives.js";
@@ -92,6 +94,8 @@ function ChildLine({ api, line }: ChildLineProps): JSX.Element {
  * @purpose Show the frontier of the selected scope beside the inspector.
  * @invariants A range line opens its children, and a note line opens its record. A temporary line
  * shows its period only.
+ * @invariants The live count of the scope comes from the scope panel. The range title comes from the
+ * open children, so the screen reads no record row and no node row.
  */
 export function TreeView({ api }: ScreenProps): JSX.Element {
 	const state = useSyncExternalStore(
@@ -101,10 +105,8 @@ export function TreeView({ api }: ScreenProps): JSX.Element {
 	);
 	const model = state.model;
 	if (!model) return <></>;
-	const lines = model.frontier;
-	const live = model.records.filter(
-		(record) => record.scope === state.scope && record.state === "live",
-	);
+	const lines = model.frontier ?? [];
+	const live = model.scopes.find((item) => item.key === state.scope)?.live ?? 0;
 	const selection = state.selection;
 	const children = selection?.result;
 	const target = selection?.target.startsWith("#")
@@ -113,25 +115,11 @@ export function TreeView({ api }: ScreenProps): JSX.Element {
 	const selectedLine = lines.find(
 		(line) => lineAddress(state.scope, line) === target,
 	);
-	const selectedNode = model.nodes.find(
-		({ scope, node, clean }) => clean && renderRange(scope, node) === target,
-	);
-	const range = target?.match(/^(.*)#(\d+)-(\d+)$/);
-	const rangeNotes = range
-		? model.records.filter(
-				(record) =>
-					record.scope === range[1] &&
-					record.state === "live" &&
-					record.pos >= Number(range[2]) &&
-					record.pos <= Number(range[3]),
-			)
-		: [];
-	const first = rangeNotes[0];
-	const last = rangeNotes.at(-1);
-	const rangeText = selectedLine
-		? lineText(selectedLine) || dateSpan(selectedLine.from, selectedLine.to)
-		: selectedNode?.node.summary ||
-			(first && last ? dateSpan(first.ts, last.ts) : "");
+	// The host names the open range. The frontier line names it before the open answers.
+	const rangeText =
+		children?.kind === "children"
+			? children.text || (selectedLine ? lineText(selectedLine) : "")
+			: "";
 	return (
 		<>
 			<p className="sub">{api.t("treeText")}</p>
@@ -140,7 +128,7 @@ export function TreeView({ api }: ScreenProps): JSX.Element {
 					title={api.t("frontier")}
 					right={api.t("frontierMeta", {
 						ranges: lines.length,
-						live: live.length,
+						live,
 					})}
 				>
 					<Legend api={api} kinds={["record", "summary", "temporary"]} />

@@ -6,6 +6,8 @@
  * the browser history listener, the dialog, and the status line. NOT: the screens, the store, the
  * transport, and the stylesheet.
  * @invariants The shell writes no markup that the screens already write.
+ * @invariants The body shows the screen only when the model is the payload of that screen, so a load
+ *   shows no stale screen data.
  * @invariants The shell emits the class names of the stylesheet of the standalone host.
  * @invariants A page without a model shows the status line only, as the DOM console did.
  * @invariants The tree screen and the search screen hold the inspector. The shell adds no second
@@ -94,7 +96,7 @@ export function App({ api }: AppProps): JSX.Element {
 			if (next === undefined || api.state.dialog) return;
 			const tag = document.activeElement?.tagName ?? "";
 			if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
-			api.call.navigate(next);
+			void api.call.navigate(next);
 		};
 		document.addEventListener("keydown", onKey);
 		return () => {
@@ -132,7 +134,11 @@ export function App({ api }: AppProps): JSX.Element {
 					<Rail api={api} model={model} />
 					<main id="main" tabIndex={-1}>
 						<h1>{title}</h1>
-						<Screen api={api} />
+						{model.screen === state.screen ? (
+							<Screen api={api} />
+						) : (
+							<p className="muted">{api.t("loading")}</p>
+						)}
 					</main>
 				</div>
 				<Footer api={api} model={model} />
@@ -151,8 +157,10 @@ interface HeaderProps {
 
 // #region COMPONENT_Header
 /**
- * @purpose Show the profile, the language, the theme, the here budget, and the create action.
- * @invariants The profile list and the dirty count come from the view.
+ * @purpose Show the profile, the language, the theme, the here budget of the read, and the create
+ * action.
+ * @invariants The profile list comes from the view. The dirty count and the budget show only when
+ *   the read holds them, so the header forces no read of a screen that shows neither.
  */
 function Header({ api, model }: HeaderProps): JSX.Element {
 	const { t } = api;
@@ -207,7 +215,7 @@ function Header({ api, model }: HeaderProps): JSX.Element {
 					/>
 				}
 			/>
-			{model.candidates.length ? (
+			{model.candidates?.length ? (
 				<Chip
 					label={t("dirty")}
 					value={String(model.candidates.length)}
@@ -215,18 +223,20 @@ function Header({ api, model }: HeaderProps): JSX.Element {
 				/>
 			) : null}
 			<span className="hspacer" />
-			<div className="budget">
-				<span>
-					{t("lines", {
-						used: model.budgets.here.used,
-						limit: model.budgets.here.limit,
-					})}
-				</span>
-				<Meter
-					used={model.budgets.here.used}
-					limit={model.budgets.here.limit}
-				/>
-			</div>
+			{model.budgets ? (
+				<div className="budget">
+					<span>
+						{t("lines", {
+							used: model.budgets.here.used,
+							limit: model.budgets.here.limit,
+						})}
+					</span>
+					<Meter
+						used={model.budgets.here.used}
+						limit={model.budgets.here.limit}
+					/>
+				</div>
+			) : null}
 			<Button
 				text={t("newRecord")}
 				className="pri"
@@ -263,7 +273,7 @@ function Rail({ api, model }: RailProps): JSX.Element {
 						className={screen === state.screen ? "btn nav on" : "btn nav"}
 						aria-current={screen === state.screen ? "page" : undefined}
 						onClick={() => {
-							api.call.navigate(screen);
+							void api.call.navigate(screen);
 						}}
 					>
 						<Icon path={ICONS[index] ?? ""} />

@@ -23,10 +23,12 @@ import type { View } from "../../src/types.js";
 
 // #region FUNC_viewOf
 /**
- * @purpose Build one view with two profiles, two scopes, and no pending candidate.
+ * @purpose Build one console view of one screen, with two profiles and two scopes.
+ * @param patch - The fields that the test changes.
  */
-function viewOf(): View {
+function viewOf(patch: Partial<View> = {}): View {
 	return {
+		screen: "overview",
 		profile: "default",
 		scope: "project:alpha",
 		scopes: [
@@ -36,7 +38,6 @@ function viewOf(): View {
 				live: 1,
 				hidden: 0,
 				deleted: 0,
-				frontier: "first note",
 			},
 			{
 				key: "project:beta",
@@ -44,51 +45,39 @@ function viewOf(): View {
 				live: 0,
 				hidden: 0,
 				deleted: 0,
-				frontier: "",
 			},
 		],
+		revision: "abcdef1234567890",
 		text: "# project:alpha",
 		budgets: {
 			here: { used: 1, limit: 10 },
 			directions: { used: 0, limit: 10 },
 		},
-		records: [],
-		nodes: [],
-		candidates: [],
+		frontier: [],
 		catalog: [],
 		catalogScopes: ["project:alpha", "project:beta"],
-		frontier: [],
-		review: [],
-		reviewNext: [],
-		reviewNextTotal: 0,
-		revision: "abcdef1234567890",
-		proposals: [],
 		profiles: ["default", "work"],
 		path: "/tmp/memlens.db",
 		backend: "sqlite",
 		allowDelete: false,
-		reviewPolicy: {
-			decision: 7,
-			preference: 30,
-			fact: 30,
-			task: 7,
-			note: 30,
-		},
-	} as unknown as View;
+		...patch,
+	};
 }
 // #endregion FUNC_viewOf
 
 // #region FUNC_stateOf
 /**
  * @purpose Build one console state from the fixed view and an optional patch.
+ * @invariants The model is the payload of the state screen, as the host answers it.
  * @param patch - The fields that the test changes.
  */
 function stateOf(patch: Partial<ConsoleState> = {}): ConsoleState {
+	const screen = patch.screen ?? "overview";
 	return {
-		model: viewOf(),
+		model: viewOf({ screen }),
 		profile: "default",
 		scope: "project:alpha",
-		screen: "overview",
+		screen,
 		lang: "en",
 		theme: "system",
 		busy: false,
@@ -186,6 +175,22 @@ describe("standalone shell", () => {
 
 		expect(markup).toContain("<h1>Tree · project:alpha</h1>");
 		expect(markup.match(/<span class="t">Inspector<\/span>/g)).toHaveLength(1);
+	});
+
+	it("shows the loading text while the model is the payload of another screen", () => {
+		const markup = renderToStaticMarkup(
+			<App
+				api={apiOf(
+					stateOf({
+						screen: "catalog",
+						model: viewOf({ screen: "tree" }),
+					}),
+				)}
+			/>,
+		);
+
+		expect(markup).toContain('<p class="muted">Loading…</p>');
+		expect(markup).not.toContain('<div class="split keys">');
 	});
 
 	it("shows the status line only before the first view", () => {

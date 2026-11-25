@@ -8,7 +8,8 @@
  * @invariants The markup holds the element and class names of the DOM console, so the standalone
  *   stylesheet keeps working.
  * @invariants The text comes from `api.t` and the intents from `api.call`.
- * @invariants A runtime field without a value renders no row.
+ * @invariants A runtime field without a value renders no row. The two budgets show only when the
+ *   read holds them.
  * @invariants The live refresh starts on mount and stops on cleanup, so another screen holds no
  *   timer. The refresh reads the runtime state only, so it reloads no view.
  * @keywords maintenance, budget, candidate, level, runtime, snapshot, compaction, journal, refresh
@@ -19,7 +20,6 @@ import type { JSX } from "react";
 import { useEffect } from "react";
 import type { ConsoleApi, ConsoleRuntime } from "../../model/console.js";
 import { localTime, renderRange } from "../../model/format.js";
-import type { View } from "../../types.js";
 import { KeyValue, Panel, Table, widthPercent } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
 import { CompactionPanel } from "./compaction.js";
@@ -41,29 +41,30 @@ export function Maintenance({ api }: ScreenProps): JSX.Element {
 	}, [watchRuntime]);
 	const model = state.model;
 	if (!model) return <></>;
+	const totals = model.totals;
+	const candidates = model.candidates ?? [];
 	return (
 		<>
 			<p className="sub">{t("maintText")}</p>
 			<div className="tiles">
-				{tile(model.records.length, t("records"))}
-				{tile(model.nodes.length, t("treeNodes"))}
-				{tile(model.candidates.length, t("mergeCandidates"))}
+				{tile(totals?.records ?? 0, t("records"))}
+				{tile(totals?.nodes ?? 0, t("treeNodes"))}
+				{tile(totals?.candidates ?? 0, t("mergeCandidates"))}
 			</div>
-			<Panel title={t("lineBudgets")}>
-				{bar("here", model.budgets.here, t("lines", model.budgets.here))}
-				{bar(
-					"directions",
-					model.budgets.directions,
-					t("lines", model.budgets.directions),
-				)}
-			</Panel>
-			<Panel
-				title={t("mergeCandidates")}
-				right={String(model.candidates.length)}
-			>
+			{model.budgets ? (
+				<Panel title={t("lineBudgets")}>
+					{bar("here", model.budgets.here, t("lines", model.budgets.here))}
+					{bar(
+						"directions",
+						model.budgets.directions,
+						t("lines", model.budgets.directions),
+					)}
+				</Panel>
+			) : null}
+			<Panel title={t("mergeCandidates")} right={String(candidates.length)}>
 				<Table
 					headers={[t("scope"), t("range"), t("level"), t("state")]}
-					rows={model.candidates.map((item) => [
+					rows={candidates.map((item) => [
 						item.scope,
 						renderRange(item.scope, item.range),
 						String(item.range.level),
@@ -75,14 +76,11 @@ export function Maintenance({ api }: ScreenProps): JSX.Element {
 			<Panel title={t("nodesByLevel")}>
 				<Table
 					headers={[t("level"), t("nodes"), t("dirty"), t("candidates")]}
-					rows={levels(model).map((level) => [
-						String(level),
-						String(nodeCount(model, level)),
-						String(nodeCount(model, level, true)),
-						String(
-							model.candidates.filter((item) => item.range.level === level)
-								.length,
-						),
+					rows={(model.levels ?? []).map((level) => [
+						String(level.level),
+						String(level.nodes),
+						String(level.dirty),
+						String(level.candidates),
 					])}
 					empty={t("none")}
 				/>
@@ -117,21 +115,6 @@ function bar(
 			<span>{text}</span>
 		</div>
 	);
-}
-
-function levels(model: View): number[] {
-	return [
-		...new Set([
-			...model.nodes.map((item) => item.node.level),
-			...model.candidates.map((item) => item.range.level),
-		]),
-	].sort((a, b) => a - b);
-}
-
-function nodeCount(model: View, level: number, dirty = false): number {
-	return model.nodes.filter(
-		(item) => item.node.level === level && (!dirty || !item.clean),
-	).length;
 }
 
 // #region FUNC_runtimePanel

@@ -4,7 +4,7 @@
  * @purpose Apply each console edit and answer each console read, so both console hosts run one rule
  *   set.
  * @scope
- *  - The action dispatch, the seven edit handlers, the four read answers, the field text rule, and
+ *  - The action dispatch, the edit handlers, the screen answers, the field text rule, and
  *    the scope check.
  *  - NOT: the transports, the scope resolution of one host, the host facts of the view answer, and
  *    the compaction job code.
@@ -21,6 +21,7 @@
  */
 
 import { debuglog } from "node:util";
+import { ConsoleReader } from "../store/console.js";
 import {
 	amend,
 	amendTx,
@@ -35,10 +36,10 @@ import {
 	reviewTx,
 } from "../store/notes.js";
 import { accept, dismiss, pending } from "../store/proposals.js";
-import { scopeNotes } from "../store/reads.js";
+import { scopeNotes, supersedesOf } from "../store/reads.js";
 import { search } from "../store/search.js";
 import type { Store } from "../store/store.js";
-import type { IndexHit, Note, Proposal } from "../store/types.js";
+import type { IndexHit, Note, NoteState, Proposal } from "../store/types.js";
 import { MemlensError } from "../types/errors.js";
 import type { NoteKind, ScopeKey } from "../types/primitives.js";
 import { NOTE_KINDS } from "../types/primitives.js";
@@ -47,14 +48,17 @@ import { parseAddress } from "./address.js";
 import { globMatches } from "./config.js";
 import type { ResolvedConfig } from "./config-types.js";
 import type { ConsoleModel } from "./console.js";
-import { readConsole } from "./console.js";
+import {
+	CONSOLE_SCREENS,
+	type ConsoleScreen,
+	readConsole,
+	readConsoleCatalog,
+} from "./console.js";
 import {
 	filterHits,
-	loadRangeView,
 	type OpenChildren,
 	type OpenEntry,
 	openNote,
-	openRange,
 } from "./reads.js";
 import { isCatalogKey, validateScopeKey } from "./scope.js";
 import { resolveTarget } from "./target.js";
@@ -394,9 +398,9 @@ function amendRecord(host: ConsoleHost, record: Note, fields: Fields): void {
 // #region INTERFACE_ConsoleViewAnswer
 /** @purpose Give the view answer of one console, before one host adds its own facts. */
 export interface ConsoleViewAnswer extends ConsoleModel {
-	readonly proposals: readonly Proposal[];
+	readonly proposals?: readonly Proposal[];
 	readonly backend: string;
-	readonly reviewPolicy: ResolvedConfig["review"];
+	readonly reviewPolicy?: ResolvedConfig["review"];
 }
 // #endregion INTERFACE_ConsoleViewAnswer
 
@@ -408,19 +412,23 @@ export async function consoleView(
 	scope: ScopeKey,
 ): Promise<ConsoleViewAnswer> {
 	const kind = text(fields, "kind");
+	const screen = text(fields, "screen") || "overview";
+	if (!(CONSOLE_SCREENS as readonly string[]).includes(screen))
+		throw new MemlensError("Usage", "The screen is unknown.");
 	const model = await readConsole(
 		host.store,
 		host.config,
 		scope,
 		undefined,
 		kind ? noteKind(kind) : null,
+		screen as ConsoleScreen,
 	);
-	debug("View answered", { event: "view", scope, kind });
+	debug("View answered", { event: "view", scope, kind, screen });
 	return {
 		...model,
-		proposals: pending(host.store),
+		...(screen === "proposals" ? { proposals: pending(host.store) } : {}),
 		backend: "sqlite",
-		reviewPolicy: host.config.review,
+		...(screen === "review" ? { reviewPolicy: host.config.review } : {}),
 	};
 }
 // #endregion FUNC_consoleView
@@ -459,38 +467,68 @@ export function consoleSearch(
 }
 // #endregion FUNC_consoleSearch
 
+// #region INTERFACE_ConsoleEntry
+/** @purpose Give the console inspector and editor all fields of one opened note. */
+export interface ConsoleEntry extends OpenEntry {
+	readonly noteKind: NoteKind;
+	readonly state: NoteState;
+	readonly session: string;
+	readonly preset: string;
+	readonly supersedes: readonly string[];
+	readonly superseded_by: string | null;
+}
+// #endregion INTERFACE_ConsoleEntry
+
+// #region INTERFACE_ConsoleChildren
+/** @purpose Give the console the text and children of one selected range. */
+export interface ConsoleChildren extends OpenChildren {
+	readonly text: string;
+}
+// #endregion INTERFACE_ConsoleChildren
+
 // #region FUNC_consoleOpen
 /** @purpose Give one note with its document, or the children of one range. */
 export function consoleOpen(
 	host: ConsoleHost,
 	fields: Fields,
 	scope: ScopeKey,
-): OpenEntry | OpenChildren {
-	const address = parseAddress(text(fields, "target"));
-	if (!address)
-		throw new MemlensError("Usage", "The target must be an address.");
-	const key = allowedScope(host, address.scope ?? scope);
-	if (address.kind === "range" || address.kind === "scoped-range")
-		return openRange(
-			key,
-			loadRangeView(host.store, key),
-			address.start,
-			address.end,
-		);
-	const row = targetRecord(host, scope, text(fields, "target"));
-	const offset = Number(text(fields, "offset") || "0");
-	if (!Number.isInteger(offset) || offset < 0)
-		throw new MemlensError(
-			"Usage",
-			"The offset must be a whole number from 0.",
-		);
-	debug("Open answered", {
-		event: "open",
-		scope: key,
-		pos: address.pos,
-		offset,
+): ConsoleEntry | ConsoleChildren {
+	return host.store.read(() => {
+		const address = parseAddress(text(fields, "target"));
+		if (!address)
+			throw new MemlensError("Usage", "The target must be an address.");
+		const key = allowedScope(host, address.scope ?? scope);
+		if (address.kind === "range" || address.kind === "scoped-range")
+			return {
+				kind: "children",
+				...new ConsoleReader(host.store.handle(), key).children(
+					address.start,
+					address.end,
+				),
+			};
+		const row = targetRecord(host, scope, text(fields, "target"));
+		const offset = Number(text(fields, "offset") || "0");
+		if (!Number.isInteger(offset) || offset < 0)
+			throw new MemlensError(
+				"Usage",
+				"The offset must be a whole number from 0.",
+			);
+		debug("Open answered", {
+			event: "open",
+			scope: key,
+			pos: address.pos,
+			offset,
+		});
+		return {
+			...openNote(key, row, "all", offset),
+			noteKind: row.kind,
+			state: row.state,
+			session: row.session,
+			preset: row.preset,
+			supersedes: supersedesOf(host.store, row.id),
+			superseded_by: row.superseded_by,
+		};
 	});
-	return openNote(key, row, "all", offset);
 }
 // #endregion FUNC_consoleOpen
 
@@ -510,8 +548,7 @@ export async function consoleCatalog(
 		level < 1
 	)
 		throw new MemlensError("Usage", "The catalog target must be a range.");
-	const model = await readConsole(host.store, host.config, scope);
 	debug("Catalog answered", { event: "catalog", start, level });
-	return model.catalog.slice(start, start + 2 ** level);
+	return readConsoleCatalog(host.store, host.config, scope, start, level);
 }
 // #endregion FUNC_consoleCatalog

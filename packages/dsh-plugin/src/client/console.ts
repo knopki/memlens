@@ -5,7 +5,8 @@
  * @scope The first state, the local storage, the in-memory address, the Remote mount, the port, and
  *   the probe loop of a store that does not open.
  * NOT: the surface markup, the styles, and the host service.
- * @invariants The port of a session surface sends the session id in the input of each method.
+ * @invariants The port of a session surface sends the session id in the input of each method, and
+ *   reads the session screen only.
  * @invariants The port of a profile surface sends the profile of the request in the input of each
  *   method, so one panel reads each profile of the base file.
  * @invariants The address stays in memory. A surface reads and writes no page address and no
@@ -18,7 +19,7 @@
  * #endregion moduleContract
  */
 
-import type { IndexHit, SliceLine } from "@memlens/core";
+import type { ConsoleScreen, IndexHit, SliceLine } from "@memlens/core";
 import type {
 	ConsoleApi,
 	ConsoleRuntime,
@@ -372,6 +373,20 @@ function identityOf(
 }
 // #endregion FUNC_identityOf
 
+// #region FUNC_screenOf
+/**
+ * @purpose Give the screen of one view request.
+ * @invariants A session surface reads the session screen only. A profile surface reads the screen
+ *   of the request, and the overview when the request names none.
+ */
+function screenOf(
+	surface: Surface,
+	screen: ConsoleScreen | undefined,
+): ConsoleScreen {
+	return surface.kind === "session" ? "session" : (screen ?? "overview");
+}
+// #endregion FUNC_screenOf
+
 // #region FUNC_portOf
 /**
  * @purpose Build the store port of one surface from the mounted namespace.
@@ -386,6 +401,7 @@ function portOf(surface: Surface): StorePort {
 				...identityOf(surface, fields.profile),
 				scope: fields.scope,
 				kind: fields.kind,
+				screen: screenOf(surface, fields.screen),
 			})) as unknown as View,
 		search: async (fields) =>
 			(await call("search", {

@@ -156,19 +156,6 @@
 	color: var(--ml-muted);
 	font-size: 12px;
 }
-.ml-console .mini {
-	display: grid;
-	gap: 4px;
-	font-family: var(--ml-mono);
-	font-size: 11.5px;
-	color: var(--ml-muted);
-	overflow: hidden;
-}
-.ml-console .mini div {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
 .ml-console .card .btn {
 	align-self: start;
 	justify-self: start;

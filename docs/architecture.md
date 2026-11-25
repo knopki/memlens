@@ -195,6 +195,9 @@ session scope.
 One backend module in `@memlens/core` holds the edit rules and the read rules of the console, so
 both hosts apply one rule set.
 
+The domain applies the profile rules and assembles each console answer. The store owns SQL and selects the required rows and columns.
+Each console request reads the data of one screen. No console read assembles a full memory snapshot.
+
 A client stays in its own package and its own bundle. A file never mixes client code and backend
 code.
 

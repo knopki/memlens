@@ -100,9 +100,11 @@ describe("console", () => {
 			).status,
 		).toBe(200);
 		let view = await get();
-		expect(view.records).toHaveLength(1);
-		expect(view.here).toContain("alpha memory");
-		const target = `user:notes#${view.records[0].pos}`;
+		expect(
+			view.scopes.map((scope: { key: string; live: number }) => scope.live),
+		).toEqual([1]);
+		expect(view.text).toContain("alpha memory");
+		const target = "user:notes#0";
 		expect(
 			(await get(`/api/open?target=${encodeURIComponent(target)}`)).longform,
 		).toBe("document");
@@ -123,16 +125,22 @@ describe("console", () => {
 				.status,
 		).toBe(200);
 		view = await get();
-		expect(view.records[0].state).toBe("hidden");
-		const next = `user:notes#${view.records[1].pos}`;
+		expect(
+			view.scopes.map((scope: { hidden: number }) => scope.hidden),
+		).toEqual([1]);
+		const next = "user:notes#1";
 		expect((await post({ action: "forget", target: next })).status).toBe(200);
 		expect((await post({ action: "delete", target: next })).status).toBe(403);
 		expect(
 			(await post({ action: "delete", target: next, confirm: true })).status,
 		).toBe(200);
 		view = await get();
-		expect(view.records[1].body).toBe("");
-		expect(view.records[1].content_cleared).toBe(true);
+		expect(
+			view.scopes.map((scope: { deleted: number }) => scope.deleted),
+		).toEqual([1]);
+		expect(
+			(await get(`/api/open?target=${encodeURIComponent(next)}`)).body,
+		).toBe("");
 	});
 
 	it("rejects foreign origins, invalid JSON, and disabled deletion", async () => {
@@ -195,12 +203,14 @@ describe("console", () => {
 			kind: "task",
 			scope: "user:other",
 		});
-		const view = await get("/api/view?scope=user:notes");
+		const view = await get("/api/view?scope=user:notes&screen=review");
 		expect(
 			view.reviewNext.map((record: { body: string }) => record.body),
 		).toEqual(["task here", "fact here"]);
 		expect(view.reviewNextTotal).toBe(2);
-		const task = await get("/api/view?scope=user:notes&kind=task");
+		const task = await get(
+			"/api/view?scope=user:notes&kind=task&screen=review",
+		);
 		expect(task.reviewNext).toHaveLength(1);
 		expect(task.reviewNextTotal).toBe(1);
 		expect((await fetch(`${host.url}/api/view?kind=wrong`)).status).toBe(400);
@@ -259,13 +269,15 @@ describe("console", () => {
 		} finally {
 			await runtime.close();
 		}
-		const proposal = (await get()).proposals[0];
+		const proposal = (await get("/api/view?screen=proposals")).proposals[0];
 		expect((await post({ action: "accept", target: proposal.id })).status).toBe(
 			200,
 		);
-		const view = await get();
-		expect(view.proposals).toHaveLength(0);
-		expect(view.records[0].body).toBe("suggestion");
+		expect((await get("/api/view?screen=proposals")).proposals).toHaveLength(0);
+		expect(
+			(await get(`/api/open?target=${encodeURIComponent("other:demo#0")}`))
+				.body,
+		).toBe("suggestion");
 		expect((await post({ action: "accept", target: proposal.id })).status).toBe(
 			422,
 		);
@@ -290,11 +302,13 @@ describe("console", () => {
 		} finally {
 			await runtime.close();
 		}
-		const proposal = (await get()).proposals[0];
+		const proposal = (await get("/api/view?screen=proposals")).proposals[0];
 		expect((await post({ action: "accept", target: proposal.id })).status).toBe(
 			200,
 		);
-		expect((await get()).records[0]?.ts).toBe("2026-01-02T03:04:05.000Z");
+		expect(
+			(await get(`/api/open?target=${encodeURIComponent("other:demo#0")}`)).ts,
+		).toBe("2026-01-02T03:04:05.000Z");
 	});
 
 	it("approves a duplicate note through ordinary write rules", async () => {
@@ -322,7 +336,7 @@ describe("console", () => {
 		} finally {
 			await runtime.close();
 		}
-		const proposal = (await get()).proposals[0];
+		const proposal = (await get("/api/view?screen=proposals")).proposals[0];
 		const responses = await Promise.all([
 			post({ action: "accept", target: proposal.id }),
 			post({ action: "accept", target: proposal.id }),
@@ -330,16 +344,17 @@ describe("console", () => {
 		expect(responses.map((response) => response.status).sort()).toEqual([
 			200, 422,
 		]);
-		const view = await get();
-		expect(view.records).toHaveLength(1);
-		expect(view.proposals).toHaveLength(0);
+		expect((await get("/api/view?screen=proposals")).proposals).toHaveLength(0);
+		expect(
+			(await get(`/api/open?target=${encodeURIComponent("user:notes#0")}`))
+				.body,
+		).toBe("same note");
 	});
 
 	it("moves a note to another listed scope on amend", async () => {
 		const { get, post } = await fixture(false, '["user:*", "project:*"]');
 		await post({ action: "note", body: "movable", kind: "fact" });
-		const before = await get();
-		const target = `user:notes#${before.records[0].pos}`;
+		const target = "user:notes#0";
 		expect(
 			(
 				await post({
@@ -351,21 +366,18 @@ describe("console", () => {
 				})
 			).status,
 		).toBe(200);
-		const after = await get(
-			`/api/view?profile=default&scope=${encodeURIComponent("project:demo")}`,
-		);
 		expect(
-			after.records.map((record: { body: string }) => record.body),
-		).toEqual(["moved"]);
+			(await get(`/api/open?target=${encodeURIComponent("project:demo#0")}`))
+				.body,
+		).toBe("moved");
 	});
 
 	it("changes the kind and the supersedes of a note from the console", async () => {
 		const { get, post } = await fixture();
 		await post({ action: "note", body: "first", kind: "note" });
 		await post({ action: "note", body: "second", kind: "note" });
-		const before = await get();
-		const first = `user:notes#${before.records[0].pos}`;
-		const second = `user:notes#${before.records[1].pos}`;
+		const first = "user:notes#0";
+		const second = "user:notes#1";
 		expect(
 			(
 				await post({
@@ -378,10 +390,8 @@ describe("console", () => {
 				})
 			).status,
 		).toBe(200);
-		let view = await get();
 		expect(
-			view.records.find((record: { body: string }) => record.body === "first")
-				?.kind,
+			(await get(`/api/open?target=${encodeURIComponent(first)}`)).noteKind,
 		).toBe("decision");
 		expect(
 			(
@@ -396,13 +406,8 @@ describe("console", () => {
 				})
 			).status,
 		).toBe(200);
-		view = await get();
-		const replaced = view.records.find(
-			(record: { body: string }) => record.body === "first",
-		);
-		const source = view.records.find(
-			(record: { body: string }) => record.body === "second",
-		);
+		const replaced = await get(`/api/open?target=${encodeURIComponent(first)}`);
+		const source = await get(`/api/open?target=${encodeURIComponent(second)}`);
 		expect(replaced.state).toBe("hidden");
 		expect(replaced.superseded_by).toBe(source.id);
 		expect(source.supersedes).toEqual([replaced.id]);
@@ -423,12 +428,12 @@ describe("console", () => {
 		} finally {
 			await runtime.close();
 		}
-		const view = await get();
+		const view = await get("/api/view?screen=proposals");
 		expect(view.proposals).toHaveLength(1);
 		expect(
 			(await post({ action: "accept", target: view.proposals[0].id })).status,
 		).toBe(200);
-		expect((await get()).proposals).toHaveLength(0);
+		expect((await get("/api/view?screen=proposals")).proposals).toHaveLength(0);
 		const opened = await openRuntime({
 			storeFlag: join(root, "store"),
 			env,
@@ -524,8 +529,10 @@ describe("console", () => {
 			})
 		).json();
 		expect(applied).toEqual({ built: 1, rejected: 0, rejectedRanges: [] });
+		const maintenance = await get("/api/view?screen=maintenance");
+		expect(maintenance.totals.nodes).toBeGreaterThan(0);
 		expect(
-			(await get()).nodes.some((entry: { clean: boolean }) => entry.clean),
+			maintenance.levels.every((row: { dirty: number }) => row.dirty === 0),
 		).toBe(true);
 	});
 });

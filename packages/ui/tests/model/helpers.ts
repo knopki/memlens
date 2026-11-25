@@ -2,13 +2,13 @@
  * #region moduleContract
  * @purpose Build the fakes of one console test: a store port, a storage, a state, and a harness
  * with a controlled address.
- * @scope The view, the record, the entry, the state, the port calls, and the harness.
+ * @scope The view, the entry, the state, the port calls, and the harness.
  * @invariants The fakes hold no network, no DOM, and no local storage.
  * @keywords test, fake, port, storage, harness, state
  * #endregion moduleContract
  */
 
-import type { OpenEntry } from "@memlens/core";
+import type { ConsoleEntry } from "@memlens/core";
 import type {
 	ConsoleActions,
 	ConsoleState,
@@ -28,34 +28,33 @@ import type { Step, View } from "../../src/types.js";
  * @purpose Build one console view for a test.
  * @param profile - The profile name.
  * @param scope - The selected scope.
- * @param records - The record rows of the view.
+ * @param patch - The fields that the test changes.
  */
 export function viewOf(
 	profile = "default",
 	scope = "project:alpha",
-	records: readonly unknown[] = [],
+	patch: Partial<View> = {},
 ): View {
 	return {
+		screen: "overview",
 		profile,
 		scope,
 		scopes: [],
-		here: "",
-		directions: "",
+		revision: "rev-1",
 		text: "",
 		budgets: {
 			here: { used: 0, limit: 10 },
 			directions: { used: 0, limit: 10 },
 		},
-		records,
-		nodes: [],
-		candidates: [],
+		frontier: [],
 		catalog: [],
 		catalogScopes: [],
-		frontier: [],
 		review: [],
 		reviewNext: [],
 		reviewNextTotal: 0,
-		revision: "rev-1",
+		candidates: [],
+		totals: { records: 0, nodes: 0, candidates: 0 },
+		levels: [],
 		proposals: [],
 		profiles: [profile],
 		path: "/tmp/memlens.db",
@@ -65,47 +64,25 @@ export function viewOf(
 			decision: 7,
 			preference: 30,
 			fact: 30,
+			gotcha: 30,
 			task: 7,
 			note: 30,
 		},
-	} as unknown as View;
-}
-// #endregion FUNC_viewOf
-
-// #region FUNC_recordOf
-/**
- * @purpose Build one record row of a view for a test.
- */
-export function recordOf(scope: string, pos: number, kind = "fact") {
-	return {
-		id: `${scope}#${pos}`,
-		scope,
-		pos,
-		order: `${pos}`,
-		state: "live",
-		body: "body",
-		kind,
-		ts: "2026-11-14T10:00:00.000Z",
-		review_at: null,
-		recorded_at: "2026-11-14T10:00:00.000Z",
-		modified_at: "2026-11-14T10:00:00.000Z",
-		longform: null,
-		refs: [],
-		supersedes: [],
-		superseded_by: null,
-		content_cleared: false,
-		session: "test",
-		turn: "test",
-		preset: "test",
+		...patch,
 	};
 }
-// #endregion FUNC_recordOf
+// #endregion FUNC_viewOf
 
 // #region FUNC_entryOf
 /**
  * @purpose Build one open entry for a test.
+ * @param patch - The fields that the test changes.
  */
-export function entryOf(scope: string, pos: number): OpenEntry {
+export function entryOf(
+	scope: string,
+	pos: number,
+	patch: Partial<ConsoleEntry> = {},
+): ConsoleEntry {
 	return {
 		kind: "entry",
 		addr: `${scope}#${pos}`,
@@ -121,6 +98,13 @@ export function entryOf(scope: string, pos: number): OpenEntry {
 		review_at: null,
 		modified_at: "2026-11-14T10:00:00.000Z",
 		refs: [],
+		noteKind: "fact",
+		state: "live",
+		session: "test",
+		preset: "test",
+		supersedes: [],
+		superseded_by: null,
+		...patch,
 	};
 }
 // #endregion FUNC_entryOf
@@ -230,6 +214,9 @@ export function fakePort(overrides: Partial<StorePort> = {}): {
 			return viewOf(
 				fields.profile || "default",
 				fields.scope || "project:alpha",
+				{
+					screen: fields.screen ?? "overview",
+				},
 			);
 		},
 		async search(fields) {

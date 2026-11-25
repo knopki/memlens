@@ -2,7 +2,8 @@
  * #region moduleContract
  * @purpose Check that the published entries load through Cordis, keep preset settings separate,
  * and skip or keep the memory surface of one agent when its start or respawn fails.
- * @scope Built host and preset entries, native module resolution, host unload, and the skipped surface.
+ * @scope Built host and preset entries, native module resolution, host unload, the skipped surface,
+ *   and the console screens of the built host entry.
  * @invariants The test opens only a temporary store and makes no model request.
  * #endregion moduleContract
  */
@@ -19,7 +20,10 @@ import {
 	SystemPrompt,
 } from "@deepseek-ai/dsh-system-prompt";
 import { ToolsService } from "@deepseek-ai/dsh-tools";
+import { TypertRegistry } from "@deepseek-ai/dsh-typert-registry";
+import { type ConsoleModel, note } from "@memlens/core";
 import { afterEach, expect, it, vi } from "vitest";
+import { CONSOLE_SERVICE } from "../src/console/remote-contract.js";
 
 let root: Context | undefined;
 
@@ -42,6 +46,18 @@ function agentUnder(ctx: Context, parent: object, cwd: string): Agent {
 	return agent;
 }
 // #endregion FUNC_agentUnder
+
+// #region FUNC_consoleShape
+/** @purpose Give the stable shape of one console answer, so the snapshot holds no id and no date. */
+function consoleShape(answer: ConsoleModel) {
+	return {
+		screen: answer.screen,
+		keys: Object.keys(answer).sort(),
+		scopes: answer.scopes.length,
+		live: answer.scopes.reduce((sum, scope) => sum + scope.live, 0),
+	};
+}
+// #endregion FUNC_consoleShape
 
 /** The six tool names of the memory surface. */
 const MEMORY_TOOL_NAMES = [
@@ -408,4 +424,127 @@ it("restores the surface when the first respawn attempt of a recovered store fai
 	if (!section)
 		throw new Error("The memlens context of the recovered agent is absent.");
 	expect(section).toContain("<memory>");
+});
+
+it("answers the console screens through the built host entry", async () => {
+	const directory = mkdtempSync(join(tmpdir(), "memlens-loader-console-"));
+	vi.stubEnv("XDG_CONFIG_HOME", directory);
+	vi.stubEnv("XDG_DATA_HOME", directory);
+	vi.stubEnv("MEMLENS_STORE", undefined);
+	root = new Context();
+	new TypertRegistry(root);
+	root.provide("llm", {} as Context["llm"]);
+	await root.plugin(Loader, {
+		baseUrl: new URL("../package.json", import.meta.url).href,
+	});
+	await root.loader.create({ name: "@memlens/dsh-plugin" });
+	await root.loader.await();
+	const agent = agentUnder(root, {}, directory);
+	Object.assign(agent, {
+		session: { header: { cwd: directory }, deriveMessages: () => [] },
+		model: { current: () => ({ provider: "test", model: "route" }) },
+	});
+	root.provide("agents", {
+		list: () => [agent],
+		get: (id: string) => (id === agent.id ? agent : undefined),
+	} as unknown as Context["agents"]);
+	const memory = root.memlens.forAgent(agent);
+	note(memory.store, {
+		scope: memory.scope,
+		kind: "note",
+		body: "A note behind a console screen.",
+		session: agent.id,
+		turn: "loader",
+		preset: "default",
+		ts: "2026-01-01T00:00:00.000Z",
+	});
+	const descriptor = root.typert.local.get("memlens/view");
+	if (descriptor === undefined)
+		throw new Error("The view descriptor is absent.");
+	const parameter = descriptor.parameters[0];
+	if (parameter === undefined)
+		throw new Error("The view descriptor has no input.");
+	const codec = parameter.codec;
+	if (codec.mode !== "strict")
+		throw new Error("The view input codec is not strict.");
+	const receiver = root.get(CONSOLE_SERVICE) as
+		| { view: (input: unknown) => Promise<unknown> }
+		| undefined;
+	if (receiver === undefined)
+		throw new Error("The console Remote service is absent.");
+	const answerOf = async (screen: string): Promise<ConsoleModel> => {
+		const input = codec.create().parse({
+			session: agent.id,
+			screen,
+		});
+		const answer = await receiver.view(input);
+		// The Gateway encodes the answer through the strict result codec, so the test does the same.
+		if (descriptor.result.mode !== "strict") return answer as ConsoleModel;
+		const encode = descriptor.result.encode;
+		return (
+			encode === undefined ? answer : encode(answer, () => null)
+		) as ConsoleModel;
+	};
+	expect(
+		[
+			await answerOf("overview"),
+			await answerOf("session"),
+			await answerOf("search"),
+		].map(consoleShape),
+	).toMatchInlineSnapshot(`
+		[
+		  {
+		    "keys": [
+		      "allowDelete",
+		      "backend",
+		      "budgets",
+		      "path",
+		      "profile",
+		      "profiles",
+		      "revision",
+		      "scope",
+		      "scopes",
+		      "screen",
+		      "text",
+		    ],
+		    "live": 1,
+		    "scopes": 1,
+		    "screen": "overview",
+		  },
+		  {
+		    "keys": [
+		      "allowDelete",
+		      "backend",
+		      "budgets",
+		      "path",
+		      "profile",
+		      "profiles",
+		      "revision",
+		      "scope",
+		      "scopes",
+		      "screen",
+		      "text",
+		    ],
+		    "live": 1,
+		    "scopes": 1,
+		    "screen": "session",
+		  },
+		  {
+		    "keys": [
+		      "allowDelete",
+		      "backend",
+		      "path",
+		      "profile",
+		      "profiles",
+		      "revision",
+		      "scope",
+		      "scopes",
+		      "screen",
+		    ],
+		    "live": 1,
+		    "scopes": 1,
+		    "screen": "search",
+		  },
+		]
+	`);
 });

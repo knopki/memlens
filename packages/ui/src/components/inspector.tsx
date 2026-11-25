@@ -5,18 +5,19 @@
  * @scope The inspector panel, the record actions, and the open of one record for an amendment.
  *   NOT: the frontier list, the host calls, and the styles.
  * @invariants The note body and its document go into text nodes, never into markup.
+ * @invariants The provenance rows come from the open answer, so the inspector reads no record row of
+ *   the scope.
  * @invariants A page without a selection renders no inspector.
  * @invariants The component holds no style, no transport, and no address.
  * @keywords inspector, note, provenance, action, delete, amend, component
  * #endregion moduleContract
  */
 
-import type { OpenEntry } from "@memlens/core";
+import type { ConsoleEntry } from "@memlens/core";
 import type { JSX } from "react";
 import { useState } from "react";
 import type { ConsoleApi } from "../model/console.js";
 import { kindName } from "../model/format.js";
-import type { RecordModel } from "../types.js";
 import { Button, KeyValue, Panel } from "./primitives.js";
 
 // #region COMPONENT_Inspector
@@ -46,18 +47,17 @@ export function Inspector({
 				)}
 			</Panel>
 		);
-	const row = api.state.model?.records.find((item) => item.id === result.id);
 	return (
 		<Panel title={title} className="ins">
 			<div className="quote">
 				{result.body}
 				{result.longform ? <div className="doc">{result.longform}</div> : null}
 			</div>
-			<KeyValue rows={metaRows(api, result, row)} />
+			<KeyValue rows={metaRows(api, result)} />
 			<RecordActions
 				api={api}
 				target={result.addr}
-				disabled={!api.state.model?.allowDelete || row?.state === "deleted"}
+				disabled={!api.state.model?.allowDelete || result.state === "deleted"}
 			/>
 			{extraActions(api, result.addr, result.id)}
 		</Panel>
@@ -65,21 +65,17 @@ export function Inspector({
 }
 // #endregion COMPONENT_Inspector
 
-function metaRows(
-	api: ConsoleApi,
-	result: OpenEntry,
-	row?: RecordModel,
-): [string, string][] {
+function metaRows(api: ConsoleApi, result: ConsoleEntry): [string, string][] {
 	const { t } = api;
 	return [
 		[t("id"), result.id],
 		[t("time"), result.ts],
-		[t("kind"), kindName(t, row?.kind ?? "unavailable")],
-		[t("session"), row?.session ?? t("none")],
-		[t("preset"), row?.preset ?? t("none")],
+		[t("kind"), kindName(t, result.noteKind)],
+		[t("session"), result.session || t("none")],
+		[t("preset"), result.preset || t("none")],
 		[t("refs"), result.refs.join(", ") || t("none")],
-		[t("supersedes"), row?.supersedes.join(", ") || t("none")],
-		[t("supersededBy"), row?.superseded_by ?? t("none")],
+		[t("supersedes"), result.supersedes.join(", ") || t("none")],
+		[t("supersededBy"), result.superseded_by ?? t("none")],
 		[t("reviewAt"), result.review_at ?? t("none")],
 		[t("modifiedAt"), result.modified_at],
 	];

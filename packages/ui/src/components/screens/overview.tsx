@@ -1,10 +1,10 @@
 /**
  * #region moduleContract
  * @purpose Show each visible scope as one card and the assembled slice below it.
- * @scope The scope card, the counts, the first frontier lines, and the slice quote. NOT: the open
- * calls and the address.
- * @invariants Keep a card for a scope with no live note.
+ * @scope The scope card, the counts, and the slice quote. NOT: the open calls, the address, and the
+ *   lines of one scope.
  * @invariants Quote the whole slice as text. The slice holds no height limit and no inner scroll.
+ * @invariants The slice budget shows only when the read holds it.
  * @keywords overview, scope, card, slice, budget, react
  * #endregion moduleContract
  */
@@ -17,8 +17,9 @@ import type { ScreenProps } from "../screen-props.js";
 // #region COMPONENT_Overview
 /**
  * @purpose Show each visible scope as one card and the assembled slice below.
- * @invariants Keep a card for a scope with no live note. Quote the whole slice as text: the page
- * scrolls, and the slice holds no height limit and no inner scroll.
+ * @invariants Keep a card for a scope with no live note. The card reads no line of the scope.
+ * @invariants Quote the whole slice as text: the page scrolls, and the slice holds no height limit
+ *   and no inner scroll.
  */
 export function Overview({ api }: ScreenProps): JSX.Element {
 	const state = useSyncExternalStore(
@@ -34,7 +35,6 @@ export function Overview({ api }: ScreenProps): JSX.Element {
 			<div className="cards">
 				{model.scopes.map((item) => {
 					const current = item.key === state.scope;
-					const lines = item.frontier.split("\n").filter(Boolean);
 					return (
 						<section
 							key={item.key}
@@ -49,16 +49,6 @@ export function Overview({ api }: ScreenProps): JSX.Element {
 								<span>{`${item.hidden} ${api.t("hidden")}`}</span>
 								<span>{`${item.deleted} ${api.t("deleted")}`}</span>
 							</div>
-							<div className="mini">
-								{lines.length ? (
-									lines.slice(0, 3).map((text, index) => (
-										// biome-ignore lint/suspicious/noArrayIndexKey: a frontier line holds no identity
-										<div key={index}>{text}</div>
-									))
-								) : (
-									<div className="muted">{api.t("noFrontier")}</div>
-								)}
-							</div>
 							<Button onClick={() => void api.call.reset(item.key)}>
 								{api.t("openScope")}
 							</Button>
@@ -68,12 +58,16 @@ export function Overview({ api }: ScreenProps): JSX.Element {
 			</div>
 			<Panel
 				title={api.t("slice")}
-				right={api.t("lines", {
-					used: model.budgets.here.used,
-					limit: model.budgets.here.limit,
-				})}
+				right={
+					model.budgets
+						? api.t("lines", {
+								used: model.budgets.here.used,
+								limit: model.budgets.here.limit,
+							})
+						: ""
+				}
 			>
-				<pre className="slice">{model.text}</pre>
+				<pre className="slice">{model.text ?? ""}</pre>
 			</Panel>
 		</>
 	);

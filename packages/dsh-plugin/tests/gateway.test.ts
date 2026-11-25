@@ -254,7 +254,7 @@ async function failure(
 interface ViewAnswer {
 	readonly profile: string;
 	readonly revision: string;
-	readonly records: readonly { readonly body: string }[];
+	readonly scopes: readonly { readonly key: string; readonly live: number }[];
 }
 
 describe("console Remote over the real gateway", () => {
@@ -269,7 +269,7 @@ describe("console Remote over the real gateway", () => {
 		})) as ViewAnswer;
 		expect(answer.profile).toBeTypeOf("string");
 		expect(answer.revision).toBeTypeOf("string");
-		expect(answer.records).toEqual([]);
+		expect(answer.scopes.every((scope) => scope.live === 0)).toBe(true);
 	});
 
 	it("answers the store state of a session and a profile with no scope requested", async () => {
@@ -327,7 +327,7 @@ describe("console Remote over the real gateway", () => {
 		const answer = (await call(testCase, "view", {
 			input: { session: testCase.agent.id },
 		})) as ViewAnswer;
-		expect(answer.records.map((record) => record.body)).toContain(body);
+		expect(answer.scopes.some((scope) => scope.live === 1)).toBe(true);
 	});
 
 	it("rejects a malformed input before the service runs", async () => {
@@ -368,7 +368,7 @@ describe("console Remote over the real gateway", () => {
 		const answer = (await call(testCase, "view", {
 			input: { session: testCase.agent.id },
 		})) as ViewAnswer;
-		expect(answer.records).toEqual([]);
+		expect(answer.scopes.every((scope) => scope.live === 0)).toBe(true);
 	});
 
 	it("removes the endpoints, the service, and the dispatch with its disposer", async () => {

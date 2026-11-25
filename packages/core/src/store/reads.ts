@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Answer each memory read from the rows of one store, so no read scans the log.
- * @scope Note by address or id, due reviews, live counts, scope notes, nodes, the directions data,
+ * @scope Note targets and supersede links, due reviews, live counts, scope notes, nodes, the directions data,
  *   and the journal rows.
  * @invariants The note reads give a row in any state. A hidden row is evidence, not content loss.
  * @invariants Each read uses one statement on the store handle. No read opens a long transaction.
@@ -98,6 +98,18 @@ export function byId(store: Store, id: Ulid): Note | null {
 	return row === undefined ? null : noteFromRow(row);
 }
 // #endregion FUNC_byId
+
+// #region FUNC_supersedesOf
+/** @purpose Read the ids of the notes that one note replaced, in id order. */
+export function supersedesOf(store: Store, id: Ulid): readonly Ulid[] {
+	const rows = store
+		.handle()
+		.prepare("SELECT id FROM notes WHERE superseded_by = ? ORDER BY id")
+		.all(id);
+	debug("Supersede links read", { id, targets: rows.length });
+	return rows.map((row) => String(row.id));
+}
+// #endregion FUNC_supersedesOf
 
 // #region FUNC_dueReviews
 /**

@@ -14,7 +14,7 @@
  */
 
 import { createRequire } from "node:module";
-import type { ScopeKey } from "@memlens/core";
+import type { ConsoleScreen, ScopeKey } from "@memlens/core";
 import type {
 	ConsoleActions,
 	ConsoleApi,
@@ -87,10 +87,11 @@ interface FakeRemote {
 
 // #region FUNC_viewOf
 /**
- * @purpose Build one console view with two scopes, one frontier line, and one due note.
+ * @purpose Build one console view of the overview screen with two scopes.
  */
-function viewOf(): View {
+function viewOf(screen: ConsoleScreen = "overview"): View {
 	return {
+		screen,
 		profile: "default",
 		scope: "project:alpha",
 		scopes: [
@@ -100,7 +101,6 @@ function viewOf(): View {
 				live: 2,
 				hidden: 0,
 				deleted: 0,
-				frontier: "alpha one",
 			},
 			{
 				key: "project:beta",
@@ -108,36 +108,13 @@ function viewOf(): View {
 				live: 0,
 				hidden: 0,
 				deleted: 0,
-				frontier: "",
 			},
 		],
-		here: "",
-		directions: "",
 		text: "# project:alpha\nnote one",
 		budgets: {
 			here: { used: 1, limit: 10 },
 			directions: { used: 0, limit: 10 },
 		},
-		records: [
-			{ scope: "project:alpha", state: "live", kind: "note", pos: 0 },
-			{ scope: "project:alpha", state: "live", kind: "note", pos: 1 },
-		],
-		nodes: [],
-		candidates: [],
-		catalog: [],
-		catalogScopes: ["project:alpha", "project:beta"],
-		frontier: [
-			{
-				kind: "record",
-				pos: 0,
-				from: "2026-11-01T00:00:00Z",
-				to: "2026-11-01T00:00:00Z",
-				body: "note one",
-			},
-		],
-		review: [],
-		reviewNext: [],
-		reviewNextTotal: 0,
 		revision: "rev-1",
 		proposals: [],
 		profiles: ["default"],
@@ -148,10 +125,11 @@ function viewOf(): View {
 			decision: 7,
 			preference: 30,
 			fact: 30,
+			gotcha: 30,
 			task: 7,
 			note: 30,
 		},
-	} as unknown as View;
+	};
 }
 // #endregion FUNC_viewOf
 
@@ -168,12 +146,13 @@ function fakeRemote(refuse: Record<string, string> = {}): FakeRemote {
 		METHODS.map((method) => [
 			method,
 			async (input: object) => {
-				calls.push({ method, input: input as Record<string, unknown> });
+				const fields = input as Record<string, unknown>;
+				calls.push({ method, input: fields });
 				const message = refuse[method];
 				if (message !== undefined) {
 					return { ok: false, error: { code: "memlens/refused", message } };
 				}
-				return { ok: true, value: answerOf(method) };
+				return { ok: true, value: answerOf(method, fields) };
 			},
 		]),
 	) as RemoteNamespace;
@@ -185,9 +164,10 @@ function fakeRemote(refuse: Record<string, string> = {}): FakeRemote {
 /**
  * @purpose Give the fixed answer of one method.
  * @param method - The name of the console method.
+ * @param input - The wire input of the call. A view answer carries the requested screen.
  */
-function answerOf(method: string): unknown {
-	if (method === "view") return viewOf();
+function answerOf(method: string, input: Record<string, unknown>): unknown {
+	if (method === "view") return viewOf(input.screen as ConsoleScreen);
 	if (method === "status") {
 		return {
 			session: "session-1",
@@ -591,6 +571,7 @@ describe("session console", () => {
 			session: "session-1",
 			scope: "",
 			kind: "",
+			screen: "session",
 		});
 		expect(remote.calls.some((call) => call.method === "status")).toBe(true);
 	});
@@ -632,6 +613,16 @@ describe("session console", () => {
 		expect(api.state.status.text).toBe("The store is locked.");
 	});
 
+	it("keeps the page screen while the model is the session screen", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createSessionConsole("session-1", english);
+		await api.call.restore(DEFAULT_ROUTE);
+		expect(api.state.model?.screen).toBe("session");
+		expect(api.state.screen).toBe("overview");
+	});
+
 	it("restores the place without a page address", async () => {
 		const remote = fakeRemote();
 		const { ctx } = fakeContext(remote);
@@ -656,10 +647,22 @@ describe("profile console", () => {
 			profile: "",
 			scope: "",
 			kind: "",
+			screen: "overview",
 		});
 		for (const call of remote.calls)
 			expect(call.input).not.toHaveProperty("session");
 		expect(remote.calls.some((call) => call.method === "status")).toBe(true);
+	});
+
+	it("reads the screen of each navigation", async () => {
+		const remote = fakeRemote();
+		const { ctx } = fakeContext(remote);
+		apply(ctx);
+		const api = createProfileConsole(english);
+		await api.call.restore(DEFAULT_ROUTE);
+		await api.call.navigate("maintenance");
+		const views = remote.calls.filter((call) => call.method === "view");
+		expect(views.at(-1)?.input.screen).toBe("maintenance");
 	});
 
 	it("asks for each profile that the page selects", async () => {
@@ -839,7 +842,7 @@ describe("page scope menu", () => {
 	it("draws the fifty scopes of the loaded view as one flat list", () => {
 		const scopes = Array.from({ length: 50 }, (_, index) => {
 			const key = `project:s${index}` as ScopeKey;
-			return { key, total: 1, live: 1, hidden: 0, deleted: 0, frontier: key };
+			return { key, total: 1, live: 1, hidden: 0, deleted: 0 };
 		});
 		const view: View = { ...viewOf(), scope: "project:s0", scopes };
 		seeded.api = apiOf(

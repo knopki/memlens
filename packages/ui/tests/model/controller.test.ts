@@ -12,14 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConsoleRuntime, OpenedTarget } from "../../src/model/console.js";
 import { DEFAULT_ROUTE } from "../../src/route.js";
 import type { View } from "../../src/types.js";
-import {
-	deferred,
-	entryOf,
-	type Harness,
-	harness,
-	recordOf,
-	viewOf,
-} from "./helpers.js";
+import { deferred, entryOf, type Harness, harness, viewOf } from "./helpers.js";
 
 /** The calls of one port method. */
 const callsOf = (h: Harness, method: string) =>
@@ -199,12 +192,10 @@ describe("console controller dialog", () => {
 		expect(h.state().dialog).toBeNull();
 	});
 
-	it("opens the amend form from the view and sends the target", async () => {
-		const record = recordOf("project:alpha", 3);
-		const h = harness(
-			{},
-			{ model: viewOf("default", "project:alpha", [record]) },
-		);
+	it("opens the amend form from the open answer and sends the target", async () => {
+		const h = harness({
+			open: async () => entryOf("project:alpha", 3, { noteKind: "fact" }),
+		});
 		await h.call.editNote("project:alpha#3", false);
 		expect(h.state().dialog).toEqual({
 			mode: "amend",
@@ -237,14 +228,12 @@ describe("console controller dialog", () => {
 	});
 
 	it("shows the supersede links of the record and adds no removal", async () => {
-		const record = {
-			...recordOf("project:alpha", 3),
-			supersedes: ["project:alpha#1", "project:alpha#2"],
-		};
-		const h = harness(
-			{},
-			{ model: viewOf("default", "project:alpha", [record]) },
-		);
+		const h = harness({
+			open: async () =>
+				entryOf("project:alpha", 3, {
+					supersedes: ["project:alpha#1", "project:alpha#2"],
+				}),
+		});
 		await h.call.editNote("project:alpha#3", false);
 		expect(h.state().dialog).toMatchObject({
 			mode: "amend",
@@ -264,11 +253,7 @@ describe("console controller dialog", () => {
 	});
 
 	it("opens the supersede form with the record address", async () => {
-		const record = recordOf("project:alpha", 3);
-		const h = harness(
-			{},
-			{ model: viewOf("default", "project:alpha", [record]) },
-		);
+		const h = harness({ open: async () => entryOf("project:alpha", 3) });
 		await h.call.editNote("project:alpha#3", true);
 		expect(h.state().dialog).toMatchObject({
 			mode: "supersede",
@@ -289,10 +274,12 @@ describe("console controller dialog", () => {
 		});
 	});
 
-	it("reads a record outside the view and starts with no kind", async () => {
-		const h = harness({ open: async () => entryOf("team:beta", 1) });
+	it("opens the record of another scope with its note kind", async () => {
+		const h = harness({
+			open: async () => entryOf("team:beta", 1, { noteKind: "task" }),
+		});
 		await h.call.editNote("team:beta#1", false);
-		expect(h.state().dialog?.kind).toBe("");
+		expect(h.state().dialog?.kind).toBe("task");
 		expect(h.state().dialog?.scope).toBe("team:beta");
 	});
 });
@@ -301,7 +288,10 @@ describe("console controller reset", () => {
 	it("clears the selection, the hits, the job, and the search scope", async () => {
 		const h = harness();
 		h.store.set({
-			selection: { target: "x", result: { kind: "children", children: [] } },
+			selection: {
+				target: "x",
+				result: { kind: "children", children: [], text: "" },
+			},
 			hits: [],
 			searchScope: "team:beta",
 			job: { inputs: [], job: "task", profile: "default", scope: "x" },
@@ -334,6 +324,28 @@ describe("console controller reset", () => {
 		expect(h.writes.at(-1)?.step).toBe("replace");
 	});
 
+	it("stops a replaced place before its search and its open", async () => {
+		const gate = deferred<View>();
+		let index = 0;
+		const h = harness({
+			view: () => (index++ === 0 ? gate.promise : Promise.resolve(viewOf())),
+		});
+		const restoring = h.call.restore({
+			...DEFAULT_ROUTE,
+			screen: "search",
+			profile: "default",
+			scope: "project:alpha",
+			target: "project:alpha#1",
+			query: "words",
+		});
+		await h.call.navigate("tree");
+		gate.resolve(viewOf("default", "project:alpha", { screen: "search" }));
+		await restoring;
+		expect(callsOf(h, "search")).toHaveLength(0);
+		expect(callsOf(h, "open")).toHaveLength(0);
+		expect(h.state().screen).toBe("tree");
+	});
+
 	it("falls back to the first place when the host rejects the place", async () => {
 		const h = harness({
 			view: async (fields) => {
@@ -362,6 +374,22 @@ describe("console controller open", () => {
 		expect(h.writes.at(-1)?.route.target).toBe("project:alpha#2");
 	});
 
+	it("keeps the selection of the latest open", async () => {
+		const older = deferred<OpenedTarget>();
+		const newer = deferred<OpenedTarget>();
+		let index = 0;
+		const h = harness({
+			open: () => (index++ === 0 ? older.promise : newer.promise),
+		});
+		const first = h.call.openTarget("project:alpha#1");
+		const second = h.call.openTarget("project:alpha#2");
+		newer.resolve(entryOf("project:alpha", 2));
+		await second;
+		older.resolve(entryOf("project:alpha", 1));
+		await first;
+		expect(h.state().selection?.target).toBe("project:alpha#2");
+	});
+
 	it("opens a catalog range with its range id", async () => {
 		const h = harness({ catalog: async () => [] });
 		await h.call.openCatalog({ start: 0, level: 1 });
@@ -375,19 +403,23 @@ describe("console controller open", () => {
 		});
 	});
 
-	it("opens a target in the tree screen", async () => {
+	it("opens a target in the tree screen and reads the tree", async () => {
 		const h = harness({
-			open: async () => ({ kind: "children", children: [] }),
+			open: async () => ({ kind: "children", children: [], text: "" }),
 		});
 		await h.call.openInTree("project:alpha#1");
 		expect(h.state().screen).toBe("tree");
 		expect(h.state().selection?.target).toBe("project:alpha#1");
+		expect(callsOf(h, "view")[0]?.fields).toMatchObject({ screen: "tree" });
 	});
 
 	it("opens the tree of one scope with no selection", async () => {
 		const h = harness();
 		h.store.set({
-			selection: { target: "x", result: { kind: "children", children: [] } },
+			selection: {
+				target: "x",
+				result: { kind: "children", children: [], text: "" },
+			},
 		});
 		await h.call.openScopeTree("team:beta");
 		expect(h.state().screen).toBe("tree");
@@ -447,9 +479,9 @@ describe("console controller search", () => {
 });
 
 describe("console controller address", () => {
-	it("writes the route after a screen change and skips a repeated route", () => {
+	it("writes the route after a screen change and skips a repeated route", async () => {
 		const h = harness();
-		h.call.navigate("tree");
+		await h.call.navigate("tree");
 		expect(h.writes).toHaveLength(1);
 		expect(h.writes[0]?.step).toBe("push");
 		expect(h.writes[0]?.route).toEqual({
@@ -458,8 +490,52 @@ describe("console controller address", () => {
 			profile: "default",
 			scope: "project:alpha",
 		});
-		h.call.navigate("tree");
+		await h.call.navigate("tree");
 		expect(h.writes).toHaveLength(1);
+	});
+
+	it("reads the screen of each navigation and clears the selection", async () => {
+		const h = harness();
+		h.store.set({
+			selection: {
+				target: "project:alpha#1",
+				result: { kind: "children", children: [], text: "" },
+			},
+		});
+		await h.call.navigate("tree");
+		await h.call.navigate("catalog");
+		const views = callsOf(h, "view");
+		expect(views.map((call) => call.fields)).toMatchObject([
+			{ screen: "tree" },
+			{ screen: "catalog" },
+		]);
+		expect(h.state().selection).toBeUndefined();
+	});
+
+	it("keeps the screen of the newest navigation", async () => {
+		const older = deferred<View>();
+		const newer = deferred<View>();
+		let index = 0;
+		const h = harness({
+			view: () => (index++ === 0 ? older.promise : newer.promise),
+		});
+		const first = h.call.navigate("tree");
+		const second = h.call.navigate("catalog");
+		newer.resolve(viewOf("default", "project:alpha", { screen: "catalog" }));
+		await second;
+		older.resolve(viewOf("default", "project:alpha", { screen: "tree" }));
+		await first;
+		expect(h.state().screen).toBe("catalog");
+		expect(h.state().model?.screen).toBe("catalog");
+	});
+
+	it("loads the current screen after an action", async () => {
+		const h = harness();
+		await h.call.navigate("review");
+		await h.call.action("review", { target: "project:alpha#1" });
+		expect(callsOf(h, "view").at(-1)?.fields).toMatchObject({
+			screen: "review",
+		});
 	});
 });
 

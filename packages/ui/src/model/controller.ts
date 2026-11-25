@@ -7,7 +7,9 @@
  * address read, and the transport.
  * @invariants The controller reads no address. The shell gives the current route and takes the next
  * route.
- * @invariants A stale answer writes no state. A second action waits for the first action.
+ * @invariants A stale answer writes no state. One open sequence lets the latest open write the
+ * selection. A second action waits for the first action.
+ * @invariants Each view read names the current screen, so a screen change reads its own payload.
  * @invariants A callback reports its error in the status line and does not reject.
  * @invariants The runtime watch reads the runtime method only, so a live read reloads no view. It
  * writes no busy flag and no status text, so it does not block or clear an action.
@@ -17,12 +19,11 @@
  * #endregion moduleContract
  */
 
-import type { BuildInput, NoteKind, OpenEntry, Range } from "@memlens/core";
-import { NOTE_KINDS } from "@memlens/core/view";
-import { readRange, renderAddress, renderRange } from "../format.js";
+import type { BuildInput, ConsoleEntry, NoteKind, Range } from "@memlens/core";
+import { readRange, renderRange } from "../format.js";
 import { LANGS, type Lang } from "../i18n.js";
 import { DEFAULT_ROUTE, type Route, routeOf, type Screen } from "../route.js";
-import type { Choice, RecordModel, Step, View } from "../types.js";
+import type { Choice, Step, View } from "../types.js";
 import type {
 	ActionFields,
 	ConsoleActions,
@@ -51,12 +52,6 @@ const ERROR_MS = 8000;
 
 /** The wait between two reads of the host runtime state, in milliseconds. */
 const RUNTIME_MS = 5000;
-
-function kindOf(value: string): NoteKind | "" {
-	return (NOTE_KINDS as readonly string[]).includes(value)
-		? (value as NoteKind)
-		: "";
-}
 
 function languageOf(code: string): Lang {
 	const short = code.slice(0, 2) as Lang;
@@ -137,6 +132,9 @@ export function createConsoleController(
 	let runtimeTimer: ReturnType<typeof setInterval> | undefined;
 	let runtimeWatch = 0;
 	let runtimePending: number | undefined;
+
+	/** The number of the latest open request. A later request drops the answer of an older one. */
+	let openSeq = 0;
 
 	const get = (): ConsoleState => store.getSnapshot();
 	const set = (patch: Partial<ConsoleState>): void => store.set(patch);
@@ -227,13 +225,16 @@ export function createConsoleController(
 
 	// #region FUNC_loadView
 	/**
-	 * @purpose Refresh the console after a profile, scope, or store change.
+	 * @purpose Read the model of the current scope and screen after a profile, scope, or screen
+	 * change.
 	 * @invariants The host resolves the profile and the scope, so the state takes the resolved values.
-	 * @invariants The call keeps a generation token. An older answer returns before it writes state.
+	 * @invariants The call names the current screen, so the host reads one screen payload only.
+	 * @invariants The call keeps a generation token. An older answer writes no state and answers
+	 *   false, so a caller stops its later steps.
 	 * @invariants A failed view read still states the runtime of the host, so a surface reports a
 	 *  store that does not open.
 	 */
-	async function loadView(step: Step = "replace"): Promise<void> {
+	async function loadView(step: Step = "replace"): Promise<boolean> {
 		const token = get().generation + 1;
 		set({ generation: token });
 		message(t("loading"));
@@ -244,6 +245,7 @@ export function createConsoleController(
 				profile: get().profile,
 				scope: get().scope,
 				kind: get().reviewKind,
+				screen: get().screen,
 			});
 		} catch (error) {
 			failed = error;
@@ -251,22 +253,21 @@ export function createConsoleController(
 		const runtime = port.runtime
 			? await port.runtime().catch(() => undefined)
 			: undefined;
-		if (token !== get().generation) return;
+		if (token !== get().generation) return false;
 		if (runtime !== undefined) set({ runtime });
 		if (failed !== undefined) throw failed;
-		if (!view || !Array.isArray(view.scopes) || !Array.isArray(view.records))
-			throw new Error(t("badView"));
+		if (!view || !Array.isArray(view.scopes)) throw new Error(t("badView"));
 		set({ model: view, profile: view.profile, scope: view.scope });
 		console.debug("Console loaded", {
 			event: "view",
 			profile: view.profile,
 			scope: view.scope,
-			records: view.records.length,
-			frontier: view.frontier.length,
+			screen: view.screen,
 			revision: view.revision,
 		});
 		enter(step);
 		message("");
+		return true;
 	}
 	// #endregion FUNC_loadView
 
@@ -358,19 +359,21 @@ export function createConsoleController(
 	// #region FUNC_openTarget
 	/**
 	 * @purpose Expand a range or inspect a note, and keep the selection for the inspector.
-	 * @invariants Write the address only after the host answers. An older answer writes no selection.
+	 * @invariants Write the address only after the host answers. An answer of a view load or of a
+	 *   newer open writes no selection, so the latest click wins.
 	 */
 	async function openTarget(
 		target: string,
 		step: Step = "push",
 	): Promise<void> {
 		const token = get().generation;
+		const seq = ++openSeq;
 		const result = await port.open({
 			profile: get().profile,
 			scope: get().scope,
 			target,
 		});
-		if (token !== get().generation) return;
+		if (token !== get().generation || seq !== openSeq) return;
 		console.debug("Console target opened", {
 			event: "open",
 			target,
@@ -385,17 +388,19 @@ export function createConsoleController(
 	// #region FUNC_openCatalog
 	/**
 	 * @purpose Expand one catalog range into the two lines below it, and keep the selection.
-	 * @invariants Write the address only after the host answers. An older answer writes no selection.
+	 * @invariants Write the address only after the host answers. An answer of a view load or of a
+	 *   newer open writes no selection, so the latest click wins.
 	 */
 	async function openCatalog(range: Range, step: Step = "push"): Promise<void> {
 		const token = get().generation;
+		const seq = ++openSeq;
 		const children = await port.catalog({
 			profile: get().profile,
 			scope: get().scope,
 			start: range.start,
 			level: range.level,
 		});
-		if (token !== get().generation) return;
+		if (token !== get().generation || seq !== openSeq) return;
 		console.debug("Console catalog opened", {
 			event: "catalog",
 			start: range.start,
@@ -434,6 +439,7 @@ export function createConsoleController(
 	 * @purpose Move the console to the place of one route.
 	 * @invariants Load the view first. Then run the search and the open of the route. Then write the
 	 * resolved place as one replacement.
+	 * @invariants A newer generation stops the restore, so a replaced place runs no later step.
 	 * @invariants A place that the host rejects falls back to the first place once, so a removed
 	 * profile cannot leave a blank page.
 	 */
@@ -454,8 +460,9 @@ export function createConsoleController(
 			target,
 			query: route.query,
 		});
+		let loaded: boolean;
 		try {
-			await loadView("none");
+			loaded = await loadView("none");
 		} catch (error) {
 			if (!retry) throw error;
 			console.debug("Console place rejected", {
@@ -465,7 +472,10 @@ export function createConsoleController(
 			await restore(DEFAULT_ROUTE, false);
 			return;
 		}
+		if (!loaded) return;
+		const token = get().generation;
 		if (get().query) await find("none");
+		if (token !== get().generation) return;
 		if (target && route.screen === "catalog") {
 			const range = readRange(target);
 			if (range) await openCatalog(range, "none");
@@ -475,6 +485,7 @@ export function createConsoleController(
 					target,
 				});
 		} else if (target) await openTarget(target, "none");
+		if (token !== get().generation) return;
 		enter("replace");
 	}
 	// #endregion FUNC_restore
@@ -518,29 +529,25 @@ export function createConsoleController(
 	/**
 	 * @purpose Build the record dialog of one record, or of a new note.
 	 * @invariants An amendment keeps the record. A supersede writes a new record with a link.
-	 * @invariants The kind is empty for an open entry, because an open entry holds no note kind.
+	 * @invariants The kind is the note kind of the open entry.
 	 * @invariants The amendment form shows the supersede links of the record and starts the field
 	 * empty.
 	 *   A save adds the links of the field that the record lacks. It removes no link.
 	 */
 	function dialogOf(
-		record: RecordModel | OpenEntry | undefined,
+		record: ConsoleEntry | undefined,
 		supersedes: string,
 	): DialogState {
 		const amend = record !== undefined && supersedes === "";
-		const links =
-			amend && record !== undefined && "supersedes" in record
-				? record.supersedes
-				: [];
 		return {
 			mode: amend ? "amend" : supersedes ? "supersede" : "create",
 			target: record === undefined ? "" : `${record.scope}#${record.pos}`,
 			body: record?.body ?? "",
 			longform: record?.longform ?? "",
 			scope: record?.scope ?? get().scope,
-			kind: record === undefined ? "note" : kindOf(record.kind),
+			kind: record?.noteKind ?? "note",
 			supersedes: amend ? "" : supersedes,
-			links,
+			links: amend ? record.supersedes : [],
 		};
 	}
 	// #endregion FUNC_dialogOf
@@ -640,23 +647,19 @@ export function createConsoleController(
 
 	// #region FUNC_editNote
 	/**
-	 * @purpose Open the record dialog for one record, and read the record first when the view lacks
-	 * it.
+	 * @purpose Open the record dialog for one record, and read the record for its fields.
 	 * @invariants The read record must be a note. A range gives the select message.
+	 * @invariants An answer of an older generation opens no dialog.
 	 */
 	async function editNote(target: string, supersede: boolean): Promise<void> {
-		const record = get().model?.records.find(
-			(item) => renderAddress(item.scope, item.pos, null) === target,
-		);
-		if (record) {
-			set({ dialog: dialogOf(record, supersede ? target : "") });
-			return;
-		}
+		const token = get().generation;
+		const seq = ++openSeq;
 		const result = await port.open({
 			profile: get().profile,
 			scope: get().scope,
 			target,
 		});
+		if (token !== get().generation || seq !== openSeq) return;
 		if (result.kind !== "entry") throw new Error(t("selectLine"));
 		set({ dialog: dialogOf(result, supersede ? target : "") });
 	}
@@ -688,8 +691,10 @@ export function createConsoleController(
 
 	return {
 		navigate(screen: Screen) {
-			set({ screen });
-			enter("push");
+			return guard(async () => {
+				if (screen !== get().screen) set({ screen, selection: undefined });
+				await loadView("push");
+			});
 		},
 		restore(route: Route) {
 			return guard(() => restore(route, true));
@@ -699,9 +704,11 @@ export function createConsoleController(
 		},
 		openInTree(target: string) {
 			return guard(async () => {
+				const token = get().generation;
 				await openTarget(target, "none");
+				if (token !== get().generation) return;
 				set({ screen: "tree" });
-				enter("push");
+				await loadView("push");
 			});
 		},
 		openCatalog(range: Range) {

@@ -316,8 +316,15 @@ export async function sliceCommand(
 	) as ScopeKey;
 	const runtime = await openCommandRuntime(args, io, profile);
 	try {
-		const view = await readConsole(runtime.store, config, active);
-		const text = view.text;
+		const view = await readConsole(
+			runtime.store,
+			config,
+			active,
+			undefined,
+			null,
+			"session",
+		);
+		const text = view.text ?? "";
 		debug("Slice rendered", {
 			event: "slice",
 			profile,
