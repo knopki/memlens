@@ -1,8 +1,3 @@
----
-description: "Плагин memlens для DeepSeek Harness: две точки входа, контекст памяти, инструменты памяти, напоминание, работник уплотнения и монтирование консоли."
-kind: "package-reference"
----
-
 # @memlens/dsh-plugin
 
 [English](README.md) | [中文](README.zh.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Português](README.pt.md) | Русский

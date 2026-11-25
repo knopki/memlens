@@ -1,8 +1,3 @@
----
-description: "memlens の DeepSeek Harness プラグイン: 2 つのエントリ、メモリコンテキスト、メモリツール、ナッジ、コンパクションワーカー、コンソールのマウント。"
-kind: "package-reference"
----
-
 # @memlens/dsh-plugin
 
 [English](README.md) | [中文](README.zh.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [Français](README.fr.md) | 日本語 | [Português](README.pt.md) | [Русский](README.ru.md)
