@@ -34,6 +34,13 @@ model {
         '
       }
 
+      scope = component 'Scope context' {
+        description '
+          Reads the effective Git remote and the repository name through Git.
+          Applies the domain rules for the CLI and the plugin.
+        '
+      }
+
       store = component 'Row store' {
         description '
           Notes, slots, proposals, and metadata. Each write runs in one transaction.
@@ -213,6 +220,10 @@ model {
   memlens.cli.commands -> memlens.core 'calls the engine'
   memlens.cli.uihost -> memlens.ui 'serves the client'
   memlens.ui -> memlens.cli.uihost 'reads and acts over HTTP'
+
+  memlens.cli -> memlens.core.scope 'resolves the directory scope'
+  memlens.plugin -> memlens.core.scope 'resolves the session scope'
+  memlens.core.scope -> memlens.core.domain 'applies the scope rules'
 
   memlens.core.store -> memlens.db 'one transaction per write'
   memlens.core.search -> memlens.db 'holds the FTS5 tables'

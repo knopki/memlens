@@ -5,25 +5,22 @@
  * @invariants The base read never throws. An absent or rejected file gives the default layer, and a
  *   rejected file states its error text.
  * @invariants The patch store path wins over the environment and the base file. An empty selected path is an error.
- * @dependencies USES API: node:fs, node:child_process, node:path, @memlens/core
+ * @dependencies USES API: node:fs, node:path, @memlens/core
  * @keywords plugin, configuration, scope, git, store, paths
  * #endregion moduleContract
  */
 
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { debuglog } from "node:util";
 import {
-	activeScope,
-	automaticScope,
 	type BaseConfig,
 	expandTilde,
 	loadBaseConfig,
 	MemlensError,
 	nativeDirs,
-	normalizeRemote,
 	type PatchConfig,
+	resolveScopeContext,
 	type ScopeKey,
 	storePath,
 } from "@memlens/core";
@@ -150,46 +147,7 @@ export function pluginActiveScope(
 	workspace?: string,
 	workspaceName?: string,
 ): ScopeKey {
-	const git = (...args: string[]): string | null => {
-		if (!cwd) return null;
-		try {
-			return (
-				execFileSync("git", args, {
-					cwd,
-					encoding: "utf8",
-					stdio: ["ignore", "pipe", "ignore"],
-				}).trim() || null
-			);
-		} catch {
-			return null;
-		}
-	};
-	const firstRemote = git("remote")?.split("\n")[0];
-	const remote =
-		git("remote", "get-url", "origin") ??
-		(firstRemote ? git("remote", "get-url", firstRemote) : null);
-	const gitRemote = remote === null ? null : normalizeRemote(remote);
-	const common = git("rev-parse", "--path-format=absolute", "--git-common-dir");
-	const root = common === null ? null : git("rev-parse", "--show-toplevel");
-	const repo =
-		common !== null && root !== null
-			? basename(common) === ".git"
-				? basename(dirname(common))
-				: basename(root)
-			: null;
-	const subject = {
-		path: cwd || null,
-		gitRemote,
-		repo,
-		workspace: workspace ?? null,
-		workspaceName: workspaceName ?? null,
-	};
-	const selected = activeScope(base.scope_default, subject);
-	return selected.rule === null
-		? automaticScope(
-				{ ...subject, gitRemote: remote },
-				base.scope_default.default,
-			).key
-		: selected.key;
+	return resolveScopeContext(base.scope_default, cwd, workspace, workspaceName)
+		.key;
 }
 // #endregion FUNC_pluginActiveScope

@@ -19,6 +19,7 @@ import type {
 	Note,
 	RuleTrace,
 	RuleVerdict,
+	ScopeContextResult,
 	ScopeKey,
 } from "@memlens/core";
 import {
@@ -47,7 +48,6 @@ import {
 	scopeList,
 } from "./commands.js";
 import {
-	type CliScopeResult,
 	cliActiveScope,
 	cliScopeResult,
 	loadCliBaseConfig,
@@ -252,7 +252,7 @@ const VERDICT_WORDS: Record<RuleVerdict, string> = {
 	"invalid-key": "invalid key",
 };
 
-function renderScope(result: CliScopeResult): string {
+function renderScope(result: ScopeContextResult): string {
 	const lines = [
 		...inputLines(result),
 		"",
@@ -265,7 +265,7 @@ function renderScope(result: CliScopeResult): string {
 	return lines.join("\n");
 }
 
-function inputLines(result: CliScopeResult): string[] {
+function inputLines(result: ScopeContextResult): string[] {
 	const labels = ["remote", "canonical", "dir", "repo"];
 	const values = [
 		result.remote ?? "-",

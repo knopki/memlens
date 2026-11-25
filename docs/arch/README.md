@@ -104,7 +104,7 @@ graph TB
   Human -. "`reviews notes in the console`" .-> Memlens.Ui
   Dsh -. "`loads at start`" .-> Memlens.Plugin
   Memlens.Core -. "`[...]`" .-> Memlens.Db
-  Memlens.Cli -. "`calls the engine`" .-> Memlens.Core
+  Memlens.Cli -. "`[...]`" .-> Memlens.Core
   Memlens.Plugin -. "`[...]`" .-> Memlens.Core
   Memlens.Cli -. "`serves the client`" .-> Memlens.Ui
   Memlens.Ui -. "`reads and acts over HTTP`" .-> Memlens.Cli
@@ -130,27 +130,33 @@ the store holds the rows, the tree builds the summaries.
 title: "Core components"
 ---
 graph TB
-  subgraph MemlensCore["`@memlens/core`"]
-    MemlensCore.Domain@{ shape: rectangle, label: "Domain" }
-    MemlensCore.Transfer@{ shape: rectangle, label: "Transfer" }
-    MemlensCore.Store@{ shape: rectangle, label: "Row store" }
-    MemlensCore.Search@{ shape: rectangle, label: "Search index" }
-    MemlensCore.Tree@{ shape: rectangle, label: "Tree build" }
-  end
   subgraph MemlensPlugin["`@memlens/dsh-plugin`"]
     MemlensPlugin.Tools@{ shape: rectangle, label: "Memory tools" }
     MemlensPlugin.Worker@{ shape: rectangle, label: "Compaction worker" }
   end
-  MemlensCliCommands@{ shape: rectangle, label: "Terminal commands" }
+  subgraph MemlensCli["`@memlens/cli`"]
+    MemlensCli.Commands@{ shape: rectangle, label: "Terminal commands" }
+  end
+  subgraph MemlensCore["`@memlens/core`"]
+    MemlensCore.Transfer@{ shape: rectangle, label: "Transfer" }
+    MemlensCore.Scope@{ shape: rectangle, label: "Scope context" }
+    MemlensCore.Store@{ shape: rectangle, label: "Row store" }
+    MemlensCore.Search@{ shape: rectangle, label: "Search index" }
+    MemlensCore.Tree@{ shape: rectangle, label: "Tree build" }
+    MemlensCore.Domain@{ shape: rectangle, label: "Domain" }
+  end
   MemlensDb@{ shape: disk, label: "SQLite store" }
+  MemlensCore.Scope -. "`applies the scope rules`" .-> MemlensCore.Domain
   MemlensCore.Store -. "`one transaction per write`" .-> MemlensDb
   MemlensCore.Search -. "`holds the FTS5 tables`" .-> MemlensDb
   MemlensPlugin.Worker -. "`collects dirty ranges`" .-> MemlensCore.Tree
+  MemlensCli -. "`resolves the directory scope`" .-> MemlensCore.Scope
+  MemlensPlugin -. "`resolves the session scope`" .-> MemlensCore.Scope
   MemlensPlugin.Tools -. "`calls the engine`" .-> MemlensCore
-  MemlensCliCommands -. "`calls the engine`" .-> MemlensCore
+  MemlensCli.Commands -. "`calls the engine`" .-> MemlensCore
   classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
-  class MemlensCore.Domain,MemlensCore.Transfer,MemlensPlugin.Tools,MemlensCliCommands,MemlensPlugin.Worker,MemlensCore.Store,MemlensCore.Search,MemlensCore.Tree,MemlensDb primary
-  linkStyle 0,1,2,3,4 stroke:#8D8D8D,stroke-dasharray:8 4
+  class MemlensCore.Transfer,MemlensPlugin.Tools,MemlensCli.Commands,MemlensPlugin.Worker,MemlensCore.Scope,MemlensCore.Store,MemlensCore.Search,MemlensCore.Tree,MemlensCore.Domain,MemlensDb primary
+  linkStyle 0,1,2,3,4,5,6,7 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 
 ### Plugin components
@@ -187,11 +193,12 @@ to write memory`" .-> Agent
   MemlensPlugin.Consoles -. "`builds the surfaces
 on the shared client`" .-> MemlensUi
   Dsh -. "`loads at start`" .-> MemlensPlugin
+  MemlensPlugin -. "`resolves the session scope`" .-> MemlensCore
   classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
   class MemlensPlugin.Nudge,MemlensPlugin.Tools,MemlensPlugin.Worker,MemlensPlugin.Context,MemlensPlugin.Consoles,MemlensCore,MemlensUi primary
   classDef muted fill:#64748b,stroke:#475569,color:#f8fafc
   class Dsh,Model_route muted
-  linkStyle 0,1,2,3,4,5,6,7,8 stroke:#8D8D8D,stroke-dasharray:8 4
+  linkStyle 0,1,2,3,4,5,6,7,8,9 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 
 ### Store schema

@@ -25,28 +25,24 @@
  * #endregion moduleContract
  */
 
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { join } from "node:path";
 import { debuglog } from "node:util";
 import type {
 	BaseConfig,
 	ResolvedConfig,
-	RuleTrace,
+	ScopeContextResult,
 	ScopeKey,
-	ScopeSubject,
 } from "@memlens/core";
 import {
-	automaticScope,
 	expandTilde,
 	globMatches,
 	isCatalogKey,
 	liveCounts,
 	loadBaseConfig,
 	nativeDirs,
-	normalizeRemote,
 	resolveConfig,
-	resolveScope,
+	resolveScopeContext,
 	Store,
 	storePath,
 	visibleScopes,
@@ -155,32 +151,6 @@ export function profileLists(runtime: Runtime, scope: ScopeKey): boolean {
 }
 // #endregion FUNC_profileLists
 
-/** One active scope of a directory, with the collected inputs and the verdict of each rule. */
-export interface CliScopeResult {
-	readonly key: ScopeKey;
-
-	/** The index of the first matching rule, or null when no rule matched. */
-	readonly rule: number | null;
-
-	/** The word `rule`, or the name of the automatic step that gave the key. */
-	readonly source: string;
-
-	/** The remote URL in its Git form, or null. */
-	readonly remote: string | null;
-
-	/** The canonical form of the remote, or null. */
-	readonly canonical: string | null;
-
-	/** The working directory of the command. */
-	readonly dir: string;
-
-	/** The repository name, or null outside a repository. */
-	readonly repo: string | null;
-
-	/** One entry for each rule, in the order of the rules. */
-	readonly trace: readonly RuleTrace[];
-}
-
 // #region FUNC_cliScopeResult
 /**
  * @purpose Resolve the scope of a directory from the rules and the automatic list.
@@ -189,103 +159,13 @@ export interface CliScopeResult {
  * @invariants A Git worktree uses the name of the main repository.
  * @invariants The remote is origin when it exists, and the first remote otherwise.
  */
-export function cliScopeResult(base: BaseConfig, cwd: string): CliScopeResult {
-	const git = (...args: string[]): string | null => {
-		try {
-			return (
-				execFileSync("git", args, {
-					cwd,
-					encoding: "utf8",
-					stdio: ["ignore", "pipe", "ignore"],
-				}).trim() || null
-			);
-		} catch {
-			return null;
-		}
-	};
-	const remote = selectedRemote(git);
-	const canonical = remote === null ? null : normalizeRemote(remote);
-	const subject: ScopeSubject = {
-		gitRemote: canonical,
-		path: cwd,
-		workspace: null,
-		workspaceName: null,
-		repo: repositoryName(git),
-	};
-	const resolution = resolveScope(base.scope_default, subject);
-	const inputs = {
-		remote,
-		canonical,
-		dir: cwd,
-		repo: subject.repo ?? null,
-		trace: resolution.trace,
-	};
-	if (resolution.rule !== null) {
-		return {
-			...inputs,
-			key: resolution.key,
-			rule: resolution.rule,
-			source: "rule",
-		};
-	}
-	const automatic = automaticScope(
-		{ ...subject, gitRemote: remote },
-		base.scope_default.default,
-	);
-	debug("Scope selected automatically", {
-		event: "scope",
-		key: automatic.key,
-		source: automatic.source,
-	});
-	return {
-		...inputs,
-		key: automatic.key,
-		rule: null,
-		source: automatic.source,
-	};
+export function cliScopeResult(
+	base: BaseConfig,
+	cwd: string,
+): ScopeContextResult {
+	return resolveScopeContext(base.scope_default, cwd);
 }
 // #endregion FUNC_cliScopeResult
-
-// #region FUNC_selectedRemote
-/**
- * @purpose Select the one remote URL of a directory, so each caller reads the same remote.
- * @invariants The remote origin wins, and the first remote applies when origin is absent.
- * @invariants A missing repository or remote gives null.
- * @param git - The Git runner of the directory.
- * @returns The remote URL in its Git form, or null.
- */
-function selectedRemote(
-	git: (...args: string[]) => string | null,
-): string | null {
-	const names =
-		git("remote")
-			?.split("\n")
-			.map((name) => name.trim())
-			.filter((name) => name.length > 0) ?? [];
-	const name = names.includes("origin") ? "origin" : names[0];
-	return name === undefined ? null : git("remote", "get-url", name);
-}
-// #endregion FUNC_selectedRemote
-
-// #region FUNC_repositoryName
-/**
- * @purpose Take the repository name from the common Git directory, so a worktree keeps the main name.
- * @invariants A worktree takes the name of the directory that holds the common Git directory.
- * @invariants The name keeps its case. A directory outside a repository gives null.
- * @param git - The Git runner of the directory.
- * @returns The repository name, or null.
- */
-function repositoryName(
-	git: (...args: string[]) => string | null,
-): string | null {
-	const common = git("rev-parse", "--path-format=absolute", "--git-common-dir");
-	const root = common === null ? null : git("rev-parse", "--show-toplevel");
-	if (common === null || root === null) return null;
-	return basename(common) === ".git"
-		? basename(dirname(common))
-		: basename(root);
-}
-// #endregion FUNC_repositoryName
 
 // #region FUNC_cliActiveScope
 /** The active scope key of one directory. */

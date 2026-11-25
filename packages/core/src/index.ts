@@ -1,7 +1,7 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Expose the core contracts and pure domain functions through one library entry point.
+ * @purpose Expose the core contracts, domain functions, and shared scope resolver through one library entry point.
  * @scope
  *  - The public value of the library.
  *  - The types from types/ as public exports.
@@ -146,6 +146,10 @@ export {
 	topRangeOf,
 } from "./domain/tree.js";
 export { ulid } from "./domain/ulid.js";
+export {
+	resolveScopeContext,
+	type ScopeContextResult,
+} from "./scope-context.js";
 export {
 	candidates,
 	publishJoin,
