@@ -20,6 +20,7 @@
  */
 
 import { once } from "node:events";
+import { realpathSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 import { debuglog } from "node:util";
@@ -261,9 +262,13 @@ function exitCode(error: unknown): number {
 	return 1;
 }
 
+// npm links the binary to this file, so read the link target.
 const entry = process.argv[1];
 
-if (entry !== undefined && import.meta.url === pathToFileURL(entry).href) {
+if (
+	entry !== undefined &&
+	import.meta.url === pathToFileURL(realpathSync(entry)).href
+) {
 	main(process.argv.slice(2)).then((code) => {
 		process.exitCode = code;
 	});
