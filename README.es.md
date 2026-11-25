@@ -5,6 +5,10 @@
 **Memoria a largo plazo para un agente.** El agente empieza cada sesión con un mapa de lo que ya
 sabe. Un archivo SQLite guarda las notas, y un árbol de resúmenes se alza sobre ellas.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Una pirámide de tiras de papel dobladas: ocho abajo, cuatro encima, luego dos y una hoja limpia arriba.">
+</p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="La consola de memlens. La barra lateral lista las pantallas y los ámbitos. La página muestra siete ámbitos con sus recuentos, y el extracto ensamblado debajo de ellos.">

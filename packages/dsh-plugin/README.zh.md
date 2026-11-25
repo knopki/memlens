@@ -6,6 +6,10 @@ memlens 是代理的长期记忆。笔记放在一个 SQLite 存储里，其上�
 DeepSeek Harness 的各个智能体。问题、设计、CLI 和控制台见
 [主 README](https://github.com/knopki/memlens/blob/HEAD/README.md)。
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="穿女仆装的鲸鱼娘把两张长便签熨成一张短便签，头顶挂着一串折叠的便签。">
+</p>
+
 ## 概要
 
 `@memlens/dsh-plugin` 为每个 DeepSeek Harness 智能体提供 memlens 的记忆。宿主入口打开一个共享存储（store）。它为每个活跃智能体提供记忆上下文、记忆工具和提醒（nudge）。它还启动后台工作进程，把旧笔记折叠成摘要行。预设入口让一个智能体预设选择自己的记忆配置档。这个包把控制台以侧边面板和会话标签页的形式挂载到 harness 的 Web 页面里。

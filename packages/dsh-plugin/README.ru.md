@@ -6,6 +6,10 @@ memlens — долговременная память агента. Заметк
 дерево сводок. Этот пакет даёт эту память агентам DeepSeek Harness. Проблема, устройство, CLI и
 консоль описаны в [основном README](https://github.com/knopki/memlens/blob/HEAD/README.md).
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="Whale-chan в платье горничной проглаживает две длинные записки в одну короткую, над ней висит гирлянда сложенных записок.">
+</p>
+
 ## Сводка
 
 `@memlens/dsh-plugin` даёт каждому агенту DeepSeek Harness память memlens. Точка входа хоста

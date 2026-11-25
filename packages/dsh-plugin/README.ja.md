@@ -6,6 +6,10 @@ memlens はエージェントの長期記憶です。ノートは 1 つの SQLit
 あります。このパッケージはその記憶を DeepSeek Harness のエージェントに与えます。課題、設計、CLI、
 コンソールは[メイン README](https://github.com/knopki/memlens/blob/HEAD/README.md) にあります。
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="メイド服のホエールちゃんが二枚の長いメモを一枚の短いメモにアイロンでまとめ、頭上には折りたたんだメモのガーランドが吊るされている。">
+</p>
+
 ## 概要
 
 `@memlens/dsh-plugin` は、各 DeepSeek Harness エージェントに memlens のメモリを与えます。ホスト

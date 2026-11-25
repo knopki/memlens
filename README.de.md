@@ -6,6 +6,10 @@
 was er schon weiß. Eine SQLite-Datei hält die Notizen, und ein Baum aus Zusammenfassungen steht
 darüber.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Eine Pyramide aus gefalteten Papierstreifen: unten acht, darüber vier, dann zwei und zuoberst ein sauberes Blatt.">
+</p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="Die memlens-Konsole. Die Leiste listet die Bildschirme und die Scopes. Die Seite zeigt sieben Scopes mit ihren Anzahlen und den zusammengestellten Auszug darunter.">

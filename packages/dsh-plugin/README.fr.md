@@ -7,6 +7,10 @@ de résumés se trouve au-dessus. Ce paquet donne cette mémoire aux agents de D
 [README principal](https://github.com/knopki/memlens/blob/HEAD/README.md) décrit le problème, la
 conception, la CLI et la console.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="Whale-chan en tenue de soubrette repasse deux longues notes en une note courte, sous une guirlande de notes pliées.">
+</p>
+
 ## Résumé
 
 `@memlens/dsh-plugin` donne à chaque agent DeepSeek Harness la mémoire de memlens. Le point d'entrée

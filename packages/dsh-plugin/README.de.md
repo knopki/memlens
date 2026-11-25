@@ -7,6 +7,10 @@ Baum aus Zusammenfassungen steht darüber. Dieses Paket gibt diesen Speicher den
 Harness. Das [Haupt-README](https://github.com/knopki/memlens/blob/HEAD/README.md) beschreibt das
 Problem, den Entwurf, die CLI und die Konsole.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="Whale-chan im Dienstmädchenkostüm bügelt zwei lange Notizen zu einer kurzen, über ihr hängt eine Girlande aus gefalteten Notizen.">
+</p>
+
 ## Übersicht
 
 `@memlens/dsh-plugin` gibt jedem Agenten von DeepSeek Harness den Speicher von memlens. Der

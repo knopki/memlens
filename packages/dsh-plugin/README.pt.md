@@ -7,6 +7,10 @@ memlens é uma memória de longo prazo para um agente. Um armazenamento SQLite c
 [README principal](https://github.com/knopki/memlens/blob/HEAD/README.md) descreve o problema, o
 projeto, a CLI e o console.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="Whale-chan, de uniforme de empregada, passa dois bilhetes longos a ferro e transforma-os num só bilhete curto, com uma grinalda de bilhetes dobrados por cima.">
+</p>
+
 ## Resumo
 
 `@memlens/dsh-plugin` dá a cada agente do DeepSeek Harness a memória do memlens. A entrada do host

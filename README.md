@@ -5,6 +5,10 @@ English | [中文](https://github.com/knopki/memlens/blob/HEAD/README.zh.md) | [
 **Long-term memory for an agent.** The agent starts each session with a map of what it already
 knows. One SQLite file holds the notes, and a tree of summaries stands above them.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="A pyramid of folded paper slips: eight at the bottom, four above, two, and one clean sheet on top.">
+</p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="The memlens console. The rail lists the screens and the scopes. The page shows seven scopes with their counts, and the assembled slice below them.">
