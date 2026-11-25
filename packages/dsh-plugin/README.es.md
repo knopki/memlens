@@ -7,6 +7,10 @@ de resúmenes está por encima de ellas. Este paquete da esa memoria a los agent
 El [README principal](https://github.com/knopki/memlens/blob/HEAD/README.md) describe el problema, el
 diseño, la CLI y la consola.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="Whale-chan, con traje de doncella, plancha dos notas largas en una corta, con una guirnalda de notas dobladas sobre ella.">
+</p>
+
 ## Resumen
 
 `@memlens/dsh-plugin` da a cada agente de DeepSeek Harness la memoria de memlens. La entrada del host

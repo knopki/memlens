@@ -5,6 +5,10 @@
 **La mémoire à long terme d'un agent.** L'agent commence chaque session avec une carte de ce qu'il
 sait déjà. Un fichier SQLite tient les notes, et un arbre de résumés se dresse au-dessus d'elles.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Une pyramide de bandes de papier pliées : huit en bas, quatre au-dessus, puis deux, et une feuille nette au sommet.">
+</p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="La console memlens. La barre latérale liste les écrans et les portées. La page montre sept portées avec leurs compteurs, et l'extrait assemblé en dessous.">

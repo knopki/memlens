@@ -4,6 +4,10 @@
 
 **智能体的长期记忆。** 智能体在每个会话开始时拿到一张地图，上面是它已经知道的东西。一个 SQLite 文件持有笔记，笔记上方立着一棵摘要树。
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="折纸金字塔：底层八张，上一层四张，再上一层两张，最顶上一张干净的纸。">
+</p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="memlens 控制台。侧栏列出各个页面和范围。页面上有七个范围及其计数，下面是已组装的片段。">

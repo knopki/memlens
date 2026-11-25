@@ -7,6 +7,10 @@ stands above them. This package gives that memory to the agents of DeepSeek Harn
 [main README](https://github.com/knopki/memlens/blob/HEAD/README.md) gives the problem, the design,
 the CLI, and the console.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/dsh-plugin-hero.png" width="640" alt="Whale-chan in a maid outfit irons two long notes into one short note, with a garland of folded notes above her.">
+</p>
+
 ## Summary
 
 `@memlens/dsh-plugin` gives each DeepSeek Harness agent the memory of memlens. The host entry opens

@@ -5,6 +5,10 @@
 **Долговременная память для агента.** Каждую сессию агент начинает с карты того, что уже знает. Один
 файл SQLite держит заметки, а над ними стоит дерево сводок.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Пирамида из сложенных бумажных полос: внизу восемь, выше четыре, затем две и один чистый лист наверху.">
+</p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="Консоль memlens. Левая колонка перечисляет экраны и области. Страница показывает семь областей с их счётчиками и собранный срез под ними.">
