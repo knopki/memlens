@@ -26,6 +26,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { NOTE_KINDS } from "@memlens/core";
 import { afterAll, describe, expect, it } from "vitest";
 import { main } from "../src/cli.js";
 import type { CommandIo } from "../src/commands.js";
@@ -544,6 +545,36 @@ describe("@memlens/cli commands", () => {
 		expect(opened.code).toBe(0);
 		expect(opened.out).toContain("Deploy on friday");
 	});
+
+	it.each(NOTE_KINDS)(
+		"shows the note kind %s in the open header",
+		async (kind) => {
+			const test = makeEnv();
+			expect(
+				(
+					await run(
+						test,
+						"note",
+						"A fact",
+						"--scope",
+						"project:acme/x",
+						"--kind",
+						kind,
+					)
+				).code,
+			).toBe(0);
+			const opened = await run(
+				test,
+				"open",
+				"project:acme/x#0",
+				"--no-longform",
+			);
+			expect(opened.code).toBe(0);
+			expect(opened.out.split("\n")[0]).toMatch(
+				new RegExp(`^project:acme/x#0  \\d{4}-\\d{2}-\\d{2}  ${kind}  review `),
+			);
+		},
+	);
 
 	it("writes a note of a past time with the flag --ts", async () => {
 		const test = makeEnv();

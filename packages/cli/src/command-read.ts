@@ -164,7 +164,7 @@ function openPos(
 		mode,
 		countFlag(args.flags, "offset", 0),
 	);
-	const text = `${entry.addr}  ${dayOf(entry.ts)}  ${entry.kind}  review ${entry.review_at ? dayOf(entry.review_at) : "never"}\n${entry.body}${
+	const text = `${entry.addr}  ${dayOf(entry.ts)}  ${record.kind}  review ${entry.review_at ? dayOf(entry.review_at) : "never"}\n${entry.body}${
 		entry.longform === undefined
 			? ""
 			: `\n--- longform ${entry.longformChars} chars, next offset ${entry.longformOffset} ---\n${entry.longform}`
