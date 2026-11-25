@@ -34,6 +34,7 @@ jobs:
       - name: Smoke-test the packed CLI
         run: |
           (cd packages/cli && pnpm pack --pack-destination "$RUNNER_TEMP" >/dev/null)
+          tar -xOf "$RUNNER_TEMP"/memlens-cli-*.tgz package/README.md | cmp README.md -
           npm install --global --prefix "$RUNNER_TEMP/smoke" "$RUNNER_TEMP"/memlens-cli-*.tgz >/dev/null
           code=0
           "$RUNNER_TEMP/smoke/bin/memlens" no-such-command >/dev/null 2>&1 || code=$?
