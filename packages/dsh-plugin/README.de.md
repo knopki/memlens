@@ -106,7 +106,7 @@ Das Preset überschreibt den Plugin-Patch. Der Plugin-Patch überschreibt das Ba
 Preset-Schlüssel `profile` wählt den Profilnamen. Das Preset akzeptiert keinen Verdichtungsschlüssel
 und keinen Speicherschlüssel.
 
-Die Basisdatei ist `$XDG_CONFIG_HOME/memlens/config.toml`. Wenn die Datei fehlt, gilt der eingebaute
+Die Basisdatei ist `config.toml` im Konfigurationsverzeichnis der Plattform. Wenn die Datei fehlt, gilt der eingebaute
 Ersatz: das Profil `default`, die Scopes `*`, die Budgets 20 und 10 und der Scope `project:misc`.
 Ein fehlender Abschnitt der Datei ergibt seinen Standardwert. Eine ungültige oder unlesbare
 Basisdatei hält den Speicher geschlossen, und die Sitzung läuft weiter.

@@ -103,7 +103,7 @@ A predefinição substitui o patch do plugin. O patch do plugin substitui o perf
 `profile` da predefinição seleciona o nome do perfil. A predefinição não aceita chave de compactação
 nem chave de armazenamento.
 
-O arquivo base é `$XDG_CONFIG_HOME/memlens/config.toml`. Se o arquivo estiver ausente, valem os
+O arquivo base é `config.toml` no diretório de configuração da plataforma. Se o arquivo estiver ausente, valem os
 padrões integrados: o perfil `default`, os escopos `*`, os orçamentos 20 e 10 e o escopo
 `project:misc`. Uma seção ausente do arquivo dá o seu valor padrão. Um arquivo base inválido ou
 ilegível mantém o armazenamento fechado, e a sessão continua.

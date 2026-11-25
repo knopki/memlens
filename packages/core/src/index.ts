@@ -41,10 +41,10 @@ export {
 	loadBaseConfig,
 	loadPatchConfig,
 	loadPresetConfig,
+	nativeDirs,
 	profileNames,
 	resolveConfig,
 	storePath,
-	xdgDirs,
 } from "./domain/config.js";
 export {
 	type BaseConfig,

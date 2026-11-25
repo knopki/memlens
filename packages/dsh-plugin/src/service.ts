@@ -38,6 +38,7 @@ import {
 	loadPatchConfig,
 	loadPresetConfig,
 	MemlensError,
+	nativeDirs,
 	type PatchConfig,
 	type PresetConfig,
 	profileNames,
@@ -46,7 +47,6 @@ import {
 	type ScopeKey,
 	Store,
 	withActiveScope,
-	xdgDirs,
 } from "@memlens/core";
 import {
 	type BaseRead,
@@ -435,7 +435,7 @@ export class Memlens extends Service {
 	 */
 	private watchBase(): void {
 		try {
-			const configPath = join(xdgDirs(process.env).configDir, "config.toml");
+			const configPath = join(nativeDirs(process.env).configDir, "config.toml");
 			const reload = () => this.reloadBase();
 			watchFile(configPath, { interval: 1000, persistent: false }, reload);
 			this.unwatch = () => unwatchFile(configPath, reload);

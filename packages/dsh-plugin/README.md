@@ -101,8 +101,9 @@ Each key is optional. A rejected value gives the empty layer, so a bad row chang
 The preset overrides the plugin patch. The plugin patch overrides the base profile. The preset key
 `profile` selects the profile name. The preset accepts no compaction key and no store key.
 
-The base file is `$XDG_CONFIG_HOME/memlens/config.toml`. If the file is absent, the built-in fallback
-applies: the profile `default`, the scopes `*`, the budgets 20 and 10, and the scope `project:misc`.
+The base file is `config.toml` in the configuration directory of the platform. If the file is
+absent, the built-in fallback applies: the profile `default`, the scopes `*`, the budgets 20 and
+10, and the scope `project:misc`.
 An absent section of the file gives its default value. An invalid or unreadable file gives the
 built-in fallback, and the store opens from it. The console shows the error, and a later valid file
 applies with no restart.

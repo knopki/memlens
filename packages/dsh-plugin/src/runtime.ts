@@ -21,11 +21,11 @@ import {
 	expandTilde,
 	loadBaseConfig,
 	MemlensError,
+	nativeDirs,
 	normalizeRemote,
 	type PatchConfig,
 	type ScopeKey,
 	storePath,
-	xdgDirs,
 } from "@memlens/core";
 
 const debug = debuglog("memlens:plugin:runtime");
@@ -58,12 +58,22 @@ function errorText(error: unknown): string {
  *   the read and no absence can hide behind a check.
  * @invariants An absent file gives the default layer. A present file that no read can parse or take
  *   gives the default layer and the error text, so the caller opens a store and states the failure.
- * @param env - The environment that supplies the XDG roots.
+ * @invariants An unknown root gives the default layer with an empty store path and the error text.
+ *   The empty path fails the open of the store, so no store starts under the working directory.
+ * @param env - The environment that supplies the native roots and the home directory.
  */
 export function readPluginBase(
 	env: Record<string, string | undefined>,
 ): BaseRead {
-	const { configDir, dataDir } = xdgDirs(env);
+	let dirs: { configDir: string; dataDir: string };
+	try {
+		dirs = nativeDirs(env);
+	} catch (cause) {
+		const error = errorText(cause);
+		debug("Native directories unknown", { event: "dirs-error", error });
+		return { base: loadBaseConfig(null, ""), present: false, error };
+	}
+	const { configDir, dataDir } = dirs;
 	const path = join(configDir, "config.toml");
 	let text: string | null = null;
 	let present = false;

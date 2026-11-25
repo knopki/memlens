@@ -92,7 +92,7 @@ dsh plugin --profile web add @memlens/dsh-plugin
 
 预设覆盖插件补丁。插件补丁覆盖基础配置档。预设键 `profile` 选择配置档名。预设不接受压缩键，也不接受存储键。
 
-基础文件是 `$XDG_CONFIG_HOME/memlens/config.toml`。文件不存在时，应用内置回退：配置档 `default`、作用域 `*`、预算 20 和 10，以及作用域 `project:misc`。文件里缺少的节取其默认值。无效或不可读的基础文件让存储保持关闭，会话继续。
+基础文件是平台配置目录中的 `config.toml`。文件不存在时，应用内置回退：配置档 `default`、作用域 `*`、预算 20 和 10，以及作用域 `project:misc`。文件里缺少的节取其默认值。无效或不可读的基础文件让存储保持关闭，会话继续。
 
 存储路径先取自补丁的 `store.path`，再取自 `MEMLENS_STORE`，最后取自基础文件。
 

@@ -98,7 +98,7 @@ export interface CompactionConfig {
 /** The review period of each kind of a note, in days. */
 export type ReviewConfig = Record<NoteKind, Days>;
 
-/** The base file, `$XDG_CONFIG_HOME/memlens/config.toml`. */
+/** The base file, `config.toml` in the configuration directory of the platform. */
 export interface BaseConfig {
 	/** One value for the store. It selects the tokenizer of the index. */
 	language: string;

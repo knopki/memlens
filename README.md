@@ -114,7 +114,7 @@ not a chat message.
 ## Configuration
 
 memlens works with no configuration file. To change a value, copy the parts that you want into
-`~/.config/memlens/config.toml`:
+the base file. On Linux the file is `~/.config/memlens/config.toml`:
 
 ```toml
 defaultProfile = "default"

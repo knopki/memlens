@@ -4,6 +4,8 @@
  * @purpose Check the configuration layers, the defaults, and the environment paths.
  * #endregion moduleContract
  */
+import { homedir } from "node:os";
+import { isAbsolute, join, win32 } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	expandTilde,
@@ -11,9 +13,9 @@ import {
 	loadBaseConfig,
 	loadPatchConfig,
 	loadPresetConfig,
+	nativeDirs,
 	resolveConfig,
 	storePath,
-	xdgDirs,
 } from "../src/domain/config.js";
 import {
 	DEFAULT_REVIEW_DAYS,
@@ -369,19 +371,105 @@ describe("globMatches", () => {
 
 describe("paths of the environment", () => {
 	it("expands a leading tilde", () => {
-		expect(expandTilde("~/store", { HOME: "/home/u" })).toBe("/home/u/store");
-		expect(expandTilde("~", { HOME: "/home/u" })).toBe("/home/u");
-		expect(expandTilde("/abs", { HOME: "/home/u" })).toBe("/abs");
+		expect(expandTilde("~/store", { HOME: "/home/u" }, "linux")).toBe(
+			"/home/u/store",
+		);
+		expect(expandTilde("~", { HOME: "/home/u" }, "linux")).toBe("/home/u");
+		expect(expandTilde("/abs", { HOME: "/home/u" }, "linux")).toBe("/abs");
 	});
 
-	it("gives the xdg directories", () => {
-		expect(xdgDirs({ XDG_CONFIG_HOME: "/c", XDG_DATA_HOME: "/d" })).toEqual({
+	it("expands the backslash form and the Windows home", () => {
+		expect(
+			expandTilde("~\\store", { USERPROFILE: "C:\\Users\\u" }, "win32"),
+		).toBe("C:\\Users\\u\\store");
+		expect(expandTilde("~", { USERPROFILE: "C:\\Users\\u" }, "win32")).toBe(
+			"C:\\Users\\u",
+		);
+	});
+
+	it("gives the linux directories", () => {
+		expect(
+			nativeDirs({ XDG_CONFIG_HOME: "/c", XDG_DATA_HOME: "/d" }, "linux"),
+		).toEqual({
 			configDir: "/c/memlens",
 			dataDir: "/d/memlens",
 		});
-		expect(xdgDirs({ HOME: "/home/u" })).toEqual({
+		expect(nativeDirs({ HOME: "/home/u" }, "linux")).toEqual({
 			configDir: "/home/u/.config/memlens",
 			dataDir: "/home/u/.local/share/memlens",
 		});
+	});
+
+	it("ignores a relative or empty XDG root", () => {
+		expect(
+			nativeDirs(
+				{ HOME: "/home/u", XDG_CONFIG_HOME: "rel", XDG_DATA_HOME: "" },
+				"linux",
+			),
+		).toEqual({
+			configDir: "/home/u/.config/memlens",
+			dataDir: "/home/u/.local/share/memlens",
+		});
+	});
+
+	it("gives the macOS directories", () => {
+		expect(nativeDirs({ HOME: "/Users/u" }, "darwin")).toEqual({
+			configDir: "/Users/u/Library/Application Support/memlens",
+			dataDir: "/Users/u/Library/Application Support/memlens",
+		});
+	});
+
+	it("keeps one XDG root on macOS", () => {
+		expect(
+			nativeDirs({ HOME: "/Users/u", XDG_DATA_HOME: "/d" }, "darwin"),
+		).toEqual({
+			configDir: "/Users/u/Library/Application Support/memlens",
+			dataDir: "/d/memlens",
+		});
+	});
+
+	it("gives the Windows directories", () => {
+		expect(nativeDirs({ USERPROFILE: "C:\\Users\\u" }, "win32")).toEqual({
+			configDir: "C:\\Users\\u\\AppData\\Roaming\\memlens",
+			dataDir: "C:\\Users\\u\\AppData\\Local\\memlens",
+		});
+	});
+
+	it("prefers the Windows program directories", () => {
+		expect(
+			nativeDirs(
+				{
+					USERPROFILE: "C:\\Users\\u",
+					APPDATA: "D:\\roam",
+					LOCALAPPDATA: "D:\\local",
+				},
+				"win32",
+			),
+		).toEqual({
+			configDir: "D:\\roam\\memlens",
+			dataDir: "D:\\local\\memlens",
+		});
+	});
+
+	it("prefers the profile over a POSIX home on Windows", () => {
+		expect(
+			nativeDirs({ HOME: "/c/Users/u", USERPROFILE: "C:\\Users\\u" }, "win32")
+				.configDir,
+		).toBe("C:\\Users\\u\\AppData\\Roaming\\memlens");
+	});
+
+	it("ignores a relative home in the environment", () => {
+		const linux = nativeDirs({ HOME: "." }, "linux");
+		expect(isAbsolute(linux.configDir)).toBe(true);
+		expect(linux.dataDir).toBe(join(homedir(), ".local", "share", "memlens"));
+		expect(
+			win32.isAbsolute(nativeDirs({ USERPROFILE: "rel" }, "win32").configDir),
+		).toBe(true);
+	});
+
+	it("gives absolute paths with no home in the environment", () => {
+		const dirs = nativeDirs({}, "linux");
+		expect(isAbsolute(dirs.configDir)).toBe(true);
+		expect(dirs.dataDir).toBe(join(homedir(), ".local", "share", "memlens"));
 	});
 });

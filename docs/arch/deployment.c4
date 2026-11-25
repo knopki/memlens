@@ -26,7 +26,7 @@ deployment {
 
     data = fs 'Filesystem' {
       description '
-        XDG data home of the operator.
+        The data directory of the operator.
       '
       instanceOf memlens.db {
         title 'memlens.db'

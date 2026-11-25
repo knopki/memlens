@@ -105,7 +105,7 @@ Le préréglage remplace le patch du plugin. Le patch du plugin remplace le prof
 `profile` du préréglage sélectionne le nom du profil. Le préréglage n'accepte aucune clé de
 compaction et aucune clé de stockage.
 
-Le fichier de base est `$XDG_CONFIG_HOME/memlens/config.toml`. Si le fichier est absent, le
+Le fichier de base est `config.toml` dans le répertoire de configuration de la plateforme. Si le fichier est absent, le
 remplacement intégré s'applique : le profil `default`, les portées `*`, les budgets 20 et 10 et la
 portée `project:misc`. Une section absente du fichier donne sa valeur par défaut. Un fichier de base
 invalide ou illisible garde le stockage fermé, et la session continue.

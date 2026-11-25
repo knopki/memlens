@@ -43,13 +43,13 @@ import {
 	isCatalogKey,
 	liveCounts,
 	loadBaseConfig,
+	nativeDirs,
 	normalizeRemote,
 	resolveConfig,
 	resolveScope,
 	Store,
 	storePath,
 	visibleScopes,
-	xdgDirs,
 } from "@memlens/core";
 
 const debug = debuglog("memlens:runtime");
@@ -69,7 +69,7 @@ export interface Runtime {
 export function loadCliBaseConfig(
 	env: Record<string, string | undefined>,
 ): BaseConfig {
-	const { configDir, dataDir } = xdgDirs(env);
+	const { configDir, dataDir } = nativeDirs(env);
 	const text = readCliFile(join(configDir, "config.toml"));
 	const layer = loadBaseConfig(text, dataDir);
 	debug("Base layer loaded", {

@@ -104,7 +104,7 @@ El preset sobrescribe el parche del plugin. El parche del plugin sobrescribe el 
 clave `profile` del preset selecciona el nombre del perfil. El preset no acepta ninguna clave de
 compactación ni ninguna clave del almacén.
 
-El archivo base es `$XDG_CONFIG_HOME/memlens/config.toml`. Si el archivo está ausente, se aplica el
+El archivo base es `config.toml` en el directorio de configuración de la plataforma. Si el archivo está ausente, se aplica el
 respaldo integrado: el perfil `default`, los ámbitos `*`, los presupuestos 20 y 10 y el ámbito
 `project:misc`. Una sección ausente del archivo da su valor por defecto. Un archivo base inválido o
 ilegible mantiene el almacén cerrado, y la sesión continúa.

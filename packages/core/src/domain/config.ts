@@ -5,18 +5,19 @@
  * and one preset see the same resolved values.
  * @scope
  *  - The public load of the base, patch, and preset layers, the deep merge, the store path order,
- *    the XDG directories, and the glob match.
+ *    the native directories of the platform, and the glob match.
  *  - NOT: reading files or the environment, and the rules of the active scope.
  * @invariants
  *  - A later layer wins over an earlier layer: the base, then the patch, then the preset.
  *    A table merges with a table, and a scalar or a list replaces.
  *  - The preset holds no compaction key. The base and the patch select the compaction route.
- *  - The configuration lives in `$XDG_CONFIG_HOME/memlens`. The data lives in `$XDG_DATA_HOME/memlens`.
+ *  - The configuration and the data live in the native directories of the platform. An absolute
+ *    XDG root of the environment wins over the native root.
  *  - An absent base file is the default layer, and no parser runs for it.
  * @usecases
  *  - Load: caller => gives the TOML text or an absent file and a default store path => gets the base layer
  *  - Resolve: caller => gives three layers => gets one resolved configuration
- * @dependencies USES API: smol-toml, node:path
+ * @dependencies USES API: smol-toml, node:path, node:os
  * @rationale
  *  - Q: Why do the readers fill the defaults?
  *    A: Each layer leaves the reader complete, so the merge works on plain spreads.
@@ -24,9 +25,11 @@
  * #endregion moduleContract
  */
 
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { posix, win32 } from "node:path";
 import { debuglog } from "node:util";
 import { parse as parseToml } from "smol-toml";
+import { MemlensError } from "../types/errors.js";
 import {
 	expectKeys,
 	expectRecord,
@@ -322,37 +325,105 @@ export function storePath(
 // #endregion FUNC_storePath
 
 // #region FUNC_expandTilde
-/** Expand a leading tilde to the home directory of the environment. */
+/**
+ * @purpose Expand a leading `~/` or `~\` to the home directory, with the separator of the platform.
+ * @invariants An unknown home directory raises an error, and no relative path leaves the call.
+ */
 export function expandTilde(
 	path: Path,
 	env: Record<string, string | undefined>,
+	platform: NodeJS.Platform = process.platform,
 ): Path {
-	const home = env.HOME ?? env.USERPROFILE;
-	if (home !== undefined && path === "~") return home;
-	if (home !== undefined && path.startsWith("~/"))
-		return join(home, path.slice(2));
-	return path;
+	const tilde = path === "~" || path.startsWith("~/") || path.startsWith("~\\");
+	if (!tilde) return path;
+	const home = homeDir(env, platform);
+	const rest = path.slice(2);
+	return path === "~" || rest.length === 0
+		? home
+		: pathRules(platform).join(home, rest);
 }
 // #endregion FUNC_expandTilde
 
-// #region FUNC_xdgDirs
-/** The config and data directories under the XDG roots of the environment. */
-export function xdgDirs(env: Record<string, string | undefined>): {
-	configDir: Path;
-	dataDir: Path;
-} {
-	const home = env.HOME ?? env.USERPROFILE;
-	const configRoot =
-		env.XDG_CONFIG_HOME || (home ? join(home, ".config") : ".config");
-	const dataRoot =
-		env.XDG_DATA_HOME ||
-		(home ? join(home, ".local", "share") : ".local/share");
+// #region FUNC_nativeDirs
+/**
+ * @purpose Give the configuration and the data directory of the platform.
+ * @invariants An absolute XDG root of the environment wins over the native root. The result holds
+ *   absolute paths, so no store opens under the working directory.
+ */
+export function nativeDirs(
+	env: Record<string, string | undefined>,
+	platform: NodeJS.Platform = process.platform,
+): { configDir: Path; dataDir: Path } {
+	const roots = nativeRoots(env, platform);
+	const tool = pathRules(platform);
+	debug("Native roots resolved", {
+		event: "dirs",
+		platform,
+		configRoot: roots.config,
+		dataRoot: roots.data,
+	});
 	return {
-		configDir: join(configRoot, "memlens"),
-		dataDir: join(dataRoot, "memlens"),
+		configDir: tool.join(roots.config, "memlens"),
+		dataDir: tool.join(roots.data, "memlens"),
 	};
 }
-// #endregion FUNC_xdgDirs
+// #endregion FUNC_nativeDirs
+
+/** The root of each directory, before the name `memlens`. */
+function nativeRoots(
+	env: Record<string, string | undefined>,
+	platform: NodeJS.Platform,
+): { config: Path; data: Path } {
+	const tool = pathRules(platform);
+	const xdg = (value: string | undefined): Path | null =>
+		value !== undefined && tool.isAbsolute(value) ? value : null;
+	const home = (...segments: string[]): Path =>
+		tool.join(homeDir(env, platform), ...segments);
+	const xdgConfig = xdg(env.XDG_CONFIG_HOME);
+	const xdgData = xdg(env.XDG_DATA_HOME);
+	if (platform === "win32") {
+		return {
+			config: xdgConfig ?? xdg(env.APPDATA) ?? home("AppData", "Roaming"),
+			data: xdgData ?? xdg(env.LOCALAPPDATA) ?? home("AppData", "Local"),
+		};
+	}
+	if (platform === "darwin") {
+		const support = home("Library", "Application Support");
+		return { config: xdgConfig ?? support, data: xdgData ?? support };
+	}
+	return {
+		config: xdgConfig ?? home(".config"),
+		data: xdgData ?? home(".local", "share"),
+	};
+}
+
+/**
+ * The home directory. A relative value is ignored. Windows reads `USERPROFILE` first, because a
+ * shell sets `HOME` to a POSIX path.
+ */
+function homeDir(
+	env: Record<string, string | undefined>,
+	platform: NodeJS.Platform,
+): Path {
+	const tool = pathRules(platform);
+	const named =
+		(platform === "win32"
+			? env.USERPROFILE || env.HOME
+			: env.HOME || env.USERPROFILE) || null;
+	const home = named !== null && tool.isAbsolute(named) ? named : homedir();
+	if (home.length === 0) {
+		throw new MemlensError(
+			"Data",
+			"The home directory is unknown, so memlens has no path for its files.",
+		);
+	}
+	return home;
+}
+
+/** The path rules of one platform, so a branch of another system runs in a test on any host. */
+function pathRules(platform: NodeJS.Platform): typeof posix {
+	return platform === "win32" ? win32 : posix;
+}
 
 // #region FUNC_globMatches
 /**

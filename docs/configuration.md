@@ -7,12 +7,12 @@ This page holds the complete format and one example of each layer.
 
 ## The three layers
 
-| Layer    | Place                                      | Writer           |
-| -------- | ------------------------------------------ | ---------------- |
-| Defaults | The code                                   | No caller        |
-| Base     | `config.toml` in the XDG config directory  | The user, by hand |
-| Patch    | The `config` table of the plugin row       | The host profile |
-| Preset   | The `config` table of the preset row       | The agent preset |
+| Layer    | Place                                 | Writer            |
+| -------- | ------------------------------------- | ----------------- |
+| Defaults | The code                              | No caller         |
+| Base     | `config.toml` in the config directory | The user, by hand |
+| Patch    | The `config` table of the plugin row  | The host profile  |
+| Preset   | The `config` table of the preset row  | The agent preset  |
 
 The layers merge in a fixed order: the defaults, then the base file, then the patch, then the
 preset. A later value wins over an earlier value. A table merges key by key. A scalar or a list
@@ -32,8 +32,15 @@ no preset.
 
 ## The base file
 
-The base file is `config.toml` in `$XDG_CONFIG_HOME/memlens`. Without `XDG_CONFIG_HOME`, the path
-is `~/.config/memlens/config.toml`. The data lives in `$XDG_DATA_HOME/memlens`.
+The base file is `config.toml` in the configuration directory of the platform. The data lives in
+the data directory of the platform. An absolute `XDG_CONFIG_HOME` or `XDG_DATA_HOME` wins over the
+platform directory.
+
+| Platform | Configuration directory                              | Data directory                                          |
+| -------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| Linux    | `$XDG_CONFIG_HOME/memlens`, else `~/.config/memlens` | `$XDG_DATA_HOME/memlens`, else `~/.local/share/memlens` |
+| macOS    | `~/Library/Application Support/memlens`              | `~/Library/Application Support/memlens`                 |
+| Windows  | `%APPDATA%\memlens`                                  | `%LOCALAPPDATA%\memlens`                                |
 
 The command `memlens config show` prints the resolved values, and it writes no file.
 
@@ -54,8 +61,9 @@ language = "en"
 defaultProfile = "default"
 
 [store]
-# The directory of the SQLite store. A leading tilde means the home directory.
-path = "~/.local/share/memlens"
+# The directory of the SQLite store. The default is the data directory of the platform.
+# A leading tilde means the home directory.
+path = "~/store"
 # The idle time in seconds that starts the background compaction.
 idle = 300
 
@@ -147,10 +155,10 @@ note = 365
 
 ### The store section
 
-| Key    | Type   | Default                  | Effect                                                |
-| ------ | ------ | ------------------------ | ----------------------------------------------------- |
-| `path` | string | `$XDG_DATA_HOME/memlens` | The directory of the SQLite store. A leading tilde means the home directory. |
-| `idle` | number | `300`                    | The idle time in seconds that starts the background compaction. |
+| Key    | Type   | Default            | Effect                                                                       |
+| ------ | ------ | ------------------ | ---------------------------------------------------------------------------- |
+| `path` | string | The data directory | The directory of the SQLite store. A leading tilde means the home directory. |
+| `idle` | number | `300`              | The idle time in seconds that starts the background compaction.              |
 
 ### The profile tables
 
