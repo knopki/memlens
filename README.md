@@ -4,8 +4,8 @@
 knows. One SQLite file holds the notes, and a tree of summaries stands above them.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/console-overview-dark.png">
-  <img src="docs/screenshots/console-overview.png" width="100%" alt="The memlens console. The rail lists the screens and the scopes. The page shows seven scopes with their counts, and the assembled slice below them.">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="The memlens console. The rail lists the screens and the scopes. The page shows seven scopes with their counts, and the assembled slice below them.">
 </picture>
 
 ## The problem
@@ -161,7 +161,7 @@ The compaction needs a model route, and the plugin never picks a model. The keys
 
 The plugin reads the same `config.toml` as the CLI. The plugin row overrides the base file, and the
 preset row overrides the plugin row. See each key, default, and example in
-[packages/dsh-plugin/README.md](packages/dsh-plugin/README.md).
+[packages/dsh-plugin/README.md](https://github.com/knopki/memlens/blob/HEAD/packages/dsh-plugin/README.md).
 
 ## Use it in a terminal
 
@@ -197,8 +197,8 @@ The console opens on `http://127.0.0.1:7788`. It shows the scopes, the tree of o
 text search, the review queue, the proposals of subagents, and the worker journal.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/console-review-dark.png">
-  <img src="docs/screenshots/console-review.png" width="100%" alt="The Review screen of the console. A table of notes with the address, the text, the kind, and the review date. Each row has the actions Reviewed, Amend, Supersede, Forget, and Delete.">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-review-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-review.png" width="100%" alt="The Review screen of the console. A table of notes with the address, the text, the kind, and the review date. Each row has the actions Reviewed, Amend, Supersede, Forget, and Delete.">
 </picture>
 
 The same client opens inside DeepSeek Harness, as a side panel and a session tab.
@@ -216,7 +216,7 @@ The same client opens inside DeepSeek Harness, as a side panel and a session tab
 | `memlens ui`         | Start the console.                                    |
 
 The CLI also gives `amend`, `forget`, `restore`, `redact`, `move`, `import`, `export`, `check`,
-`repair`, `journal`, and `status`. See [docs/architecture.md](docs/architecture.md).
+`repair`, `journal`, and `status`. See [docs/architecture.md](https://github.com/knopki/memlens/blob/HEAD/docs/architecture.md).
 
 ## Configuration
 
@@ -245,7 +245,7 @@ directions = 10
 The key `here` gives the lines of the current scope. The key `directions` gives the lines of the
 scope list. The DSH plugin reads the same file and adds two layers of its own. The command
 `memlens config show` prints the resolved values, and it writes no file. See each key, default, and
-example in [docs/configuration.md](docs/configuration.md).
+example in [docs/configuration.md](https://github.com/knopki/memlens/blob/HEAD/docs/configuration.md).
 
 ## Why not a chat log
 
@@ -265,22 +265,22 @@ The core library, the CLI, the console, and the DSH plugin are ready, and the ch
 repository pass. The compaction needs a model: the plugin sends the merge calls through the harness,
 and the CLI waits for an answer file from `memlens compact`.
 
-The source is on [GitHub](https://github.com/knopki/memlens). See [AGENTS.md](AGENTS.md) for the
+The source is on [GitHub](https://github.com/knopki/memlens). See [AGENTS.md](https://github.com/knopki/memlens/blob/HEAD/AGENTS.md) for the
 build, the tests, and the work rules of the repository.
 
 ## Documents
 
 | File                                       | Content                               |
 | ------------------------------------------ | ------------------------------------- |
-| [docs/architecture.md](docs/architecture.md) | How the system works.               |
-| [docs/configuration.md](docs/configuration.md) | The configuration format and examples. |
-| [packages/dsh-plugin/README.md](packages/dsh-plugin/README.md) | The plugin of DeepSeek Harness. |
-| [docs/features](docs/features/README.md)   | Cross-module behavior as scenarios.   |
-| [docs/arch/README.md](docs/arch/README.md) | The architecture model as diagrams.   |
-| [AGENTS.md](AGENTS.md)                     | Work rules for agents.                |
+| [docs/architecture.md](https://github.com/knopki/memlens/blob/HEAD/docs/architecture.md) | How the system works.               |
+| [docs/configuration.md](https://github.com/knopki/memlens/blob/HEAD/docs/configuration.md) | The configuration format and examples. |
+| [packages/dsh-plugin/README.md](https://github.com/knopki/memlens/blob/HEAD/packages/dsh-plugin/README.md) | The plugin of DeepSeek Harness. |
+| [docs/features](https://github.com/knopki/memlens/blob/HEAD/docs/features/README.md)   | Cross-module behavior as scenarios.   |
+| [docs/arch/README.md](https://github.com/knopki/memlens/blob/HEAD/docs/arch/README.md) | The architecture model as diagrams.   |
+| [AGENTS.md](https://github.com/knopki/memlens/blob/HEAD/AGENTS.md)                     | Work rules for agents.                |
 
-English · [Русский](README.ru.md) · [中文](README.zh.md). The translations follow the English text.
+English · [Русский](https://github.com/knopki/memlens/blob/HEAD/README.ru.md) · [中文](https://github.com/knopki/memlens/blob/HEAD/README.zh.md). The translations follow the English text.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/knopki/memlens/blob/HEAD/LICENSE).
