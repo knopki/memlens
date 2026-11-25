@@ -1,0 +1,51 @@
+name: Publish
+
+# A published GitHub release starts this workflow. The workflow `CI` makes a draft release, and a
+# person publishes it. The workflow sends the public packages to npm through a trusted publisher
+# (OIDC), so it needs no npm token. A fork holds no trusted publisher.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  npm:
+    name: npm
+    if: github.repository == 'knopki/memlens'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - name: Install the tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm run build
+      # npm links the binary to its file. A link that starts nothing gives the exit code 0.
+      - name: Smoke-test the packed CLI
+        run: |
+          (cd packages/cli && pnpm pack --pack-destination "$RUNNER_TEMP" >/dev/null)
+          npm install --global --prefix "$RUNNER_TEMP/smoke" "$RUNNER_TEMP"/memlens-cli-*.tgz >/dev/null
+          code=0
+          "$RUNNER_TEMP/smoke/bin/memlens" no-such-command >/dev/null 2>&1 || code=$?
+          test "$code" -eq 2
+      - name: Publish
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          if [ "$TAG" != "v$version" ]; then
+            echo "The tag $TAG does not match the version $version of the packages."
+            exit 1
+          fi
+          case "$version" in *-*) dist=next ;; *) dist=latest ;; esac
+          pnpm -r publish --tag "$dist" --no-git-checks

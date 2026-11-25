@@ -32,6 +32,20 @@ memlens — долговременная память агента: набор �
 | [docs/questions.md](docs/questions.md)                           | Открытые вопросы, блокирующие решения.     |
 | [AGENTS.md](AGENTS.md)                                           | Правила работы для агентов.                |
 
+## Установка из npm
+
+Поставь утилиту командной строки:
+
+```sh
+npm install -g @memlens/cli
+```
+
+Добавь плагин в профиль DeepSeek Harness:
+
+```sh
+dsh plugin --profile web add @memlens/dsh-plugin
+```
+
 ## Конфигурация
 
 memlens работает без файла конфигурации. Чтобы изменить значение, скопируй нужные куски в

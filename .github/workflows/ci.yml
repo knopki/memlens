@@ -1,0 +1,76 @@
+name: CI
+
+# A pull request from a fork gets no secret, no write token, and no OIDC token. This workflow
+# needs none of them. On a push to `master`, it makes the tag and a draft release for a version
+# that has no tag. A person publishes the draft, and the workflow `Publish` then runs.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.tag.outputs.release }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install the tools
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+      - name: Verify
+        run: pnpm run verify
+      - name: Check the release tag
+        id: tag
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          code=0
+          git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1 || code=$?
+          case "$code" in
+            0) echo "release=false" >> "$GITHUB_OUTPUT"; echo "The tag v$version exists." ;;
+            2) echo "release=true" >> "$GITHUB_OUTPUT"; echo "The tag v$version is new." ;;
+            *) echo "git ls-remote failed with exit code $code."; exit 1 ;;
+          esac
+
+  release:
+    name: Release
+    needs: verify
+    if: >-
+      github.event_name == 'push' &&
+      github.repository == 'knopki/memlens' &&
+      needs.verify.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Write the release notes
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4
+        with:
+          config: cliff.toml
+          args: --unreleased
+        env:
+          OUTPUT: release-notes.md
+      - name: Push the tag
+        env:
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file release-notes.md

@@ -4,3 +4,8 @@ packages:
 # Allow the build script of esbuild. Vite and vitest use it for the tests.
 allowBuilds:
   esbuild: true
+
+# The packages release at one version. `pnpm change check` stops a pull request that breaks this.
+versioning:
+  fixed:
+    - ["@memlens/cli", "@memlens/core", "@memlens/dsh-plugin", "@memlens/ui"]

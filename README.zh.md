@@ -32,6 +32,20 @@ memlens 是代理的长期记忆：一组受管理的笔记，上面是重述构
 | [docs/questions.md](docs/questions.md)                           | 阻碍决策的开放问题。             |
 | [AGENTS.md](AGENTS.md)                                           | 代理工作规则。                |
 
+## 从 npm 安装
+
+安装命令行工具：
+
+```sh
+npm install -g @memlens/cli
+```
+
+把插件添加到你的 DeepSeek Harness profile：
+
+```sh
+dsh plugin --profile web add @memlens/dsh-plugin
+```
+
 ## 配置
 
 memlens 无需配置文件即可工作。要修改某个值，把需要的部分复制到
