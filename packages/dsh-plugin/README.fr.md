@@ -2,6 +2,11 @@
 
 [English](README.md) | [中文](README.zh.md) | [Deutsch](README.de.md) | [Español](README.es.md) | Français | [日本語](README.ja.md) | [Português](README.pt.md) | [Русский](README.ru.md)
 
+memlens est une mémoire à long terme pour un agent. Un stockage SQLite contient les notes, et un arbre
+de résumés se trouve au-dessus. Ce paquet donne cette mémoire aux agents de DeepSeek Harness. Le
+[README principal](https://github.com/knopki/memlens/blob/HEAD/README.md) décrit le problème, la
+conception, la CLI et la console.
+
 ## Résumé
 
 `@memlens/dsh-plugin` donne à chaque agent DeepSeek Harness la mémoire de memlens. Le point d'entrée

@@ -2,6 +2,10 @@
 
 [English](README.md) | [中文](README.zh.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Português](README.pt.md) | Русский
 
+memlens — долговременная память агента. Заметки лежат в одном хранилище SQLite, а над ними стоит
+дерево сводок. Этот пакет даёт эту память агентам DeepSeek Harness. Проблема, устройство, CLI и
+консоль описаны в [основном README](https://github.com/knopki/memlens/blob/HEAD/README.md).
+
 ## Сводка
 
 `@memlens/dsh-plugin` даёт каждому агенту DeepSeek Harness память memlens. Точка входа хоста

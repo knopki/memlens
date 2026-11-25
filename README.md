@@ -104,8 +104,9 @@ Every write to Stripe carries an idempotency key with the invoice id.
 
 ## Use it in DeepSeek Harness
 
-The map and the tools reach the agent through the plugin. The store alone gives an agent nothing.
-Add the plugin to the profile of the host:
+The map and the tools reach the agent through the plugin
+[`@memlens/dsh-plugin`](https://www.npmjs.com/package/@memlens/dsh-plugin). The store alone gives an
+agent nothing. Add the plugin to the profile of the host:
 
 ```sh
 dsh plugin --profile web add @memlens/dsh-plugin
@@ -171,7 +172,8 @@ preset row overrides the plugin row. See each key, default, and example in
 npm install -g @memlens/cli
 ```
 
-The install gives the `memlens` binary. Write a note, find it, and read the map:
+The install of [`@memlens/cli`](https://www.npmjs.com/package/@memlens/cli) gives the `memlens`
+binary. Write a note, find it, and read the map:
 
 ```sh
 memlens note "The billing database is Postgres 16." --scope project:acme/billing
