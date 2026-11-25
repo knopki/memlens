@@ -10,17 +10,17 @@
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="折った紙片のピラミッド。一番下に八枚、その上に四枚、さらに二枚、てっぺんに一枚のきれいな紙。">
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="memlens のコンソールです。サイドバーは画面とスコープを並べます。ページは件数付きの 7 つのスコープと、その下に組み立て済みのスライスを示します。">
-</picture>
-
 ## 問題
 
 エージェントはセッションの間で忘れます。新しいセッションは、古いセッションの事実を
 1 つも持たずに始まります。長いチャットは記憶ではありません。トークンごとに
 コストがかかり、それでもモデルは冒頭を失います。この損失は数週間続くプロジェクトで
 現れます。エージェントは同じ決定を再び尋ね、すでに直した間違いを繰り返します。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="memlens のコンソールです。サイドバーは画面とスコープを並べます。ページは件数付きの 7 つのスコープと、その下に組み立て済みのスライスを示します。">
+</picture>
 
 ## アイデア
 

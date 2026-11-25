@@ -8,14 +8,14 @@
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="折纸金字塔：底层八张，上一层四张，再上一层两张，最顶上一张干净的纸。">
 </p>
 
+## 问题
+
+智能体在会话之间遗忘。新会话开始时，旧会话的事实一条也没有。更长的聊天不是记忆：每个 token 都有成本，模型还是会丢掉开头。这种损失在持续数周的项目上显现：智能体再次询问一个已经定下的决策，还重复一个你已经修掉的错误。
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="memlens 控制台。侧栏列出各个页面和范围。页面上有七个范围及其计数，下面是已组装的片段。">
 </picture>
-
-## 问题
-
-智能体在会话之间遗忘。新会话开始时，旧会话的事实一条也没有。更长的聊天不是记忆：每个 token 都有成本，模型还是会丢掉开头。这种损失在持续数周的项目上显现：智能体再次询问一个已经定下的决策，还重复一个你已经修掉的错误。
 
 ## 思路
 

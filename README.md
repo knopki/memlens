@@ -9,17 +9,17 @@ knows. One SQLite file holds the notes, and a tree of summaries stands above the
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="A pyramid of folded paper slips: eight at the bottom, four above, two, and one clean sheet on top.">
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="The memlens console. The rail lists the screens and the scopes. The page shows seven scopes with their counts, and the assembled slice below them.">
-</picture>
-
 ## The problem
 
 An agent forgets between sessions. A new session starts with no fact of the old sessions. A longer
 chat is not a memory: each token costs, and the model still loses the start. The loss shows on a
 project that lasts weeks: the agent asks again for a decision, and it repeats a mistake that you
 already fixed.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="The memlens console. The rail lists the screens and the scopes. The page shows seven scopes with their counts, and the assembled slice below them.">
+</picture>
 
 ## The idea
 

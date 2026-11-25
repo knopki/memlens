@@ -9,17 +9,17 @@
   <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/images/hero.png" width="100%" alt="Пирамида из сложенных бумажных полос: внизу восемь, выше четыре, затем две и один чистый лист наверху.">
 </p>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="Консоль memlens. Левая колонка перечисляет экраны и области. Страница показывает семь областей с их счётчиками и собранный срез под ними.">
-</picture>
-
 ## Проблема
 
 Агент забывает между сессиями. Новая сессия начинается без единого факта из прошлых сессий. Длинная
 переписка не память: каждый токен стоит денег, а модель всё равно теряет начало. Потеря видна на
 проекте, который длится недели: агент снова спрашивает про уже принятое решение и повторяет ошибку,
 которую ты уже исправил.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/knopki/memlens/HEAD/docs/screenshots/console-overview.png" width="100%" alt="Консоль memlens. Левая колонка перечисляет экраны и области. Страница показывает семь областей с их счётчиками и собранный срез под ними.">
+</picture>
 
 ## Идея
 
