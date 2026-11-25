@@ -86,7 +86,8 @@ Every write to Stripe carries an idempotency key with the invoice id.
 
 ## 在 DeepSeek Harness 中使用
 
-地图和工具通过插件到达智能体。只有存储时，智能体什么也得不到。把插件加入宿主的配置档：
+地图和工具通过插件 [`@memlens/dsh-plugin`](https://www.npmjs.com/package/@memlens/dsh-plugin)
+到达智能体。只有存储时，智能体什么也得不到。把插件加入宿主的配置档：
 
 ```sh
 dsh plugin --profile web add @memlens/dsh-plugin
@@ -144,7 +145,7 @@ dsh plugin --profile web add @memlens/dsh-plugin
 npm install -g @memlens/cli
 ```
 
-安装给出 `memlens` 可执行文件。写一条笔记，找到它，再读地图：
+安装 [`@memlens/cli`](https://www.npmjs.com/package/@memlens/cli) 给出 `memlens` 可执行文件。写一条笔记，找到它，再读地图：
 
 ```sh
 memlens note "The billing database is Postgres 16." --scope project:acme/billing

@@ -2,6 +2,10 @@
 
 [English](README.md) | [中文](README.zh.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [Français](README.fr.md) | 日本語 | [Português](README.pt.md) | [Русский](README.ru.md)
 
+memlens はエージェントの長期記憶です。ノートは 1 つの SQLite ストアに入り、その上に要約のツリーが
+あります。このパッケージはその記憶を DeepSeek Harness のエージェントに与えます。課題、設計、CLI、
+コンソールは[メイン README](https://github.com/knopki/memlens/blob/HEAD/README.md) にあります。
+
 ## 概要
 
 `@memlens/dsh-plugin` は、各 DeepSeek Harness エージェントに memlens のメモリを与えます。ホスト

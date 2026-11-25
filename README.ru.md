@@ -105,8 +105,9 @@ Every write to Stripe carries an idempotency key with the invoice id.
 
 ## Использование в DeepSeek Harness
 
-Карта и инструменты попадают к агенту через плагин. Само хранилище агенту ничего не даёт. Добавь
-плагин в профиль хоста:
+Карта и инструменты попадают к агенту через плагин
+[`@memlens/dsh-plugin`](https://www.npmjs.com/package/@memlens/dsh-plugin). Само хранилище агенту
+ничего не даёт. Добавь плагин в профиль хоста:
 
 ```sh
 dsh plugin --profile web add @memlens/dsh-plugin
@@ -173,7 +174,8 @@ dsh plugin --profile web add @memlens/dsh-plugin
 npm install -g @memlens/cli
 ```
 
-Установка даёт бинарник `memlens`. Напиши заметку, найди её и прочитай карту:
+Установка [`@memlens/cli`](https://www.npmjs.com/package/@memlens/cli) даёт бинарник `memlens`.
+Напиши заметку, найди её и прочитай карту:
 
 ```sh
 memlens note "The billing database is Postgres 16." --scope project:acme/billing
