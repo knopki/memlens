@@ -8,6 +8,7 @@ coverage/
 
 # Packs
 *.tgz
+/packages/cli/README.md
 
 # mise local overrides and generated lockfile
 mise.local.toml
