@@ -1,7 +1,8 @@
 {
 	"name": "@memlens/core",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "The headless library of memlens.",
+	"private": true,
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",

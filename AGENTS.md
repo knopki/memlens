@@ -47,6 +47,19 @@ needs no question, and the commit message states it.
 Follow Conventional Commits: `<type>: <change>`. The types are `feat`, `fix`, `refactor`, `docs`,
 and `spec`.
 
+## Releases
+
+A package without `"private": true` is public. Only a public package goes to npm.
+
+To make a release, run `pnpm version -r patch`, `minor`, or `major`, and open a pull request with
+the change. A push to `master` makes the tag `v<version>` and a draft GitHub release when that tag
+does not exist. Read the draft, then select "Publish release". The publish then sends the public
+packages to npm. The command `pnpm change check` stops a pull request that holds different
+versions.
+
+A version with a suffix, for example `0.2.0-rc.1`, is a prerelease and goes to the `next` dist-tag.
+Set that draft as a pre-release before you publish it.
+
 ## Implementation
 
 1. Load the `grace-lite` skill before you write or change code. The skill owns the markup, and each
