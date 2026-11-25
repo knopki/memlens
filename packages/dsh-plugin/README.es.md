@@ -1,8 +1,3 @@
----
-description: "El plugin de DeepSeek Harness de memlens: las dos entradas, el contexto de memoria, las herramientas de memoria, el aviso, el worker de compactación y el montaje de la consola."
-kind: "package-reference"
----
-
 # @memlens/dsh-plugin
 
 [English](README.md) | [中文](README.zh.md) | [Deutsch](README.de.md) | Español | [Français](README.fr.md) | [日本語](README.ja.md) | [Português](README.pt.md) | [Русский](README.ru.md)

@@ -1,8 +1,3 @@
----
-description: "memlens 的 DeepSeek Harness 插件：两个入口、记忆上下文、记忆工具、提醒、压缩工作进程和控制台挂载。"
-kind: "package-reference"
----
-
 # @memlens/dsh-plugin
 
 [English](README.md) | 中文 | [Deutsch](README.de.md) | [Español](README.es.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Português](README.pt.md) | [Русский](README.ru.md)

@@ -1,8 +1,3 @@
----
-description: "Das DeepSeek-Harness-Plugin von memlens: die zwei Einstiegspunkte, der Speicherkontext, die Speicherwerkzeuge, der Hinweis, der Verdichtungs-Worker und die Montage der Konsole."
-kind: "package-reference"
----
-
 # @memlens/dsh-plugin
 
 [English](README.md) | [中文](README.zh.md) | Deutsch | [Español](README.es.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Português](README.pt.md) | [Русский](README.ru.md)
