@@ -75,6 +75,12 @@ scopes = ["project:memlens"]
 here = 20
 directions = 1
 
+[profile.blank]
+scopes = ["p:nothing/*"]
+[profile.blank.budget]
+here = 20
+directions = 10
+
 [profile.propose]
 scopes = ["*"]
 subagents = "propose"
@@ -756,6 +762,18 @@ describe("memory tools of one agent", () => {
 		await expect(
 			call(narrow, "memory_review", { scope: "global:prefs" }),
 		).rejects.toThrow(/not visible/);
+	});
+
+	it("finds no note when the profile matches no live scope", async () => {
+		seed("p:private", "The private decision.");
+		seed("p:work", "The work decision.");
+		const blank = subject("blank", "blank");
+
+		const answer = (await call(blank, "memory_find", {
+			query: "decision",
+		})) as { hits: unknown[] };
+
+		expect(answer.hits).toEqual([]);
 	});
 
 	it("joins the active scope into a profile that lists it not", async () => {

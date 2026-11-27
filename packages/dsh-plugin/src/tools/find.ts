@@ -32,8 +32,8 @@ import {
 /**
  * @purpose Answer a find call from the index of each selected scope.
  * @invariants The profile hides each scope that the call does not name, and a named foreign scope gives NotAllowed.
- * @invariants An absent scope list takes each visible scope. Each filter of the call cuts the rows
- * before the limit.
+ * @invariants An absent scope list takes each visible scope, and an empty visible list gives no hit.
+ * Each filter of the call cuts the rows before the limit.
  */
 function findAnswer(
 	memory: AgentMemory,
@@ -43,6 +43,10 @@ function findAnswer(
 		input.scopes === undefined || input.scopes.length === 0
 			? visibleScopeList(memory)
 			: input.scopes.map((raw) => checkedScope(memory, raw));
+	if (scopes.length === 0) {
+		debug("Find refused", { event: "find", hits: 0, scopes: 0 });
+		return { hits: [] };
+	}
 	const filter: FindFilter = {
 		query: input.query ?? null,
 		scopes,
