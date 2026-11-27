@@ -529,6 +529,31 @@ describe("console", () => {
 		}
 	});
 
+	it("refuses the config glob when no listed scope exists", async () => {
+		const { host, root, env } = await fixture(
+			false,
+			'["user:*"]',
+			`[profile.default]\nscopes = ["*"]\n\n[scope_default]\nrules = [{ match = "path", glob = "*", key = "project:other" }]\ndefault = "user:notes"\n`,
+		);
+		const action = await fetch(`${host.url}/api/action`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ action: "note", body: "stale note" }),
+		});
+		expect(action.status).toBe(403);
+		const view = await fetch(`${host.url}/api/view`);
+		expect(view.status).toBe(403);
+		const opened = await openRuntime({
+			storeFlag: join(root, "store"),
+			env,
+		});
+		try {
+			expect(scopeNotes(opened.store, "user:*")).toHaveLength(0);
+		} finally {
+			await opened.close();
+		}
+	});
+
 	it("states a compaction job without a merge input", async () => {
 		const { post } = await fixture();
 		await post({ action: "note", body: "alone", kind: "fact" });

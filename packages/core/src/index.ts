@@ -123,6 +123,7 @@ export {
 	scopeLines,
 } from "./domain/reads.js";
 export {
+	concreteScopeKey,
 	isCatalogKey,
 	normalizeScopeKey,
 	validateScopeKey,

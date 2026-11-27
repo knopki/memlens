@@ -1,12 +1,13 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Check the scope key grammar, the normalization, the sanitization, and the hidden key
- * test.
+ * @purpose Check the scope key grammar, the normalization, the sanitization, the hidden key
+ * test, and the concrete key test.
  * #endregion moduleContract
  */
 import { describe, expect, it } from "vitest";
 import {
+	concreteScopeKey,
 	isCatalogKey,
 	normalizeScopeKey,
 	sanitizeName,
@@ -118,5 +119,22 @@ describe("isCatalogKey", () => {
 
 	it("rejects a normal scope key", () => {
 		expect(isCatalogKey("project:dsh")).toBe(false);
+	});
+});
+
+describe("concreteScopeKey", () => {
+	it("accepts a valid key", () => {
+		expect(concreteScopeKey("project:dsh/optmem")).toBe(true);
+	});
+
+	it("rejects a scope pattern", () => {
+		expect(concreteScopeKey("user:*")).toBe(false);
+		expect(concreteScopeKey("*")).toBe(false);
+		expect(concreteScopeKey("project:d*sh")).toBe(false);
+	});
+
+	it("rejects an invalid key", () => {
+		expect(concreteScopeKey("nodash")).toBe(false);
+		expect(concreteScopeKey("kind:")).toBe(false);
 	});
 });
