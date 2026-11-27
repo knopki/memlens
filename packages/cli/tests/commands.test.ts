@@ -826,6 +826,32 @@ describe("@memlens/cli commands", () => {
 		expect(due.out).toContain("Check the certificate");
 	});
 
+	it("marks no record when one mark address is wrong", async () => {
+		const test = makeEnv();
+		await run(
+			test,
+			"note",
+			"Check the certificate",
+			"--scope",
+			"project:ssl",
+			"--review",
+			"30d",
+		);
+		const mark = await run(
+			test,
+			"review",
+			"--mark",
+			"project:ssl#0,bogus",
+			"--for",
+			"0d",
+		);
+		expect(mark.code).toBe(2);
+		expect(mark.err).toContain("bogus");
+		const due = await run(test, "review", "--limit", "10");
+		expect(due.code).toBe(0);
+		expect(due.out).not.toContain("Check the certificate");
+	});
+
 	it("amends a note and hides a note", async () => {
 		const test = makeEnv();
 		await run(test, "note", "First text", "--scope", "project:acme/x");
