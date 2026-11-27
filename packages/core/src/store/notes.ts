@@ -491,26 +491,75 @@ export function restore(store: Store, id: Ulid, reason?: string): Note {
  * @returns The cleared note.
  */
 export function redact(store: Store, id: Ulid, reason: string): Note {
-	const checked = checkedReason(reason);
-	const cleared = store.publish((tx) => {
-		const old = requireRow(tx.db, id);
-		const now = new Date().toISOString();
-		ftsSet(tx.db, old.n, ftsRowOf(old), null);
-		tx.db
-			.prepare(
-				"UPDATE notes SET state = 'deleted', cleared = 1, body = '', longform = NULL, v = ?, modified_at = ? WHERE id = ?",
-			)
-			.run(tx.version, now, id);
-		deleteCovering(tx.db, old.scope, old.pos);
-		tx.db.prepare("DELETE FROM proposals WHERE target = ?").run(id);
-		tx.journal("redact", id, old.scope, checked);
-		debug("Note redact", { event: "redact", id, scope: old.scope });
-		return requireNote(tx.db, id);
-	});
+	const cleared = store.publish((tx) => redactTx(tx, { id, reason }));
 	store.truncate();
 	return cleared.value;
 }
 // #endregion FUNC_redact
+
+// #region FUNC_redactTx
+/**
+ * @purpose Redact one note within the caller transaction.
+ * @invariants The caller owns the transaction, so the row, the index, the nodes, and the
+ *   proposals change together with the work of the caller.
+ */
+function redactTx(tx: Tx, input: { id: Ulid; reason: string }): Note {
+	const { id, reason } = input;
+	const checked = checkedReason(reason);
+	const old = requireRow(tx.db, id);
+	const now = new Date().toISOString();
+	ftsSet(tx.db, old.n, ftsRowOf(old), null);
+	tx.db
+		.prepare(
+			"UPDATE notes SET state = 'deleted', cleared = 1, body = '', longform = NULL, v = ?, modified_at = ? WHERE id = ?",
+		)
+		.run(tx.version, now, id);
+	deleteCovering(tx.db, old.scope, old.pos);
+	tx.db.prepare("DELETE FROM proposals WHERE target = ?").run(id);
+	tx.journal("redact", id, old.scope, checked);
+	debug("Note redact", { event: "redact", id, scope: old.scope });
+	return requireNote(tx.db, id);
+}
+// #endregion FUNC_redactTx
+
+// #region FUNC_scopeAction
+/**
+ * @purpose Redact or hide each note of one scope in one transaction, so a scope-wide delete
+ *   never stops halfway and never answers a partial change.
+ * @invariants One publish applies the whole set, so a failure changes no row of the scope.
+ * @invariants A redact skips each deleted row. A hide touches live rows only, so a hidden or
+ *   cleared row keeps its state.
+ * @invariants A redact runs one truncating checkpoint after the publish. A hide runs none, and
+ *   a busy or failed checkpoint is a state.
+ * @returns The count of the changed rows.
+ */
+export function scopeAction(
+	store: Store,
+	scope: ScopeKey,
+	action: "redact" | "hide",
+	reason: string,
+): number {
+	const key = checkedScope(scope);
+	const changed = store.publish((tx) => {
+		const ids = tx.db
+			.prepare(
+				action === "redact"
+					? "SELECT id FROM notes WHERE scope = ? AND state != 'deleted' ORDER BY pos"
+					: "SELECT id FROM notes WHERE scope = ? AND state = 'live' ORDER BY pos",
+			)
+			.all(key)
+			.map((item) => String(item.id));
+		for (const id of ids) {
+			if (action === "redact") redactTx(tx, { id, reason });
+			else hideTx(tx, { id, reason });
+		}
+		return ids.length;
+	}).value;
+	if (action === "redact") store.truncate();
+	debug("Scope action", { event: "scope-action", action, scope: key, changed });
+	return changed;
+}
+// #endregion FUNC_scopeAction
 
 // #region FUNC_review
 /**

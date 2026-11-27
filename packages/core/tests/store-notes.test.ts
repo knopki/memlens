@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Prove that each note write keeps the row, the index, the nodes, the journal, and the clock in step.
- * @scope The duplicate check, the slot order, the single and the bulk scope move, the index removal, the restore, the redaction, and the review fields.
+ * @scope The duplicate check, the slot order, the single and the bulk scope move, the index removal, the restore, the redaction, the review fields, and the scope action.
  * @keywords test, note, amend, move, hide, restore, redact, review, fts, slot
  * #endregion moduleContract
  */
@@ -23,6 +23,7 @@ import {
 	redact,
 	restore,
 	review,
+	scopeAction,
 } from "../src/store/notes.js";
 import { check } from "../src/store/repair.js";
 import { search } from "../src/store/search.js";
@@ -484,6 +485,81 @@ describe("redact", () => {
 	});
 });
 // #endregion FUNC_test_redact
+
+// #region FUNC_test_scopeAction
+/**
+ * @purpose Prove that one scope action changes the whole set in one transaction and empties the log.
+ */
+describe("scope action", () => {
+	it("redacts each row that is not deleted and truncates the log", () => {
+		const { store, dir } = fresh();
+		const marker = "sweepecanaryzzq42";
+		const live = note(store, { ...BASE, body: `A live fact ${marker}.` });
+		const hidden = note(store, { ...BASE, body: "A hidden fact." });
+		hide(store, idOf(hidden), "No longer true.");
+		const gone = note(store, { ...BASE, body: "A deleted fact." });
+		redact(store, idOf(gone), "Operator request.");
+		const changed = scopeAction(store, "p:test", "redact", "Operator request.");
+		assert.equal(changed, 2);
+		for (const created of [live, hidden, gone]) {
+			const cleared = row(store, idOf(created));
+			assert.equal(field(cleared, "state"), "deleted");
+			assert.equal(Number(field(cleared, "cleared")), 1);
+			assert.equal(field(cleared, "body"), "");
+		}
+		assert.equal(ftsCount(store, marker), 0);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'redact'"),
+			3,
+		);
+		assert.equal(statSync(join(dir, "memlens.db-wal")).size, 0);
+	});
+
+	it("hides live rows only", () => {
+		const { store } = fresh();
+		const live = note(store, { ...BASE, body: "A live fact." });
+		const hidden = note(store, { ...BASE, body: "A hidden fact." });
+		hide(store, idOf(hidden), "No longer true.");
+		const cleared = note(store, { ...BASE, body: "A cleared fact." });
+		redact(store, idOf(cleared), "Operator request.");
+		const changed = scopeAction(store, "p:test", "hide", "Operator request.");
+		assert.equal(changed, 1);
+		assert.equal(field(row(store, idOf(live)), "state"), "hidden");
+		assert.equal(field(row(store, idOf(live)), "body"), "A live fact.");
+		assert.equal(field(row(store, idOf(hidden)), "state"), "hidden");
+		assert.equal(field(row(store, idOf(cleared)), "state"), "deleted");
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'hide'"),
+			2,
+		);
+	});
+
+	it("rolls back the whole set when one row fails", () => {
+		const { store } = fresh();
+		const first = idOf(note(store, { ...BASE, body: "First fact." }));
+		const second = idOf(note(store, { ...BASE, body: "Second fact." }));
+		addNode(store.handle(), "A summary of the first slot.");
+		const rev = store.rev();
+		store
+			.handle()
+			.exec(
+				`CREATE TRIGGER scope_stop BEFORE UPDATE OF state ON notes WHEN NEW.id = '${second}' BEGIN SELECT RAISE(ABORT, 'scope stop'); END`,
+			);
+		assert.throws(
+			() => scopeAction(store, "p:test", "hide", "Operator request."),
+			/scope stop/,
+		);
+		assert.equal(field(row(store, first), "state"), "live");
+		assert.equal(field(row(store, second), "state"), "live");
+		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 1);
+		assert.equal(
+			count(store, "SELECT count(*) AS c FROM journal WHERE op = 'hide'"),
+			0,
+		);
+		assert.equal(store.rev(), rev);
+	});
+});
+// #endregion FUNC_test_scopeAction
 
 // #region FUNC_test_review
 /**
