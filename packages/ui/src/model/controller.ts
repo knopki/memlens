@@ -22,7 +22,13 @@
 import type { BuildInput, ConsoleEntry, NoteKind, Range } from "@memlens/core";
 import { readRange, renderRange } from "../format.js";
 import { LANGS, type Lang } from "../i18n.js";
-import { DEFAULT_ROUTE, type Route, routeOf, type Screen } from "../route.js";
+import {
+	DEFAULT_ROUTE,
+	LIMIT_MAX,
+	type Route,
+	routeOf,
+	type Screen,
+} from "../route.js";
 import type { Choice, Step, View } from "../types.js";
 import type {
 	ActionFields,
@@ -740,13 +746,20 @@ export function createConsoleController(
 		},
 		search(filters: SearchFilters) {
 			return guard(async () => {
+				// The number field sits in no form, so the browser checks nothing.
+				// Clamp the limit here, so the host reads a whole number from 1 to LIMIT_MAX.
+				const asked = Number(filters.limit);
+				const limit =
+					Number.isInteger(asked) && asked >= 1
+						? String(Math.min(asked, LIMIT_MAX))
+						: DEFAULT_ROUTE.limit;
 				set({
 					query: filters.query.trim(),
 					kinds: filters.kinds,
 					since: filters.since,
 					until: filters.until,
 					due: filters.due,
-					limit: filters.limit,
+					limit,
 					searchScope: filters.searchScope,
 				});
 				await find("push");

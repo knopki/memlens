@@ -100,7 +100,8 @@ export function findTool(memory: AgentMemory): ToolDefinition {
 			},
 			limit: {
 				type: "number",
-				description: "The greatest count of hits. The default is 10.",
+				description:
+					"The greatest count of hits. The default is 10. The answer never holds more than 50 hits.",
 			},
 		},
 		output: {

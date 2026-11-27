@@ -29,6 +29,7 @@ import {
 } from "../src/store/reads.js";
 import {
 	FIND_DEFAULT_LIMIT,
+	FIND_MAX_LIMIT,
 	type FindFilter,
 	search,
 } from "../src/store/search.js";
@@ -284,7 +285,8 @@ describe("find filters", () => {
 			"b15",
 		]);
 		assert.equal(search(store, {}, NOW).length, FIND_DEFAULT_LIMIT);
-		assert.equal(idsOf(store, { limit: 100 }).length, 80);
+		// The limit caps at FIND_MAX_LIMIT, so a huge ask reads no whole store.
+		assert.equal(idsOf(store, { limit: 100 }).length, FIND_MAX_LIMIT);
 		assert.deepEqual(idsOf(store, { limit: 0 }), []);
 		assert.deepEqual(idsOf(store, { limit: -5 }), []);
 	});

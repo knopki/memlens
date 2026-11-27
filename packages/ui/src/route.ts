@@ -58,6 +58,9 @@ export type Route = {
 };
 // #endregion TYPE_route
 
+/** The greatest limit of one search. The limit field of the search screen shows the same bound. */
+export const LIMIT_MAX = 50;
+
 /** The place of a first visit: the overview of the default profile with no filter. */
 export const DEFAULT_ROUTE: Route = {
 	screen: "overview",
@@ -140,7 +143,7 @@ export function readRoute(search: string): Route {
 		until: DATE.test(until) ? until : "",
 		due: params.get("due") === "1",
 		limit:
-			Number.isInteger(limit) && limit > 0 && limit <= 50
+			Number.isInteger(limit) && limit > 0 && limit <= LIMIT_MAX
 				? String(limit)
 				: DEFAULT_ROUTE.limit,
 		reviewKind: kindOf(params.get("rkind") ?? ""),
