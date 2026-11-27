@@ -20,14 +20,12 @@ import type { BuildInput, ScopeKey } from "@memlens/core";
 import {
 	answerLine,
 	batchTask,
-	candidates,
 	childOf,
-	copyBuild,
-	joinBuild,
 	MemlensError,
 	NODE_TARGET,
-	publishJoin,
 	publishNode,
+	publishRound,
+	type RoundEntry,
 	readBuild,
 	text,
 } from "@memlens/core";
@@ -80,83 +78,11 @@ function buildInput(
 }
 // #endregion FUNC_buildInput
 
-// #region FUNC_readyInputs
-/** Each candidate range of one scope with its current build input. */
-function readyInputs(
-	memory: AgentMemory,
-	scope: ScopeKey,
-): readonly Captured[] {
-	return candidates(memory.store, scope).flatMap((range) => {
-		const result = buildInput(memory, scope, range);
-		return result ? [result] : [];
-	});
-}
-// #endregion FUNC_readyInputs
-
-// #region FUNC_publishRounds
-/**
- * @purpose Publish each fitting join and copy in rounds until one round publishes nothing.
- * @invariants One run completes each join chain, so the merge inputs come from the last round.
- */
-function publishRounds(
-	memory: AgentMemory,
-	scope: ScopeKey,
-): { readonly published: number; readonly joined: number } {
-	let published = 0;
-	let joined = 0;
-	for (let round = 1; ; round += 1) {
-		const pending = readyInputs(memory, scope);
-		let accepted = 0;
-		let roundJoins = 0;
-		for (const { input, read } of pending) {
-			const [left, right] = input.children;
-			const joinedLine = left && right ? joinBuild(input) : null;
-			if (joinedLine) {
-				if (
-					publishJoin(
-						memory.store,
-						scope,
-						input.range.level,
-						input.range.start,
-						read,
-					).ok
-				) {
-					accepted += 1;
-					roundJoins += 1;
-				}
-			} else if ((!left || !right) && read.fits) {
-				const line = copyBuild(input);
-				if (
-					publishNode(
-						memory.store,
-						scope,
-						input.range.level,
-						input.range.start,
-						line.summary,
-						read,
-					).ok
-				)
-					accepted += 1;
-			}
-		}
-		published += accepted;
-		joined += roundJoins;
-		debug("Mechanical round", {
-			event: "round",
-			round,
-			found: pending.length,
-			accepted,
-		});
-		if (!accepted) break;
-	}
-	return { published, joined };
-}
-// #endregion FUNC_publishRounds
-
 // #region FUNC_prepareCompact
 /**
  * @purpose Publish the copies and joins of one tree and give the merge inputs that remain.
- * @invariants A job holds at most fifty merge inputs. The job text strips the input block tags.
+ * @invariants One round loads the view once. A job holds at most fifty merge inputs. The job
+ * text strips the input block tags.
  * @param memory - The store and the profile of the session.
  * @param scope - The scope of the compaction.
  * @returns The merge inputs, the task text, and the publication counts.
@@ -170,9 +96,19 @@ export function prepareCompact(
 	readonly copies: number;
 	readonly joins: number;
 } {
-	const found = readyInputs(memory, scope).length;
-	const { published, joined } = publishRounds(memory, scope);
-	const inputs = readyInputs(memory, scope)
+	let found = 0;
+	let published = 0;
+	let joined = 0;
+	let pending: readonly RoundEntry[] = [];
+	for (let round = 1; ; round += 1) {
+		const result = publishRound(memory.store, scope);
+		if (round === 1) found = result.pending.length;
+		published += result.published;
+		joined += result.joined;
+		pending = result.pending;
+		if (!result.published) break;
+	}
+	const inputs = pending
 		.filter(({ read }) => !read.fits)
 		.map(({ input }) => input)
 		.slice(0, MAX_INPUTS);

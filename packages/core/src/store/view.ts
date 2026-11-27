@@ -228,9 +228,7 @@ export function nodeAt(
 	level: number,
 	start: number,
 ): Node | undefined {
-	return view.nodes.find(
-		(node) => node.level === level && node.start === start,
-	);
+	return indexOf(view).nodes.get(nodeKey(level, start));
 }
 // #endregion FUNC_nodeAt
 
