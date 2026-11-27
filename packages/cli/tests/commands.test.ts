@@ -1080,6 +1080,25 @@ describe("@memlens/cli commands", () => {
 		expect(answer.err).toContain("is larger than");
 	});
 
+	it("refuses one answer file larger than the byte limit before the read", async () => {
+		const test = makeEnv();
+		await run(test, "note", "Seed note", "--scope", "project:acme/x");
+		const answer = join(test.home, "big.txt");
+		// One sparse file: its size crosses the limit, and it holds no data on the disk.
+		writeFileSync(answer, "");
+		truncateSync(answer, 256 * 1024 * 1024 + 1);
+		const done = await run(
+			test,
+			"compact",
+			"--answer",
+			answer,
+			"--scope",
+			"project:acme/x",
+		);
+		expect(done.code).toBe(1);
+		expect(done.err).toContain("is larger than");
+	});
+
 	it("shows the resolved configuration", async () => {
 		const test = makeEnv();
 		const shown = await run(test, "config", "show");

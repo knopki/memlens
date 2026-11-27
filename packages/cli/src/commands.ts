@@ -6,8 +6,8 @@
  * @purpose Give each command the shared flags, the value readers, and one answer shape, so no
  *   command reads the environment or the argument text itself.
  * @scope
- *  - The run type, the command constructor, the shared flags, the value readers, and the answer
- *    printer.
+ *  - The run type, the command constructor, the shared flags, the value readers, the input file
+ *    reader, and the answer printer.
  *  - NOT: the semantics of one command, the dispatch, and the exit code mapping.
  * @invariants
  *  - Each command closes the runtime that it opens.
@@ -15,11 +15,12 @@
  *  - A short flag has one meaning in each command.
  * @usecases
  *  - Open: command => gives its io => gets one runtime and closes it
- * @dependencies USES API: @memlens/core, commander
- * @keywords command, io, flag, scope, runtime, answer, json
+ * @dependencies USES API: @memlens/core, commander; READS: the input files that the commands name
+ * @keywords command, io, flag, scope, runtime, answer, json, input file
  * #endregion moduleContract
  */
 
+import { readFileSync, statSync } from "node:fs";
 import type { ScopeKey } from "@memlens/core";
 import {
 	MemlensError,
@@ -113,6 +114,34 @@ export function collect(value: string, previous: string[] = []): string[] {
 export function addressList(value: string): string[] {
 	return value.split(",").filter((item) => item !== "");
 }
+
+/** The greatest size of one input file, in bytes. The commands read no larger file. */
+const MAX_INPUT_BYTES = 256 * 1024 * 1024;
+
+// #region FUNC_readInputText
+/**
+ * @purpose Read one input file whole after the size check, so one oversized file cannot exhaust
+ *   the memory before a command rejects it.
+ * @invariants One file larger than the limit gives one Data error before the read. One file that
+ *   does not read gives one Data error.
+ */
+export function readInputText(path: string): string {
+	let text: string;
+	try {
+		const { size } = statSync(path);
+		if (size > MAX_INPUT_BYTES)
+			throw new MemlensError(
+				"Data",
+				`The file ${path} is larger than ${MAX_INPUT_BYTES} bytes.`,
+			);
+		text = readFileSync(path, "utf8");
+	} catch (cause) {
+		if (cause instanceof MemlensError) throw cause;
+		throw new MemlensError("Data", `The file ${path} does not read.`);
+	}
+	return text;
+}
+// #endregion FUNC_readInputText
 
 /** Read one review period: a number of days with the letter d, or never. */
 export function period(value: string): string {
