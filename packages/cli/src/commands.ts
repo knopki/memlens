@@ -23,6 +23,7 @@
 import { readFileSync, statSync } from "node:fs";
 import type { ScopeKey } from "@memlens/core";
 import {
+	MAX_ADD_DAYS,
 	MemlensError,
 	NOTE_KINDS,
 	normalizeScopeKey,
@@ -90,11 +91,16 @@ export async function reply(
 }
 // #endregion FUNC_reply
 
-/** Read one whole number. */
+/** Read one whole number, so the engine never receives a value above the safe range. */
 export function whole(value: string): number {
 	if (!/^\d+$/.test(value))
 		throw new InvalidArgumentError("needs a whole number.");
-	return Number(value);
+	const number = Number(value);
+	if (number > Number.MAX_SAFE_INTEGER)
+		throw new InvalidArgumentError(
+			`must be at most ${Number.MAX_SAFE_INTEGER}.`,
+		);
+	return number;
 }
 
 /** Read one value of a list, so a wrong value names the allowed values. */
@@ -150,6 +156,8 @@ export function period(value: string): string {
 		throw new InvalidArgumentError(
 			"needs a number of days with the letter d, or never.",
 		);
+	if (Number(value.slice(0, -1)) > MAX_ADD_DAYS)
+		throw new InvalidArgumentError(`must be at most ${MAX_ADD_DAYS} days.`);
 	return value;
 }
 

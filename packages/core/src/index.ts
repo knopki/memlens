@@ -132,6 +132,7 @@ export { resolveTarget } from "./domain/target.js";
 export {
 	addDaysAtTime,
 	compareIso,
+	MAX_ADD_DAYS,
 	nowIso,
 	parseNoteTime,
 	toIso,

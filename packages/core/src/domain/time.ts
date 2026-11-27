@@ -57,6 +57,9 @@ export function toIso(d: Date | number): string {
 }
 // #endregion FUNC_toIso
 
+/** The most days that addDaysAtTime adds, so the result stays inside the Date range. */
+export const MAX_ADD_DAYS = 99_000_000;
+
 // #region FUNC_addDaysAtTime
 /**
  * Add days to a time and keep the full UTC form.

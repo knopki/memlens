@@ -441,6 +441,15 @@ describe("memory tools of one agent", () => {
 		expect(pending(host.store)).toHaveLength(0);
 	});
 
+	it("refuses a review period above the date range", async () => {
+		const main = subject("main", "all");
+
+		await expect(
+			call(main, "memory_note", { body: "A fact.", reviewIn: "99999999999d" }),
+		).rejects.toThrow(/more than 99000000 days/);
+		expect(pending(host.store)).toHaveLength(0);
+	});
+
 	it("finds the written note with its declared shape", async () => {
 		seed("user:notes", "A decision about the cache.");
 		const main = subject("main", "all");

@@ -17,6 +17,7 @@ import {
 	globMatches,
 	isCatalogKey,
 	liveCounts,
+	MAX_ADD_DAYS,
 	MemlensError,
 	NOTE_KINDS,
 	type Note,
@@ -259,6 +260,7 @@ export function resolveTarget(
 /**
  * @purpose Give the next review time of one note from its period or its kind.
  * @invariants `never` gives null. An absent period gives the days of the kind.
+ * @invariants A count above MAX_ADD_DAYS gives a Usage error, so the date stays inside its range.
  */
 export function reviewTime(
 	memory: AgentMemory,
@@ -274,7 +276,13 @@ export function reviewTime(
 			"Usage",
 			`The review period ${reviewIn} is not a count of days or never.`,
 		);
-	return addDaysAtTime(Date.now(), Number(days[1]));
+	const count = Number(days[1]);
+	if (count > MAX_ADD_DAYS)
+		throw new MemlensError(
+			"Usage",
+			`The review period ${reviewIn} is more than ${MAX_ADD_DAYS} days.`,
+		);
+	return addDaysAtTime(Date.now(), count);
 }
 // #endregion FUNC_reviewTime
 
