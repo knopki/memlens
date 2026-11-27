@@ -3,7 +3,8 @@
  * @vitest-environment happy-dom
  * @purpose Hold the shell to the browser wiring that a server render cannot show: a click, a pick,
  * a key, and a typed field reach the controller, and the page redraws from the new state.
- * @scope The rail, the header pickers, the number keys, the theme attribute, and the record form.
+ * @scope The rail, the header pickers, the number keys, the theme attribute, the record form, and
+ *   the inspector actions.
  * @invariants Each test mounts the real shell on a real controller with a fake port.
  * @invariants Each test sends DOM events as a browser sends them, and no state goes in by hand.
  * @dependencies USES: React, the shell, the controller harness of the model tests, and happy-dom.
@@ -11,13 +12,14 @@
  * #endregion moduleContract
  */
 
+import type { SliceLine } from "@memlens/core";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { fill, messages } from "../../src/i18n.js";
 import type { ConsoleApi, Translate } from "../../src/model/console.js";
 import { App } from "../../src/standalone/app.js";
-import { type Harness, harness, viewOf } from "../model/helpers.js";
+import { entryOf, type Harness, harness, viewOf } from "../model/helpers.js";
 
 (
 	globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -291,5 +293,37 @@ describe("standalone interaction", () => {
 			scope: "project:alpha",
 		});
 		expect(h.state().dialog).toBeNull();
+	});
+
+	it("drops the armed confirm when another record opens", async () => {
+		const line = (pos: number): SliceLine => ({
+			kind: "record",
+			pos,
+			from: "2026-11-01T00:00:00.000Z",
+			to: "2026-11-27T00:00:00.000Z",
+			body: `body ${pos}`,
+		});
+		const h = harness(
+			{
+				view: async (fields) =>
+					viewOf("default", "project:alpha", {
+						screen: fields.screen ?? "overview",
+						frontier: [line(1), line(2)],
+					}),
+				open: async (fields) =>
+					entryOf("project:alpha", Number(fields.target.split("#")[1])),
+			},
+			{ model: viewOf() },
+		);
+		const container = await mount(h);
+		await click(container, "aside nav button:nth-child(2)");
+
+		await click(container, ".lines .line:nth-child(1)");
+		await click(container, ".ins .actions button:nth-child(4)");
+		expect(container.textContent).toContain("Forget project:alpha#1?");
+
+		await click(container, ".lines .line:nth-child(2)");
+		expect(h.state().selection?.target).toBe("project:alpha#2");
+		expect(container.textContent).not.toContain("?");
 	});
 });

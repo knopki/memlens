@@ -51,6 +51,7 @@ export function Inspector({
 			</div>
 			<KeyValue rows={metaRows(api, result)} />
 			<RecordActions
+				key={result.addr}
 				api={api}
 				target={result.addr}
 				disabled={!api.state.model?.allowDelete || result.state === "deleted"}

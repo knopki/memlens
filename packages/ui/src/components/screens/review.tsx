@@ -69,7 +69,7 @@ function ReviewTable({
 					kindName(t, item.kind),
 					item.review_at ? dayOf(item.review_at) : t("none"),
 					<RecordActions
-						key="actions"
+						key={item.addr}
 						api={api}
 						target={item.addr}
 						disabled={!allowDelete}
