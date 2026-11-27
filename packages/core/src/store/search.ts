@@ -37,6 +37,9 @@ export interface FindFilter {
 /** The default limit of a find. */
 export const FIND_DEFAULT_LIMIT = 10;
 
+/** The greatest limit of a find. A caller that asks for more gets this many hits at most. */
+export const FIND_MAX_LIMIT = 50;
+
 /** The note columns of one hit. */
 const HIT_COLUMNS =
 	"n.id, n.scope, n.pos, n.ts, n.kind, n.body, n.longform, n.review_at";
@@ -239,7 +242,8 @@ function filterSql(filter: FindFilter, now: IsoTime): SqlTail {
  * @invariants An empty query lists each matching live row in the ts order. An exclusion-only query
  * gives no hit.
  * @invariants A trigram index with a short positive word uses a bounded literal containment scan.
- * @invariants A negative limit gives no hit. The default limit is 10.
+ * @invariants A negative limit gives no hit. The default limit is 10. Each answer holds at most
+ * FIND_MAX_LIMIT hits.
  * @returns The hits, at most the limit.
  */
 export function search(
@@ -248,7 +252,10 @@ export function search(
 	now: IsoTime,
 ): readonly IndexHit[] {
 	const db = store.handle();
-	const limit = Math.max(0, filter.limit ?? FIND_DEFAULT_LIMIT);
+	const limit = Math.min(
+		FIND_MAX_LIMIT,
+		Math.max(0, filter.limit ?? FIND_DEFAULT_LIMIT),
+	);
 	const tail = filterSql(filter, now);
 	const parsed = parseQuery(filter.query ?? "");
 	if (parsed.empty) return searchAll(db, tail, limit);

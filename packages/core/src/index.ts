@@ -194,6 +194,7 @@ export {
 export { check } from "./store/repair.js";
 export {
 	FIND_DEFAULT_LIMIT,
+	FIND_MAX_LIMIT,
 	type FindFilter,
 	search,
 } from "./store/search.js";

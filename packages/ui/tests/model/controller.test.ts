@@ -547,6 +547,38 @@ describe("console controller search", () => {
 		await first;
 		expect(h.state().hits).toEqual([hit(2)]);
 	});
+
+	it("clamps the limit of one search to the bounds of the field", async () => {
+		const h = harness();
+		await h.call.search({
+			query: "words",
+			kinds: [],
+			since: "",
+			until: "",
+			due: false,
+			limit: "100000",
+			searchScope: "",
+		});
+		expect(h.state().limit).toBe("50");
+		expect(callsOf(h, "search")[0]?.fields).toMatchObject({ limit: "50" });
+	});
+
+	it("gives the default limit for a limit that no whole number reads", async () => {
+		const h = harness();
+		await h.call.search({
+			query: "words",
+			kinds: [],
+			since: "",
+			until: "",
+			due: false,
+			limit: "five",
+			searchScope: "",
+		});
+		expect(h.state().limit).toBe(DEFAULT_ROUTE.limit);
+		expect(callsOf(h, "search")[0]?.fields).toMatchObject({
+			limit: DEFAULT_ROUTE.limit,
+		});
+	});
 });
 
 describe("console controller address", () => {
