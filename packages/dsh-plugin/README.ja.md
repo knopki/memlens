@@ -311,13 +311,9 @@ CLI とコンソールだけが修正、秘匿化、承認、却下を行いま�
 #### モデルが見るもの
 
 プラグインはメインエージェントのツール呼び出しとターンを数えます。上限に達したカウンタは、user
-ロールの行を 1 つ挿入します。その行は `{n}` を保持し、そこに回数が入ります。既定のテキストは次
-のとおりです。
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+ロールの行を 1 つ挿入します。その行は `{n}` を保持し、そこに回数が入ります。
+既定の行は、後のセッションに必要で、1 分では見つけられないことだけをノートに書くようエージェ
+ントに求めます。当てはまるものがなければ、エージェントはその行を無視します。
 
 設定の `[nudge]` セクションが回数とテキストを与えます。0 以下の上限はそのカウンタを無効にします。
 

@@ -324,12 +324,9 @@ bleiben. Ein Aufruf und seine Antwort hängen sich hinter dem wiederverwendbaren
 
 Das Plugin zählt die Werkzeugaufrufe und die Züge des Hauptagenten. Ein Zähler, der sein Limit
 erreicht, fügt eine Zeile in der Rolle des Nutzers ein. Die Zeile enthält `{n}`, und die Anzahl tritt
-an seine Stelle. Die Standardtexte sind:
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+an seine Stelle.
+Die Standardzeile bittet den Agenten, eine Notiz nur für das zu schreiben, was eine spätere Sitzung
+braucht und in einer Minute nicht finden kann. Wenn nichts passt, ignoriert der Agent die Zeile.
 
 Der Abschnitt `[nudge]` der Konfiguration ergibt die Anzahlen und die Texte. Ein Limit von null oder
 weniger deaktiviert seinen Zähler.

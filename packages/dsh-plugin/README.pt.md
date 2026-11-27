@@ -311,12 +311,9 @@ inalterados. Uma chamada e a sua resposta se acrescentam depois do prefixo reuti
 
 O plugin conta as chamadas de ferramentas e os turnos do agente principal. Um contador que alcança o
 seu limite injeta uma linha com o papel de usuário. A linha contém `{n}`, e a contagem toma o seu
-lugar. Os textos padrão são:
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+lugar.
+A linha padrão pede ao agente que escreva uma nota apenas para o que uma sessão posterior precisa e
+não consegue encontrar em um minuto. Se nada se qualifica, o agente ignora a linha.
 
 A seção `[nudge]` da configuração define as contagens e os textos. Um limite de zero ou menos
 desativa o seu contador.
