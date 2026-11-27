@@ -602,7 +602,33 @@ describe("@memlens/cli commands", () => {
 		expect(found.out).not.toContain("A fact");
 		const unknown = await run(test, "find", "--kind", "urgent");
 		expect(unknown.code).toBe(2);
-		expect(unknown.err).toContain("The kind urgent is unknown");
+		expect(unknown.err).toContain("argument 'urgent' is invalid");
+	});
+
+	it("takes the short flags of each command", async () => {
+		const test = makeEnv();
+		const saved = await run(
+			test,
+			"note",
+			"Short flags",
+			"-s",
+			"project:acme/x",
+			"-k",
+			"fact",
+		);
+		expect(saved.code).toBe(0);
+		const found = await run(
+			test,
+			"find",
+			"-k",
+			"fact",
+			"-s",
+			"project:acme/x",
+			"-l",
+			"1",
+		);
+		expect(found.code).toBe(0);
+		expect(found.out).toContain("Short flags");
 	});
 
 	it.each(NOTE_KINDS)(
@@ -1065,7 +1091,7 @@ describe("@memlens/cli commands", () => {
 		expect(scoped.profile.scopes).toEqual(["project:*"]);
 		const removed = await run(test, "config", "get", "store.idle");
 		expect(removed.code).toBe(2);
-		expect(removed.err).toContain("outside the usage");
+		expect(removed.err).toContain("unknown command 'get'");
 	});
 
 	it("publishes one copy input and gives a compaction job with --max", async () => {

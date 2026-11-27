@@ -11,19 +11,47 @@
  * @invariants The command opens no store.
  * @invariants The answer holds every key of the resolved configuration, and a dotted path names no
  *   single key.
- * @dependencies USES API: @memlens/core, smol-toml; READS: config.toml
+ * @dependencies USES API: @memlens/core, smol-toml, commander; READS: config.toml
  * @keywords config, toml, show, resolved, cli
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
-import { MemlensError } from "@memlens/core";
+import type { Command } from "commander";
 import { stringify as stringifyToml } from "smol-toml";
-import type { ParsedArgs } from "./args.js";
-import type { CommandIo } from "./commands.js";
+import {
+	type CommandIo,
+	command,
+	JSON_FLAG,
+	type Run,
+	reply,
+} from "./commands.js";
 import { loadCliBaseConfig, resolveForProfile } from "./runtime.js";
 
 const debug = debuglog("memlens:commands");
+
+// #region FUNC_commands
+/**
+ * @purpose Declare the signature and the flags of the command once, so the help comes from the
+ *   same place as the parse.
+ */
+export function commands(run: Run): Command[] {
+	return [
+		command(
+			"config",
+			"Show the resolved configuration of this machine.",
+		).addCommand(
+			command("show", "Print each value that the commands use.")
+				.option(
+					"--profile <name>",
+					"The profile of the configuration. The default profile applies without the flag.",
+				)
+				.addOption(JSON_FLAG)
+				.action((options) => reply(run, configCommand(options, run.io))),
+		),
+	];
+}
+// #endregion FUNC_commands
 
 // #region FUNC_configCommand
 /**
@@ -36,18 +64,16 @@ const debug = debuglog("memlens:commands");
  *   without the flag.
  * @returns The configuration as TOML, or as JSON with the flag --json.
  */
-export function configCommand(args: ParsedArgs, io: CommandIo): string {
-	const action = args.positional[0];
-	if (action !== "show")
-		throw new MemlensError("Usage", "The action must be show.");
+export function configCommand(
+	input: { profile?: string; json?: boolean },
+	io: CommandIo,
+): string {
 	const base = loadCliBaseConfig(io.env);
-	const selected = args.flags.profile;
-	const profile = typeof selected === "string" ? selected : base.defaultProfile;
+	const profile = input.profile ?? base.defaultProfile;
 	const config = resolveForProfile(base, profile);
 	const plain = JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
-	const json = args.flags.json === true;
-	debug("Config shown", { event: "config", profile, json });
-	return json
+	debug("Config shown", { event: "config", profile, json: input.json });
+	return input.json
 		? JSON.stringify(plain, null, 2)
 		: stringifyToml(plain as Parameters<typeof stringifyToml>[0]);
 }

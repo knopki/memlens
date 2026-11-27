@@ -3,28 +3,26 @@
  *
  * #region moduleContract
  * @modulecontract
- * @purpose Give each command one input surface and one answer shape, so no command reads flag text
- *   itself.
+ * @purpose Give each command the shared flags, the value readers, and one answer shape, so no
+ *   command reads the environment or the argument text itself.
  * @scope
- *  - The command IO type, the flag readers, the scope reader, the answer printer, and the runtime
- *    open.
- *  - NOT: the semantics of one command, argument parsing, and the exit code mapping.
- * @invariants Each command closes the runtime that it opens.
+ *  - The run type, the command constructor, the shared flags, the value readers, and the answer
+ *    printer.
+ *  - NOT: the semantics of one command, the dispatch, and the exit code mapping.
+ * @invariants
+ *  - Each command closes the runtime that it opens.
+ *  - A command rejects a positional value outside its signature.
+ *  - A short flag has one meaning in each command.
  * @usecases
- *  - Flag: command => gives one flag name => gets one typed value
- * @dependencies USES API: @memlens/core
+ *  - Open: command => gives its io => gets one runtime and closes it
+ * @dependencies USES API: @memlens/core, commander
  * @keywords command, io, flag, scope, runtime, answer, json
  * #endregion moduleContract
  */
 
-import {
-	MemlensError,
-	NOTE_KINDS,
-	type NoteKind,
-	normalizeScopeKey,
-	type ScopeKey,
-} from "@memlens/core";
-import type { ParsedArgs } from "./args.js";
+import type { ScopeKey } from "@memlens/core";
+import { NOTE_KINDS, normalizeScopeKey, parseNoteTime } from "@memlens/core";
+import { Command, InvalidArgumentError, Option } from "commander";
 import { openRuntime, type Runtime } from "./runtime.js";
 
 /** The input and output surface of one command run. */
@@ -36,83 +34,169 @@ export interface CommandIo {
 	confirm(question: string): Promise<boolean>;
 }
 
+/** One run of one command line: its input surface and the exit code of its answer. */
+export interface Run {
+	readonly io: CommandIo;
+
+	/** The exit code of the answer. The run starts at 0, and a command sets a value of its own. */
+	code: number;
+}
+
 /** One command answer with its own exit code. */
 export interface CommandAnswer {
 	readonly text: string;
 	readonly code: number;
 }
 
-// #region FUNC_flagValue
+// #region FUNC_command
 /**
- * @purpose Give the text of one flag, so a command reads no raw flag value.
- * @returns The value, or null when the command did not give the flag.
+ * @purpose Make one command of the binary, so each command rejects a positional value outside its
+ *   signature and throws its errors instead of the exit of the process.
+ * @invariants The signature holds the name and the positional values, in the form of commander.
  */
-export function flagValue(
-	flags: ParsedArgs["flags"],
-	name: string,
-): string | null {
-	const value = flags[name];
-	return typeof value === "string" ? value : null;
+export function command(signature: string, description: string): Command {
+	const [, name = "", args = ""] = /^(\S+) *(.*)/.exec(signature) ?? [];
+	const cmd = new Command(name)
+		.description(description)
+		.allowExcessArguments(false)
+		.exitOverride();
+	return args === "" ? cmd : cmd.arguments(args);
 }
-// #endregion FUNC_flagValue
+// #endregion FUNC_command
 
-// #region FUNC_flagList
-/** @purpose Give each value of a many-value flag in order. */
-export function flagList(flags: ParsedArgs["flags"], name: string): string[] {
-	const value = flags[name];
-	if (Array.isArray(value)) return [...value];
-	if (typeof value === "string") return [value];
-	return [];
-}
-// #endregion FUNC_flagList
-
-// #region FUNC_countFlag
+// #region FUNC_reply
 /**
- * @purpose Read one count flag, so each command rejects a wrong number with one message.
- * @invariants A value outside the digits gives a Usage error.
+ * @purpose Print the answer of one command and keep its exit code, so a command only returns its
+ *   answer.
+ * @invariants An empty answer prints nothing. A string gives the exit code 0.
  */
-export function countFlag(
-	flags: ParsedArgs["flags"],
-	name: string,
-	fallback: number,
-): number {
-	const raw = flagValue(flags, name);
-	if (raw === null) return fallback;
-	if (!/^\d+$/.test(raw))
-		throw new MemlensError("Usage", `The flag --${name} needs a whole number.`);
-	return Number(raw);
+export async function reply(
+	run: Run,
+	answer: string | CommandAnswer | Promise<string | CommandAnswer>,
+): Promise<void> {
+	const value = await answer;
+	const text = typeof value === "string" ? value : value.text;
+	if (typeof value !== "string") run.code = value.code;
+	if (text !== "") process.stdout.write(`${text}\n`);
 }
-// #endregion FUNC_countFlag
+// #endregion FUNC_reply
+
+/** Read one whole number. */
+export function whole(value: string): number {
+	if (!/^\d+$/.test(value))
+		throw new InvalidArgumentError("needs a whole number.");
+	return Number(value);
+}
+
+/** Read one value of a list, so a wrong value names the allowed values. */
+export function oneOf(values: readonly string[]): (value: string) => string {
+	return (value) => {
+		if (!values.includes(value))
+			throw new InvalidArgumentError(
+				`allowed choices are ${values.join(", ")}.`,
+			);
+		return value;
+	};
+}
+
+/** Collect each repetition of one flag in one list. */
+export function collect(value: string, previous: string[] = []): string[] {
+	return [...previous, value];
+}
+
+/** Split one list of addresses in the form 12,14. */
+export function addressList(value: string): string[] {
+	return value.split(",").filter((item) => item !== "");
+}
+
+/** Read one review period: a number of days with the letter d, or never. */
+export function period(value: string): string {
+	if (!/^\d+d$|^never$/.test(value))
+		throw new InvalidArgumentError(
+			"needs a number of days with the letter d, or never.",
+		);
+	return value;
+}
+
+/** Read one time of a note: a day or an ISO 8601 time, in the stored form. */
+export function noteTime(value: string): string {
+	const time = parseNoteTime(value);
+	if (time === null)
+		throw new InvalidArgumentError("needs a day or an ISO 8601 time.");
+	return time;
+}
+
+/** Read one port of the console. */
+export function port(value: string): number {
+	const number = whole(value);
+	if (number < 1 || number > 65535)
+		throw new InvalidArgumentError("must be between 1 and 65535.");
+	return number;
+}
+
+const kindOf = oneOf(NOTE_KINDS);
+
+/** The flag --store of each command that opens the store. */
+export const STORE = new Option(
+	"--store <dir>",
+	"The directory of the store. Without the flag, MEMLENS_STORE gives the path, then the base file.",
+);
+
+/** The flag -s, --scope of each command that takes one scope key. */
+export const SCOPE = new Option("-s, --scope <key>", "The scope key.");
+
+/** The flag -s, --scope of each command that takes a list of scope keys. */
+export const SCOPES = new Option(
+	"-s, --scope <key>",
+	"A scope key. Repeat the flag for each scope.",
+).argParser(collect);
+
+/** The flag -k, --kind of each command that takes one kind. */
+export const KIND = new Option(
+	"-k, --kind <kind>",
+	"The kind of the note.",
+).argParser(kindOf);
+
+/** The flag -k, --kind of each command that takes a list of kinds. */
+export const KINDS = new Option(
+	"-k, --kind <kind>",
+	"A kind. Repeat the flag for each kind.",
+).argParser((value: string, previous: string[] = []) => [
+	...previous,
+	kindOf(value),
+]);
+
+/** The flag -l, --limit of each command that cuts one list. */
+export function limit(fallback: number): Option {
+	return new Option("-l, --limit <n>", "The most records of the answer.")
+		.argParser(whole)
+		.default(fallback);
+}
+
+/** The flag --json of each command that gives one answer in two forms. */
+export const JSON_FLAG = new Option("--json", "Give the answer as JSON.");
+
+/** The flag --dry-run of each command that can plan its change. */
+export const DRY_RUN = new Option(
+	"--dry-run",
+	"Plan the change and write nothing.",
+);
+
+/** The flag -r, --reason of each command that records a reason. */
+export const REASON = new Option(
+	"-r, --reason <text>",
+	"The reason of the change.",
+);
 
 // #region FUNC_scopeList
-/** @purpose Read each --scope value in order, so the read commands share one scope list. */
-export function scopeList(flags: ParsedArgs["flags"]): ScopeKey[] {
-	return flagList(flags, "scope").map(
-		(raw) => normalizeScopeKey(raw) as ScopeKey,
-	);
+/**
+ * @purpose Give each scope key of one scope list, so the read commands share one reader.
+ * @invariants No flag gives an empty list.
+ */
+export function scopeList(raw: readonly string[]): ScopeKey[] {
+	return raw.map((key) => normalizeScopeKey(key) as ScopeKey);
 }
 // #endregion FUNC_scopeList
-
-// #region FUNC_kindList
-/**
- * @purpose Read each --kind value in order, so a command shares one kind list.
- * @invariants A value outside the kinds gives a Usage error.
- */
-export function kindList(flags: ParsedArgs["flags"]): NoteKind[] {
-	return flagList(flags, "kind").map((raw) => {
-		if (!(NOTE_KINDS as readonly string[]).includes(raw))
-			throw new MemlensError("Usage", `The kind ${raw} is unknown.`);
-		return raw as NoteKind;
-	});
-}
-// #endregion FUNC_kindList
-
-// #region FUNC_isJson
-/** @purpose Tell a JSON answer from a text answer. */
-export function isJson(flags: ParsedArgs["flags"]): boolean {
-	return flags.json === true;
-}
-// #endregion FUNC_isJson
 
 // #region FUNC_print
 /** @purpose Give the JSON text of one answer. */
@@ -127,12 +211,12 @@ export function print(value: unknown): string {
  * @invariants A profile that the base file does not name uses the default profile values.
  */
 export async function openCommandRuntime(
-	args: ParsedArgs,
 	io: CommandIo,
+	store: string | undefined,
 	profile?: string,
 ): Promise<Runtime> {
 	return openRuntime({
-		storeFlag: flagValue(args.flags, "store"),
+		storeFlag: store ?? null,
 		profile: profile ?? null,
 		env: io.env,
 	});

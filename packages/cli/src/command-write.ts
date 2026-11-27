@@ -14,7 +14,7 @@
  *  - Each target scope must be visible in the profile, or the command gives NotAllowed. The
  *    command restore takes each valid scope, because only the CLI restores.
  *  - Each supersedes address must resolve to a record id before the write.
- * @dependencies USES API: @memlens/core; WRITES: the store directory
+ * @dependencies USES API: @memlens/core, commander; WRITES: the store directory
  * @keywords note, amend, forget, restore, redact, review, write, cli
  * #endregion moduleContract
  */
@@ -31,31 +31,141 @@ import {
 	linkSupersedes,
 	MemlensError,
 	move,
-	NOTE_KINDS,
 	normalizeScopeKey,
 	note,
 	nowIso,
-	parseNoteTime,
 	redact,
 	resolveTarget,
 	restore,
 	review,
 	validateScopeKey,
 } from "@memlens/core";
-import type { ParsedArgs } from "./args.js";
+import type { Command } from "commander";
 import {
+	addressList,
 	type CommandIo,
-	countFlag,
-	flagList,
-	flagValue,
-	isJson,
+	command,
+	DRY_RUN,
+	JSON_FLAG,
+	KIND,
+	limit,
+	noteTime,
 	openCommandRuntime,
+	period,
 	print,
+	REASON,
+	type Run,
+	reply,
+	SCOPE,
+	SCOPES,
+	STORE,
 	scopeList,
 } from "./commands.js";
 import { cliActiveScope, profileLists, type Runtime } from "./runtime.js";
 
 const debug = debuglog("memlens:commands");
+
+// #region FUNC_commands
+/**
+ * @purpose Declare the signature and the flags of each write command once, so the help comes from
+ *   the same place as the parse.
+ */
+export function commands(run: Run): Command[] {
+	const io = run.io;
+	return [
+		command("note <body>", "Save one note.")
+			.addOption(SCOPE)
+			.option("--longform <file>", "A file with the long text of the note.")
+			.addOption(KIND)
+			.option(
+				"--supersedes <addresses>",
+				"The addresses of the records that the note supersedes, in the form 12,14.",
+				addressList,
+			)
+			.option(
+				"--review <period>",
+				"The review period: a number of days with the letter d, or never. The period of the kind applies without the flag.",
+				period,
+			)
+			.option(
+				"--ts <time>",
+				"The time of the note: a day or an ISO 8601 time. The write time applies without the flag.",
+				noteTime,
+			)
+			.addOption(STORE)
+			.action((body: string, options) =>
+				reply(run, noteCommand({ ...options, body }, io)),
+			),
+		command("forget <target>", "Hide one record.")
+			.addOption(SCOPE)
+			.addOption(REASON)
+			.addOption(STORE)
+			.action((target: string, options) =>
+				reply(run, forgetCommand({ ...options, target }, io)),
+			),
+		command("restore <target>", "Restore one hidden record.")
+			.addOption(SCOPE)
+			.addOption(REASON)
+			.addOption(STORE)
+			.action((target: string, options) =>
+				reply(run, restoreCommand({ ...options, target }, io)),
+			),
+		command("review", "List the notes that are due, or mark them as reviewed.")
+			.addOption(SCOPES)
+			.addOption(limit(50))
+			.addOption(JSON_FLAG)
+			.option(
+				"--mark <addresses>",
+				"The addresses of the records to mark, in the form 12,14. The command marks the records and lists none.",
+				addressList,
+			)
+			.option(
+				"--for <period>",
+				"The review period of the marked records: a number of days with the letter d, or never. The period of the kind of each record applies without the flag.",
+				period,
+			)
+			.addOption(STORE)
+			.action((options) => reply(run, reviewCommand(options, io))),
+		command("redact <target>", "Erase the content of one record for good.")
+			.addOption(SCOPE)
+			.addOption(REASON)
+			.option("-y, --yes", "Skip the confirmation.")
+			.addOption(STORE)
+			.action((target: string, options) =>
+				reply(run, redactCommand({ ...options, target }, io)),
+			),
+		command("amend <target>", "Change the content or the scope of one record.")
+			.option(
+				"-s, --scope <key>",
+				"The destination scope of the record. It also names the current scope of an address without a scope.",
+			)
+			.option("--body <text>", "The new text of the record.")
+			.option(
+				"--longform <file>",
+				"A file with the new long text of the record.",
+			)
+			.addOption(KIND)
+			.option(
+				"--supersedes <addresses>",
+				"The addresses of the records that the record supersedes, in the form 12,14.",
+				addressList,
+			)
+			.addOption(STORE)
+			.action((target: string, options) =>
+				reply(run, amendCommand({ ...options, target }, io)),
+			),
+		command(
+			"move <source> <destination>",
+			"Move each note of one scope to another scope.",
+		)
+			.addOption(DRY_RUN)
+			.addOption(STORE)
+			.action((source: string, destination: string, options) =>
+				reply(run, moveCommand({ ...options, source, destination }, io)),
+			),
+	];
+}
+// #endregion FUNC_commands
 
 // #region FUNC_noteCommand
 /**
@@ -63,37 +173,40 @@ const debug = debuglog("memlens:commands");
  *
  * @purpose Save one curated note from the terminal, so a user records a fact without a session.
  * @invariants The body and the longform file content go to the store as given, and the store
- *   normalizes and splits them.
+ *   normalizes and splits them. The kind is note without the flag.
  */
 export async function noteCommand(
-	args: ParsedArgs,
+	input: {
+		body: string;
+		scope?: string;
+		longform?: string;
+		kind?: NoteKind;
+		supersedes?: string[];
+		review?: string;
+		ts?: string;
+		store?: string;
+	},
 	io: CommandIo,
 ): Promise<string> {
-	const kindRaw = flagValue(args.flags, "kind") ?? "note";
-	if (!(NOTE_KINDS as readonly string[]).includes(kindRaw))
-		throw new MemlensError("Usage", `The kind ${kindRaw} is unknown.`);
-	const kind = kindRaw as NoteKind;
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const scope = normalizeScopeKey(
-			flagValue(args.flags, "scope") ?? cliActiveScope(runtime.base, io.cwd),
+			input.scope ?? cliActiveScope(runtime.base, io.cwd),
 		) as ScopeKey;
-		const supersedes = supersedeIds(runtime, args.flags, scope);
-		const longformFile = flagValue(args.flags, "longform");
-		const longform = longformFile === null ? null : readBodyFile(longformFile);
-		const reviewAt = reviewFlag(
-			args.flags,
-			"review",
-			runtime.config.review[kind],
+		const supersedes = (input.supersedes ?? []).map(
+			(address) => resolveRowTarget(runtime, address, scope).record.id,
 		);
-		const ts = tsFlag(args.flags);
+		const longform =
+			input.longform === undefined ? null : readBodyFile(input.longform);
+		const kind = input.kind ?? "note";
+		const reviewAt = nextReview(input.review, runtime.config.review[kind]);
 		if (!profileLists(runtime, scope))
 			throw new MemlensError("NotAllowed", "The scope is not listed.");
 		const saved = note(runtime.store, {
 			scope,
-			body: args.positional[0] ?? "",
+			body: input.body,
 			kind,
-			ts,
+			ts: input.ts ?? nowIso(),
 			review_at: reviewAt,
 			session: "cli",
 			turn: "cli",
@@ -129,20 +242,6 @@ function checkedScope(runtime: Runtime, raw: string): ScopeKey {
 	return scope;
 }
 
-// #region FUNC_supersedeIds
-/** Resolve each --supersedes target to its row id. */
-function supersedeIds(
-	runtime: Runtime,
-	flags: ParsedArgs["flags"],
-	fallback: string | null,
-): string[] {
-	return flagList(flags, "supersedes")
-		.flatMap((raw) => raw.split(","))
-		.filter((raw) => raw !== "")
-		.map((raw) => resolveRowTarget(runtime, raw, fallback).record.id);
-}
-// #endregion FUNC_supersedeIds
-
 // #region FUNC_forgetCommand
 /**
  * Hide one record.
@@ -150,21 +249,17 @@ function supersedeIds(
  * @purpose Remove one note from the view and keep it in the store, so a user curates without loss.
  */
 export async function forgetCommand(
-	args: ParsedArgs,
+	input: { target: string; scope?: string; reason?: string; store?: string },
 	io: CommandIo,
 ): Promise<string> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const { scope, record } = resolveRowTarget(
 			runtime,
-			args.positional[0] ?? "",
-			flagValue(args.flags, "scope"),
+			input.target,
+			input.scope ?? null,
 		);
-		hide(
-			runtime.store,
-			record.id,
-			flagValue(args.flags, "reason") ?? "cli forget",
-		);
+		hide(runtime.store, record.id, input.reason ?? "cli forget");
 		debug("Record hidden", { event: "forget", scope, pos: record.pos });
 		return `hidden ${scope}#${record.pos}`;
 	} finally {
@@ -178,15 +273,15 @@ export async function forgetCommand(
  * @purpose Let an operator undo a hide outside the profile scope list.
  */
 export async function restoreCommand(
-	args: ParsedArgs,
+	input: { target: string; scope?: string; reason?: string; store?: string },
 	io: CommandIo,
 ): Promise<string> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const record = resolveTarget(
 			runtime.store,
-			flagValue(args.flags, "scope"),
-			args.positional[0] ?? "",
+			input.scope ?? null,
+			input.target,
 			(raw) => {
 				const scope = normalizeScopeKey(raw) as ScopeKey;
 				if (!validateScopeKey(scope))
@@ -194,11 +289,7 @@ export async function restoreCommand(
 				return scope;
 			},
 		);
-		restore(
-			runtime.store,
-			record.id,
-			flagValue(args.flags, "reason") ?? "cli restore",
-		);
+		restore(runtime.store, record.id, input.reason ?? "cli restore");
 		debug("Record restored", {
 			event: "restore",
 			scope: record.scope,
@@ -220,21 +311,27 @@ export async function restoreCommand(
  *   from today, or the period of the kind of the record.
  */
 export async function reviewCommand(
-	args: ParsedArgs,
+	input: {
+		scope?: string[];
+		limit: number;
+		json?: boolean;
+		mark?: string[];
+		for?: string;
+		store?: string;
+	},
 	io: CommandIo,
 ): Promise<string> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
-		const mark = flagValue(args.flags, "mark");
-		if (mark !== null) return reviewMark(runtime, args, mark);
-		const scopes = scopeList(args.flags);
+		if ((input.mark ?? []).length > 0) return reviewMark(runtime, input);
+		const scopes = scopeList(input.scope ?? []);
 		const due = dueRecords(
 			runtime.store,
 			scopes.length === 0 ? runtime.scopes : scopes,
 			nowIso(),
-		).slice(0, countFlag(args.flags, "limit", 50));
+		).slice(0, input.limit);
 		debug("Review listed", { event: "review", due: due.length });
-		return isJson(args.flags) ? print(due) : due.map(renderDue).join("\n");
+		return input.json ? print(due) : due.map(renderDue).join("\n");
 	} finally {
 		await runtime.close();
 	}
@@ -247,21 +344,16 @@ function renderDue(record: DueRecord): string {
 
 async function reviewMark(
 	runtime: Runtime,
-	args: ParsedArgs,
-	mark: string,
+	input: { mark?: string[]; scope?: string[]; for?: string },
 ): Promise<string> {
 	const answers: string[] = [];
-	for (const raw of mark.split(",").filter((value) => value !== "")) {
+	for (const address of input.mark ?? []) {
 		const { scope, record } = resolveRowTarget(
 			runtime,
-			raw,
-			flagValue(args.flags, "scope"),
+			address,
+			input.scope?.[0] ?? null,
 		);
-		const reviewAt = reviewFlag(
-			args.flags,
-			"for",
-			runtime.config.review[record.kind],
-		);
+		const reviewAt = nextReview(input.for, runtime.config.review[record.kind]);
 		review(runtime.store, record.id, reviewAt);
 		answers.push(
 			`reviewed ${scope}#${record.pos} -> ${reviewAt === null ? "never" : dayOf(reviewAt)}`,
@@ -279,18 +371,24 @@ async function reviewMark(
  * @invariants The command asks for a confirmation. The flag --yes skips the question.
  */
 export async function redactCommand(
-	args: ParsedArgs,
+	input: {
+		target: string;
+		scope?: string;
+		reason?: string;
+		yes?: boolean;
+		store?: string;
+	},
 	io: CommandIo,
 ): Promise<string> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const { scope, record } = resolveRowTarget(
 			runtime,
-			args.positional[0] ?? "",
-			flagValue(args.flags, "scope"),
+			input.target,
+			input.scope ?? null,
 		);
 		const proceed =
-			args.flags.yes === true ||
+			input.yes === true ||
 			(await io.confirm(
 				`Redact ${scope}#${record.pos}? This erases the content for good.`,
 			));
@@ -298,11 +396,7 @@ export async function redactCommand(
 			debug("Redact cancelled", { event: "redact", scope, pos: record.pos });
 			return "cancelled";
 		}
-		redact(
-			runtime.store,
-			record.id,
-			flagValue(args.flags, "reason") ?? "cli redact",
-		);
+		redact(runtime.store, record.id, input.reason ?? "cli redact");
 		debug("Record redacted", { event: "redact", scope, pos: record.pos });
 		return `redacted ${scope}#${record.pos}`;
 	} finally {
@@ -322,38 +416,39 @@ export async function redactCommand(
  *   Each target takes the amended note as its supersede link.
  */
 export async function amendCommand(
-	args: ParsedArgs,
+	input: {
+		target: string;
+		scope?: string;
+		body?: string;
+		longform?: string;
+		kind?: NoteKind;
+		supersedes?: string[];
+		store?: string;
+	},
 	io: CommandIo,
 ): Promise<string> {
-	const destination = flagValue(args.flags, "scope");
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const { scope, record } = resolveRowTarget(
 			runtime,
-			args.positional[0] ?? "",
-			destination,
+			input.target,
+			input.scope ?? null,
 		);
-		const body = flagValue(args.flags, "body");
-		const longformFile = flagValue(args.flags, "longform");
-		const kindRaw = flagValue(args.flags, "kind");
-		if (
-			kindRaw !== null &&
-			!(NOTE_KINDS as readonly string[]).includes(kindRaw)
-		)
-			throw new MemlensError("Usage", `The kind ${kindRaw} is unknown.`);
 		const target =
-			destination === null
+			input.scope === undefined
 				? scope
-				: (normalizeScopeKey(destination) as ScopeKey);
-		const supersedes = supersedeIds(runtime, args.flags, target);
+				: (normalizeScopeKey(input.scope) as ScopeKey);
+		const supersedes = (input.supersedes ?? []).map(
+			(address) => resolveRowTarget(runtime, address, target).record.id,
+		);
 		amend(runtime.store, {
 			id: record.id,
 			scope: target,
-			...(body === null ? {} : { body }),
-			...(longformFile === null
+			...(input.body === undefined ? {} : { body: input.body }),
+			...(input.longform === undefined
 				? {}
-				: { longform: readBodyFile(longformFile) }),
-			...(kindRaw === null ? {} : { kind: kindRaw as NoteKind }),
+				: { longform: readBodyFile(input.longform) }),
+			...(input.kind === undefined ? {} : { kind: input.kind }),
 		});
 		if (supersedes.length > 0)
 			linkSupersedes(runtime.store, record.id, supersedes);
@@ -361,7 +456,7 @@ export async function amendCommand(
 			event: "amend",
 			scope,
 			pos: record.pos,
-			kind: kindRaw,
+			kind: input.kind,
 			supersedes: supersedes.length,
 		});
 		return `amended ${scope}#${record.pos}`;
@@ -378,14 +473,19 @@ export async function amendCommand(
  * @invariants The answer names both scopes, the moved count, and each cleared source address.
  */
 export async function moveCommand(
-	args: ParsedArgs,
+	input: {
+		source: string;
+		destination: string;
+		dryRun?: boolean;
+		store?: string;
+	},
 	io: CommandIo,
 ): Promise<string> {
-	const source = normalizeScopeKey(args.positional[0] ?? "") as ScopeKey;
-	const destination = normalizeScopeKey(args.positional[1] ?? "") as ScopeKey;
+	const source = normalizeScopeKey(input.source) as ScopeKey;
+	const destination = normalizeScopeKey(input.destination) as ScopeKey;
 	if (!validateScopeKey(source) || !validateScopeKey(destination))
 		throw new MemlensError("Data", "The scope key is not valid.");
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		for (const scope of [source, destination]) {
 			if (!profileLists(runtime, scope))
@@ -394,7 +494,7 @@ export async function moveCommand(
 					`The scope ${scope} is not listed.`,
 				);
 		}
-		const dryRun = args.flags["dry-run"] === true;
+		const dryRun = input.dryRun === true;
 		const result = move(runtime.store, source, destination, { dryRun });
 		return [
 			`${dryRun ? "would move" : "moved"} ${result.moved} notes from ${source} to ${destination}`,
@@ -406,40 +506,20 @@ export async function moveCommand(
 }
 // #endregion FUNC_moveCommand
 
-// #region FUNC_reviewFlag
-/** Parse --review or --for: <number>d or never. The fallback gives the days of a kind. */
-function reviewFlag(
-	flags: ParsedArgs["flags"],
-	name: string,
+// #region FUNC_nextReview
+/**
+ * @purpose Read --review or --for with one rule, so each command sets the same date for one period.
+ */
+function nextReview(
+	period: string | undefined,
 	fallbackDays: number,
 ): string | null {
-	const raw = flagValue(flags, name);
-	if (raw === null) return addDaysAtTime(Date.now(), fallbackDays);
-	if (raw === "never") return null;
-	if (!/^\d+d$/.test(raw))
-		throw new MemlensError(
-			"Usage",
-			`The flag --${name} needs <number>d or never.`,
-		);
-	return addDaysAtTime(Date.now(), Number(raw.slice(0, -1)));
+	if (period === undefined) return addDaysAtTime(Date.now(), fallbackDays);
+	return period === "never"
+		? null
+		: addDaysAtTime(Date.now(), Number(period.slice(0, -1)));
 }
-// #endregion FUNC_reviewFlag
-
-// #region FUNC_tsFlag
-/**
- * @purpose Read the flag --ts as the time of the note in the stored form.
- * @invariants An absent flag gives the write time.
- * @invariants A value that is not a date gives a Usage error.
- */
-function tsFlag(flags: ParsedArgs["flags"]): string {
-	const raw = flagValue(flags, "ts");
-	if (raw === null) return nowIso();
-	const time = parseNoteTime(raw);
-	if (time === null)
-		throw new MemlensError("Usage", "The flag --ts needs an ISO 8601 time.");
-	return time;
-}
-// #endregion FUNC_tsFlag
+// #endregion FUNC_nextReview
 
 function readBodyFile(path: string): string {
 	try {

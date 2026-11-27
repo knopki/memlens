@@ -32,16 +32,51 @@ import {
 	publishNode,
 	readBuild,
 } from "@memlens/core";
-import type { ParsedArgs } from "./args.js";
+import type { Command } from "commander";
 import {
 	type CommandIo,
-	countFlag,
-	flagValue,
+	command,
+	DRY_RUN,
 	openCommandRuntime,
+	type Run,
+	reply,
+	SCOPE,
+	STORE,
+	whole,
 } from "./commands.js";
 import { cliActiveScope, loadCliBaseConfig, type Runtime } from "./runtime.js";
 
 const debug = debuglog("memlens:compact");
+
+/** The input of the command compact. */
+interface CompactInput {
+	scope?: string;
+	max: number;
+	dryRun?: boolean;
+	answer?: string;
+	store?: string;
+}
+
+// #region FUNC_commands
+/**
+ * @purpose Declare the signature and the flags of the command once, so the help comes from the
+ *   same place as the parse.
+ */
+export function commands(run: Run): Command[] {
+	return [
+		command("compact", "Start a tree build, or apply one answer file.")
+			.addOption(SCOPE)
+			.option("--max <n>", "The most merge inputs of one job.", whole, 50)
+			.addOption(DRY_RUN)
+			.option(
+				"--answer <path>",
+				"The path of one answer file. The command applies the file and starts no job.",
+			)
+			.addOption(STORE)
+			.action((options) => reply(run, compactCommand(options, run.io))),
+	];
+}
+// #endregion FUNC_commands
 
 /** The result of one prepared compaction job. */
 interface CompactJob {
@@ -107,20 +142,20 @@ function buildInput(
 }
 // #endregion FUNC_buildInput
 
-function compactScope(args: ParsedArgs, io: CommandIo): ScopeKey {
+function compactScope(input: CompactInput, io: CommandIo): ScopeKey {
 	const base = loadCliBaseConfig(io.env);
-	const raw = flagValue(args.flags, "scope") ?? cliActiveScope(base, io.cwd);
+	const raw = input.scope ?? cliActiveScope(base, io.cwd);
 	return normalizeScopeKey(raw) as ScopeKey;
 }
 
 // #region FUNC_compactRuntime
 /** Open the runtime for the compaction of one scope, with the profile check. */
 async function compactRuntime(
-	args: ParsedArgs,
 	io: CommandIo,
+	store: string | undefined,
 	scope: ScopeKey,
 ): Promise<Runtime> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, store);
 	if (!runtime.scopes.includes(scope))
 		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
 	return runtime;
@@ -136,16 +171,20 @@ async function compactRuntime(
  *   each copy input and prints the job of the merge inputs.
  */
 export async function compactCommand(
-	args: ParsedArgs,
+	input: CompactInput,
 	io: CommandIo,
 ): Promise<string> {
-	const scope = compactScope(args, io);
-	const answer = flagValue(args.flags, "answer");
-	debug("Compact start", { event: "start", scope, answer: answer !== null });
+	const scope = compactScope(input, io);
+	const answer = input.answer;
+	debug("Compact start", {
+		event: "start",
+		scope,
+		answer: answer !== undefined,
+	});
 	const result =
-		answer === null
-			? await compactJob(args, io, scope)
-			: await compactAnswer(args, io, scope, answer);
+		answer === undefined
+			? await compactJob(input, io, scope)
+			: await compactAnswer(input, io, scope, answer);
 	debug("Compact done", { event: "end", scope });
 	return result;
 }
@@ -265,16 +304,16 @@ function unwrapIds(text: string): string {
  *   inputs.
  */
 async function compactJob(
-	args: ParsedArgs,
+	input: CompactInput,
 	io: CommandIo,
 	scope: ScopeKey,
 ): Promise<string> {
-	const runtime = await compactRuntime(args, io, scope);
+	const runtime = await compactRuntime(io, input.store, scope);
 	try {
-		const dryRun = args.flags["dry-run"] === true;
+		const dryRun = input.dryRun === true;
 		const job = await prepareCompact(runtime, scope, {
 			dryRun,
-			max: countFlag(args.flags, "max", 50),
+			max: input.max,
 		});
 		const head = [
 			`scope: ${scope}`,
@@ -371,12 +410,12 @@ export async function applyAnswers(
  *   stays for the next job.
  */
 async function compactAnswer(
-	args: ParsedArgs,
+	input: CompactInput,
 	io: CommandIo,
 	scope: ScopeKey,
 	answerPath: string,
 ): Promise<string> {
-	const runtime = await compactRuntime(args, io, scope);
+	const runtime = await compactRuntime(io, input.store, scope);
 	try {
 		const answers = parseAnswerFile(answerPath);
 		const { built, rejected } = await applyAnswers(runtime, scope, answers);
