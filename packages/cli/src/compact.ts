@@ -329,7 +329,7 @@ function canonical(value: unknown): string {
 
 // #region FUNC_applyAnswers
 /**
- * Write one answer for each range into the store as node rows.
+ * Write or plan one answer for each range as node rows.
  *
  * @purpose Turn the answers of a job into built nodes through one rule set for both hosts.
  * @invariants An empty answer gives a Data error. The store checks the exact input under the write
@@ -340,6 +340,7 @@ export async function applyAnswers(
 	scope: ScopeKey,
 	answers: readonly Answer[],
 	copied: readonly BuildInput[] | null = null,
+	dryRun = false,
 ): Promise<{ readonly built: number; readonly rejected: readonly string[] }> {
 	let built = 0;
 	const rejected: string[] = [];
@@ -357,6 +358,10 @@ export async function applyAnswers(
 		const line = answerLine(input, answer.text);
 		if (!line.ok)
 			throw new MemlensError("Data", `The answer for ${answer.addr} is empty.`);
+		if (dryRun) {
+			built += 1;
+			continue;
+		}
 		const result = publishNode(
 			runtime.store,
 			scope,
@@ -372,6 +377,7 @@ export async function applyAnswers(
 		event: "answer",
 		built,
 		rejected: rejected.length,
+		dryRun,
 	});
 	return { built, rejected };
 }
@@ -394,12 +400,19 @@ async function compactAnswer(
 	const runtime = await compactRuntime(io, input.store, scope);
 	try {
 		const answers = parseAnswerFile(answerPath);
-		const { built, rejected } = await applyAnswers(runtime, scope, answers);
+		const dryRun = input.dryRun === true;
+		const { built, rejected } = await applyAnswers(
+			runtime,
+			scope,
+			answers,
+			null,
+			dryRun,
+		);
 		const hint =
 			rejected.length > 0
 				? `\nrun memlens compact again for the rejected ranges: ${rejected.join(", ")}`
 				: "";
-		return `built ${built} nodes, rejected ${rejected.length}${hint}`;
+		return `${dryRun ? "would build" : "built"} ${built} nodes, rejected ${rejected.length}${hint}`;
 	} finally {
 		await runtime.close();
 	}

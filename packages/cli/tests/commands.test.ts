@@ -1225,6 +1225,45 @@ describe("@memlens/cli commands", () => {
 		expect(after.out).not.toContain("#0-1");
 	});
 
+	it("plans one answer file with --dry-run and writes no node", async () => {
+		const test = makeEnv();
+		for (const body of ["First", "Second"])
+			await run(
+				test,
+				"note",
+				`${body} ${"detail ".repeat(80)}`,
+				"--scope",
+				"project:acme/x",
+			);
+		await run(test, "compact", "--scope", "project:acme/x");
+		const answer = join(test.home, "answer.txt");
+		writeFileSync(answer, "#0-1: One line over both notes");
+		const dry = await run(
+			test,
+			"compact",
+			"--answer",
+			answer,
+			"--scope",
+			"project:acme/x",
+			"--dry-run",
+		);
+		expect(dry.code).toBe(0);
+		expect(dry.out).toContain("would build 1 nodes, rejected 0");
+		const kept = await run(test, "compact", "--scope", "project:acme/x");
+		expect(kept.code).toBe(0);
+		expect(kept.out).toContain("#0-1");
+		const applied = await run(
+			test,
+			"compact",
+			"--answer",
+			answer,
+			"--scope",
+			"project:acme/x",
+		);
+		expect(applied.code).toBe(0);
+		expect(applied.out).toContain("built 1 nodes");
+	});
+
 	it("gives the whole longform above 1024 chars to the compaction job", async () => {
 		const test = makeEnv();
 		const longform = `${"head ".repeat(300)}LONGFORM-TAIL`;
