@@ -14,6 +14,8 @@
 
 import type { DatabaseSync, StatementSync } from "node:sqlite";
 import { debuglog } from "node:util";
+import { validateScopeKey } from "../domain/scope.js";
+import { MemlensError } from "../types/errors.js";
 import type { NoteKind, ScopeKey } from "../types/primitives.js";
 import { deleteCovering, deleteRange } from "./nodes.js";
 import { nullable } from "./rows.js";
@@ -123,6 +125,7 @@ export function exportLines(
 /**
  * @purpose Join one transfer file into the note rows of a store with the five merge channels.
  * @invariants The call validates the complete file before the first write.
+ * @invariants The option as must hold one valid scope key, or the call writes nothing.
  * @invariants A dry run reads the local rows per id and writes nothing.
  * @invariants A real run writes one publish.
  * @requires The store is open and trusts the file creator.
@@ -134,9 +137,12 @@ export function importLines(
 	opts: ImportOptions = {},
 ): ImportResult {
 	const file = parseTransfer(lines);
-	if (opts.as !== undefined)
+	if (opts.as !== undefined) {
+		if (!validateScopeKey(opts.as))
+			throw new MemlensError("Data", "The scope key is not valid.");
 		for (const item of file.rows)
 			if (!item.row.scope.startsWith("__catalog__:")) item.row.scope = opts.as;
+	}
 	const dryRun = opts.dryRun === true;
 	const clock = foldClock(store.meta("clock") ?? "", file.versions);
 	debug("Import start", {

@@ -1281,4 +1281,38 @@ describe("@memlens/cli commands", () => {
 		expect(found.out).toContain("project:other/y#0");
 		expect(found.out).not.toContain("project:acme/x");
 	});
+
+	it("refuses an import under an invalid --as key", async () => {
+		const first = makeEnv();
+		await run(first, "note", "Move me", "--scope", "project:acme/x");
+		const out = join(first.home, "out");
+		await run(
+			first,
+			"export",
+			"--format",
+			"jsonl",
+			"--out",
+			out,
+			"--scope",
+			"project:acme/x",
+		);
+		const second = makeEnv();
+		const input = join(second.home, "in.jsonl");
+		writeFileSync(
+			input,
+			readFileSync(join(out, "project%3Aacme%2Fx.jsonl"), "utf8"),
+		);
+		const refused = await run(
+			second,
+			"import",
+			"--in",
+			input,
+			"--as",
+			"myproject",
+		);
+		expect(refused.code).toBe(1);
+		expect(refused.err).toContain("The scope key is not valid.");
+		const found = await run(second, "find", "Move");
+		expect(found.out).not.toContain("myproject");
+	});
 });

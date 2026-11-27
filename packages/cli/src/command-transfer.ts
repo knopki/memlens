@@ -25,6 +25,7 @@ import {
 	MemlensError,
 	normalizeScopeKey,
 	scopeNotes,
+	validateScopeKey,
 } from "@memlens/core";
 import type { Command } from "commander";
 import {
@@ -137,8 +138,8 @@ function encodeStem(scope: ScopeKey): string {
  *
  * @purpose Join the notes of one file into the store by id, so a user moves or merges a store.
  * @invariants The import joins by id and applies the erasure evidence of both sides. The flag
- *   --dry-run validates and counts the change and writes nothing. The flag --as rewrites the scope
- *   of each imported note.
+ *   --dry-run validates and counts the change and writes nothing. The flag --as must hold one
+ *   valid scope key, and rewrites the scope of each imported note.
  */
 export async function importCommand(
 	input: { in: string; as?: string; dryRun?: boolean; store?: string },
@@ -146,6 +147,8 @@ export async function importCommand(
 ): Promise<string> {
 	const as =
 		input.as === undefined ? null : (normalizeScopeKey(input.as) as ScopeKey);
+	if (as !== null && !validateScopeKey(as))
+		throw new MemlensError("Data", "The scope key is not valid.");
 	const incoming = readLines(input.in);
 	const runtime = await openCommandRuntime(io, input.store);
 	try {
