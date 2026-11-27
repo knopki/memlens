@@ -1,5 +1,6 @@
 /**
  * #region moduleContract
+ * @modulecontract
  * @purpose Answer a find call from the index, so the model reads the notes that match its words.
  * @scope The memory_find schema, the scope choice, the filters, and the hit answer.
  *  NOT: the index rules, the profile check, and the registration.
@@ -11,8 +12,8 @@
 
 import { defineTool, type ToolDefinition } from "@deepseek-ai/dsh-tools";
 import {
-	FIND_MAX_PER_SCOPE,
-	filterHits,
+	FIND_DEFAULT_LIMIT,
+	type FindFilter,
 	NOTE_KINDS,
 	nowIso,
 	search,
@@ -31,6 +32,8 @@ import {
 /**
  * @purpose Answer a find call from the index of each selected scope.
  * @invariants The profile hides each scope that the call does not name, and a named foreign scope gives NotAllowed.
+ * @invariants An absent scope list takes each visible scope. Each filter of the call cuts the rows
+ * before the limit.
  */
 function findAnswer(
 	memory: AgentMemory,
@@ -40,23 +43,18 @@ function findAnswer(
 		input.scopes === undefined || input.scopes.length === 0
 			? visibleScopeList(memory)
 			: input.scopes.map((raw) => checkedScope(memory, raw));
-	const found = scopes.flatMap((scope) =>
-		search(memory.store, input.query ?? "", scope, FIND_MAX_PER_SCOPE),
-	);
-	const kept = filterHits(
-		found,
-		{
-			scopes,
-			since: input.since ?? null,
-			until: input.until ?? null,
-			kinds: input.kinds ?? null,
-			due: input.due === true,
-			...(input.limit === undefined ? {} : { limit: input.limit }),
-		},
-		nowIso(),
-	);
-	debug("Find answered", { event: "find", hits: kept.length });
-	return { hits: kept.map((hit) => ({ ...hit })) };
+	const filter: FindFilter = {
+		query: input.query ?? null,
+		scopes,
+		since: input.since ?? null,
+		until: input.until ?? null,
+		kinds: input.kinds ?? null,
+		due: input.due === true,
+		limit: input.limit ?? FIND_DEFAULT_LIMIT,
+	};
+	const found = search(memory.store, filter, nowIso());
+	debug("Find answered", { event: "find", hits: found.length });
+	return { hits: found.map((hit) => ({ ...hit })) };
 }
 // #endregion FUNC_findAnswer
 
@@ -68,9 +66,12 @@ export function findTool(memory: AgentMemory): ToolDefinition {
 	return defineTool({
 		name: "memory_find",
 		description:
-			"Find memory notes by words. Each word must match, and a word with a leading minus is excluded. Each hit gives its address as scope#pos.",
+			"Find memory notes by words. Each word must match, and a word with a leading minus is excluded. An empty query gives the newest notes. The filters cut the rows before the limit. Each hit gives its address as scope#pos.",
 		parameters: {
-			query: { type: "string", description: "The words." },
+			query: {
+				type: "string",
+				description: "The words. An empty query gives the newest notes.",
+			},
 			scopes: {
 				type: "array",
 				items: { type: "string" },

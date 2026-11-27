@@ -573,26 +573,32 @@ describe("console reads", () => {
 		expect(defaulted.screen).toBe("overview");
 	});
 
-	it("answers search with the hits and the limit rule", async () => {
+	it("answers search with the hits, the filters, and the limit rule", async () => {
 		const testCase = composition();
 		insert(testCase, "alpha beta gamma", 1);
 		await registered(testCase);
 		const found = await call(testCase, "search", {
 			session: testCase.agent.id,
-			q: "alpha",
+			query: "alpha",
 		});
 		expect(Array.isArray(found)).toBe(true);
 		expect(found[0]?.scope).toBe("user:notes");
 		expect(found[0]?.pos).toBe(0);
-		const alias = await call(testCase, "search", {
+		// The note is of the kind note, so the kind filter and a late bound give no hit.
+		const byKind = await call(testCase, "search", {
 			session: testCase.agent.id,
-			query: "alpha",
+			kinds: "task",
 		});
-		expect(alias).toHaveLength(found.length);
+		expect(byKind).toHaveLength(0);
+		const late = await call(testCase, "search", {
+			session: testCase.agent.id,
+			since: "2999-01-01",
+		});
+		expect(late).toHaveLength(0);
 		const badLimit = await failure(
 			call(testCase, "search", {
 				session: testCase.agent.id,
-				q: "alpha",
+				query: "alpha",
 				limit: "many",
 			}),
 		);

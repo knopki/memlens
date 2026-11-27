@@ -115,10 +115,11 @@ const en = {
 	scope: "scope",
 	kindLabel: "kind",
 	since: "since",
+	until: "until",
+	dueOnly: "due for review",
 	limit: "limit",
 	matches: "{count} matches",
 	noMatches: "No matches.",
-	searchHint: "Enter words and press Find.",
 	revText:
 		"The notes with a review time of now or earlier, then the notes that come due next.",
 	due: "Due",

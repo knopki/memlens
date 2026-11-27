@@ -152,8 +152,10 @@ function stateOf(patch: Partial<ConsoleState> = {}): ConsoleState {
 		selection: undefined,
 		hits: [],
 		query: "",
-		kind: "",
+		kinds: [],
 		since: "",
+		until: "",
+		due: false,
 		limit: "10",
 		searchScope: null,
 		reviewKind: "",
@@ -188,12 +190,17 @@ function apiOf(state: ConsoleState): ConsoleApi {
 // #endregion FUNC_apiOf
 
 describe("search screen", () => {
-	it("offers each kind of the store in the kind filter", () => {
-		const markup = renderToStaticMarkup(<Search api={apiOf(stateOf())} />);
+	it("offers each kind of the store as one toggle", () => {
+		const markup = renderToStaticMarkup(
+			<Search api={apiOf(stateOf({ kinds: ["task"] }))} />,
+		);
 		const en = messages("en");
 		for (const kind of NOTE_KINDS) {
 			const label = en[KIND_KEYS[kind]];
-			expect(markup).toContain(`<option value="${kind}">${label}</option>`);
+			const on = kind === "task";
+			expect(markup).toContain(
+				`<button type="button" class="btn${on ? " on" : ""}" aria-pressed="${on}">${label}</button>`,
+			);
 		}
 	});
 
@@ -215,6 +222,9 @@ describe("search screen", () => {
 		expect(markup).toContain("<span>scope</span>");
 		expect(markup).toContain("<span>kind</span>");
 		expect(markup).toContain("<span>since</span>");
+		expect(markup).toContain("<span>until</span>");
+		expect(markup).toContain("<span>due for review</span>");
+		expect(markup).toContain('type="checkbox"');
 		expect(markup).toContain("<span>limit</span>");
 		expect(markup).toContain('<option value="project:alpha" selected="">');
 		expect(markup).toContain(">Find</button>");

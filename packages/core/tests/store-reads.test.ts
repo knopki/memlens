@@ -1,11 +1,13 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Prove the search and the read models against the real store engine.
- * @scope The prefix match, the scope filter, the hidden row, the tie order, the trigram fallback, the due list, and the directions block.
+ * @purpose Prove the search with its filters and the read models against the real store engine.
+ * @scope The prefix match, the find filters, the hit order, the hidden row, the tie order, the trigram
+ *   fallback, the due list, and the directions block.
  * @invariants Each test reads rows that the test wrote by raw SQL, except the move test, which
  *   writes through the note API.
- * @keywords test, search, fts, trigram, read, due, directions
+ * @invariants The file pins the zone to Europe/Moscow before the search tests.
+ * @keywords test, search, find, filter, fts, trigram, read, due, directions
  * #endregion moduleContract
  */
 
@@ -13,7 +15,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, it } from "vitest";
+import { afterAll, describe, it, vi } from "vitest";
 import { amend, note } from "../src/store/notes.js";
 import {
 	byAddress,
@@ -25,9 +27,17 @@ import {
 	nodesOf,
 	scopeNotes,
 } from "../src/store/reads.js";
-import { search } from "../src/store/search.js";
+import {
+	FIND_DEFAULT_LIMIT,
+	type FindFilter,
+	search,
+} from "../src/store/search.js";
 import { Store } from "../src/store/store.js";
 import type { ScopeKey } from "../src/types/primitives.js";
+
+vi.hoisted(() => {
+	process.env.TZ = "Europe/Moscow";
+});
 
 const T0 = "2026-01-01T00:00:00.000Z";
 
@@ -125,13 +135,17 @@ function addNode(
 // #region FUNC_test_search
 /**
  * @purpose Prove the match grammar, the live filter, the order, and the empty query.
+ * @invariants Each call gives a limit of ten.
  */
 describe("search", () => {
+	const seek = (store: Store, query: string, scopes?: readonly ScopeKey[]) =>
+		search(store, { query, limit: 10, scopes }, NOW);
+
 	it("finds a word form by prefix", () => {
 		const store = newStore();
 		addNote(store, { id: "n1", pos: 0, body: "alphaprobe report" });
 		indexNote(store, "n1", "alphaprobe report");
-		const hits = search(store, "alphap", null, 10);
+		const hits = seek(store, "alphap");
 		assert.equal(hits.length, 1);
 		assert.equal(hits[0]?.id, "n1");
 		assert.equal(hits[0]?.addr, "p:x#0");
@@ -147,7 +161,7 @@ describe("search", () => {
 			longform: "0123456789",
 		});
 		indexNote(store, "n1", "betaprobe", "0123456789");
-		const hits = search(store, "betaprobe", null, 10);
+		const hits = seek(store, "betaprobe");
 		assert.equal(hits[0]?.longformChars, 10);
 	});
 
@@ -157,12 +171,12 @@ describe("search", () => {
 		addNote(store, { id: "n2", pos: 0, scope: "p:y", body: "gammaprobe" });
 		indexNote(store, "n1", "gammaprobe");
 		indexNote(store, "n2", "gammaprobe");
-		const one = search(store, "gammaprobe", "p:x", 10);
+		const one = seek(store, "gammaprobe", ["p:x"]);
 		assert.deepEqual(
 			one.map((hit) => hit.scope),
 			["p:x"],
 		);
-		const all = search(store, "gammaprobe", null, 10);
+		const all = seek(store, "gammaprobe");
 		assert.equal(all.length, 2);
 	});
 
@@ -177,7 +191,7 @@ describe("search", () => {
 		indexNote(store, "n1", "deltaprobe secret");
 		addNote(store, { id: "n2", pos: 1, body: "deltaprobe live" });
 		indexNote(store, "n2", "deltaprobe live");
-		const hits = search(store, "deltaprobe", null, 10);
+		const hits = seek(store, "deltaprobe");
 		assert.deepEqual(
 			hits.map((hit) => hit.id),
 			["n2"],
@@ -190,7 +204,7 @@ describe("search", () => {
 		addNote(store, { id: "id-a", pos: 1, body: "epsilonprobe" });
 		indexNote(store, "id-b", "epsilonprobe");
 		indexNote(store, "id-a", "epsilonprobe");
-		const hits = search(store, "epsilonprobe", null, 10);
+		const hits = seek(store, "epsilonprobe");
 		assert.deepEqual(
 			hits.map((hit) => hit.id),
 			["id-a", "id-b"],
@@ -201,7 +215,7 @@ describe("search", () => {
 		const store = newStore();
 		addNote(store, { id: "n1", pos: 0, body: "zetaprobe" });
 		indexNote(store, "n1", "zetaprobe");
-		assert.deepEqual(search(store, "-zetaprobe", null, 10), []);
+		assert.deepEqual(seek(store, "-zetaprobe"), []);
 	});
 
 	it("matches each live row for an empty query", () => {
@@ -216,7 +230,7 @@ describe("search", () => {
 			ts: T3,
 		});
 		indexNote(store, "n1", "etaprobe");
-		const hits = search(store, "   ", null, 10);
+		const hits = seek(store, "   ");
 		assert.deepEqual(
 			hits.map((hit) => hit.id),
 			["n2", "n1"],
@@ -224,6 +238,150 @@ describe("search", () => {
 	});
 });
 // #endregion FUNC_test_search
+
+// #region FUNC_test_findFilters
+/**
+ * @purpose Prove that each filter cuts the rows before the limit, in one query over each scope.
+ */
+describe("find filters", () => {
+	/** Give a time that is some minutes after T0. */
+	const afterMinutes = (minutes: number): string =>
+		new Date(Date.parse(T0) + minutes * 60_000).toISOString();
+
+	/** Give the ids of the hits of one filter. */
+	const idsOf = (store: Store, filter: FindFilter): string[] =>
+		search(store, filter, NOW).map((hit) => hit.id);
+
+	it("gives the newest rows of each scope in the time order, then cuts at the limit", () => {
+		const store = newStore();
+		for (let pos = 0; pos < 60; pos += 1)
+			addNote(store, {
+				id: `a${pos}`,
+				pos,
+				scope: "x:a",
+				body: "row",
+				ts: afterMinutes(pos),
+			});
+		for (let pos = 0; pos < 20; pos += 1)
+			addNote(store, {
+				id: `b${pos}`,
+				pos,
+				scope: "x:b",
+				body: "row",
+				ts: afterMinutes(pos + 40),
+			});
+		// An equal time keeps the scope order.
+		assert.deepEqual(idsOf(store, { limit: 10 }), [
+			"a59",
+			"b19",
+			"a58",
+			"b18",
+			"a57",
+			"b17",
+			"a56",
+			"b16",
+			"a55",
+			"b15",
+		]);
+		assert.equal(search(store, {}, NOW).length, FIND_DEFAULT_LIMIT);
+		assert.equal(idsOf(store, { limit: 100 }).length, 80);
+		assert.deepEqual(idsOf(store, { limit: 0 }), []);
+		assert.deepEqual(idsOf(store, { limit: -5 }), []);
+	});
+
+	it("applies the scope, kind, date, and due filters", () => {
+		const store = newStore();
+		addNote(store, {
+			id: "n0",
+			pos: 0,
+			scope: "x:a",
+			ts: "2026-11-01T12:00:00.000Z",
+			body: "row",
+		});
+		addNote(store, {
+			id: "n1",
+			pos: 0,
+			scope: "x:b",
+			kind: "fact",
+			ts: "2026-11-02T12:00:00.000Z",
+			body: "row",
+		});
+		addNote(store, {
+			id: "n2",
+			pos: 1,
+			scope: "x:a",
+			ts: "2026-11-03T12:00:00.000Z",
+			review_at: "2026-11-02",
+			body: "row",
+		});
+		assert.deepEqual(idsOf(store, { scopes: ["x:a"] }), ["n2", "n0"]);
+		// The order of the scope list does not order the hits.
+		assert.deepEqual(idsOf(store, { scopes: ["x:b", "x:a"] }), [
+			"n2",
+			"n1",
+			"n0",
+		]);
+		assert.deepEqual(idsOf(store, { kinds: ["fact"] }), ["n1"]);
+		assert.deepEqual(idsOf(store, { since: "2026-11-02" }), ["n2", "n1"]);
+		assert.deepEqual(idsOf(store, { until: "2026-11-02" }), ["n1", "n0"]);
+		// The review time of n2 is before the tenth of November.
+		const dueIds = (filter: FindFilter) =>
+			search(store, filter, "2026-11-10T00:00:00.000Z").map((hit) => hit.id);
+		assert.deepEqual(dueIds({ due: true }), ["n2"]);
+		// The due filter combines with a date bound.
+		assert.deepEqual(dueIds({ due: true, since: "2026-11-03" }), ["n2"]);
+		assert.deepEqual(dueIds({ due: true, until: "2026-11-02" }), []);
+	});
+
+	it("compares a day bound with the day of the zone of the process", () => {
+		const store = newStore();
+		const times = [
+			"2026-11-02T21:30:00.000Z",
+			"2026-11-03T12:00:00.000Z",
+			"2026-11-03T20:59:00.000Z",
+			"2026-11-03T21:00:00.000Z",
+		];
+		for (const [pos, ts] of times.entries())
+			addNote(store, { id: `n${pos}`, pos, body: "row", ts });
+		// The day 2026-11-03 in Moscow starts at 21:00 in UTC of the day before.
+		assert.deepEqual(
+			search(store, { since: "2026-11-03", until: "2026-11-03" }, NOW).map(
+				(hit) => hit.id,
+			),
+			["n2", "n1", "n0"],
+		);
+		assert.deepEqual(
+			search(store, { since: "2026-11-03T12:00" }, NOW).map((hit) => hit.id),
+			["n3", "n2", "n1"],
+		);
+	});
+
+	it("finds a kind that the newest rows of the scope hide", () => {
+		const store = newStore();
+		for (let pos = 0; pos < 60; pos += 1) {
+			addNote(store, {
+				id: `n${pos}`,
+				pos,
+				body: "row fresh",
+				ts: afterMinutes(pos + 1),
+			});
+			indexNote(store, `n${pos}`, "row fresh");
+		}
+		addNote(store, {
+			id: "task",
+			pos: 60,
+			kind: "task",
+			body: "row old",
+			ts: T0,
+		});
+		indexNote(store, "task", "row old");
+		// Without the kind filter the task row stays outside the first hit.
+		assert.deepEqual(idsOf(store, { query: "row", limit: 1 }), ["n59"]);
+		assert.deepEqual(idsOf(store, { kinds: ["task"] }), ["task"]);
+		assert.deepEqual(idsOf(store, { query: "row", kinds: ["task"] }), ["task"]);
+	});
+});
+// #endregion FUNC_test_findFilters
 
 // #region FUNC_test_trigram
 /**

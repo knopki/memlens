@@ -545,6 +545,28 @@ describe("memory tools of one agent", () => {
 		expect(FIND_DEFAULT_LIMIT).toBe(10);
 	});
 
+	it("finds a kind that the newest rows of the scope hide", async () => {
+		const main = subject("main", "all");
+		const task = (await call(main, "memory_note", {
+			body: "An old task about the deploy.",
+			kind: "task",
+			ts: "2020-01-01",
+		})) as { addr: string };
+		for (let index = 0; index < 60; index += 1)
+			seed("user:notes", `A fresh note number ${index}.`);
+
+		const byKind = (await call(main, "memory_find", {
+			kinds: ["task"],
+		})) as { hits: { addr: string }[] };
+		const newest = (await call(main, "memory_find", { limit: 1 })) as {
+			hits: { addr: string }[];
+		};
+
+		// The kind filter cuts the rows before the limit, so the oldest note comes first.
+		expect(byKind.hits.map((hit) => hit.addr)).toEqual([task.addr]);
+		expect(newest.hits[0]?.addr).not.toBe(task.addr);
+	});
+
 	it("opens a record by pos, by address, and by range", async () => {
 		const record = seed("user:notes", "The active scope record.");
 		const main = subject("main", "all");

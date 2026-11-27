@@ -20,8 +20,10 @@ const ROUTE: Route = {
 	target: "project:alpha#1",
 	query: "budget",
 	searchScope: "",
-	kind: "fact",
+	kinds: ["fact"],
 	since: "2026-11-01",
+	until: "2026-11-30",
+	due: true,
 	limit: "20",
 	reviewKind: "task",
 };

@@ -12,7 +12,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConsoleRuntime, OpenedTarget } from "../../src/model/console.js";
 import { DEFAULT_ROUTE } from "../../src/route.js";
 import type { View } from "../../src/types.js";
-import { deferred, entryOf, type Harness, harness, viewOf } from "./helpers.js";
+import {
+	deferred,
+	entryOf,
+	type Harness,
+	harness,
+	routeOfState,
+	stateOf,
+	viewOf,
+} from "./helpers.js";
 
 /** The calls of one port method. */
 const callsOf = (h: Harness, method: string) =>
@@ -447,8 +455,10 @@ describe("console controller search", () => {
 		});
 		await h.call.search({
 			query: "  words  ",
-			kind: "task",
+			kinds: ["task"],
 			since: "2026-11-01",
+			until: "",
+			due: false,
 			limit: "5",
 			searchScope: "",
 		});
@@ -456,25 +466,51 @@ describe("console controller search", () => {
 		expect(h.state().hits).toHaveLength(1);
 		expect(callsOf(h, "search")[0]?.fields).toEqual({
 			profile: "default",
-			scope: "",
 			query: "words",
-			kind: "task",
+			scopes: "",
+			kinds: "task",
 			since: "2026-11-01",
+			until: "",
+			due: "",
 			limit: "5",
 		});
 	});
 
-	it("asks for words when the query is empty", async () => {
+	it("runs the search for an empty query and sends each filter as text", async () => {
 		const h = harness();
 		await h.call.search({
 			query: "   ",
-			kind: "",
+			kinds: ["task", "fact"],
 			since: "",
+			until: "2026-11-30",
+			due: true,
 			limit: "10",
 			searchScope: null,
 		});
-		expect(h.state().status).toEqual({ text: "searchHint", error: false });
+		expect(h.state().query).toBe("");
+		expect(h.state().kinds).toEqual(["task", "fact"]);
+		expect(h.state().status).toEqual({ text: "", error: false });
+		expect(callsOf(h, "search")).toHaveLength(1);
+		expect(callsOf(h, "search")[0]?.fields).toEqual({
+			profile: "default",
+			query: "",
+			scopes: "",
+			kinds: "task,fact",
+			since: "",
+			until: "2026-11-30",
+			due: "1",
+			limit: "10",
+		});
+	});
+
+	it("runs the search again for a restored search screen or a search filter", async () => {
+		const h = harness();
+		const base = routeOfState(stateOf());
+		await h.call.restore(base);
 		expect(callsOf(h, "search")).toHaveLength(0);
+		await h.call.restore({ ...base, screen: "search" });
+		await h.call.restore({ ...base, kinds: ["task"] });
+		expect(callsOf(h, "search")).toHaveLength(2);
 	});
 });
 

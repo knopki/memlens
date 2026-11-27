@@ -54,12 +54,7 @@ import {
 	readConsole,
 	readConsoleCatalog,
 } from "./console.js";
-import {
-	filterHits,
-	type OpenChildren,
-	type OpenEntry,
-	openNote,
-} from "./reads.js";
+import { type OpenChildren, type OpenEntry, openNote } from "./reads.js";
 import { isCatalogKey, validateScopeKey } from "./scope.js";
 import { resolveTarget } from "./target.js";
 import { addDaysAtTime, nowIso } from "./time.js";
@@ -433,34 +428,50 @@ export async function consoleView(
 }
 // #endregion FUNC_consoleView
 
+// #region FUNC_listField
+/** @purpose Give each value of one comma-separated list field, so a route reads one list in one way. */
+function listField(fields: Fields, key: string): string[] {
+	return text(fields, key)
+		.split(",")
+		.map((value) => value.trim())
+		.filter(Boolean);
+}
+// #endregion FUNC_listField
+
 // #region FUNC_consoleSearch
-/** @purpose Answer one search over the requested scope or each visible scope. */
+/**
+ * @purpose Answer one search over the named scopes or each visible scope.
+ * @invariants The fields are the fields of one find filter. A comma separates the values of the
+ * lists `scopes` and `kinds`.
+ * @invariants A scope outside the profile gives NotAllowed. The limit must be a whole number from 0.
+ */
 export function consoleSearch(
 	host: ConsoleHost,
 	fields: Fields,
-	scope: ScopeKey,
 ): readonly IndexHit[] {
 	const raw = text(fields, "limit") || "10";
 	if (!/^\d+$/.test(raw))
 		throw new MemlensError("Usage", "The limit must be a whole number from 0.");
-	const scopes = text(fields, "scope") ? [scope] : host.scopes;
-	const hits = scopes.flatMap((key) =>
-		search(host.store, text(fields, "query"), key, 50),
-	);
-	const kind = text(fields, "kind");
-	const answer = filterHits(
-		hits,
+	const named = listField(fields, "scopes");
+	const answer = search(
+		host.store,
 		{
-			scopes,
-			limit: Number(raw),
+			query: text(fields, "query"),
+			scopes:
+				named.length === 0
+					? host.scopes
+					: named.map((item) => allowedScope(host, item)),
+			kinds: listField(fields, "kinds").map(noteKind),
 			since: text(fields, "since"),
-			...(kind ? { kinds: [noteKind(kind)] } : {}),
+			until: text(fields, "until"),
+			due: text(fields, "due") === "1",
+			limit: Number(raw),
 		},
 		nowIso(),
 	);
 	debug("Search answered", {
 		event: "search",
-		scopes: scopes.length,
+		scopes: named.length === 0 ? host.scopes.length : named.length,
 		hits: answer.length,
 	});
 	return answer;

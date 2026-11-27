@@ -152,7 +152,7 @@ The plugin registers the memory tools in the context of each agent.
 | --------------- | -------------------- | ---------------------------------------------------------------------- |
 | `memory_note`   | main agent, subagent | Writes a note, or gives the live note with the same four fields.        |
 | `memory_forget` | main agent           | Hides records, and makes the dependent summary ranges dirty.            |
-| `memory_find`   | main agent, subagent | Gives the records with the matching words, each with its `addr`.        |
+| `memory_find`   | main agent, subagent | Gives the records that match the words and the filters, or the newest records. |
 | `memory_open`   | main agent, subagent | Gives a record with its longform, or the two children of a node.        |
 | `memory_review` | main agent           | Gives the due records, or marks the reviewed records.                   |
 | `memory_map`    | main agent, subagent | Gives the visible scopes, or the tree slice of one scope.               |
@@ -207,7 +207,7 @@ The binary `memlens` runs without the harness and takes one command.
 
 ```text
 memlens note "<body>" [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never] [--ts iso]
-memlens find "<words>" [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
+memlens find [words] [--scope key]... [--kind kind]... [--since date] [--until date] [--due] [--limit 10] [--json]
 memlens open <target> [--scope key] [--no-longform] [--json]
 memlens forget <target> [--scope key] [--reason "text"]
 memlens restore <target> [--scope key] [--reason "text"]
@@ -280,4 +280,4 @@ An error carries a code and a message, and the exit code follows the kind.
 | Compaction       | `batch` 10, a whole number above zero, no upper limit, 120 calls in an hour           |
 | Nudge            | `tool_calls` and `turns` 10                                                           |
 | GC of proposals  | 30 days                                                                               |
-| `find`           | 10 records, and 50 for each scope                                                     |
+| `find`           | 10 records                                                                            |

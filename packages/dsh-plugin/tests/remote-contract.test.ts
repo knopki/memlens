@@ -74,10 +74,12 @@ const CLIENT_INPUTS: ConsoleInputs = {
 	search: {
 		session: "s",
 		profile: "default",
-		scope: "",
 		query: "tab",
-		kind: "",
+		scopes: "",
+		kinds: "",
 		since: "",
+		until: "",
+		due: "",
 		limit: "10",
 	},
 	open: {

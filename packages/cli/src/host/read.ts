@@ -59,8 +59,8 @@ async function viewAnswer(
 /** Each read route of the console. */
 export const READ_ROUTES: Readonly<Record<string, Handler>> = {
 	"/api/view": viewAnswer,
-	"/api/search": (runtime, fields, scope): readonly IndexHit[] =>
-		consoleSearch(hostOf(runtime), fields, scope),
+	"/api/search": (runtime, fields): readonly IndexHit[] =>
+		consoleSearch(hostOf(runtime), fields),
 	"/api/open": (runtime, fields, scope): ConsoleEntry | ConsoleChildren =>
 		consoleOpen(hostOf(runtime), fields, scope),
 	"/api/catalog": (runtime, fields, scope): Promise<readonly SliceLine[]> =>

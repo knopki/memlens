@@ -61,7 +61,7 @@ const debug = debuglog("memlens:cli");
 const USAGE = `Usage: ${NAME} <command> [flags]
 
   note <body> [--scope key] [--longform file.md] [--kind kind] [--supersedes 12,14] [--review 180d|never] [--ts iso]
-  find <words> [--scope key]... [--since date] [--until date] [--due] [--limit 10] [--json]
+  find [words] [--scope key]... [--kind kind]... [--since date] [--until date] [--due] [--limit 10] [--json]
   open <target> [--scope key] [--no-longform] [--json]
   forget <target> [--scope key] [--reason "text"]
   restore <target> [--scope key] [--reason "text"]
@@ -113,8 +113,16 @@ const COMMANDS: Readonly<Record<string, Command>> = {
 	find: {
 		run: findCommand,
 		spec: {
-			positional: ["words"],
-			flags: { scope: "many", since: 1, until: 1, due: 0, limit: 1, json: 0 },
+			positional: ["words?"],
+			flags: {
+				scope: "many",
+				kind: "many",
+				since: 1,
+				until: 1,
+				due: 0,
+				limit: 1,
+				json: 0,
+			},
 		},
 	},
 	open: {

@@ -104,8 +104,14 @@ export interface ConsoleState {
 	readonly selection: Selection | undefined;
 	readonly hits: readonly IndexHit[];
 	readonly query: string;
-	readonly kind: NoteKind | "";
+
+	/** The kinds of the search. An empty list takes each kind. */
+	readonly kinds: readonly NoteKind[];
 	readonly since: string;
+	readonly until: string;
+
+	/** True when the search keeps only the notes that are due for review. */
+	readonly due: boolean;
 	readonly limit: string;
 	readonly searchScope: string | null;
 	readonly reviewKind: NoteKind | "";
@@ -135,15 +141,20 @@ export interface ViewQuery {
 
 // #region INTERFACE_SearchQuery
 /**
- * @purpose Hold the fields of one search.
- * @invariants An empty scope reads every visible scope.
+ * @purpose Hold the fields of one search, so each transport sends the fields of one find filter.
+ * @invariants Each list is one text, and a comma separates its values.
+ * @invariants An empty `scopes` reads every visible scope. An empty text imposes no limit.
  */
 export interface SearchQuery {
 	readonly profile: string;
-	readonly scope: string;
 	readonly query: string;
-	readonly kind: NoteKind | "";
+	readonly scopes: string;
+	readonly kinds: string;
 	readonly since: string;
+	readonly until: string;
+
+	/** The text `1` keeps only the notes that are due for review. An empty text keeps each note. */
+	readonly due: string;
 	readonly limit: string;
 }
 // #endregion INTERFACE_SearchQuery
@@ -267,8 +278,10 @@ export interface ConsoleStorage {
  */
 export interface SearchFilters {
 	readonly query: string;
-	readonly kind: NoteKind | "";
+	readonly kinds: readonly NoteKind[];
 	readonly since: string;
+	readonly until: string;
+	readonly due: boolean;
 	readonly limit: string;
 	readonly searchScope: string | null;
 }

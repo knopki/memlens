@@ -197,8 +197,10 @@ export function createConsoleController(
 			target: state.selection?.target ?? "",
 			query: state.query,
 			searchScope: state.searchScope,
-			kind: state.kind,
+			kinds: state.kinds,
 			since: state.since,
+			until: state.until,
+			due: state.due,
 			limit: state.limit,
 			reviewKind: state.reviewKind,
 		};
@@ -338,10 +340,12 @@ export function createConsoleController(
 		const token = get().generation;
 		const found = await port.search({
 			profile: get().profile,
-			scope: get().searchScope ?? "",
 			query: get().query,
-			kind: get().kind,
+			scopes: get().searchScope ?? "",
+			kinds: get().kinds.join(","),
 			since: get().since,
+			until: get().until,
+			due: get().due ? "1" : "",
 			limit: get().limit,
 		});
 		if (token !== get().generation) return;
@@ -474,7 +478,17 @@ export function createConsoleController(
 		}
 		if (!loaded) return;
 		const token = get().generation;
-		if (get().query) await find("none");
+		// A search screen or a place with a search filter runs its search again.
+		const state = get();
+		if (
+			state.screen === "search" ||
+			state.query.length > 0 ||
+			state.kinds.length > 0 ||
+			state.since.length > 0 ||
+			state.until.length > 0 ||
+			state.due
+		)
+			await find("none");
 		if (token !== get().generation) return;
 		if (target && route.screen === "catalog") {
 			const range = readRange(target);
@@ -724,15 +738,13 @@ export function createConsoleController(
 			return guard(async () => {
 				set({
 					query: filters.query.trim(),
-					kind: filters.kind,
+					kinds: filters.kinds,
 					since: filters.since,
+					until: filters.until,
+					due: filters.due,
 					limit: filters.limit,
 					searchScope: filters.searchScope,
 				});
-				if (!get().query) {
-					message(t("searchHint"));
-					return;
-				}
 				await find("push");
 			});
 		},

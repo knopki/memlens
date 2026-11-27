@@ -130,8 +130,10 @@ function initialState(): ConsoleState {
 		selection: undefined,
 		hits: [],
 		query: "",
-		kind: "",
+		kinds: [],
 		since: "",
+		until: "",
+		due: false,
 		limit: DEFAULT_ROUTE.limit,
 		searchScope: null,
 		reviewKind: "",
@@ -406,10 +408,12 @@ function portOf(surface: Surface): StorePort {
 		search: async (fields) =>
 			(await call("search", {
 				...identityOf(surface, fields.profile),
-				scope: fields.scope,
 				query: fields.query,
-				kind: fields.kind,
+				scopes: fields.scopes,
+				kinds: fields.kinds,
 				since: fields.since,
+				until: fields.until,
+				due: fields.due,
 				limit: fields.limit,
 			})) as unknown as readonly IndexHit[],
 		open: async (fields) =>

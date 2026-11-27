@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, it, vi } from "vitest";
+import { nowIso } from "../src/domain/time.js";
 import { ulid } from "../src/domain/ulid.js";
 import {
 	amend,
@@ -602,17 +603,27 @@ describe("move", () => {
 			scope: src,
 			body: "A movecanary fact.",
 		});
-		assert.equal(search(store, "movecanary", src, 10).length, 1);
+		assert.equal(
+			search(store, { query: "movecanary", scopes: [src] }, nowIso()).length,
+			1,
+		);
 		move(store, src, dst);
-		assert.deepEqual(search(store, "movecanary", src, 10), []);
-		const found = search(store, "movecanary", dst, 10);
+		assert.deepEqual(
+			search(store, { query: "movecanary", scopes: [src] }, nowIso()),
+			[],
+		);
+		const found = search(
+			store,
+			{ query: "movecanary", scopes: [dst] },
+			nowIso(),
+		);
 		assert.deepEqual(
 			found.map((hit) => hit.id),
 			[idOf(created)],
 		);
 		assert.equal(found[0]?.scope, dst);
 		assert.deepEqual(
-			search(store, "movecanary", null, 10).map((hit) => hit.id),
+			search(store, { query: "movecanary" }, nowIso()).map((hit) => hit.id),
 			[idOf(created)],
 		);
 		assert.deepEqual(check(store), []);

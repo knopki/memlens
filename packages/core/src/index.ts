@@ -111,9 +111,6 @@ export {
 export {
 	type DueRecord,
 	dueRecords,
-	FIND_DEFAULT_LIMIT,
-	FIND_MAX_PER_SCOPE,
-	filterHits,
 	LONGFORM_ALL,
 	LONGFORM_HEAD,
 	loadRangeView,
@@ -188,7 +185,11 @@ export {
 	scopeNotes,
 } from "./store/reads.js";
 export { check } from "./store/repair.js";
-export { search } from "./store/search.js";
+export {
+	FIND_DEFAULT_LIMIT,
+	type FindFilter,
+	search,
+} from "./store/search.js";
 export { Store } from "./store/store.js";
 export {
 	exportLines,

@@ -1,6 +1,6 @@
 {
 	"name": "@memlens/core",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"description": "The headless library of memlens.",
 	"private": true,
 	"type": "module",

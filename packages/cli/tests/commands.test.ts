@@ -546,6 +546,65 @@ describe("@memlens/cli commands", () => {
 		expect(opened.out).toContain("Deploy on friday");
 	});
 
+	it("lists the newest notes for an empty query and cuts them with --limit", async () => {
+		const test = makeEnv();
+		for (let pos = 0; pos < 12; pos += 1)
+			expect(
+				(await run(test, "note", `Row ${pos}`, "--scope", "project:acme/x"))
+					.code,
+			).toBe(0);
+		const lines = (text: string): string[] => text.split("\n").filter(Boolean);
+		const newest = await run(test, "find", "--scope", "project:acme/x");
+		expect(newest.code).toBe(0);
+		expect(lines(newest.out)).toHaveLength(10);
+		const two = await run(
+			test,
+			"find",
+			"--scope",
+			"project:acme/x",
+			"--limit",
+			"2",
+		);
+		expect(two.code).toBe(0);
+		expect(lines(two.out)).toHaveLength(2);
+	});
+
+	it("finds one kind and refuses an unknown kind", async () => {
+		const test = makeEnv();
+		await run(
+			test,
+			"note",
+			"A task",
+			"--scope",
+			"project:acme/x",
+			"--kind",
+			"task",
+		);
+		await run(
+			test,
+			"note",
+			"A fact",
+			"--scope",
+			"project:acme/x",
+			"--kind",
+			"fact",
+		);
+		const found = await run(
+			test,
+			"find",
+			"--kind",
+			"task",
+			"--scope",
+			"project:acme/x",
+		);
+		expect(found.code).toBe(0);
+		expect(found.out).toContain("A task");
+		expect(found.out).not.toContain("A fact");
+		const unknown = await run(test, "find", "--kind", "urgent");
+		expect(unknown.code).toBe(2);
+		expect(unknown.err).toContain("The kind urgent is unknown");
+	});
+
 	it.each(NOTE_KINDS)(
 		"shows the note kind %s in the open header",
 		async (kind) => {
