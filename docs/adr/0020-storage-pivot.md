@@ -17,7 +17,7 @@ The owner called the event model overcomplex for fork, merge, import, and export
 - Sync merges by channel: content and review by version, lifecycle by maximum, cleared by latch, and the supersede link by first write.
 - Node rows are cache entries guarded by validity keys. The write path deletes every node that covers a changed slot. The render gives children text until compaction rebuilds the node. A join of children that fits the line limit publishes with no model call.
 - Search uses one external-content FTS5 table created with the FTS5 secure-delete option.
-- Redaction is one transaction, and the byte guarantee waits for the truncating checkpoint at close.
+- Redaction is one transaction, and it truncates the write-ahead log right after its commit.
 - The audit journal holds no content and no hash, and never syncs.
 - No revision counter, no scopes table, no fingerprints, and no numeric line budget. The package isolation test guards the shape, and the core exports no replay.
 
