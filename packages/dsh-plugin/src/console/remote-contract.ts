@@ -312,6 +312,7 @@ const screenFields = {
 	catalog: z.array(catalogLine).optional(),
 	catalogScopes: z.array(scopeKey).optional(),
 	review: z.array(dueRecord).optional(),
+	reviewTotal: z.number().optional(),
 	reviewNext: z.array(dueRecord).optional(),
 	reviewNextTotal: z.number().optional(),
 	candidates: z

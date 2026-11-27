@@ -50,6 +50,7 @@ export function viewOf(
 		catalog: [],
 		catalogScopes: [],
 		review: [],
+		reviewTotal: 0,
 		reviewNext: [],
 		reviewNextTotal: 0,
 		candidates: [],

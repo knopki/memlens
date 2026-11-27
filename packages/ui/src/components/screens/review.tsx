@@ -4,7 +4,7 @@
  * their record actions, so a human reviews the notes of one scope.
  * @scope The kind filter, the two note tables, and the review periods. NOT: the reload call, the
  * transport, and the address.
- * @invariants The kind filter keeps one kind in both lists. The next list states its shown count and
+ * @invariants The kind filter keeps one kind in both lists. Each list states its shown count and
  * the count before the cap. The periods panel shows only when the read holds the policy.
  * @invariants A note body goes into a text node.
  * @keywords review, due, next, period, kind, note, actions, react
@@ -97,6 +97,7 @@ export function Review({ api }: ScreenProps): JSX.Element | null {
 	if (!model) return null;
 	const t = api.t;
 	const due = model.review ?? [];
+	const dueTotal = model.reviewTotal ?? 0;
 	const next = model.reviewNext ?? [];
 	const nextTotal = model.reviewNextTotal ?? 0;
 	const policy = model.reviewPolicy;
@@ -130,7 +131,7 @@ export function Review({ api }: ScreenProps): JSX.Element | null {
 			<ReviewTable
 				api={api}
 				title={t("due")}
-				right={String(due.length)}
+				right={`${due.length} / ${dueTotal}`}
 				items={due}
 				allowDelete={model.allowDelete}
 			/>

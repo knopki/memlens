@@ -113,6 +113,7 @@ function viewOf(patch: Partial<View> = {}): View {
 			},
 		],
 		review: [DUE],
+		reviewTotal: 1,
 		reviewNext: [NEXT],
 		reviewNextTotal: 4,
 		reviewPolicy: {
@@ -260,7 +261,7 @@ describe("review screen", () => {
 		);
 		expect(markup).toContain("The notes with a review time of now");
 		expect(markup).toContain('<span class="t">Due</span>');
-		expect(markup).toContain('<span class="r">1</span>');
+		expect(markup).toContain('<span class="r">1 / 1</span>');
 		expect(markup).toContain('<span class="r">1 / 4</span>');
 		expect(markup).toContain("<th>Address</th>");
 		expect(markup).toContain("<th>Review date</th>");

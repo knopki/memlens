@@ -12,6 +12,7 @@
  *   read holds them.
  * @invariants The live refresh starts on mount and stops on cleanup, so another screen holds no
  *   timer. The refresh reads the runtime state only, so it reloads no view.
+ * @invariants The merge panel states the shown candidates and the count before the cap.
  * @keywords maintenance, budget, candidate, level, runtime, snapshot, compaction, journal, refresh
  * #endregion moduleContract
  */
@@ -61,7 +62,10 @@ export function Maintenance({ api }: ScreenProps): JSX.Element | null {
 					)}
 				</Panel>
 			) : null}
-			<Panel title={t("mergeCandidates")} right={String(candidates.length)}>
+			<Panel
+				title={t("mergeCandidates")}
+				right={`${candidates.length} / ${totals?.candidates ?? candidates.length}`}
+			>
 				<Table
 					headers={[t("scope"), t("range"), t("level"), t("state")]}
 					rows={candidates.map((item) => [
