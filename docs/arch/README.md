@@ -282,6 +282,34 @@ node delete`" .-> MemlensDb
   linkStyle 0,1,2,3 stroke:#8D8D8D,stroke-dasharray:8 4
 ```
 
+### Import run
+
+The CLI imports one JSONL file. The import ranks each incoming row
+against the local rows of its scope, in memory.
+A new id lands between its key neighbors. A known id merges into its local row.
+One transaction then writes each final slot once.
+
+```mermaid
+---
+title: "Import run"
+---
+graph LR
+  MemlensCliCommands@{ shape: rectangle, label: "Terminal commands" }
+  MemlensCoreTransfer@{ shape: rectangle, label: "Transfer" }
+  MemlensDb@{ shape: disk, label: "SQLite store" }
+  MemlensCliCommands -. "`imports the validated file`" .-> MemlensCoreTransfer
+  MemlensCoreTransfer -. "`reads the id, the time, and the slot of 
+each local note of the touched scopes`" .-> MemlensDb
+  MemlensCoreTransfer -. "`ranks the incoming rows into the key 
+order of each scope`" .-> MemlensCoreTransfer
+  MemlensCoreTransfer -. "`one transaction: each final slot once, 
+the index rows, one node range delete 
+per scope`" .-> MemlensDb
+  classDef primary fill:#3b82f6,stroke:#2563eb,color:#eff6ff
+  class MemlensCliCommands,MemlensCoreTransfer,MemlensDb primary
+  linkStyle 0,1,2,3 stroke:#8D8D8D,stroke-dasharray:8 4
+```
+
 ### Compaction pass
 
 The worker runs one pass when the host is idle. It holds no default model:

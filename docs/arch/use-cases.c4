@@ -27,6 +27,26 @@ views 'Use cases' {
     agent <- memlens.plugin.tools 'returns addresses and target echoes'
   }
 
+  dynamic view import-run {
+    title 'Import run'
+    description '
+      The CLI imports one JSONL file. The import ranks each incoming row
+      against the local rows of its scope, in memory.
+      A new id lands between its key neighbors. A known id merges into its local row.
+      One transaction then writes each final slot once.
+    '
+
+    memlens.cli.commands -> memlens.core.transfer 'imports the validated file'
+    memlens.core.transfer -> memlens.db 'reads the id, the time, and the slot of each local note of the touched scopes'
+    memlens.core.transfer -> memlens.core.transfer 'ranks the incoming rows into the key order of each scope' {
+      notes '
+        A content win moves the key or the scope of the local note.
+        A local note changes its slot only when a younger key lands below it.
+      '
+    }
+    memlens.core.transfer -> memlens.db 'one transaction: each final slot once, the index rows, one node range delete per scope'
+  }
+
   dynamic view compaction-pass {
     title 'Compaction pass'
     description '

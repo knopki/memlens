@@ -64,6 +64,8 @@ model {
       transfer = component 'Transfer' {
         description '
           JSONL import and export of full note state. The Markdown format is export-only.
+          The import ranks the incoming rows against the local rows of each touched scope.
+          One transaction then writes each final slot once.
         '
       }
     }
