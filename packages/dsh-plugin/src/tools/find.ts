@@ -66,7 +66,7 @@ export function findTool(memory: AgentMemory): ToolDefinition {
 	return defineTool({
 		name: "memory_find",
 		description:
-			"Find memory notes by words. Each word must match, and a word with a leading minus is excluded. An empty query gives the newest notes. The filters cut the rows before the limit. Each hit gives its address as scope#pos.",
+			"Find memory notes by words. Each word must match, and a word with a leading minus is excluded. An empty query gives the newest notes. Each hit gives its address as scope#pos.",
 		parameters: {
 			query: {
 				type: "string",

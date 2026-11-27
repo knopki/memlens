@@ -280,4 +280,3 @@ An error carries a code and a message, and the exit code follows the kind.
 | Compaction       | `batch` 10, a whole number above zero, no upper limit, 120 calls in an hour           |
 | Nudge            | `tool_calls` and `turns` 10                                                           |
 | GC of proposals  | 30 days                                                                               |
-| `find`           | 10 records                                                                            |
