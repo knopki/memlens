@@ -23,11 +23,10 @@
 import { debuglog } from "node:util";
 import { ConsoleReader } from "../store/console.js";
 import {
-	amend,
 	amendTx,
 	hide,
 	hideTx,
-	linkSupersedes,
+	linkSupersedesTx,
 	type NoteInput,
 	note,
 	noteCheckedTx,
@@ -361,29 +360,29 @@ function applyRecordAction(
 // #endregion FUNC_applyRecordAction
 
 // #region FUNC_amendRecord
-/** @purpose Change the body, the longform, the kind, the scope, or the supersedes of one note. */
+/**
+ * @purpose Change the body, the longform, the kind, the scope, or the supersedes of one note.
+ * @invariants One publish applies the supersede links and the amendment, so a refused edit changes
+ *   no note.
+ */
 function amendRecord(host: ConsoleHost, record: Note, fields: Fields): void {
 	const destination = text(fields, "dest") || record.scope;
 	const kind = text(fields, "kind");
+	const destScope = allowedScope(host, destination);
 	const targets = text(fields, "supersedes")
 		.split(",")
 		.map((item) => item.trim())
-		.filter(Boolean);
-	if (targets.length > 0)
-		linkSupersedes(
-			host.store,
-			record.id,
-			targets.map(
-				(target) =>
-					targetRecord(host, allowedScope(host, destination), target).id,
-			),
-		);
-	amend(host.store, {
-		id: record.id,
-		scope: allowedScope(host, destination),
-		body: text(fields, "body"),
-		longform: text(fields, "longform"),
-		...(kind ? { kind: noteKind(kind) } : {}),
+		.filter(Boolean)
+		.map((target) => targetRecord(host, destScope, target).id);
+	host.store.publish((tx) => {
+		if (targets.length > 0) linkSupersedesTx(tx, record.id, targets);
+		amendTx(tx, {
+			id: record.id,
+			scope: destScope,
+			body: text(fields, "body"),
+			longform: text(fields, "longform"),
+			...(kind ? { kind: noteKind(kind) } : {}),
+		});
 	});
 }
 // #endregion FUNC_amendRecord
