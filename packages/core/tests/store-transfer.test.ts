@@ -33,6 +33,7 @@ import {
 } from "../src/store/transfer-format.js";
 import { mergeRow } from "../src/store/transfer-merge.js";
 import { MemlensError } from "../src/types/errors.js";
+import type { ScopeKey } from "../src/types/primitives.js";
 
 const dirs: string[] = [];
 
@@ -350,6 +351,23 @@ describe("file validation", () => {
 			() => importLines(makeStore(), repeated),
 			(error) => error instanceof MemlensError && error.code === "Data",
 		);
+	});
+
+	it("refuses an invalid as scope key before any write", () => {
+		const source = makeStore();
+		addNote(source.handle(), {
+			id: "n1",
+			ts: "2026-01-01T00:00:00.000Z",
+			body: "alpha",
+			v: version(1),
+		});
+		const file = exportLines(source);
+		const target = makeStore();
+		assert.throws(
+			() => importLines(target, file, { as: "myproject" as ScopeKey }),
+			/The scope key is not valid\./,
+		);
+		assert.deepEqual(dump(target), []);
 	});
 });
 // #endregion FUNC_test_validation
