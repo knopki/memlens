@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Read and change the stored note row, so each note write keeps the row and the index in step.
- * @scope The row shape, the index row, the slot open, the row read, the duplicate test, and the body limits.
+ * @scope The row shape, the index row, the row read, the duplicate test, and the body limits.
  *  NOT: the operations, the transactions, the journal, and the nodes.
  * @dependencies USES API: node:sqlite
  * @keywords note, row, slot, fts, index, refs, duplicate, body
@@ -17,7 +17,7 @@ import { MemlensError } from "../types/errors.js";
 import type { NoteKind, ScopeKey } from "../types/primitives.js";
 import { deleteRange } from "./nodes.js";
 import { parseRefs } from "./rows.js";
-import { nextSlot, rankFor } from "./slots.js";
+import { nextSlot } from "./slots.js";
 import type { Note, NoteState } from "./types.js";
 
 const debug = debuglog("memlens:notes");
@@ -93,31 +93,6 @@ export function ftsSet(
 	}
 }
 // #endregion FUNC_ftsSet
-
-// #region FUNC_openSlot
-/**
- * @purpose Open the rank slot of one key, and move each later slot one place up.
- * @invariants Two statements pass the moved tail through a negative band, so no pair of slots clashes.
- * @requires The caller runs the statements inside the write transaction.
- * @returns The free slot of the key.
- */
-export function openSlot(
-	db: DatabaseSync,
-	scope: ScopeKey,
-	ts: string,
-	id: string,
-): number {
-	const pos = rankFor(db, scope, ts, id);
-	db.prepare(
-		"UPDATE notes SET pos = -pos - 1 WHERE scope = ? AND pos >= ?",
-	).run(scope, pos);
-	db.prepare("UPDATE notes SET pos = -pos WHERE scope = ? AND pos < 0").run(
-		scope,
-	);
-	debug("Slot open", { event: "slot_open", slot: pos });
-	return pos;
-}
-// #endregion FUNC_openSlot
 
 // #region FUNC_deleteShifted
 /**
