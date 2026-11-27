@@ -71,8 +71,8 @@ not remember one.
 
 A hidden note keeps its slot and its content, and it leaves the view. A redacted note keeps its
 row as a tombstone with no content. The redaction clears the body, the longform, the index row, the
-covering node rows, and the proposals that name the note in one transaction. The write-ahead log
-keeps the earlier frames until the close truncates it.
+covering node rows, and the proposals that name the note in one transaction. The redaction then
+truncates the write-ahead log, so no earlier frame keeps the cleared text. A busy result is a state.
 
 ## The tree
 

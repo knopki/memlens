@@ -8,7 +8,7 @@
  */
 
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
@@ -470,6 +470,17 @@ describe("redact", () => {
 		assert.equal(count(store, "SELECT count(*) AS c FROM nodes"), 0);
 		assert.equal(count(store, "SELECT count(*) AS c FROM proposals"), 0);
 		assert.equal(ftsCount(store, marker), 0);
+	});
+
+	it("truncates the write-ahead log after the redaction", () => {
+		const { store, dir } = fresh();
+		const marker = "redactwalcanaryzz77";
+		const created = note(store, { ...BASE, body: `A fact with ${marker}.` });
+		const cleared = redact(store, idOf(created), "Operator request.");
+		assert.equal(cleared.cleared, true);
+		const wal = join(dir, "memlens.db-wal");
+		assert.equal(statSync(wal).size, 0);
+		assert.equal(readFileSync(wal).includes(marker), false);
 	});
 });
 // #endregion FUNC_test_redact
