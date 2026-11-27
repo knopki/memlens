@@ -264,32 +264,44 @@ export function linkSupersedes(
 	id: string,
 	targets: readonly string[],
 ): void {
-	store.publish((tx) => {
-		const source = requireRow(tx.db, id);
-		const now = new Date().toISOString();
-		for (const target of targets) {
-			const row = requireRow(tx.db, target);
-			if (row.scope !== source.scope)
-				throw new MemlensError(
-					"CrossScopeSupersede",
-					"A supersede target belongs to another scope.",
-				);
-			if (row.cleared === 1)
-				throw new MemlensError("Data", "A cleared note cannot change.");
-			if (row.superseded_by !== null) continue;
-			ftsSet(tx.db, row.n, ftsRowOf(row), null);
-			tx.db
-				.prepare(
-					"UPDATE notes SET state = 'hidden', superseded_by = ?, v = ?, modified_at = ? WHERE id = ?",
-				)
-				.run(id, tx.version, now, target);
-			deleteCovering(tx.db, row.scope, row.pos);
-			tx.journal("supersede", target, row.scope);
-		}
-		tx.journal("supersede", id, source.scope);
-	});
+	store.publish((tx) => linkSupersedesTx(tx, id, targets));
 }
 // #endregion FUNC_linkSupersedes
+
+// #region FUNC_linkSupersedesTx
+/**
+ * @purpose Link the supersede targets of one source within the caller transaction.
+ * @invariants A refused target rolls back with the whole caller transaction, so no target hides alone.
+ */
+export function linkSupersedesTx(
+	tx: Tx,
+	id: string,
+	targets: readonly string[],
+): void {
+	const source = requireRow(tx.db, id);
+	const now = new Date().toISOString();
+	for (const target of targets) {
+		const row = requireRow(tx.db, target);
+		if (row.scope !== source.scope)
+			throw new MemlensError(
+				"CrossScopeSupersede",
+				"A supersede target belongs to another scope.",
+			);
+		if (row.cleared === 1)
+			throw new MemlensError("Data", "A cleared note cannot change.");
+		if (row.superseded_by !== null) continue;
+		ftsSet(tx.db, row.n, ftsRowOf(row), null);
+		tx.db
+			.prepare(
+				"UPDATE notes SET state = 'hidden', superseded_by = ?, v = ?, modified_at = ? WHERE id = ?",
+			)
+			.run(id, tx.version, now, target);
+		deleteCovering(tx.db, row.scope, row.pos);
+		tx.journal("supersede", target, row.scope);
+	}
+	tx.journal("supersede", id, source.scope);
+}
+// #endregion FUNC_linkSupersedesTx
 
 // #region FUNC_amend
 /**

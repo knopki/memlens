@@ -414,6 +414,26 @@ describe("console", () => {
 		expect(source.supersedes).toEqual([replaced.id]);
 	});
 
+	it("keeps the supersede targets visible when the amendment is refused", async () => {
+		const { get, post } = await fixture();
+		await post({ action: "note", body: "first", kind: "note" });
+		await post({ action: "note", body: "second", kind: "note" });
+		const refused = await post({
+			action: "amend",
+			target: "user:notes#1",
+			dest: "user:notes",
+			body: "second",
+			longform: "x".repeat(16385),
+			supersedes: "0",
+		});
+		expect(refused.status).toBe(422);
+		const target = await get(
+			`/api/open?target=${encodeURIComponent("user:notes#0")}`,
+		);
+		expect(target.state).toBe("live");
+		expect(target.superseded_by).toBeNull();
+	});
+
 	it("shows a proposal of an unlisted scope and accepts it", async () => {
 		const { root, env, get, post } = await fixture(false, '["user:*"]');
 		const runtime = await openRuntime({
