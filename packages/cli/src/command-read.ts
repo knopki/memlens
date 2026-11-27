@@ -42,6 +42,7 @@ import {
 	type CommandIo,
 	checkedScope,
 	command,
+	day,
 	JSON_FLAG,
 	KINDS,
 	limit,
@@ -76,8 +77,8 @@ export function commands(run: Run): Command[] {
 			.addOption(SCOPES)
 			.addOption(KINDS)
 			.addOption(limit(10))
-			.option("--since <day>", "The first day of the period.")
-			.option("--until <day>", "The last day of the period.")
+			.option("--since <day>", "The first day of the period.", day)
+			.option("--until <day>", "The last day of the period.", day)
 			.option("--due", "Keep the records with a review date in the past.")
 			.addOption(JSON_FLAG)
 			.addOption(STORE)

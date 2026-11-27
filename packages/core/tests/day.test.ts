@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { dayOf } from "../src/domain/day.js";
+import { dayOf, parseDay } from "../src/domain/day.js";
 
 vi.hoisted(() => {
 	process.env.TZ = "Europe/Moscow";
@@ -25,5 +25,20 @@ describe("dayOf", () => {
 	it("gives a day unchanged, and the first 10 characters of a text that is not a time", () => {
 		expect(dayOf("2026-11-28")).toBe("2026-11-28");
 		expect(dayOf("not a time at all")).toBe("not a time");
+	});
+});
+
+describe("parseDay", () => {
+	it("gives a day of the calendar unchanged", () => {
+		expect(parseDay("2026-11-28")).toBe("2026-11-28");
+		expect(parseDay("2024-02-29")).toBe("2024-02-29");
+	});
+
+	it("gives null for a text outside YYYY-MM-DD and for a day the calendar lacks", () => {
+		expect(parseDay("yesterday")).toBeNull();
+		expect(parseDay("5")).toBeNull();
+		expect(parseDay("2026-2-3")).toBeNull();
+		expect(parseDay("2026-02-30")).toBeNull();
+		expect(parseDay("2026-13-01")).toBeNull();
 	});
 });

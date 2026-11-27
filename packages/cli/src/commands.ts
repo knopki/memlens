@@ -26,6 +26,7 @@ import {
 	MemlensError,
 	NOTE_KINDS,
 	normalizeScopeKey,
+	parseDay,
 	parseNoteTime,
 } from "@memlens/core";
 import { Command, InvalidArgumentError, Option } from "commander";
@@ -159,6 +160,19 @@ export function noteTime(value: string): string {
 		throw new InvalidArgumentError("needs a day or an ISO 8601 time.");
 	return time;
 }
+
+// #region FUNC_day
+/**
+ * @purpose Read the day of one flag, so a command refuses a text that is not a day of the calendar.
+ * @ensures The result is a day of the calendar, or the read throws an argument error.
+ */
+export function day(value: string): string {
+	const result = parseDay(value);
+	if (result === null)
+		throw new InvalidArgumentError("needs a day, as YYYY-MM-DD.");
+	return result;
+}
+// #endregion FUNC_day
 
 /** Read one port of the console. */
 export function port(value: string): number {

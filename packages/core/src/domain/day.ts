@@ -2,8 +2,8 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Give the day of a stored UTC time in the zone of the process, so a view shows the day of the reader.
- * @scope The day text of one ISO 8601 time. NOT: the stored form of a time and the clock.
- * @keywords day, date, zone
+ * @scope The day text of one ISO 8601 time, and the reading of one day text that a flag gives. NOT: the stored form of a time and the clock.
+ * @keywords day, date, zone, read, reject
  * #endregion moduleContract
  */
 
@@ -31,3 +31,19 @@ export function dayOf(iso: string): string {
 	return `${field("year")}-${field("month")}-${field("day")}`;
 }
 // #endregion FUNC_dayOf
+
+// #region FUNC_parseDay
+/**
+ * @purpose Read one day text and reject a day that the calendar does not hold, so a flag refuses a
+ *   date that looks right and is not.
+ * @ensures The result is the same text for a day of the calendar.
+ * @ensures The result is null for a text outside YYYY-MM-DD, and for a day that the calendar does
+ *   not hold.
+ */
+export function parseDay(text: string): string | null {
+	const time = DAY.test(text) ? Date.parse(`${text}T00:00:00`) : Number.NaN;
+	return Number.isNaN(time) || dayOf(new Date(time).toISOString()) !== text
+		? null
+		: text;
+}
+// #endregion FUNC_parseDay
