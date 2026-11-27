@@ -134,6 +134,16 @@ default = "user:notes"
 const WORK_CONFIG = baseConfig("work", '["project:*"]');
 
 describe("@memlens/cli commands", () => {
+	it.each(["", " \t\n\r "])("rejects a blank note body %j", async (body) => {
+		const test = makeEnv(WORK_CONFIG);
+		const answer = await run(test, "note", body, "--scope", "project:a");
+		expect(answer.code).toBe(2);
+		expect(answer.err).toContain("The note body is empty.");
+		expect(
+			(await run(test, "note", "first note", "--scope", "project:a")).out,
+		).toContain("saved project:a#0");
+	});
+
 	it("previews and moves a scope, reports cleared rows, and repeats without writes", async () => {
 		const test = makeEnv(WORK_CONFIG);
 		const src = "project:source";

@@ -219,7 +219,7 @@ export class ConsoleReader {
 				"SELECT substr(CAST(body || CASE WHEN longform IS NOT NULL AND longform != '' THEN char(10) || longform ELSE '' END AS BLOB), 1, ?) AS text FROM notes WHERE scope = ? AND pos = ? AND state = 'live'",
 			).get(LINE_LIMIT * 4, this.scope, range.start);
 			return row
-				? Buffer.from(row.text as Uint8Array)
+				? Buffer.from((row.text ?? "") as Uint8Array)
 						.toString("utf8")
 						.slice(0, LINE_LIMIT)
 				: "";
