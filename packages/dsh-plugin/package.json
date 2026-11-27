@@ -1,6 +1,6 @@
 {
 	"name": "@memlens/dsh-plugin",
-	"version": "0.1.4",
+	"version": "0.2.0",
 	"description": "DeepSeek Harness plugin that gives an agent long-term memory: notes and a summary tree in one SQLite store, with memory tools and a console.",
 	"keywords": [
 		"dsh",
