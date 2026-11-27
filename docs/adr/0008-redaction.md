@@ -17,9 +17,9 @@ id, its slot, its date, and its state.
 A cleared row refuses a content change. A later summary build uses the remaining live children, and
 no path restores the cleared text. The store holds no scrub call.
 
-The commit holds the logical delete. The redaction runs one truncating checkpoint after the commit,
-so the write-ahead log holds no earlier frame of the cleared text. The close truncates the log too.
-A busy result is a state. The command reports no byte guarantee.
+The commit holds the logical delete, and the write-ahead log keeps its frames until the store
+closes. The close runs one truncating checkpoint, and a busy result is a state. The command reports
+no byte guarantee.
 
 The store guarantees no cleared value in its rows and in its index. It claims no forensic clearing
 of free filesystem blocks, and it rewrites no earlier export.

@@ -485,9 +485,9 @@ export function restore(store: Store, id: Ulid, reason?: string): Note {
 
 // #region FUNC_redact
 /**
- * @purpose Clear the content of one note from the memory, and leave no copy of it in the write-ahead log.
+ * @purpose Clear the content of one note.
  * @invariants The transaction clears the row, the index row, the covering nodes, and the proposals of the target.
- * @invariants The call truncates the write-ahead log after the commit. A busy or failed checkpoint is a state.
+ * @invariants The call truncates the write-ahead log after the commit.
  * @returns The cleared note.
  */
 export function redact(store: Store, id: Ulid, reason: string): Note {
