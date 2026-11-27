@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
 	compactionPass,
+	publishRound,
 	RateWindow,
 	retryDelay,
 } from "../src/domain/compaction.js";
@@ -27,7 +28,8 @@ import {
 	OUTPUT_ONE,
 	parseBatchAnswer,
 } from "../src/domain/merge-line.js";
-import { amend, note } from "../src/store/notes.js";
+import { candidates } from "../src/store/build.js";
+import { amend, hide, note } from "../src/store/notes.js";
 import { Store } from "../src/store/store.js";
 import { loadView, sliceOf } from "../src/store/view.js";
 import type { BuildChild, BuildInput } from "../src/types/tree.js";
@@ -687,5 +689,100 @@ describe("compactionPass", () => {
 		});
 		expect(result).toMatchObject({ rejected: 1, built: 0, calls: 1 });
 		expect(loadView(store.handle(), "p:x").nodes).toHaveLength(0);
+	});
+});
+
+describe("publishRound", () => {
+	const stores: Store[] = [];
+	const dirs: string[] = [];
+	afterAll(() => {
+		for (const store of stores) store.close();
+		for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
+	});
+	function open(): Store {
+		const dir = mkdtempSync(join(tmpdir(), "memlens-round-"));
+		dirs.push(dir);
+		const store = new Store(dir);
+		stores.push(store);
+		return store;
+	}
+	function add(store: Store, body: string, index: number) {
+		const result = note(store, {
+			scope: "p:x",
+			kind: "note",
+			body,
+			session: "s",
+			turn: "t",
+			preset: "p",
+			ts: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+		});
+		if (!result.ok) throw new Error(result.reason);
+		return result.value;
+	}
+	it("publishes a join chain from one view per round", () => {
+		const store = open();
+		for (let i = 0; i < 4; i++) add(store, `note ${i}`, i);
+		const first = publishRound(store, "p:x");
+		expect(first).toMatchObject({ published: 2, joined: 2 });
+		expect(first.pending).toHaveLength(2);
+		expect(first.pending[0]?.range).toEqual({ start: 0, level: 1 });
+		expect(first.pending[0]?.input.children).toMatchObject([
+			{ kind: "record", pos: 0, body: "note 0", preview: "" },
+			{ kind: "record", pos: 1, body: "note 1", preview: "" },
+		]);
+		const second = publishRound(store, "p:x");
+		expect(second).toMatchObject({ published: 1, joined: 1 });
+		expect(second.pending).toHaveLength(1);
+		const third = publishRound(store, "p:x");
+		expect(third).toMatchObject({ published: 0, joined: 0 });
+		expect(third.pending).toEqual([]);
+		expect(candidates(store, "p:x")).toEqual([]);
+	});
+	it("publishes a copy for one live half", () => {
+		const store = open();
+		add(store, "kept", 0);
+		const drop = add(store, "hidden", 1);
+		hide(store, drop.id);
+		const round = publishRound(store, "p:x");
+		expect(round).toMatchObject({ published: 1, joined: 0 });
+		expect(round.pending).toHaveLength(1);
+		expect(candidates(store, "p:x")).toEqual([]);
+		expect(
+			store.handle().prepare("SELECT summary FROM nodes").get()?.summary,
+		).toBe("kept");
+	});
+	it("holds an oversized pair as a merge input", () => {
+		const store = open();
+		add(store, "a".repeat(400), 0);
+		add(store, "b".repeat(400), 1);
+		const round = publishRound(store, "p:x");
+		expect(round).toMatchObject({ published: 0, joined: 0 });
+		expect(round.pending).toHaveLength(1);
+		expect(round.pending[0]?.read.fits).toBe(false);
+	});
+	it("runs one publish and no read per round of a whole compaction", () => {
+		const store = open();
+		for (let i = 0; i < 64; i++) add(store, `note ${i}`, i);
+		let reads = 0;
+		let publishes = 0;
+		const read = store.read.bind(store);
+		const publish = store.publish.bind(store);
+		store.read = ((work) => {
+			reads += 1;
+			return read(work);
+		}) as typeof store.read;
+		store.publish = ((work) => {
+			publishes += 1;
+			return publish(work);
+		}) as typeof store.publish;
+		let rounds = 0;
+		for (;;) {
+			rounds += 1;
+			if (!publishRound(store, "p:x").published) break;
+		}
+		// Six levels of 64 notes publish, then one empty round ends the loop.
+		expect(rounds).toBe(7);
+		expect(publishes).toBe(7);
+		expect(reads).toBe(0);
 	});
 });

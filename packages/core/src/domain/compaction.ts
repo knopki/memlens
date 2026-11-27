@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Build clean summaries for dirty tree ranges, so the view holds text without waiting.
- * @scope The retry pacing, the model call limit, and one compaction pass.
+ * @scope The retry pacing, the model call limit, one compaction pass, and the mechanical rounds.
  *  NOT: the line text, the prompts, the triggers, the timers, and the model service.
  * @invariants The host owns the trigger, the timer, the loop, and the model service.
  * @invariants Failed attempts wait 10, 60, then 300 seconds. The waits and in-flight work are local
@@ -16,20 +16,26 @@
 import { debuglog } from "node:util";
 import {
 	type BuildRead,
+	captureRound,
 	childOf,
+	insertNode,
 	publishJoin,
 	publishNode,
+	type RoundEntry,
 	readBuild,
 	candidates as storeCandidates,
 } from "../store/build.js";
 import type { Store } from "../store/store.js";
+import { joinText, loadView } from "../store/view.js";
 import type { ScopeKey } from "../types/primitives.js";
 import type { BuildInput } from "../types/tree.js";
 import { DEFAULT_COMPACTION_BATCH } from "./config-types.js";
 import {
 	address,
 	batchTask,
+	copyBuild,
 	finalizeLine,
+	joinBuild,
 	type LineBuild,
 	MERGE_SYSTEM_BATCH,
 	type MergeModel,
@@ -283,3 +289,64 @@ async function runBatch(
 		await runBatch(unresolved.slice(index, index + size), model, publish);
 }
 // #endregion FUNC_runBatch
+
+// #region FUNC_publishRound
+/**
+ * @purpose Publish the copies and joins of one round from one view, so a big store compacts
+ * without a view load per range.
+ * @invariants One view load serves each read and each publish of the round. The write lock holds
+ * during the round, so each publish keeps its captured keys and dates.
+ * @returns The ready entries of the round and the counts of the accepted publishes.
+ */
+export function publishRound(
+	store: Store,
+	scope: ScopeKey,
+): {
+	readonly pending: readonly RoundEntry[];
+	readonly published: number;
+	readonly joined: number;
+} {
+	const result = store.publish((tx) => {
+		// One view for the whole round: each read comes from it, and each publish
+		// keeps the keys of that read. No other writer can change a key in between.
+		const entries = captureRound(loadView(tx.db, scope));
+		let published = 0;
+		let joined = 0;
+		for (const { range, read, input } of entries) {
+			const [left, right] = input.children;
+			// Two children join when the whole pair fits the line.
+			const line = left && right ? joinBuild(input) : null;
+			// One child copies when it fits. A pair above the limit stays for the
+			// merge job of the caller and returns in `pending`.
+			let summary: string | null = null;
+			if (line !== null && read.fits) {
+				summary = joinText(read.aText ?? "", read.bText ?? "").text;
+				joined += 1;
+			} else if (line === null && (!left || !right) && read.fits) {
+				summary = copyBuild(input).summary;
+			}
+			if (summary === null) continue;
+			insertNode(
+				tx.db,
+				scope,
+				range.level,
+				range.start,
+				summary,
+				read,
+				tx.version,
+				read.aKey,
+				read.bKey,
+			);
+			published += 1;
+		}
+		debug("Round published", {
+			scope,
+			found: entries.length,
+			published,
+			joined,
+		});
+		return { pending: entries, published, joined };
+	});
+	return result.value;
+}
+// #endregion FUNC_publishRound

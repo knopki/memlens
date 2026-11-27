@@ -7,10 +7,11 @@
  * #endregion moduleContract
  */
 
+import type { DatabaseSync } from "node:sqlite";
 import { debuglog } from "node:util";
 import { due } from "../domain/tree.js";
 import type { ScopeKey } from "../types/primitives.js";
-import type { BuildChild, Range } from "../types/tree.js";
+import type { BuildChild, BuildInput, Range } from "../types/tree.js";
 import type { Store } from "./store.js";
 import {
 	candidatesOf,
@@ -19,6 +20,7 @@ import {
 	loadView,
 	nodeAt,
 	nodeValid,
+	notesInRange,
 	type View,
 } from "./view.js";
 
@@ -58,9 +60,7 @@ type Half = {
 // #region FUNC_half
 /** @purpose Read one ready child or detect an unready child. */
 function half(view: View, level: number, start: number): Half {
-	const live = view.notes.filter(
-		(n) => n.state === "live" && n.pos >= start && n.pos < start + 2 ** level,
-	);
+	const live = notesInRange(view, start, start + 2 ** level);
 	if (!live.length) return { key: null, text: null, preview: null };
 	if (level === 0) {
 		const note = live[0];
@@ -81,9 +81,7 @@ function half(view: View, level: number, start: number): Half {
 // #region FUNC_snapshot
 /** @purpose Capture the current children and the live dates of the range and of each half. */
 function snapshot(view: View, level: number, start: number): BuildRead | null {
-	const live = view.notes.filter(
-		(n) => n.state === "live" && n.pos >= start && n.pos < start + 2 ** level,
-	);
+	const live = notesInRange(view, start, start + 2 ** level);
 	const first = live[0];
 	const last = live[live.length - 1];
 	if (!first || !last || level < 1) return null;
@@ -133,6 +131,35 @@ export function readBuild(
 	return result ?? { ok: false, reason: "empty" };
 }
 // #endregion FUNC_readBuild
+
+// #region FUNC_insertNode
+/** @purpose Write one node row with the keys and dates of one captured read. */
+export function insertNode(
+	db: DatabaseSync,
+	scope: ScopeKey,
+	level: number,
+	start: number,
+	summary: string,
+	read: BuildRead,
+	version: string,
+	aKey: string | null,
+	bKey: string | null,
+): void {
+	db.prepare(
+		"INSERT OR REPLACE INTO nodes (scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	).run(
+		scope,
+		level,
+		start,
+		summary,
+		read.tsFrom,
+		read.tsTo,
+		version,
+		aKey,
+		bKey,
+	);
+}
+// #endregion FUNC_insertNode
 
 // #region FUNC_childOf
 /**
@@ -185,21 +212,17 @@ export function publishNode(
 		const current = snapshot(loadView(tx.db, scope), level, start);
 		if (!current || current.aKey !== read.aKey || current.bKey !== read.bKey)
 			return false;
-		tx.db
-			.prepare(
-				"INSERT OR REPLACE INTO nodes (scope, level, start, summary, ts_from, ts_to, built_v, a_key, b_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			)
-			.run(
-				scope,
-				level,
-				start,
-				summary,
-				read.tsFrom,
-				read.tsTo,
-				tx.version,
-				current.aKey,
-				current.bKey,
-			);
+		insertNode(
+			tx.db,
+			scope,
+			level,
+			start,
+			summary,
+			read,
+			tx.version,
+			current.aKey,
+			current.bKey,
+		);
 		return true;
 	});
 	if (!result.value) {
@@ -234,20 +257,68 @@ export function publishJoin(
 }
 // #endregion FUNC_publishJoin
 
+// #region FUNC_sortedCandidates
+/** @purpose List the covered ranges without valid cache rows, older coverage first. */
+function sortedCandidates(index: ReturnType<typeof indexOf>): readonly Range[] {
+	return candidatesOf(index).sort(
+		(a, b) =>
+			due(index.total, { start: b.start, level: b.level - 1 }) -
+				due(index.total, { start: a.start, level: a.level - 1 }) ||
+			a.level - b.level ||
+			a.start - b.start,
+	);
+}
+// #endregion FUNC_sortedCandidates
+
 // #region FUNC_candidates
 /** @purpose List covered ranges without valid cache rows, with older coverage first. */
 export function candidates(store: Store, scope: ScopeKey): readonly Range[] {
 	return store.read((db) => {
-		const index = indexOf(loadView(db, scope));
-		const result = candidatesOf(index).sort(
-			(a, b) =>
-				due(index.total, { start: b.start, level: b.level - 1 }) -
-					due(index.total, { start: a.start, level: a.level - 1 }) ||
-				a.level - b.level ||
-				a.start - b.start,
-		);
+		const result = sortedCandidates(indexOf(loadView(db, scope)));
 		debug("Candidates listed", { scope, count: result.length });
 		return result;
 	});
 }
 // #endregion FUNC_candidates
+
+/** One ready range of one round: its captured read and the merge input of that read. */
+export interface RoundEntry {
+	readonly range: Range;
+	readonly read: BuildRead;
+	readonly input: BuildInput;
+}
+
+// #region FUNC_captureRound
+/** @purpose Capture each ready range of one view, in candidate order, with the input of each read. */
+export function captureRound(view: View): RoundEntry[] {
+	const entries: RoundEntry[] = [];
+	for (const range of sortedCandidates(indexOf(view))) {
+		const read = snapshot(view, range.level, range.start);
+		if (!read) continue;
+		const width = 2 ** (range.level - 1);
+		entries.push({
+			range,
+			read,
+			input: {
+				range,
+				children: [
+					childOf(read, range, range.start),
+					childOf(read, range, range.start + width),
+				],
+			},
+		});
+	}
+	debug("Round captured", { scope: view.scope, found: entries.length });
+	return entries;
+}
+// #endregion FUNC_captureRound
+
+// #region FUNC_readRound
+/** @purpose Capture each ready range of one scope from one view, with no write. */
+export function readRound(
+	store: Store,
+	scope: ScopeKey,
+): readonly RoundEntry[] {
+	return store.read((db) => captureRound(loadView(db, scope)));
+}
+// #endregion FUNC_readRound

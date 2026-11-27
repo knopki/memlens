@@ -1,7 +1,8 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Check build snapshots and conditional publication against store rows.
+ * @purpose Check build snapshots, the rounds of the compaction, and conditional publication
+ * against store rows.
  * #endregion moduleContract
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -14,6 +15,7 @@ import {
 	publishJoin,
 	publishNode,
 	readBuild,
+	readRound,
 } from "../src/store/build.js";
 import { amend, hide, note } from "../src/store/notes.js";
 import { Store } from "../src/store/store.js";
@@ -165,5 +167,15 @@ describe("store build", () => {
 		hide(store, first.id);
 		const read = readBuild(store, "p:x", 1, 0);
 		expect(read).toMatchObject({ aKey: null, aText: null, fits: true });
+	});
+	it("reads one round of an oversized pair without a write", () => {
+		const store = open();
+		add(store, "a".repeat(400), 1);
+		add(store, "b".repeat(400), 2);
+		const rev = store.rev();
+		const round = readRound(store, "p:x");
+		expect(round).toHaveLength(1);
+		expect(round[0]?.read.fits).toBe(false);
+		expect(store.rev()).toBe(rev);
 	});
 });

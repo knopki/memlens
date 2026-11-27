@@ -21,16 +21,15 @@ import type { BuildInput, ScopeKey } from "@memlens/core";
 import {
 	answerLine,
 	batchTask,
-	candidates,
 	childOf,
-	copyBuild,
-	joinBuild,
 	MemlensError,
 	NODE_TARGET,
 	normalizeScopeKey,
-	publishJoin,
 	publishNode,
+	publishRound,
+	type RoundEntry,
 	readBuild,
+	readRound,
 } from "@memlens/core";
 import type { Command } from "commander";
 import {
@@ -101,7 +100,10 @@ function buildInput(
 	store: Runtime["store"],
 	scope: ScopeKey,
 	range: { level: number; start: number },
-) {
+): {
+	read: Extract<ReturnType<typeof readBuild>, { ok: true }>;
+	input: BuildInput;
+} | null {
 	const read = readBuild(store, scope, range.level, range.start);
 	if (!read.ok) return null;
 	const width = 2 ** (range.level - 1);
@@ -172,8 +174,9 @@ export async function compactCommand(
  *
  * @purpose Let a terminal user and a console user start one job with one rule set.
  * @invariants Publish each copy input and each fitting join with no model call. A dry run writes
- *   nothing. The merge inputs come from the projection after the last round. The rounds repeat
- *   until a round publishes nothing, so one run completes each join chain.
+ *   nothing. One round loads the view once. The merge inputs come from the projection after the
+ *   last round. The rounds repeat until a round publishes nothing, so one run completes each
+ *   join chain.
  */
 export async function prepareCompact(
 	runtime: Runtime,
@@ -184,15 +187,26 @@ export async function prepareCompact(
 		readonly scopeKeys?: readonly ScopeKey[];
 	} = {},
 ): Promise<CompactJob> {
-	const ready = () => readyInputs(runtime.store, scope);
-	const found = ready().length;
-	const { published, joined } =
-		options.dryRun === true
-			? { published: 0, joined: 0 }
-			: publishRounds(runtime.store, scope, ready);
-	const inputs = ready()
-		.filter(({ result: { read } }) => !read.fits)
-		.map(({ result: { input } }) => input)
+	let found = 0;
+	let published = 0;
+	let joined = 0;
+	let pending: readonly RoundEntry[] = [];
+	if (options.dryRun === true) {
+		pending = readRound(runtime.store, scope);
+		found = pending.length;
+	} else {
+		for (let round = 1; ; round += 1) {
+			const result = publishRound(runtime.store, scope);
+			if (round === 1) found = result.pending.length;
+			published += result.published;
+			joined += result.joined;
+			pending = result.pending;
+			if (!result.published) break;
+		}
+	}
+	const inputs = pending
+		.filter(({ read }) => !read.fits)
+		.map(({ input }) => input)
 		.slice(0, options.max ?? 50);
 	return {
 		inputs,
@@ -205,66 +219,6 @@ export async function prepareCompact(
 	};
 }
 // #endregion FUNC_prepareCompact
-
-function readyInputs(store: Runtime["store"], scope: ScopeKey) {
-	return candidates(store, scope).flatMap((range) => {
-		const result = buildInput(store, scope, range);
-		return result ? [{ range, result }] : [];
-	});
-}
-
-// #region FUNC_publishRounds
-/** Publish each fitting join and copy in rounds until one round publishes nothing. */
-function publishRounds(
-	store: Runtime["store"],
-	scope: ScopeKey,
-	ready: () => ReturnType<typeof readyInputs>,
-): { readonly published: number; readonly joined: number } {
-	let published = 0;
-	let joined = 0;
-	for (let round = 1; ; round += 1) {
-		const pending = ready();
-		let accepted = 0;
-		let roundJoins = 0;
-		for (const {
-			range,
-			result: { input, read },
-		} of pending) {
-			const [left, right] = input.children;
-			const joinedLine = left && right ? joinBuild(input) : null;
-			if (joinedLine) {
-				if (publishJoin(store, scope, range.level, range.start, read).ok) {
-					accepted += 1;
-					roundJoins += 1;
-				}
-			} else if ((!left || !right) && read.fits) {
-				const line = copyBuild(input);
-				if (
-					publishNode(
-						store,
-						scope,
-						range.level,
-						range.start,
-						line.summary,
-						read,
-					).ok
-				)
-					accepted += 1;
-			}
-		}
-		published += accepted;
-		joined += roundJoins;
-		debug("Mechanical round", {
-			event: "round",
-			round,
-			found: pending.length,
-			accepted,
-		});
-		if (!accepted) break;
-	}
-	return { published, joined };
-}
-// #endregion FUNC_publishRounds
 
 function unwrapIds(text: string): string {
 	return text.replace(/<input id="(#[^"]+)">/g, "$1");

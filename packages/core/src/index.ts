@@ -32,6 +32,7 @@ export { parseAddress } from "./domain/address.js";
 export { renderAddress } from "./domain/address-form.js";
 export {
 	compactionPass,
+	publishRound,
 	RateWindow,
 	retryDelay,
 } from "./domain/compaction.js";
@@ -147,13 +148,17 @@ export {
 	resolveScopeContext,
 	type ScopeContextResult,
 } from "./scope-context.js";
+
 export {
 	candidates,
 	childOf,
 	publishJoin,
 	publishNode,
+	type RoundEntry,
 	readBuild,
+	readRound,
 } from "./store/build.js";
+
 export {
 	amend,
 	hide,
