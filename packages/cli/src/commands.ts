@@ -21,7 +21,12 @@
  */
 
 import type { ScopeKey } from "@memlens/core";
-import { NOTE_KINDS, normalizeScopeKey, parseNoteTime } from "@memlens/core";
+import {
+	MemlensError,
+	NOTE_KINDS,
+	normalizeScopeKey,
+	parseNoteTime,
+} from "@memlens/core";
 import { Command, InvalidArgumentError, Option } from "commander";
 import { openRuntime, type Runtime } from "./runtime.js";
 
@@ -197,6 +202,19 @@ export function scopeList(raw: readonly string[]): ScopeKey[] {
 	return raw.map((key) => normalizeScopeKey(key) as ScopeKey);
 }
 // #endregion FUNC_scopeList
+
+// #region FUNC_checkedScope
+/**
+ * @purpose Read one scope key and keep only a scope that the profile lists, so each command shares
+ *   one visibility rule.
+ */
+export function checkedScope(runtime: Runtime, raw: string): ScopeKey {
+	const scope = normalizeScopeKey(raw) as ScopeKey;
+	if (!runtime.scopes.includes(scope))
+		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
+	return scope;
+}
+// #endregion FUNC_checkedScope
 
 // #region FUNC_print
 /** @purpose Give the JSON text of one answer. */

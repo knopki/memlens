@@ -71,6 +71,10 @@ describe("@memlens/cli entry", () => {
 		expect(await main(["scopes", "--wrong"])).toBe(2);
 	});
 
+	it("gives the exit code 2 for a value outside its range", async () => {
+		expect(await main(["ui", "-p", "0"])).toBe(2);
+	});
+
 	it("gives the help of the binary and the version with the exit code 0", async () => {
 		const help = await run("--help");
 		expect(help.code).toBe(0);

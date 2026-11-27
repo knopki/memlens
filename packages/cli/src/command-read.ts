@@ -40,6 +40,7 @@ import {
 import type { Command } from "commander";
 import {
 	type CommandIo,
+	checkedScope,
 	command,
 	JSON_FLAG,
 	KINDS,
@@ -160,13 +161,6 @@ export async function findCommand(
 
 function renderHit(hit: IndexHit): string {
 	return `${hit.addr}  ${dayOf(hit.ts)}  ${hit.kind}  ${hit.body}`;
-}
-
-function checkedScope(runtime: Runtime, raw: string): ScopeKey {
-	const scope = normalizeScopeKey(raw) as ScopeKey;
-	if (!runtime.scopes.includes(scope))
-		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
-	return scope;
 }
 
 // #region FUNC_openCommand
