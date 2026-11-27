@@ -13,7 +13,8 @@
  *    command takes the scope in the address or in --scope.
  *  - Each target scope must be visible in the profile, or the command gives NotAllowed. The
  *    command restore takes each valid scope, because only the CLI restores.
- *  - Each supersedes address must resolve to a record id before the write.
+ *  - Each address of --supersedes and --mark must resolve before the first write, so a wrong
+ *    address changes nothing.
  * @dependencies USES API: @memlens/core, commander; WRITES: the store directory
  * @keywords note, amend, forget, restore, redact, review, write, cli
  * #endregion moduleContract
@@ -341,13 +342,12 @@ async function reviewMark(
 	runtime: Runtime,
 	input: { mark?: string[]; scope?: string[]; for?: string },
 ): Promise<string> {
+	const fallback = input.scope?.[0] ?? null;
 	const answers: string[] = [];
-	for (const address of input.mark ?? []) {
-		const { scope, record } = resolveRowTarget(
-			runtime,
-			address,
-			input.scope?.[0] ?? null,
-		);
+	const targets = (input.mark ?? []).map((address) =>
+		resolveRowTarget(runtime, address, fallback),
+	);
+	for (const { scope, record } of targets) {
 		const reviewAt = nextReview(input.for, runtime.config.review[record.kind]);
 		review(runtime.store, record.id, reviewAt);
 		answers.push(
