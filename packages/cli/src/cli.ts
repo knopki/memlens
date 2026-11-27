@@ -21,10 +21,10 @@
  * #endregion moduleContract
  */
 
-import { once } from "node:events";
 import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createInterface } from "node:readline";
+import type { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { debuglog } from "node:util";
 import { MemlensError, NAME } from "@memlens/core";
@@ -116,19 +116,31 @@ export async function main(
 }
 // #endregion FUNC_main
 
+/** Ask one question and read one answer line. A closed input gives no answer. */
+async function askConfirm(
+	input: Readable,
+	question: string,
+): Promise<boolean | null> {
+	process.stderr.write(`${question} [y/N] `);
+	const reader = createInterface({ input });
+	const answer = await new Promise<boolean | null>((resolve) => {
+		reader.once("line", (text: string) => {
+			resolve(text.trim().toLowerCase() === "y");
+		});
+		reader.once("close", () => resolve(null));
+	});
+	reader.close();
+	debug("Confirm answer", { event: "confirm", answer });
+	return answer;
+}
+
 function cliIo(io: Partial<CommandIo> | undefined): CommandIo {
 	return {
 		env: io?.env ?? process.env,
 		cwd: io?.cwd ?? process.cwd(),
 		confirm:
 			io?.confirm ??
-			(async (question: string) => {
-				process.stderr.write(`${question} [y/N] `);
-				const reader = createInterface({ input: process.stdin });
-				const [line] = await once(reader, "line");
-				reader.close();
-				return String(line).trim().toLowerCase() === "y";
-			}),
+			((question: string) => askConfirm(process.stdin, question)),
 	};
 }
 
