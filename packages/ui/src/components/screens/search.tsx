@@ -26,30 +26,18 @@ import { Inspector } from "../inspector.js";
 import { Button, FilterBar, Panel, Select, TextInput } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
 
-// #region FUNC_signatureOf
-/**
- * @purpose Give one text of the search filters of a state.
- * @invariants A new filter value gives a new text, so the form takes the new values.
- */
-function signatureOf(state: ConsoleState): string {
-	return JSON.stringify([
-		state.scope,
-		state.query,
-		state.kinds,
-		state.since,
-		state.until,
-		state.due,
-		state.limit,
-		state.searchScope,
-	]);
+// #region FUNC_formKey
+/** @purpose Give the key that starts the filter form of the search again. */
+function formKey(state: ConsoleState): string {
+	return `${state.generation}:${state.model?.scope ?? ""}`;
 }
-// #endregion FUNC_signatureOf
+// #endregion FUNC_formKey
 
 // #region COMPONENT_Search
 /**
  * @purpose Find notes by words in the selected scope or in every visible scope.
- * @invariants The form starts again when the filters of the state change, so a restored address
- * shows its own values.
+ * @invariants The form starts again at each view load, so a restored address shows its own values.
+ * A submit loads no view, so the form keeps the focus.
  */
 export function Search({ api }: ScreenProps): JSX.Element {
 	const state = useSyncExternalStore(
@@ -57,7 +45,7 @@ export function Search({ api }: ScreenProps): JSX.Element {
 		() => api.state,
 		() => api.state,
 	);
-	return <SearchScreen key={signatureOf(state)} api={api} />;
+	return <SearchScreen key={formKey(state)} api={api} />;
 }
 // #endregion COMPONENT_Search
 

@@ -211,6 +211,20 @@ describe("standalone interaction", () => {
 		});
 	});
 
+	it("keeps the focus of the search box after a submit", async () => {
+		const h = harness({}, { model: viewOf() });
+		const container = await mount(h);
+		await click(container, "aside nav button:nth-child(4)");
+		const box = need(container, ".searchbar input") as HTMLInputElement;
+		box.focus();
+		await type(container, ".searchbar input", "words");
+		await key(box, "Enter");
+
+		expect(h.state().query).toBe("words");
+		expect(h.state().searchScope).toBeNull();
+		expect(document.activeElement).toBe(box);
+	});
+
 	it("opens the screen of a number key", async () => {
 		const h = harness({}, { model: viewOf() });
 		const container = await mount(h);
