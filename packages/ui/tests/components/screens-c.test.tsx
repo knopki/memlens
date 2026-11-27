@@ -30,7 +30,7 @@ const noop = async () => undefined;
 
 /** The console actions of a test. No action reaches a host. */
 const actions: ConsoleActions = {
-	navigate() {},
+	navigate: noop,
 	restore: noop,
 	openTarget: noop,
 	openInTree: noop,
@@ -38,6 +38,7 @@ const actions: ConsoleActions = {
 	openScopeTree: noop,
 	search: noop,
 	reload: noop,
+	refresh: noop,
 	reset: noop,
 	setProfile: noop,
 	action: noop,
@@ -49,6 +50,7 @@ const actions: ConsoleActions = {
 	applyCompaction: noop,
 	setLanguage() {},
 	setTheme() {},
+	copy() {},
 	clearStatus() {},
 	watchRuntime() {},
 };

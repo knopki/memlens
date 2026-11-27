@@ -8,7 +8,7 @@
  * #endregion moduleContract
  */
 
-import type { ConsoleEntry } from "@memlens/core";
+import type { ConsoleEntry, ScopeKey } from "@memlens/core";
 import type {
 	ConsoleActions,
 	ConsoleState,
@@ -32,7 +32,7 @@ import type { Step, View } from "../../src/types.js";
  */
 export function viewOf(
 	profile = "default",
-	scope = "project:alpha",
+	scope: ScopeKey = "project:alpha",
 	patch: Partial<View> = {},
 ): View {
 	return {
@@ -80,7 +80,7 @@ export function viewOf(
  * @param patch - The fields that the test changes.
  */
 export function entryOf(
-	scope: string,
+	scope: ScopeKey,
 	pos: number,
 	patch: Partial<ConsoleEntry> = {},
 ): ConsoleEntry {
@@ -218,7 +218,7 @@ export function fakePort(overrides: Partial<StorePort> = {}): {
 			if (overrides.view) return overrides.view(fields);
 			return viewOf(
 				fields.profile || "default",
-				fields.scope || "project:alpha",
+				(fields.scope || "project:alpha") as ScopeKey,
 				{
 					screen: fields.screen ?? "overview",
 				},
@@ -232,7 +232,7 @@ export function fakePort(overrides: Partial<StorePort> = {}): {
 		async open(fields) {
 			calls.push({ method: "open", fields });
 			if (overrides.open) return overrides.open(fields);
-			return entryOf(fields.scope || "project:alpha", 1);
+			return entryOf((fields.scope || "project:alpha") as ScopeKey, 1);
 		},
 		async catalog(fields) {
 			calls.push({ method: "catalog", fields });
