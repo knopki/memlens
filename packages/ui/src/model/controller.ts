@@ -136,6 +136,9 @@ export function createConsoleController(
 	/** The number of the latest open request. A later request drops the answer of an older one. */
 	let openSeq = 0;
 
+	/** The number of the latest search request. A later request drops the answer of an older one. */
+	let findSeq = 0;
+
 	const get = (): ConsoleState => store.getSnapshot();
 	const set = (patch: Partial<ConsoleState>): void => store.set(patch);
 
@@ -334,10 +337,11 @@ export function createConsoleController(
 	// #region FUNC_find
 	/**
 	 * @purpose Run the current search filters and keep the hits.
-	 * @invariants An answer of an older generation writes no hit.
+	 * @invariants An answer of an older generation or of a newer search writes no hit.
 	 */
 	async function find(step: Step): Promise<void> {
 		const token = get().generation;
+		const seq = ++findSeq;
 		const found = await port.search({
 			profile: get().profile,
 			query: get().query,
@@ -348,7 +352,7 @@ export function createConsoleController(
 			due: get().due ? "1" : "",
 			limit: get().limit,
 		});
-		if (token !== get().generation) return;
+		if (token !== get().generation || seq !== findSeq) return;
 		set({ hits: found });
 		console.debug("Console search", {
 			event: "search",
