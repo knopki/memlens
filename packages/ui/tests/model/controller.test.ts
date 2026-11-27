@@ -7,7 +7,7 @@
  * #endregion moduleContract
  */
 
-import type { BuildInput, IndexHit } from "@memlens/core";
+import type { BuildInput, IndexHit, NoteKind, ScopeKey } from "@memlens/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConsoleRuntime, OpenedTarget } from "../../src/model/console.js";
 import { DEFAULT_ROUTE } from "../../src/route.js";
@@ -358,7 +358,10 @@ describe("console controller reset", () => {
 		const h = harness({
 			view: async (fields) => {
 				if (fields.profile === "gone") throw new Error("The scope is absent.");
-				return viewOf(fields.profile || "default", fields.scope || "");
+				return viewOf(
+					fields.profile || "default",
+					(fields.scope || "project:alpha") as ScopeKey,
+				);
 			},
 		});
 		await h.call.restore({ ...DEFAULT_ROUTE, profile: "gone" });
@@ -532,7 +535,7 @@ describe("console controller search", () => {
 			review_at: null,
 		});
 		const filters = {
-			kinds: [] as string[],
+			kinds: [] as NoteKind[],
 			since: "",
 			until: "",
 			due: false,

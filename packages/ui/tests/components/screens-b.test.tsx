@@ -68,7 +68,7 @@ const PROPOSAL: Proposal = {
 	payload: "the waiting payload",
 	created_at: "2026-11-01T10:00:00Z",
 	expires_at: "2026-12-01T10:00:00Z",
-	status: "pending",
+	status: "open",
 };
 
 /** The open dialog of a new note. */

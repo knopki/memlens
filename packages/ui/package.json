@@ -29,7 +29,7 @@
 		"build": "rm -rf dist && tsc -p tsconfig.build.json && node build.mjs",
 		"prepare": "pnpm run build",
 		"test": "vitest run",
-		"typecheck": "tsc -p tsconfig.json --noEmit"
+		"typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
 	},
 	"dependencies": {
 		"@memlens/core": "workspace:*"

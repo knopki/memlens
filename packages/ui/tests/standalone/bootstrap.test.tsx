@@ -44,8 +44,6 @@ vi.mock("../../src/model/transport.js", () => ({
 afterEach(() => {
 	document.body.replaceChildren();
 	delete document.documentElement.dataset.theme;
-	entry.mount = undefined;
-	entry.classed = undefined;
 	entry.rendered.length = 0;
 });
 
