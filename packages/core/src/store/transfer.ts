@@ -2,13 +2,15 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Move the complete note state between two stores and join the copies without a lost update.
- * @scope The portable line list, the import transaction, and the write of one merged row.
+ * @scope The portable line list, the import plan, and the one-transaction write of the planned rows.
  *  NOT: the transfer text and the field parsers, and the merge channels.
  * @invariants The import writes one publish transaction, so a failure leaves no partial copy.
+ * @invariants The plan phase reads each local row before the first note write, so no merge sees
+ *  another write of this import.
  * @invariants A tombstone travels with no content. A cleared row holds no content after the merge,
  *  and no proposal payload targets it.
  * @dependencies USES API: node:sqlite
- * @keywords transfer, jsonl, export, import, merge, row, slot, index
+ * @keywords transfer, jsonl, export, import, merge, row, slot, plan, index
  * #endregion moduleContract
  */
 
@@ -17,7 +19,7 @@ import { debuglog } from "node:util";
 import type { NoteKind, ScopeKey } from "../types/primitives.js";
 import { deleteCovering, deleteRange } from "./nodes.js";
 import { nullable } from "./rows.js";
-import { insertSlot, nextSlot } from "./slots.js";
+import { ScopeSlots, type SlotShift } from "./slot-model.js";
 import type { Store, Tx } from "./store.js";
 import {
 	FORMAT,
@@ -70,10 +72,61 @@ interface Statements {
 	select: StatementSync;
 	insert: StatementSync;
 	update: StatementSync;
+	movePos: StatementSync;
+	vacate: StatementSync;
 	rowid: StatementSync;
 	ftsDelete: StatementSync;
 	ftsInsert: StatementSync;
 	proposals: StatementSync;
+}
+
+/** The mutable counts of one import. */
+type MutableResult = {
+	applied: number;
+	merged: number;
+	keptLocal: number;
+	lost: number;
+	clearedApplied: boolean;
+};
+
+/** One absent note row with its final slot. */
+interface PlannedInsert {
+	readonly row: Row;
+	readonly pos: number;
+}
+
+/** One changed note row, with its final slot. */
+interface PlannedMerge {
+	readonly local: LocalRow;
+	readonly merged: Row;
+	pos: number;
+
+	/** The source slot at the time of a move, or null without a move. */
+	readonly vacated: number | null;
+}
+
+/** The write plan of one import. */
+interface Plan {
+	/** The slot model of each scope that the import touched. */
+	readonly models: Map<ScopeKey, ScopeSlots>;
+
+	/** Each absent note row with its final slot. */
+	readonly inserts: PlannedInsert[];
+
+	/** Each changed note row, with its final slot. */
+	readonly merges: PlannedMerge[];
+
+	/** Each stored note that moved with no other write. */
+	readonly shifts: SlotShift[];
+
+	/** Each note whose current slot must go free before the writes. */
+	readonly vacate: Set<string>;
+
+	/** The lowest slot that an insert opened, per scope. */
+	readonly minInsert: Map<ScopeKey, number>;
+
+	/** The counts of the import. */
+	readonly result: MutableResult;
 }
 
 // #region FUNC_exportLines
@@ -208,11 +261,9 @@ function countDecisions(
 // #region FUNC_applyRows
 /**
  * @purpose Write the merged note rows in one publish transaction.
- * @invariants Each absent row takes its key rank with one tail shift.
- * @invariants A winning scope change inserts the row at the destination rank and frees the old slot.
- * @invariants A changed row syncs the FTS row and deletes each node over a changed or shifted slot.
- * @invariants A lost local content or review channel appends one merge_lost fact.
- * @invariants A cleared row leaves no proposal payload that targets it.
+ * @invariants The plan phase replays each slot event in key order, so each row takes its final slot
+ *  once and no row-by-row tail shift runs.
+ * @requires The rows come sorted by key, so the replay gives each slot that the SQL write gives.
  */
 function applyRows(
 	store: Store,
@@ -228,57 +279,229 @@ function applyRows(
 	return store.publish((tx) => {
 		const sql = statementsOf(tx.db);
 		if (clock !== "") setClock(tx.db, clock);
-		const result = {
+		const plan = planRows(tx, sql, ordered);
+		applyPlan(tx.db, sql, plan);
+		return plan.result;
+	}).value;
+}
+// #endregion FUNC_applyRows
+
+// #region FUNC_planRows
+/**
+ * @purpose Replay each row of one import against the slot models, and queue each note write.
+ * @invariants The phase reads each local row before the first note write, so no merge sees another
+ *  write of this import.
+ * @invariants An absent row takes its key rank in the model of its scope.
+ * @invariants A winning scope change takes the row out of the source model and opens its destination
+ *  rank.
+ * @invariants A stored row that wins the content channel keeps its slot, also under a new key.
+ */
+function planRows(
+	tx: Tx,
+	sql: Statements,
+	ordered: readonly ParsedRow[],
+): Plan {
+	const plan: Plan = {
+		models: new Map(),
+		inserts: [],
+		merges: [],
+		shifts: [],
+		vacate: new Set(),
+		minInsert: new Map(),
+		result: {
 			applied: 0,
 			merged: 0,
 			keptLocal: 0,
 			lost: 0,
 			clearedApplied: false,
-		};
-		for (const { row, tombstone } of ordered) {
-			const local = localFrom(sql.select.get(row.id));
-			if (local === null) {
-				result.applied += 1;
-				if (applyMissing(tx, sql, row, tombstone)) result.clearedApplied = true;
-				if (tombstone) deleteProposals(sql, row.id);
-				continue;
-			}
-			const decision = mergeRow(local, row);
-			if (decision.merged.cleared) {
-				if (!local.cleared) result.clearedApplied = true;
-				deleteProposals(sql, row.id);
-			}
-			if (!decision.changed) continue;
-			writeMerged(tx, sql, local, decision.merged);
-			result.merged += 1;
-			countChannels(tx, row, decision, result);
+		},
+	};
+	for (const { row, tombstone } of ordered) {
+		const local = localFrom(sql.select.get(row.id));
+		if (local === null) {
+			plan.result.applied += 1;
+			const pos = planInsert(tx.db, plan, row.scope, row.ts, row.id);
+			plan.inserts.push({ row, pos });
+			if (row.cleared) plan.result.clearedApplied = true;
+			if (tombstone) deleteProposals(sql, row.id);
+			continue;
 		}
-		return result;
-	}).value;
+		const decision = mergeRow(local, row);
+		if (decision.merged.cleared) {
+			if (!local.cleared) plan.result.clearedApplied = true;
+			deleteProposals(sql, row.id);
+		}
+		if (!decision.changed) continue;
+		const merged = decision.merged;
+		let vacated: number | null = null;
+		if (merged.scope !== local.scope) {
+			vacated = modelOf(tx.db, plan.models, local.scope).remove(local.id).pos;
+			planInsert(tx.db, plan, merged.scope, merged.ts, merged.id);
+		} else if (merged.ts !== local.ts) {
+			modelOf(tx.db, plan.models, local.scope).rekey(local.id, merged.ts);
+		}
+		plan.merges.push({ local, merged, pos: local.pos, vacated });
+		plan.result.merged += 1;
+		countChannels(tx, row, decision, plan.result);
+	}
+	resolvePositions(plan);
+	debug("Plan complete", {
+		event: "plan",
+		inserts: plan.inserts.length,
+		merges: plan.merges.length,
+		shifts: plan.shifts.length,
+	});
+	return plan;
 }
-// #endregion FUNC_applyRows
+// #endregion FUNC_planRows
 
-// #region FUNC_applyMissing
-/** @purpose Insert one absent row, and report whether it latched the cleared flag. */
-function applyMissing(
-	tx: Tx,
-	sql: Statements,
-	row: Row,
-	tombstone: boolean,
-): boolean {
-	const next = tombstone
-		? {
-				...row,
-				state: "deleted" as NoteState,
-				cleared: true,
-				body: "",
-				longform: null,
-			}
-		: row;
-	insertRow(tx.db, sql, next);
-	return next.cleared;
+// #region FUNC_planInsert
+/** @purpose Open the slot of one new key in the model, and track the lowest open slot per scope. */
+function planInsert(
+	db: DatabaseSync,
+	plan: Plan,
+	scope: ScopeKey,
+	ts: string,
+	id: string,
+): number {
+	const pos = modelOf(db, plan.models, scope).openSlot(ts, id);
+	const known = plan.minInsert.get(scope);
+	if (known === undefined || pos < known) plan.minInsert.set(scope, pos);
+	return pos;
 }
-// #endregion FUNC_applyMissing
+// #endregion FUNC_planInsert
+
+// #region FUNC_modelOf
+/** @purpose Give the slot model of one scope, and load it on the first touch. */
+function modelOf(
+	db: DatabaseSync,
+	models: Map<ScopeKey, ScopeSlots>,
+	scope: ScopeKey,
+): ScopeSlots {
+	let model = models.get(scope);
+	if (model === undefined) {
+		model = ScopeSlots.read(db, scope);
+		models.set(scope, model);
+	}
+	return model;
+}
+// #endregion FUNC_modelOf
+
+// #region FUNC_resolvePositions
+/**
+ * @purpose Give each planned merge its final slot, and list each stored note that moved.
+ * @invariants Each final slot comes from the model after the full replay, so a later insert moves a
+ *  merged row too.
+ * @invariants A note whose slot or scope changes goes to the vacate set, so its old place goes free
+ *  before the writes.
+ */
+function resolvePositions(plan: Plan): void {
+	for (const merge of plan.merges) {
+		const model = plan.models.get(merge.merged.scope);
+		if (model !== undefined)
+			merge.pos = model.posOf(merge.merged.id) ?? merge.local.pos;
+		if (merge.vacated !== null || merge.pos !== merge.local.pos)
+			plan.vacate.add(merge.local.id);
+	}
+	const mergedIds = new Set(plan.merges.map((item) => item.local.id));
+	for (const model of plan.models.values())
+		for (const shift of model.shifted()) {
+			if (mergedIds.has(shift.id)) continue;
+			plan.shifts.push(shift);
+			plan.vacate.add(shift.id);
+		}
+}
+// #endregion FUNC_resolvePositions
+
+// #region FUNC_applyPlan
+/**
+ * @purpose Write the planned rows in one pass.
+ * @invariants The vacate statements free each changed slot first, so no pair of slots clashes.
+ * @invariants One range delete per touched scope covers each slot that an insert or a shift changed.
+ * @invariants A changed row syncs the index row, and a moved row deletes the nodes over its vacated
+ *  source slot.
+ * @invariants Only a live row without cleared content enters the index.
+ */
+function applyPlan(db: DatabaseSync, sql: Statements, plan: Plan): void {
+	for (const id of plan.vacate) sql.vacate.run(id);
+	for (const merge of plan.merges) {
+		const { local, merged } = merge;
+		if (local.state === "live" && !local.cleared)
+			sql.ftsDelete.run(local.n, local.body, local.longform ?? "");
+		sql.update.run(
+			merged.scope,
+			merged.state,
+			merged.cleared ? 1 : 0,
+			merged.kind,
+			merged.body,
+			merged.longform,
+			JSON.stringify(merged.refs),
+			merged.superseded_by,
+			merged.ts,
+			merged.created_at,
+			merged.modified_at,
+			merged.review_at,
+			merged.reviewed_at,
+			merged.session,
+			merged.turn,
+			merged.preset,
+			merged.v,
+			merged.v_content,
+			merged.v_review,
+			merge.pos,
+			merged.id,
+		);
+		if (merged.state === "live" && !merged.cleared)
+			sql.ftsInsert.run(local.n, merged.body, merged.longform);
+		deleteCovering(db, merged.scope, merge.pos);
+		if (merge.vacated !== null) deleteCovering(db, local.scope, merge.vacated);
+		debug("Row merged", {
+			event: "merge",
+			moved: merge.vacated !== null,
+			scope: merged.scope,
+		});
+	}
+	for (const insert of plan.inserts) {
+		const row = insert.row;
+		sql.insert.run(
+			row.id,
+			row.scope,
+			insert.pos,
+			row.state,
+			row.cleared ? 1 : 0,
+			row.kind,
+			row.body,
+			row.longform,
+			JSON.stringify(row.refs),
+			row.superseded_by,
+			row.ts,
+			row.created_at,
+			row.modified_at,
+			row.review_at,
+			row.reviewed_at,
+			row.session,
+			row.turn,
+			row.preset,
+			row.v,
+			row.v_content,
+			row.v_review,
+		);
+		const n = Number(sql.rowid.get(row.id)?.n ?? 0);
+		if (row.state === "live" && !row.cleared)
+			sql.ftsInsert.run(n, row.body, row.longform);
+		debug("Row inserted", {
+			event: "insert",
+			slot: insert.pos,
+			scope: row.scope,
+		});
+	}
+	for (const shift of plan.shifts) sql.movePos.run(shift.pos, shift.id);
+	for (const [scope, model] of plan.models) {
+		const from = plan.minInsert.get(scope);
+		if (from !== undefined) deleteRange(db, scope, from, model.maxPos() + 1);
+	}
+}
+// #endregion FUNC_applyPlan
 
 // #region FUNC_countChannels
 /** @purpose Count the two merge channels of one changed row, and journal each loss. */
@@ -301,103 +524,6 @@ function countChannels(
 }
 // #endregion FUNC_countChannels
 
-// #region FUNC_insertRow
-/**
- * @purpose Insert one absent note at its key rank, then sync the index and the node cache.
- * @invariants The tail shift moves each later slot of the scope one slot up.
- * @invariants A tombstone takes its ts as the creation and modification time, because it carries no other time.
- * @invariants Only a live row without cleared content enters the index.
- */
-function insertRow(db: DatabaseSync, sql: Statements, row: Row): void {
-	const scope = row.scope;
-	const pos = insertSlot(db, scope, row.ts, row.id);
-	const end = nextSlot(db, scope);
-	deleteCovering(db, scope, pos);
-	if (end > pos) deleteRange(db, scope, pos, end);
-	sql.insert.run(
-		row.id,
-		scope,
-		pos,
-		row.state,
-		row.cleared ? 1 : 0,
-		row.kind,
-		row.body,
-		row.longform,
-		JSON.stringify(row.refs),
-		row.superseded_by,
-		row.ts,
-		row.created_at,
-		row.modified_at,
-		row.review_at,
-		row.reviewed_at,
-		row.session,
-		row.turn,
-		row.preset,
-		row.v,
-		row.v_content,
-		row.v_review,
-	);
-	const id = sql.rowid.get(row.id);
-	const n = Number(id?.n ?? 0);
-	if (row.state === "live" && !row.cleared)
-		sql.ftsInsert.run(n, row.body, row.longform);
-	debug("Row inserted", { event: "insert", slot: pos, scope });
-}
-// #endregion FUNC_insertRow
-
-// #region FUNC_writeMerged
-/**
- * @purpose Apply one merged note row, its index rows, its node rows, and its slot.
- * @invariants A winning scope change inserts the row at the destination key rank.
- * @invariants The index drops the old row values and adds the new live row.
- */
-function writeMerged(
-	tx: Tx,
-	sql: Statements,
-	local: LocalRow,
-	merged: Row,
-): void {
-	const db = tx.db;
-	const moved = merged.scope !== local.scope;
-	let pos = local.pos;
-	if (moved) {
-		pos = insertSlot(db, merged.scope, merged.ts, merged.id);
-		const end = nextSlot(db, merged.scope);
-		if (end > pos) deleteRange(db, merged.scope, pos, end);
-	}
-	if (local.state === "live" && !local.cleared)
-		sql.ftsDelete.run(local.n, local.body, local.longform ?? "");
-	sql.update.run(
-		merged.scope,
-		merged.state,
-		merged.cleared ? 1 : 0,
-		merged.kind,
-		merged.body,
-		merged.longform,
-		JSON.stringify(merged.refs),
-		merged.superseded_by,
-		merged.ts,
-		merged.created_at,
-		merged.modified_at,
-		merged.review_at,
-		merged.reviewed_at,
-		merged.session,
-		merged.turn,
-		merged.preset,
-		merged.v,
-		merged.v_content,
-		merged.v_review,
-		pos,
-		merged.id,
-	);
-	if (merged.state === "live" && !merged.cleared)
-		sql.ftsInsert.run(local.n, merged.body, merged.longform);
-	deleteCovering(db, local.scope, local.pos);
-	if (moved) deleteCovering(db, merged.scope, pos);
-	debug("Row merged", { event: "merge", moved, scope: merged.scope });
-}
-// #endregion FUNC_writeMerged
-
 // #region FUNC_statementsOf
 /**
  * @purpose Prepare each statement of one import publish one time.
@@ -415,6 +541,8 @@ function statementsOf(db: DatabaseSync): Statements {
 			WHERE id = ?`,
 		),
 		rowid: db.prepare("SELECT n FROM notes WHERE id = ?"),
+		movePos: db.prepare("UPDATE notes SET pos = ? WHERE id = ?"),
+		vacate: db.prepare("UPDATE notes SET pos = -pos - 1 WHERE id = ?"),
 		ftsDelete: db.prepare(
 			"INSERT INTO fts(fts, rowid, body, longform) VALUES ('delete', ?, ?, ?)",
 		),
