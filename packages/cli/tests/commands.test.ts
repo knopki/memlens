@@ -617,6 +617,46 @@ describe("@memlens/cli commands", () => {
 		expect(unknown.err).toContain("argument 'urgent' is invalid");
 	});
 
+	it("cuts the answer with one day and refuses a day the calendar lacks", async () => {
+		const test = makeEnv();
+		for (const [body, ts] of [
+			["an older fact", "2020-01-01T00:00:00.000Z"],
+			["a newer fact", "2021-06-01T00:00:00.000Z"],
+		] as const)
+			expect(
+				(await run(test, "note", body, "--scope", "project:acme/x", "--ts", ts))
+					.code,
+			).toBe(0);
+		const older = await run(
+			test,
+			"find",
+			"--scope",
+			"project:acme/x",
+			"--until",
+			"2020-12-31",
+		);
+		expect(older.code).toBe(0);
+		expect(older.out).toContain("an older fact");
+		expect(older.out).not.toContain("a newer fact");
+		const newer = await run(
+			test,
+			"find",
+			"--scope",
+			"project:acme/x",
+			"--since",
+			"2021-01-01",
+		);
+		expect(newer.code).toBe(0);
+		expect(newer.out).toContain("a newer fact");
+		expect(newer.out).not.toContain("an older fact");
+		for (const flag of ["--since", "--until"])
+			for (const bad of ["yesterday", "5", "abc", "2026-02-30"]) {
+				const answer = await run(test, "find", flag, bad);
+				expect(answer.code).toBe(2);
+				expect(answer.err).toContain("needs a day, as YYYY-MM-DD.");
+			}
+	});
+
 	it("takes the short flags of each command", async () => {
 		const test = makeEnv();
 		const saved = await run(

@@ -89,7 +89,7 @@ export {
 	POLICY,
 	renderContext,
 } from "./domain/context.js";
-export { dayOf } from "./domain/day.js";
+export { dayOf, parseDay } from "./domain/day.js";
 export {
 	answerLine,
 	batchTask,
