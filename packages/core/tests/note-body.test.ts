@@ -24,6 +24,14 @@ describe("normalizeBody", () => {
 		expect(normalizeBody("a\tb")).toBe("a b");
 	});
 
+	it("collapses newlines to one space", () => {
+		expect(normalizeBody("a\nb")).toBe("a b");
+	});
+
+	it("collapses mixed whitespace with newlines to one space", () => {
+		expect(normalizeBody("a \n\t b")).toBe("a b");
+	});
+
 	it("passes a clean body through unchanged", () => {
 		expect(normalizeBody("hello world")).toBe("hello world");
 	});
