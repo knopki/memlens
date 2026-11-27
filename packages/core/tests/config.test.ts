@@ -367,6 +367,12 @@ describe("globMatches", () => {
 		expect(globMatches("deepseek/chat", "deepseek/chat")).toBe(true);
 		expect(globMatches("deepseek/chat", "deepseek/v3")).toBe(false);
 	});
+
+	it("keeps one glob strict after another glob matched", () => {
+		expect(globMatches("*", "project:dsh/optmem")).toBe(true);
+		expect(globMatches("project:dsh/*", "project:acme/x")).toBe(false);
+		expect(globMatches("deepseek/chat", "deepseek/v3")).toBe(false);
+	});
 });
 
 describe("paths of the environment", () => {
