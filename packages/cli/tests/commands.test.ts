@@ -852,6 +852,22 @@ describe("@memlens/cli commands", () => {
 		expect(due.out).not.toContain("Check the certificate");
 	});
 
+	it("refuses a number above the safe range and a period above the date range", async () => {
+		const test = makeEnv();
+		const bigLimit = await run(test, "find", "--limit", "99999999999999999999");
+		expect(bigLimit.code).toBe(2);
+		expect(bigLimit.err).toContain("must be at most 9007199254740991.");
+		const bigPeriod = await run(
+			test,
+			"note",
+			"A fact.",
+			"--review",
+			"99999999999d",
+		);
+		expect(bigPeriod.code).toBe(2);
+		expect(bigPeriod.err).toContain("must be at most 99000000 days.");
+	});
+
 	it("amends a note and hides a note", async () => {
 		const test = makeEnv();
 		await run(test, "note", "First text", "--scope", "project:acme/x");
