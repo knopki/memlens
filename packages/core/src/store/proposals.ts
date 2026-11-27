@@ -129,12 +129,24 @@ export function pending(store: Store): readonly Proposal[] {
  * @purpose Close each proposal past its expiry, so no timer is necessary.
  * @invariants The sweep clears the payload and keeps the row as a fact.
  * @invariants A repeated sweep closes nothing.
+ * @invariants A check that finds no expired row writes nothing and takes no write lock.
  * @ensures One journal fact records the count. It holds no payload content.
  * @returns The count of closed rows.
  */
 export function sweep(store: Store): number {
+	const now = new Date().toISOString();
+	// One indexed compare names the first expired row, so the read path takes no write lock.
+	const due = store
+		.handle()
+		.prepare(
+			"SELECT id FROM proposals WHERE closed = 0 AND expires_at <= ? LIMIT 1",
+		)
+		.get(now);
+	if (due === undefined) {
+		debug("Sweep skipped", { event: "sweep", skipped: true });
+		return 0;
+	}
 	const closed = store.publish((tx) => {
-		const now = new Date().toISOString();
 		const result = tx.db
 			.prepare(
 				"UPDATE proposals SET closed = 3, payload = '' WHERE closed = 0 AND expires_at <= ?",

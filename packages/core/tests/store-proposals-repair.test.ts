@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, it } from "vitest";
 import { noteTx } from "../src/store/notes.js";
 import {
@@ -156,6 +157,28 @@ describe("proposals", () => {
 			pending(store).map((item) => item.id),
 			["01OPEN"],
 		);
+	});
+
+	it("takes no write lock when no row expires", () => {
+		const dir = mkdtempSync(join(tmpdir(), "memlens-"));
+		dirs.push(dir);
+		const store = new Store(dir);
+		stores.push(store);
+		propose(store, { id: "01FUTURE", scope: "p:x", op: "note", payload: {} });
+		const other = new DatabaseSync(join(dir, "memlens.db"));
+		other.exec("BEGIN IMMEDIATE");
+		try {
+			const started = Date.now();
+			assert.equal(sweep(store), 0);
+			assert.ok(
+				Date.now() - started < 900,
+				"the sweep waited on the write lock of another connection",
+			);
+			assert.equal(proposalRow(store, "01FUTURE")?.closed, 0);
+		} finally {
+			other.exec("ROLLBACK");
+			other.close();
+		}
 	});
 
 	it("applies the payload and closes the row in one transaction", () => {
