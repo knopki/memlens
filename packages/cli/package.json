@@ -1,7 +1,7 @@
 {
 	"name": "@memlens/cli",
 	"version": "0.1.4",
-	"description": "The CLI frontend of memlens.",
+	"description": "memlens — long-term memory for an agent in one SQLite file. This package holds the `memlens` command: notes, search, a summary tree, and a web console.",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
