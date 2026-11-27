@@ -146,6 +146,23 @@ describe("openNote", () => {
 		expect(none.longform).toBeUndefined();
 		expect(none.longformChars).toBe(LONGFORM_ALL + 100);
 	});
+
+	it("reads from zero when the offset is negative", () => {
+		const store = newStore();
+		addNote(store, {
+			scope: "x:a",
+			pos: 0,
+			body: "first",
+			longform,
+			ts: "2026-11-01T00:00:00.000Z",
+		});
+		const note = byAddress(store, "x:a" as ScopeKey, 0);
+		if (note === null) throw new Error("Fixture note is absent");
+		const entry = openNote("x:a" as ScopeKey, note, "head", -5);
+		expect(entry.longform).toHaveLength(LONGFORM_HEAD);
+		expect(entry.longformOffset).toBe(LONGFORM_HEAD);
+		expect(entry.longformTruncated).toBe(true);
+	});
 });
 
 describe("openRange", () => {
