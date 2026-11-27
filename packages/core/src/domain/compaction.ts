@@ -16,14 +16,13 @@
 import { debuglog } from "node:util";
 import {
 	type BuildRead,
+	buildInput,
+	candidates,
 	captureRound,
-	childOf,
 	insertNode,
 	publishJoin,
 	publishNode,
 	type RoundEntry,
-	readBuild,
-	candidates as storeCandidates,
 } from "../store/build.js";
 import type { Store } from "../store/store.js";
 import { joinText, loadView } from "../store/view.js";
@@ -153,19 +152,11 @@ export async function compactionPass(
 	};
 	const captured = new Map<BuildInput, BuildRead>();
 	const inputs: BuildInput[] = [];
-	for (const range of storeCandidates(store, scope)) {
-		const read = readBuild(store, scope, range.level, range.start);
-		if (!read.ok) continue;
-		const width = 2 ** (range.level - 1);
-		const input: BuildInput = {
-			range,
-			children: [
-				childOf(read, range, range.start),
-				childOf(read, range, range.start + width),
-			],
-		};
-		captured.set(input, read);
-		inputs.push(input);
+	for (const range of candidates(store, scope)) {
+		const current = buildInput(store, scope, range);
+		if (!current) continue;
+		captured.set(current.input, current.read);
+		inputs.push(current.input);
 		if (inputs.length >= batch) break;
 	}
 	const counted: MergeModel = async (system, task) => {

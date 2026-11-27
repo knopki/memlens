@@ -20,13 +20,12 @@ import type { BuildInput, ScopeKey } from "@memlens/core";
 import {
 	answerLine,
 	batchTask,
-	childOf,
+	buildInput,
 	MemlensError,
 	NODE_TARGET,
 	publishNode,
 	publishRound,
 	type RoundEntry,
-	readBuild,
 	text,
 } from "@memlens/core";
 import type { AgentMemory } from "../service.js";
@@ -46,37 +45,6 @@ export interface Answer {
 	readonly text: string;
 }
 // #endregion INTERFACE_Answer
-
-/** One captured build input with the keys that the publication checks. */
-interface Captured {
-	readonly read: Extract<ReturnType<typeof readBuild>, { ok: true }>;
-	readonly input: BuildInput;
-}
-
-// #region FUNC_buildInput
-/**
- * @purpose Read the current build input of one candidate range, or null when a half is empty.
- */
-function buildInput(
-	memory: AgentMemory,
-	scope: ScopeKey,
-	range: { level: number; start: number },
-): Captured | null {
-	const read = readBuild(memory.store, scope, range.level, range.start);
-	if (!read.ok) return null;
-	const width = 2 ** (range.level - 1);
-	return {
-		read,
-		input: {
-			range,
-			children: [
-				childOf(read, range, range.start),
-				childOf(read, range, range.start + width),
-			],
-		},
-	};
-}
-// #endregion FUNC_buildInput
 
 // #region FUNC_prepareCompact
 /**
@@ -207,7 +175,7 @@ export function applyAnswers(
 	let built = 0;
 	const rejected: string[] = [];
 	for (const answer of answers) {
-		const current = buildInput(memory, scope, answer.range);
+		const current = buildInput(memory.store, scope, answer.range);
 		if (
 			current === null ||
 			(copied !== null &&

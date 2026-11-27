@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Build summary cache rows from consistent child snapshots.
- * @scope Candidate ranges, build reads, child rows, joins, and conditional publication.
+ * @scope Candidate ranges, build reads, child rows, build inputs, joins, and conditional publication.
  * @invariants A model call runs outside the store transaction.
  * #endregion moduleContract
  */
@@ -196,6 +196,20 @@ export function childOf(
 }
 // #endregion FUNC_childOf
 
+// #region FUNC_inputOf
+/** @purpose Join the two children of one read into the merge input of that range. */
+function inputOf(read: BuildRead, range: Range): BuildInput {
+	const width = 2 ** (range.level - 1);
+	return {
+		range,
+		children: [
+			childOf(read, range, range.start),
+			childOf(read, range, range.start + width),
+		],
+	};
+}
+// #endregion FUNC_inputOf
+
 // #region FUNC_publishNode
 /** @purpose Publish a summary only when both captured child keys still match. */
 export function publishNode(
@@ -295,18 +309,7 @@ export function captureRound(view: View): RoundEntry[] {
 	for (const range of sortedCandidates(indexOf(view))) {
 		const read = snapshot(view, range.level, range.start);
 		if (!read) continue;
-		const width = 2 ** (range.level - 1);
-		entries.push({
-			range,
-			read,
-			input: {
-				range,
-				children: [
-					childOf(read, range, range.start),
-					childOf(read, range, range.start + width),
-				],
-			},
-		});
+		entries.push({ range, read, input: inputOf(read, range) });
 	}
 	debug("Round captured", { scope: view.scope, found: entries.length });
 	return entries;
@@ -322,3 +325,20 @@ export function readRound(
 	return store.read((db) => captureRound(loadView(db, scope)));
 }
 // #endregion FUNC_readRound
+
+// #region FUNC_buildInput
+/**
+ * @purpose Read the current build input of one range, so no host builds an input of its own.
+ * @invariants The input comes from one read transaction. Null means an empty half, and the caller
+ *   must not publish that range.
+ */
+export function buildInput(
+	store: Store,
+	scope: ScopeKey,
+	range: Range,
+): RoundEntry | null {
+	const read = readBuild(store, scope, range.level, range.start);
+	if (!read.ok) return null;
+	return { range, read, input: inputOf(read, range) };
+}
+// #endregion FUNC_buildInput

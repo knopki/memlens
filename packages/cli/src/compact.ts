@@ -21,14 +21,13 @@ import type { BuildInput, ScopeKey } from "@memlens/core";
 import {
 	answerLine,
 	batchTask,
-	childOf,
+	buildInput,
 	MemlensError,
 	NODE_TARGET,
 	normalizeScopeKey,
 	publishNode,
 	publishRound,
 	type RoundEntry,
-	readBuild,
 	readRound,
 } from "@memlens/core";
 import type { Command } from "commander";
@@ -93,32 +92,6 @@ interface CompactJob {
 	/** The joins that the store accepted. This count is part of the published count. */
 	readonly joined: number;
 }
-
-// #region FUNC_buildInput
-/** Read the current build input for one candidate range. */
-function buildInput(
-	store: Runtime["store"],
-	scope: ScopeKey,
-	range: { level: number; start: number },
-): {
-	read: Extract<ReturnType<typeof readBuild>, { ok: true }>;
-	input: BuildInput;
-} | null {
-	const read = readBuild(store, scope, range.level, range.start);
-	if (!read.ok) return null;
-	const width = 2 ** (range.level - 1);
-	return {
-		read,
-		input: {
-			range,
-			children: [
-				childOf(read, range, range.start),
-				childOf(read, range, range.start + width),
-			] as const,
-		},
-	};
-}
-// #endregion FUNC_buildInput
 
 function compactScope(input: CompactInput, io: CommandIo): ScopeKey {
 	const base = loadCliBaseConfig(io.env);
