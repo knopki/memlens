@@ -121,12 +121,12 @@ describe("loadBaseConfig", () => {
 		expect(config.compaction.batch).toBe(10);
 		expect(config.compaction.maxCallsPerHour).toBe(120);
 		expect(config.review).toEqual({
-			decision: 365,
-			preference: 365,
+			decision: 90,
+			preference: 180,
 			fact: 90,
-			gotcha: 180,
+			gotcha: 90,
 			task: 7,
-			note: 365,
+			note: 180,
 		});
 		expect(config.profile.work.subagents).toBeUndefined();
 	});

@@ -1050,7 +1050,14 @@ describe("@memlens/cli commands", () => {
 		expect(shown.out).toContain("here = 20");
 		const json = JSON.parse((await run(test, "config", "show", "--json")).out);
 		expect(json.budget).toMatchObject({ here: 20, directions: 10 });
-		expect(json.review).toMatchObject({ decision: 365, gotcha: 180, task: 7 });
+		expect(json.review).toMatchObject({
+			decision: 90,
+			preference: 180,
+			fact: 30,
+			gotcha: 90,
+			task: 7,
+			note: 180,
+		});
 		const work = makeEnv(WORK_CONFIG);
 		const scoped = JSON.parse(
 			(await run(work, "config", "show", "--json", "--profile", "work")).out,
