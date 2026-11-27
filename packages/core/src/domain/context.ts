@@ -187,12 +187,17 @@ function fillTemplate(
 	input: ContextInput,
 	parts: { readonly directions: string; readonly here: string },
 ): string {
-	return (input.customPrompt ?? CONTEXT_TEMPLATE)
-		.replaceAll("{{policy}}", input.policy ?? POLICY)
-		.replaceAll("{{append}}", input.customPromptAppend ?? input.append ?? "")
-		.replaceAll("{{scope}}", attribute(input.scope))
-		.replaceAll("{{directions}}", parts.directions)
-		.replaceAll("{{here}}", parts.here);
+	const values = {
+		policy: input.policy ?? POLICY,
+		append: input.customPromptAppend ?? input.append ?? "",
+		scope: attribute(input.scope),
+		directions: parts.directions,
+		here: parts.here,
+	};
+	return (input.customPrompt ?? CONTEXT_TEMPLATE).replace(
+		/\{\{(policy|append|scope|directions|here)\}\}/g,
+		(_placeholder, key: keyof typeof values) => values[key],
+	);
 }
 // #endregion FUNC_fillTemplate
 

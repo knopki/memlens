@@ -13,6 +13,8 @@
  * @invariants The page renders the stylesheet in a `style` element, so the CSS leaves with the page.
  * @invariants A store that is not open gives the stated error in the body. The page probes the host
  *   at each retry, and the view load replaces that error when the store opens.
+ * @invariants A failed view read gives its text and a retry in the body, so the body never waits on
+ *   a read that ended.
  * @dependencies USES API: @memlens/ui, react
  * @keywords client, page, panel, memory, profile, screen, scope, dialog, status
  * #endregion moduleContract
@@ -51,6 +53,8 @@ export type MemoryPageProps = {
  *   that scope.
  * @invariants The status line states a failed call. A store that is not open also holds one stated
  *   line, which stays until the store opens.
+ * @invariants A failed view read shows its text and a retry button, and the retry reads the current
+ *   screen again.
  */
 export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 	const [api] = useState(() => createProfileConsole(t));
@@ -82,6 +86,20 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 	const selectedScope = scopes.some((item) => item.key === state.scope)
 		? state.scope
 		: (scopes[0]?.key ?? "");
+	const failure = state.loadError ? (
+		<div className="failure">
+			<p>{state.loadError}</p>
+			<button
+				type="button"
+				className="btn"
+				onClick={() => {
+					void api.call.reload();
+				}}
+			>
+				{t("retry")}
+			</button>
+		</div>
+	) : null;
 	return (
 		<div className="ml-console ml-page">
 			<style>{CONSOLE_CSS}</style>
@@ -151,11 +169,12 @@ export function MemoryPage({ t, title }: MemoryPageProps): JSX.Element {
 						{`${t("store")}: ${state.runtime?.store?.error ?? ""}`}
 					</div>
 				) : null}
-				{model && model.screen !== state.screen ? (
-					<p className="ml-muted">{t("loading")}</p>
-				) : (
-					<Screen api={api} />
-				)}
+				{failure ??
+					(model && model.screen !== state.screen ? (
+						<p className="ml-muted">{t("loading")}</p>
+					) : (
+						<Screen api={api} />
+					))}
 			</div>
 			<div
 				className={state.status.error ? "status error" : "status"}

@@ -51,7 +51,6 @@ export const RETRY_WAITS: readonly number[] = [10, 60, 300];
 export interface PassResult {
 	readonly built: number;
 	readonly rejected: number;
-	readonly reasons: readonly "input_changed"[];
 
 	/** The ranges that no attempt built. Each such range counts once. */
 	readonly failed: number;
@@ -147,7 +146,6 @@ export async function compactionPass(
 		rejected: 0,
 		failed: 0,
 		calls: 0,
-		reasons: [] as "input_changed"[],
 		failures: [] as ("no_answer" | "not_shorter" | "invalid_batch")[],
 	};
 	const captured = new Map<BuildInput, BuildRead>();

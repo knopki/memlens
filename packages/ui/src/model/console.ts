@@ -120,6 +120,12 @@ export interface ConsoleState {
 	readonly status: StatusLine;
 	readonly dialog: DialogState | null;
 
+	/**
+	 * The text of the last failed view read. An empty or absent text shows no failure, and the
+	 * shell states the loading of the screen. The shell offers a retry of that read.
+	 */
+	readonly loadError?: string;
+
 	/** The host runtime state, when its port gives one. The standalone host gives none. */
 	readonly runtime?: ConsoleRuntime;
 }

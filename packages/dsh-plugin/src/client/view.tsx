@@ -11,6 +11,8 @@
  * @invariants The tab shows no screen control. The page holds the screens of the console.
  * @invariants A store that is not open gives the stated error in place of the slice. The tab probes
  *   the host at each retry, and the view load replaces that error when the store opens.
+ * @invariants A failed view read gives its text and a retry in place of the slice, so the tab never
+ *   waits on a read that ended.
  * @dependencies USES API: @memlens/ui, react
  * @keywords client, tab, view, memory, session, slice, profile, scope, status
  * #endregion moduleContract
@@ -59,7 +61,9 @@ export function MemoryView({
  * @invariants The console starts once per mount. The first restore reads the state of the session.
  * @invariants The head names the profile of the session.
  * @invariants The status line states a failed call. A store that is not open also holds one stated
- *   line, which stays until the store opens. */
+ *   line, which stays until the store opens.
+ * @invariants A failed view read shows its text and a retry button, and the retry reads the state of
+ *   the session again. */
 function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 	const [api] = useState(() => createSessionConsole(sessionId, t));
 	const state = useSyncExternalStore(
@@ -82,6 +86,20 @@ function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 	const model = state.model;
 	const profile = model?.profile || state.profile;
 	const scopes = model?.scopes ?? [];
+	const failure = state.loadError ? (
+		<div className="failure">
+			<p>{state.loadError}</p>
+			<button
+				type="button"
+				className="btn"
+				onClick={() => {
+					void api.call.reload();
+				}}
+			>
+				{t("retry")}
+			</button>
+		</div>
+	) : null;
 	return (
 		<div className="ml-console ml-session">
 			<style>{CONSOLE_CSS}</style>
@@ -134,7 +152,7 @@ function SessionState({ sessionId, t, title }: MemoryViewProps): JSX.Element {
 					{`${t("store")}: ${state.runtime?.store?.error ?? ""}`}
 				</div>
 			) : (
-				<p className="ml-muted">{t("loading")}</p>
+				(failure ?? <p className="ml-muted">{t("loading")}</p>)
 			)}
 			<div
 				className={state.status.error ? "status error" : "status"}

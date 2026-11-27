@@ -31,6 +31,7 @@ import { debuglog } from "node:util";
 import { parse as parseToml } from "smol-toml";
 import { MemlensError } from "../types/errors.js";
 import {
+	defaultProfile,
 	expectKeys,
 	expectRecord,
 	expectString,
@@ -45,17 +46,16 @@ import {
 	readScopeDefault,
 	readStore,
 } from "./config-read.js";
-import {
-	type BaseConfig,
-	type Budget,
-	DEFAULT_BUDGET,
-	type Glob,
-	type PatchConfig,
-	type Path,
-	type PresetConfig,
-	type ProfileConfig,
-	type ResolvedConfig,
-	type StoreConfig,
+import type {
+	BaseConfig,
+	Budget,
+	Glob,
+	PatchConfig,
+	Path,
+	PresetConfig,
+	ProfileConfig,
+	ResolvedConfig,
+	StoreConfig,
 } from "./config-types.js";
 
 const debug = debuglog("memlens:config");
@@ -242,11 +242,7 @@ export function resolveConfig(
 			profile: name,
 		});
 	}
-	const values = named ?? {
-		scopes: ["*"] as Glob[],
-		budget: { ...DEFAULT_BUDGET },
-		subagents: "propose" as const,
-	};
+	const values = named ?? defaultProfile();
 	const budget: Budget = {
 		...values.budget,
 		...(patch.budget ?? {}),

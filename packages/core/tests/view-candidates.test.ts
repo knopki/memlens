@@ -92,9 +92,9 @@ it("keeps changed ranges dirty and valid nodes out of candidates across readers"
 			"maintenance",
 		);
 		expect((model.candidates ?? []).map((row) => row.range)).toEqual(dirty);
-		expect(
-			(model.candidates ?? []).every((row) => row.scope === scope && row.ready),
-		).toBe(true);
+		expect((model.candidates ?? []).every((row) => row.scope === scope)).toBe(
+			true,
+		);
 		expect(model.levels).toEqual([
 			{ level: 1, nodes: 3, dirty: 1, candidates: 2 },
 			{ level: 2, nodes: 1, dirty: 0, candidates: 1 },

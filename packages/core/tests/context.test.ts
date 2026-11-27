@@ -313,6 +313,22 @@ describe("renderContext", () => {
 		);
 	});
 
+	it("keeps placeholder text inside each inserted value unchanged", () => {
+		const literal =
+			"{{policy}} {{append}} {{scope}} {{directions}} {{here}} $& $` $'";
+		const text = renderContext({
+			...input(),
+			customPrompt: "{{policy}}|{{append}}|{{directions}}|{{here}}|{{unknown}}",
+			policy: literal,
+			customPromptAppend: literal,
+			directions: [{ scope: "project:a", newestTs: now, summary: literal }],
+			here: [{ kind: "record", pos: 0, from: now, to: now, body: literal }],
+		});
+		expect(text).toBe(
+			`${literal}|${literal}|[project:a] 0d ${literal}|#0 2026-11-10 ${literal}|{{unknown}}`,
+		);
+	});
+
 	it("keeps the CONTEXT_TEMPLATE a copy of the product text", () => {
 		expect(CONTEXT_TEMPLATE).toContain("<how-to>\n{{policy}}\n{{append}}");
 		expect(CONTEXT_TEMPLATE).toContain("{{directions}}\n</directions>");

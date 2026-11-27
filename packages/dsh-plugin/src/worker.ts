@@ -368,7 +368,6 @@ export class MemoryWorker {
 				built += result.built;
 				failed += result.failed;
 				count(reasons, result.failures);
-				count(reasons, result.reasons);
 			}
 			const summary = [...reasons]
 				.map(([reason, count]) => `${reason} ${count}`)

@@ -1,8 +1,8 @@
 /**
  * #region moduleContract
  * @purpose Hold the console controller to its visible behaviour: one action at a time, the newest
- * answer, the status time, the stored choices, the dialog path, the runtime watch, and the reset
- * rules.
+ * answer, the status time, the failed read and its retry, the stored choices, the dialog path, the
+ * runtime watch, and the reset rules.
  * @scope The controller actions and the state snapshots. NOT: the markup and the transport.
  * #endregion moduleContract
  */
@@ -135,6 +135,25 @@ describe("console controller status", () => {
 		gate.resolve(viewOf());
 		await reload;
 		expect(h.state().status).toEqual({ text: "", error: false });
+	});
+
+	it("keeps the text of a failed read until a retry answers", async () => {
+		let index = 0;
+		const h = harness({
+			view: async () => {
+				if (index++ === 0) throw new Error("The host is closed.");
+				return viewOf();
+			},
+		});
+
+		await h.call.reload();
+		expect(h.state().loadError).toBe("The host is closed.");
+		expect(h.state().status.error).toBe(true);
+		expect(h.state().model).toBeUndefined();
+
+		await h.call.reload();
+		expect(h.state().loadError).toBe("");
+		expect(h.state().model?.screen).toBe("overview");
 	});
 });
 

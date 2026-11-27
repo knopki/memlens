@@ -20,8 +20,8 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
+import { kindName } from "../../format.js";
 import type { ConsoleApi, ConsoleState } from "../../model/console.js";
-import { kindName } from "../../model/format.js";
 import { Inspector } from "../inspector.js";
 import { Button, FilterBar, Panel, Select, TextInput } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";

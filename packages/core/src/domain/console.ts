@@ -64,7 +64,6 @@ export interface ConsoleModel {
 	readonly candidates?: readonly {
 		readonly scope: string;
 		readonly range: Range;
-		readonly ready: boolean;
 	}[];
 	readonly totals?: {
 		readonly records: number;
@@ -329,7 +328,6 @@ function maintenance(
 					.map((range) => ({
 						scope: scope.key,
 						range,
-						ready: true,
 					})),
 			);
 	}

@@ -13,48 +13,26 @@
  */
 
 import { createRoot } from "react-dom/client";
-import { fill, LANGS, type Lang, messages } from "../i18n.js";
+import { fill, messages } from "../i18n.js";
 import type { ConsoleApi, ConsoleState, Translate } from "../model/console.js";
-import { createConsoleController } from "../model/controller.js";
+import {
+	createConsoleController,
+	LANG_KEY,
+	languageOf,
+	THEME_KEY,
+	themeOf,
+} from "../model/controller.js";
 import { createConsoleStore } from "../model/store.js";
 import { createHttpPort } from "../model/transport.js";
 import { readRoute } from "../route.js";
-import type { Choice } from "../types.js";
 import { writeAddress } from "./address.js";
 import { App } from "./app.js";
 import { createLocalStorage } from "./storage.js";
 import { applyTheme } from "./theme.js";
 
-/** The storage key of the language choice. The controller writes this key. */
-const LANG_KEY = "memlens.lang";
-
-/** The storage key of the theme choice. The controller writes this key. */
-const THEME_KEY = "memlens.theme";
-
-// #region FUNC_langOf
-/**
- * @purpose Give the language of one stored or browser code, with English as the fallback.
- * @param code - A language code or a browser language tag.
- */
-function langOf(code: string): Lang {
-	const short = code.slice(0, 2) as Lang;
-	return LANGS.includes(short) ? short : "en";
-}
-// #endregion FUNC_langOf
-
-// #region FUNC_themeOf
-/**
- * @purpose Give the theme of one stored text, with the system setting as the fallback.
- * @param code - The stored theme text.
- */
-function themeOf(code: string): Choice {
-	return code === "light" || code === "dark" ? code : "system";
-}
-// #endregion FUNC_themeOf
-
 const storage = createLocalStorage();
 
-const lang = langOf(storage.read(LANG_KEY, navigator.language));
+const lang = languageOf(storage.read(LANG_KEY, navigator.language));
 
 const theme = themeOf(storage.read(THEME_KEY, "system"));
 

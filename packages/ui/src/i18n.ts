@@ -107,7 +107,6 @@ const en = {
 	catLines: "Catalog lines",
 	emptyCatalog: "The catalog is empty.",
 	range: "Range",
-	state: "State",
 	searchText: "Find notes by words. The words match the note body.",
 	find: "Find",
 	allScopes: "All scopes",
@@ -148,7 +147,6 @@ const en = {
 	nodes: "Nodes",
 	candidates: "Candidates",
 	ready: "ready",
-	waits: "waits for the second child",
 	nodesByLevel: "Nodes by level",
 	compaction: "Compaction",
 	// The host runtime state.
@@ -203,6 +201,7 @@ const en = {
 	save: "Save changes",
 	// The answers of the screen.
 	loading: "Loading…",
+	retry: "Try again",
 	saving: "Saving…",
 	saved: "Saved.",
 	copied: "Copied.",

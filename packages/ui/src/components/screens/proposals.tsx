@@ -4,7 +4,8 @@
  * accepts or dismisses it from one table.
  * @scope The proposal table and its two decisions. NOT: the proposal store rules, the transport,
  * and the stylesheet.
- * @invariants The payload text goes into a text node.
+ * @invariants The payload text goes into a text node. The session column reads the session of the
+ *   payload, and a payload without one shows the empty message.
  * @invariants A decision calls the API intent and holds no state of its own.
  * @invariants The table lists the proposals of the view scope only, so the list follows the
  *   selected scope. A line below the table states the count of the other scopes.
@@ -15,7 +16,7 @@
 import type { Proposal } from "@memlens/core";
 import type { JSX } from "react";
 import { useSyncExternalStore } from "react";
-import type { ConsoleApi } from "../../model/console.js";
+import type { ConsoleApi, Translate } from "../../model/console.js";
 import { Button, Panel, Table } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
 
@@ -45,6 +46,25 @@ function Decision({ api, item }: DecisionProps): JSX.Element {
 	);
 }
 // #endregion COMPONENT_Decision
+
+// #region FUNC_sessionOf
+/**
+ * @purpose Give the session of one proposal, or the empty message when the payload holds none.
+ * @invariants A payload that is not a JSON object gives the empty message.
+ */
+function sessionOf(t: Translate, item: Proposal): string {
+	try {
+		const payload: unknown = JSON.parse(item.payload);
+		const session =
+			typeof payload === "object" && payload !== null
+				? (payload as { session?: unknown }).session
+				: undefined;
+		return typeof session === "string" && session !== "" ? session : t("none");
+	} catch {
+		return t("none");
+	}
+}
+// #endregion FUNC_sessionOf
 
 // #region COMPONENT_Proposals
 /**
@@ -79,7 +99,7 @@ export function Proposals({ api }: ScreenProps): JSX.Element | null {
 					]}
 					rows={proposals.map((item) => [
 						item.id,
-						t("none"),
+						sessionOf(t, item),
 						item.payload,
 						item.scope,
 						<Decision key={item.id} api={api} item={item} />,

@@ -74,7 +74,6 @@ export const es: Table = {
 	catLines: "Líneas del catálogo",
 	emptyCatalog: "El catálogo está vacío.",
 	range: "Rango",
-	state: "Estado",
 	searchText:
 		"Buscar notas por palabras. Las palabras coinciden con el cuerpo de la nota.",
 	find: "Buscar",
@@ -116,7 +115,6 @@ export const es: Table = {
 	nodes: "Nodos",
 	candidates: "Candidatos",
 	ready: "listo",
-	waits: "espera al segundo hijo",
 	nodesByLevel: "Nodos por nivel",
 	compaction: "Compactación",
 	// The host runtime state.
@@ -170,6 +168,7 @@ export const es: Table = {
 	create: "Crear entrada",
 	save: "Guardar cambios",
 	loading: "Cargando…",
+	retry: "Reintentar",
 	saving: "Guardando…",
 	saved: "Guardado.",
 	copied: "Copiado.",

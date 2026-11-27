@@ -92,6 +92,15 @@
 .ml-console .muted {
 	color: var(--ml-muted);
 }
+.ml-console .failure {
+	display: grid;
+	justify-items: start;
+	gap: 8px;
+}
+.ml-console .failure p {
+	margin: 0;
+	color: var(--ml-error);
+}
 .ml-console .panel {
 	display: grid;
 	gap: 10px;

@@ -315,9 +315,7 @@ const screenFields = {
 	reviewTotal: z.number().optional(),
 	reviewNext: z.array(dueRecord).optional(),
 	reviewNextTotal: z.number().optional(),
-	candidates: z
-		.array(z.strictObject({ scope: z.string(), range, ready: z.boolean() }))
-		.optional(),
+	candidates: z.array(z.strictObject({ scope: z.string(), range })).optional(),
 	totals: totals.optional(),
 	levels: z.array(levelRow).optional(),
 } as const;

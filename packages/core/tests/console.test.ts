@@ -18,6 +18,7 @@ import {
 	type ConsoleModel,
 	type ConsoleScreen,
 	readConsole,
+	readConsoleCatalog,
 } from "../src/domain/console.js";
 import {
 	type ConsoleChildren,
@@ -156,6 +157,30 @@ function addNode(store: Store, node: NodeRow): void {
 			node.a_key,
 			node.b_key,
 		);
+}
+
+/** Three scopes of different freshness, so the directions budget drops the oldest. */
+function catalogStore(): Store {
+	const store = newStore();
+	addNote(store, {
+		scope: "project:a",
+		pos: 0,
+		body: "a top",
+		ts: "2026-11-01T00:00:00.000Z",
+	});
+	addNote(store, {
+		scope: "project:b",
+		pos: 0,
+		body: "b top",
+		ts: "2026-11-09T00:00:00.000Z",
+	});
+	addNote(store, {
+		scope: "project:c",
+		pos: 0,
+		body: "c top",
+		ts: "2026-11-13T00:00:00.000Z",
+	});
+	return store;
 }
 
 const DATA_KEYS = [
@@ -435,6 +460,49 @@ describe("console screens", () => {
 		]);
 	});
 
+	it("keeps the catalog inside the directions budget and at the interval offset", () => {
+		const store = catalogStore();
+		const model = config({ directions: 2 });
+		expect(readConsoleCatalog(store, model, "project:a", 0, 0)).toEqual([
+			{
+				kind: "temporary",
+				range: { start: 0, level: 0 },
+				from: "2026-11-09T00:00:00.000Z",
+				to: "2026-11-09T00:00:00.000Z",
+				text: "b top",
+			},
+		]);
+		expect(readConsoleCatalog(store, model, "project:a", 1, 0)).toEqual([
+			{
+				kind: "temporary",
+				range: { start: 1, level: 0 },
+				from: "2026-11-13T00:00:00.000Z",
+				to: "2026-11-13T00:00:00.000Z",
+				text: "c top",
+			},
+		]);
+	});
+
+	it("stops the catalog at the tail and caps an oversized interval", () => {
+		const store = catalogStore();
+		const model = config({ directions: 2 });
+		expect(readConsoleCatalog(store, model, "project:a", 2, 0)).toEqual([]);
+		expect(readConsoleCatalog(store, model, "project:a", 99, 3)).toEqual([]);
+		expect(
+			readConsoleCatalog(store, model, "project:a", 0, 5).map(
+				(line) => line.range,
+			),
+		).toEqual([
+			{ start: 0, level: 0 },
+			{ start: 1, level: 0 },
+		]);
+		expect(
+			readConsoleCatalog(store, model, "project:a", 1, 5).map(
+				(line) => line.range,
+			),
+		).toEqual([{ start: 1, level: 0 }]);
+	});
+
 	it("lists the due and the next review rows of the selected scope", async () => {
 		const store = newStore();
 		addNote(store, { pos: 0, body: "due here", review_at: "2026-11-01" });
@@ -531,9 +599,9 @@ describe("console screens", () => {
 			"maintenance",
 		);
 		expect(model.candidates).toEqual([
-			{ scope: "project:a", range: { start: 0, level: 1 }, ready: true },
-			{ scope: "project:a", range: { start: 2, level: 1 }, ready: true },
-			{ scope: "project:a", range: { start: 0, level: 2 }, ready: true },
+			{ scope: "project:a", range: { start: 0, level: 1 } },
+			{ scope: "project:a", range: { start: 2, level: 1 } },
+			{ scope: "project:a", range: { start: 0, level: 2 } },
 		]);
 		expect(model.levels).toEqual([
 			{ level: 1, nodes: 1, dirty: 1, candidates: 2 },
@@ -562,7 +630,6 @@ describe("console screens", () => {
 		expect(model.candidates?.[0]).toEqual({
 			scope: "project:a",
 			range: { start: 0, level: 1 },
-			ready: true,
 		});
 		expect(model.totals?.candidates).toBe(63);
 	});

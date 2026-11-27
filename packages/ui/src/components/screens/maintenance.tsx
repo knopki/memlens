@@ -19,8 +19,8 @@
 
 import type { JSX } from "react";
 import { useEffect } from "react";
+import { localTime, renderRange } from "../../format.js";
 import type { ConsoleApi, ConsoleRuntime } from "../../model/console.js";
-import { localTime, renderRange } from "../../model/format.js";
 import { KeyValue, Panel, Table, widthPercent } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
 import { CompactionPanel } from "./compaction.js";
@@ -67,12 +67,11 @@ export function Maintenance({ api }: ScreenProps): JSX.Element | null {
 				right={`${candidates.length} / ${totals?.candidates ?? candidates.length}`}
 			>
 				<Table
-					headers={[t("scope"), t("range"), t("level"), t("state")]}
+					headers={[t("scope"), t("range"), t("level")]}
 					rows={candidates.map((item) => [
 						item.scope,
 						renderRange(item.scope, item.range),
 						String(item.range.level),
-						item.ready ? t("ready") : t("waits"),
 					])}
 					empty={t("none")}
 				/>

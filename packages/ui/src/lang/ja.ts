@@ -74,7 +74,6 @@ export const ja: Table = {
 	catLines: "カタログの行",
 	emptyCatalog: "カタログは空です。",
 	range: "範囲",
-	state: "状態",
 	searchText: "単語でノートを検索します。単語はノートの本文と照合されます。",
 	find: "検索",
 	allScopes: "すべてのスコープ",
@@ -114,7 +113,6 @@ export const ja: Table = {
 	nodes: "ノード",
 	candidates: "候補",
 	ready: "準備完了",
-	waits: "2 つ目の子を待機中",
 	nodesByLevel: "レベル別のノード",
 	compaction: "集約",
 	// The host runtime state.
@@ -167,6 +165,7 @@ export const ja: Table = {
 	create: "記録を作成",
 	save: "変更を保存",
 	loading: "読み込み中…",
+	retry: "再試行",
 	saving: "保存中…",
 	saved: "保存しました。",
 	copied: "コピーしました。",

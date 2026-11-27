@@ -318,9 +318,51 @@ describe("proposals screen", () => {
 		expect(markup).toContain("<td>01JAZ5S0V0S9Z3H7Y8F4W6Q2P2</td>");
 		expect(markup).toContain("<td>the waiting payload</td>");
 		expect(markup).toContain("<td>project:alpha</td>");
+		expect(markup).toContain("<td>none</td>");
 		expect(markup).toContain('<button type="button" class="btn pri">');
 		expect(markup).toContain(">Accept</button>");
 		expect(markup).toContain(">Dismiss</button>");
+	});
+
+	it("shows the session of the payload", () => {
+		const withSession: Proposal = {
+			...PROPOSAL,
+			payload: JSON.stringify({
+				session: "sess-7",
+				body: "the waiting payload",
+			}),
+		};
+		const markup = renderToStaticMarkup(
+			<Proposals
+				api={apiOf(
+					stateOf({
+						screen: "proposals",
+						model: viewOf({ proposals: [withSession] }),
+					}),
+				)}
+			/>,
+		);
+		expect(markup).toContain("<td>sess-7</td>");
+		expect(markup).not.toContain("<td>none</td>");
+	});
+
+	it("keeps the empty session for a payload without a session text", () => {
+		const proposals = ["42", "null", '{"session":7}'].map((payload, index) => ({
+			...PROPOSAL,
+			id: `01JAZ5S0V0S9Z3H7Y8F4W6Q2P${index}`,
+			payload,
+		}));
+		const markup = renderToStaticMarkup(
+			<Proposals
+				api={apiOf(
+					stateOf({
+						screen: "proposals",
+						model: viewOf({ proposals }),
+					}),
+				)}
+			/>,
+		);
+		expect(markup.match(/<td>none<\/td>/g) ?? []).toHaveLength(3);
 	});
 
 	it("lists only the proposals of the view scope", () => {

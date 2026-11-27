@@ -15,8 +15,8 @@
 import type { OpenLine, SliceLine } from "@memlens/core";
 import { dateSpan } from "@memlens/core/view";
 import { type JSX, useSyncExternalStore } from "react";
+import { lineAddress, lineText } from "../../format.js";
 import type { ConsoleApi } from "../../model/console.js";
-import { lineAddress, lineText } from "../../model/format.js";
 import { Inspector } from "../inspector.js";
 import { ChildrenPanel, Legend } from "../line-views.js";
 import { Button, Panel } from "../primitives.js";
