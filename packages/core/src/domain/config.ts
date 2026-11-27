@@ -425,15 +425,22 @@ function pathRules(platform: NodeJS.Platform): typeof posix {
 	return platform === "win32" ? win32 : posix;
 }
 
+const globPatterns = new Map<string, RegExp>();
+
 // #region FUNC_globMatches
 /**
  * @purpose Match one glob, so scope lists, rules, and model globs share one rule.
  * @param glob - The pattern. The part `*` matches any text, and the rest matches itself.
  * @param value - The key or name to test.
  * @returns True when the whole value matches the glob.
+ * @invariant One glob text compiles at most once, because scope lists compare it with every scope.
  */
 export function globMatches(glob: Glob, value: string): boolean {
-	const re = new RegExp(`^${glob.split("*").map(escapeRegExp).join(".*")}$`);
+	let re = globPatterns.get(glob);
+	if (re === undefined) {
+		re = new RegExp(`^${glob.split("*").map(escapeRegExp).join(".*")}$`);
+		globPatterns.set(glob, re);
+	}
 	return re.test(value);
 }
 // #endregion FUNC_globMatches
