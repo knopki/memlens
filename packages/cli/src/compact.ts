@@ -406,9 +406,8 @@ export async function applyAnswers(
  * Apply one answer file as node rows.
  *
  * @purpose Write the answers of a job into the store, so the tree holds the built nodes.
- * @invariants Each answer names one aligned range with "#a-b: text". The command refuses one
- *   answer file larger than 256 MB before the read. A rejected answer counts and stays for the
- *   next job.
+ * @invariants Each answer names one aligned range with "#a-b: text". A rejected answer counts and
+ *   stays for the next job.
  */
 async function compactAnswer(
 	input: CompactInput,

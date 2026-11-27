@@ -137,9 +137,9 @@ function encodeStem(scope: ScopeKey): string {
  * Import notes from one JSONL file.
  *
  * @purpose Join the notes of one file into the store by id, so a user moves or merges a store.
- * @invariants The import joins by id and applies the erasure evidence of both sides. The import
- *   refuses one input file larger than 256 MB before the read. The flag --dry-run validates and
- *   counts the change and writes nothing. The flag --as rewrites the scope of each imported note.
+ * @invariants The import joins by id and applies the erasure evidence of both sides. The flag
+ *   --dry-run validates and counts the change and writes nothing. The flag --as rewrites the scope
+ *   of each imported note.
  */
 export async function importCommand(
 	input: { in: string; as?: string; dryRun?: boolean; store?: string },
