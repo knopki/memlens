@@ -94,7 +94,8 @@ export interface OpenChildren {
 /**
  * @purpose Give one note with the visible part of its document.
  * @invariants The mode head gives 2048 characters at most, and all gives 16384.
- * The offset cuts the document from its start. The answer reports the next offset and the rest flag.
+ * The offset cuts the document from its start. A negative offset reads from zero.
+ * The answer reports the next offset and the rest flag.
  * The mode none omits the document text and keeps the full length.
  */
 export function openNote(
@@ -104,9 +105,10 @@ export function openNote(
 	offset = 0,
 ): OpenEntry {
 	const document = record.longform ?? "";
+	const start = Math.max(0, offset);
 	const cap = mode === "all" ? LONGFORM_ALL : LONGFORM_HEAD;
-	const slice = mode === "none" ? "" : document.slice(offset, offset + cap);
-	const next = mode === "none" ? 0 : offset + slice.length;
+	const slice = mode === "none" ? "" : document.slice(start, start + cap);
+	const next = mode === "none" ? 0 : start + slice.length;
 	debug("Note opened", {
 		event: "open",
 		pos: record.pos,
