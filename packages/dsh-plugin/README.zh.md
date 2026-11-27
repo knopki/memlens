@@ -246,12 +246,8 @@ dsh plugin --profile web add @memlens/dsh-plugin
 
 #### 模型看到的内容
 
-插件统计主智能体的工具调用和轮次。计数器达到上限时，注入一行 user 角色的内容。这一行持有 `{n}`，计数取代它的位置。默认文本是：
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+插件统计主智能体的工具调用和轮次。计数器达到上限时，注入一行 user 角色的内容。这一行持有 `{n}`，计数取代它的位置。
+默认行要求智能体只为后续会话需要、且一分钟内找不到的内容写笔记。没有符合的内容时，智能体忽略这一行。
 
 配置的 `[nudge]` 节给出次数和文本。上限为零或更小时，禁用对应的计数器。
 

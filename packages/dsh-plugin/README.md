@@ -305,13 +305,9 @@ and its answer append after the reusable prefix.
 #### What the model sees
 
 The plugin counts the tool calls and the turns of the main agent. A counter that reaches its limit
-injects one user-role line. The line holds `{n}`, and the count takes its place. The default texts
-are:
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+injects one user-role line. The line holds `{n}`, and the count takes its place. The default line
+asks the agent to write a note only for what a later session needs and cannot find in one minute.
+When nothing qualifies, the agent ignores the line.
 
 The `[nudge]` section of the configuration gives the counts and the texts. A limit of zero or less
 disables its counter.

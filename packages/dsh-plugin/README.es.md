@@ -318,12 +318,9 @@ cambien. Una llamada y su respuesta se añaden después del prefijo reutilizable
 
 El plugin cuenta las llamadas de herramientas y los turnos del agente principal. Un contador que
 alcanza su límite inyecta una línea con rol de usuario. La línea contiene `{n}`, y la cuenta ocupa su
-lugar. Los textos por defecto son:
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+lugar.
+La línea por defecto pide al agente que escriba una nota solo para lo que una sesión posterior necesita
+y no puede encontrar en un minuto. Si nada cumple esa condición, el agente ignora la línea.
 
 La sección `[nudge]` de la configuración da las cuentas y los textos. Un límite de cero o menos
 desactiva su contador.

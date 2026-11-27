@@ -122,8 +122,8 @@ turns = 10
 
 # Each text must hold the part {n}.
 [nudge.text]
-tool_calls = "[memory] {n} tool calls since the last record. Anything durable?"
-turns = "[memory] {n} turns since the last record. Anything durable?"
+tool_calls = "[memory] {n} tool calls passed. Write only what a later session needs."
+turns = "[memory] {n} turns passed. Write only what a later session needs."
 
 # Set the model route to enable background compaction.
 [compaction]

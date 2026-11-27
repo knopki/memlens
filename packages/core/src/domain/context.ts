@@ -45,7 +45,8 @@ then the position, as "project:acme/api#2107".
 
 Find a note before you write one. Save a note with \`memory_note\` when the user gives an order, a
 decision, a correction, or a preference, when a fact changes later work, and when a task fails and the
-cause matters. Do not save greetings, routine tool output, work in progress, or a duplicate.
+cause matters. Write only what a later session cannot find in one minute. Do not save greetings,
+routine tool output, work in progress, or a duplicate.
 
 One note holds one kind: decision, preference, fact, gotcha, task, or note. A gotcha is a failure
 and its cause: what broke, and why. Copy names, numbers, paths, dates, and errors exactly. Give the

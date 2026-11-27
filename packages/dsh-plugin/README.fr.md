@@ -318,13 +318,9 @@ Un appel et sa réponse s'ajoutent après le préfixe réutilisable.
 #### Ce que le modèle voit
 
 Le plugin compte les appels d'outils et les tours de l'agent principal. Un compteur qui atteint sa
-limite injecte une ligne de rôle utilisateur. La ligne porte `{n}`, et le compte prend sa place. Les
-textes par défaut sont :
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+limite injecte une ligne de rôle utilisateur. La ligne porte `{n}`, et le compte prend sa place.
+La ligne par défaut demande à l'agent de n'écrire une note que pour ce dont une session ultérieure a
+besoin et qu'elle ne peut pas trouver en une minute. Si rien ne correspond, l'agent ignore la ligne.
 
 La section `[nudge]` de la configuration donne les comptes et les textes. Une limite de zéro ou moins
 désactive son compteur.

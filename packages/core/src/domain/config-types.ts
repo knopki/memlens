@@ -145,9 +145,9 @@ export interface ResolvedConfig extends Omit<BaseConfig, "profile"> {
 /** The default texts of the nudge counters. */
 export const NUDGE_TEXTS: Record<"tool_calls" | "turns", string> = {
 	tool_calls:
-		"[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?",
+		"[memory] {n} tool calls passed. Write a note only for what a later session needs and cannot find in one minute. If nothing qualifies, ignore this reminder.",
 	turns:
-		"[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?",
+		"[memory] {n} turns passed. Write a note only for what a later session needs and cannot find in one minute. If nothing qualifies, ignore this reminder.",
 };
 
 /** The default review period of each kind, in days. */

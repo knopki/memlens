@@ -304,13 +304,9 @@ dsh plugin --profile web add @memlens/dsh-plugin
 #### Что видит модель
 
 Плагин считает вызовы инструментов и ходы основного агента. Счётчик, достигший предела, вставляет
-одну строку с ролью пользователя. Строка держит `{n}`, и счётчик встаёт на его место. Тексты по
-умолчанию:
-
-```text
-[memory] {n} tool calls since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-[memory] {n} turns since the last record. Anything durable: a decision, a correction, a preference, a failed attempt and its cause?
-```
+одну строку с ролью пользователя. Строка держит `{n}`, и счётчик встаёт на его месте.
+Строка по умолчанию просит агента писать заметку только о том, что понадобится другой сессии и чего
+она не найдёт за минуту. Если ничего такого нет, агент игнорирует строку.
 
 Раздел `[nudge]` конфигурации задаёт счётчики и тексты. Предел ноль или меньше выключает свой
 счётчик.
