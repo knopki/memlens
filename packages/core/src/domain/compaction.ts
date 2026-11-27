@@ -16,6 +16,7 @@
 import { debuglog } from "node:util";
 import {
 	type BuildRead,
+	childOf,
 	publishJoin,
 	publishNode,
 	readBuild,
@@ -23,7 +24,7 @@ import {
 } from "../store/build.js";
 import type { Store } from "../store/store.js";
 import type { ScopeKey } from "../types/primitives.js";
-import type { BuildChild, BuildInput } from "../types/tree.js";
+import type { BuildInput } from "../types/tree.js";
 import { DEFAULT_COMPACTION_BATCH } from "./config-types.js";
 import {
 	address,
@@ -150,38 +151,11 @@ export async function compactionPass(
 		const read = readBuild(store, scope, range.level, range.start);
 		if (!read.ok) continue;
 		const width = 2 ** (range.level - 1);
-		const child = (
-			text: string | null,
-			key: string | null,
-			start: number,
-		): BuildChild | null => {
-			if (text === null) return null;
-			if (range.level === 1)
-				return {
-					kind: "record",
-					id: key ?? "",
-					pos: start,
-					body: text,
-					preview:
-						start === range.start
-							? (read.aPreview ?? "")
-							: (read.bPreview ?? ""),
-					ts: start === range.start ? read.tsFrom : read.tsTo,
-				};
-			return {
-				kind: "node",
-				id: key ?? "",
-				range: { start, level: range.level - 1 },
-				summary: text,
-				ts_from: read.tsFrom,
-				ts_to: read.tsTo,
-			};
-		};
 		const input: BuildInput = {
 			range,
 			children: [
-				child(read.aText, read.aKey, range.start),
-				child(read.bText, read.bKey, range.start + width),
+				childOf(read, range, range.start),
+				childOf(read, range, range.start + width),
 			],
 		};
 		captured.set(input, read);

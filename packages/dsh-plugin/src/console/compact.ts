@@ -16,11 +16,12 @@
  */
 
 import { debuglog } from "node:util";
-import type { BuildChild, BuildInput, ScopeKey } from "@memlens/core";
+import type { BuildInput, ScopeKey } from "@memlens/core";
 import {
 	answerLine,
 	batchTask,
 	candidates,
+	childOf,
 	copyBuild,
 	joinBuild,
 	MemlensError,
@@ -66,38 +67,13 @@ function buildInput(
 	const read = readBuild(memory.store, scope, range.level, range.start);
 	if (!read.ok) return null;
 	const width = 2 ** (range.level - 1);
-	const child = (
-		text: string | null,
-		key: string | null,
-		start: number,
-	): BuildChild | null => {
-		if (text === null) return null;
-		if (range.level === 1)
-			return {
-				kind: "record",
-				id: key ?? "",
-				pos: start,
-				body: text,
-				preview:
-					start === range.start ? (read.aPreview ?? "") : (read.bPreview ?? ""),
-				ts: start === range.start ? read.tsFrom : read.tsTo,
-			};
-		return {
-			kind: "node",
-			id: key ?? "",
-			range: { start, level: range.level - 1 },
-			summary: text,
-			ts_from: read.tsFrom,
-			ts_to: read.tsTo,
-		};
-	};
 	return {
 		read,
 		input: {
 			range,
 			children: [
-				child(read.aText, read.aKey, range.start),
-				child(read.bText, read.bKey, range.start + width),
+				childOf(read, range, range.start),
+				childOf(read, range, range.start + width),
 			],
 		},
 	};

@@ -149,6 +149,7 @@ export {
 } from "./scope-context.js";
 export {
 	candidates,
+	childOf,
 	publishJoin,
 	publishNode,
 	readBuild,
