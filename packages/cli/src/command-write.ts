@@ -44,6 +44,7 @@ import type { Command } from "commander";
 import {
 	addressList,
 	type CommandIo,
+	checkedScope,
 	command,
 	DRY_RUN,
 	JSON_FLAG,
@@ -233,13 +234,6 @@ function resolveRowTarget(
 		checkedScope(runtime, scope),
 	);
 	return { scope: record.scope, record };
-}
-
-function checkedScope(runtime: Runtime, raw: string): ScopeKey {
-	const scope = normalizeScopeKey(raw) as ScopeKey;
-	if (!runtime.scopes.includes(scope))
-		throw new MemlensError("NotAllowed", `The scope ${scope} is not visible.`);
-	return scope;
 }
 
 // #region FUNC_forgetCommand
