@@ -72,7 +72,6 @@ export const zh: Table = {
 	catLines: "目录行",
 	emptyCatalog: "目录为空。",
 	range: "区间",
-	state: "状态",
 	searchText: "按词语查找笔记。词语会在笔记正文中匹配。",
 	find: "查找",
 	allScopes: "所有范围",
@@ -111,7 +110,6 @@ export const zh: Table = {
 	nodes: "节点",
 	candidates: "候选",
 	ready: "就绪",
-	waits: "等待第二个子节点",
 	nodesByLevel: "各层级节点",
 	compaction: "压缩",
 	// The host runtime state.
@@ -163,6 +161,7 @@ export const zh: Table = {
 	create: "创建记录",
 	save: "保存更改",
 	loading: "加载中…",
+	retry: "重试",
 	saving: "保存中…",
 	saved: "已保存。",
 	copied: "已复制。",

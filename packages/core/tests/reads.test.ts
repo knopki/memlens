@@ -20,7 +20,6 @@ import {
 	openNote,
 	openRange,
 	scopeLines,
-	upcomingRecords,
 } from "../src/domain/reads.js";
 import { byAddress } from "../src/store/reads.js";
 import { Store } from "../src/store/store.js";
@@ -359,31 +358,12 @@ describe("dueRecords and scopeLines", () => {
 		expect(dueRecords(store, null, "2025-12-31")).toEqual([]);
 	});
 
-	it("keeps one kind through the due and upcoming lists", () => {
+	it("keeps one kind through the due list", () => {
 		const store = fixture();
 		expect(
 			dueRecords(store, null, "2026-11-10", "fact").map((item) => item.body),
 		).toEqual(["due fact"]);
 		expect(dueRecords(store, null, "2026-11-10", "task")).toEqual([]);
-		const task = upcomingRecords(store, null, "2026-11-10", 10, "task");
-		expect(task.records.map((item) => item.body)).toEqual(["fresh task"]);
-		expect(task.total).toBe(1);
-	});
-
-	it("lists the upcoming notes in date order under the limit", () => {
-		const store = fixture();
-		expect(
-			upcomingRecords(store, null, "2026-11-10", 10).records.map(
-				(item) => item.body,
-			),
-		).toEqual(["fresh task", "later decision"]);
-		const one = upcomingRecords(store, null, "2026-11-10", 1);
-		expect(one.records.map((item) => item.body)).toEqual(["fresh task"]);
-		expect(one.total).toBe(2);
-		expect(upcomingRecords(store, null, "2026-12-31", 10)).toEqual({
-			records: [],
-			total: 0,
-		});
 	});
 
 	it("compares an older date value with a full review time", () => {
@@ -405,11 +385,6 @@ describe("dueRecords and scopeLines", () => {
 				(item) => item.body,
 			),
 		).toEqual(["date due", "time due"]);
-		expect(
-			upcomingRecords(store, null, "2026-11-10T08:00:00.000Z", 10).records.map(
-				(item) => item.body,
-			),
-		).toEqual(["time due"]);
 	});
 
 	it("lists each scope with its live count and its last write date", () => {

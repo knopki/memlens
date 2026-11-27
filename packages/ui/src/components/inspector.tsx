@@ -16,8 +16,8 @@
 import type { ConsoleEntry } from "@memlens/core";
 import type { JSX } from "react";
 import { useState } from "react";
+import { kindName } from "../format.js";
 import type { ConsoleApi } from "../model/console.js";
-import { kindName } from "../model/format.js";
 import { Button, KeyValue, Panel } from "./primitives.js";
 
 // #region COMPONENT_Inspector

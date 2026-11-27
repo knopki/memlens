@@ -74,7 +74,6 @@ export const ru: Table = {
 	catLines: "Строки каталога",
 	emptyCatalog: "Каталог пуст.",
 	range: "Диапазон",
-	state: "Состояние",
 	searchText: "Поиск записей по словам. Слова ищутся в теле записи.",
 	find: "Найти",
 	allScopes: "Все области",
@@ -114,7 +113,6 @@ export const ru: Table = {
 	nodes: "Узлы",
 	candidates: "Кандидаты",
 	ready: "готов",
-	waits: "ждёт второго ребёнка",
 	nodesByLevel: "Узлы по уровням",
 	compaction: "Уплотнение",
 	// The host runtime state.
@@ -168,6 +166,7 @@ export const ru: Table = {
 	create: "Создать запись",
 	save: "Сохранить",
 	loading: "Загрузка…",
+	retry: "Повторить",
 	saving: "Сохранение…",
 	saved: "Сохранено.",
 	copied: "Скопировано.",

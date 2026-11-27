@@ -74,7 +74,6 @@ export const de: Table = {
 	catLines: "Katalogzeilen",
 	emptyCatalog: "Der Katalog ist leer.",
 	range: "Intervall",
-	state: "Status",
 	searchText:
 		"Notizen nach Wörtern durchsuchen. Gesucht wird im Inhalt der Notiz.",
 	find: "Suchen",
@@ -116,7 +115,6 @@ export const de: Table = {
 	nodes: "Knoten",
 	candidates: "Kandidaten",
 	ready: "bereit",
-	waits: "wartet auf das zweite Kind",
 	nodesByLevel: "Knoten je Ebene",
 	compaction: "Verdichtung",
 	// The host runtime state.
@@ -170,6 +168,7 @@ export const de: Table = {
 	create: "Eintrag erstellen",
 	save: "Änderungen speichern",
 	loading: "Lädt…",
+	retry: "Erneut versuchen",
 	saving: "Speichert…",
 	saved: "Gespeichert.",
 	copied: "Kopiert.",

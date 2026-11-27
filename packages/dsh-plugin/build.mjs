@@ -27,7 +27,6 @@ await build({
 	platform: "node",
 	format: "esm",
 	target: "node24",
-	sourcemap: true,
 });
 
 // The Web page loads the client bundle as a classic script, before the module

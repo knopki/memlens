@@ -75,13 +75,7 @@ function modelOf(): View {
 		},
 		totals: { records: 4, nodes: 1, candidates: 1 },
 		levels: [{ level: 1, nodes: 1, dirty: 0, candidates: 1 }],
-		candidates: [
-			{
-				scope: "project:alpha",
-				range: { start: 0, level: 1 },
-				ready: true,
-			},
-		],
+		candidates: [{ scope: "project:alpha", range: { start: 0, level: 1 } }],
 	});
 }
 
@@ -98,7 +92,7 @@ describe("maintenance screen", () => {
 		expect(markup).toContain("4 / 10 lines");
 		expect(markup).toContain('<span class="r">1 / 1</span>');
 		expect(markup).toContain("project:alpha#0-1");
-		expect(markup).toContain("ready");
+		expect(markup).not.toContain("<th>State</th>");
 		expect(markup).toContain("Nodes by level");
 		expect(markup).toContain("Prepare a scope job");
 		expect(markup).not.toContain("Host runtime");

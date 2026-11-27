@@ -47,10 +47,10 @@ import type {
 import type { ConsoleStore } from "./store.js";
 
 /** The storage key of the language choice. */
-const LANG_KEY = "memlens.lang";
+export const LANG_KEY = "memlens.lang";
 
 /** The storage key of the theme choice. */
-const THEME_KEY = "memlens.theme";
+export const THEME_KEY = "memlens.theme";
 
 /** The time that a success message stays on the page, in milliseconds. */
 const SUCCESS_MS = 2500;
@@ -61,14 +61,20 @@ const ERROR_MS = 8000;
 /** The wait between two reads of the host runtime state, in milliseconds. */
 const RUNTIME_MS = 5000;
 
-function languageOf(code: string): Lang {
+// #region FUNC_languageOf
+/** @purpose Give the language of one stored or browser code, with English as the fallback. */
+export function languageOf(code: string): Lang {
 	const short = code.slice(0, 2) as Lang;
 	return LANGS.includes(short) ? short : "en";
 }
+// #endregion FUNC_languageOf
 
-function themeOf(code: string): Choice {
+// #region FUNC_themeOf
+/** @purpose Give the theme of one stored text, with the system setting as the fallback. */
+export function themeOf(code: string): Choice {
 	return code === "light" || code === "dark" ? code : "system";
 }
+// #endregion FUNC_themeOf
 
 // #region INTERFACE_ControllerOptions
 /**
@@ -249,7 +255,7 @@ export function createConsoleController(
 	 */
 	async function loadView(step: Step = "replace"): Promise<boolean> {
 		const token = get().generation + 1;
-		set({ generation: token });
+		set({ generation: token, loadError: "" });
 		message(t("loading"));
 		let view: View | undefined;
 		let failed: unknown;
@@ -268,8 +274,16 @@ export function createConsoleController(
 			: undefined;
 		if (token !== get().generation) return false;
 		if (runtime !== undefined) set({ runtime });
-		if (failed !== undefined) throw failed;
-		if (!view || !Array.isArray(view.scopes)) throw new Error(t("badView"));
+		if (failed !== undefined) {
+			set({
+				loadError: failed instanceof Error ? failed.message : String(failed),
+			});
+			throw failed;
+		}
+		if (!view || !Array.isArray(view.scopes)) {
+			set({ loadError: t("badView") });
+			throw new Error(t("badView"));
+		}
 		set({ model: view, profile: view.profile, scope: view.scope });
 		console.debug("Console loaded", {
 			event: "view",

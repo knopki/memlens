@@ -2,16 +2,20 @@
  * #region moduleContract
  * @purpose Turn the store positions and ranges into the short text of a console line, so both
  * console shells and the model name one target in the same way.
- * @scope The line address, the line text, and the local time. NOT: the address grammar, the markup,
- * the store reads, the state, and the localised kind name.
- * @keywords address, range, line, text
+ * @scope The line address, the line text, the local time, and the localised kind name. NOT: the
+ * address grammar, the markup, the store reads, and the state.
+ * @invariants Each helper takes no message function, except the kind name. It takes the function of
+ * its host.
+ * @keywords address, range, line, text, kind, label
  * #endregion moduleContract
  */
 
-import type { SliceLine } from "@memlens/core";
+import type { NoteKind, SliceLine } from "@memlens/core";
 import { readRange, renderAddress, renderRange } from "@memlens/core/view";
+import { KIND_KEYS, type Table } from "./i18n.js";
+import type { Translate } from "./model/console.js";
 
-export { readRange, renderAddress, renderRange };
+export { readRange, renderRange };
 
 export const lineAddress = (key: string, line: SliceLine) =>
 	line.kind === "record"
@@ -44,3 +48,10 @@ export function localTime(iso: string): string {
 	return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
 // #endregion FUNC_localTime
+
+// #region FUNC_kindName
+/** @purpose Give the localised name of one note kind. */
+export function kindName(t: Translate, kind: NoteKind | "unavailable"): string {
+	return kind === "unavailable" ? t("none") : t(KIND_KEYS[kind] as keyof Table);
+}
+// #endregion FUNC_kindName

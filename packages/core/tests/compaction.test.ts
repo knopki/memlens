@@ -22,8 +22,6 @@ import {
 	joinBuild,
 	MERGE_SYSTEM,
 	MERGE_SYSTEM_BATCH,
-	mergeLine,
-	mergeTask,
 	OUTPUT_MANY,
 	OUTPUT_ONE,
 	parseBatchAnswer,
@@ -47,19 +45,6 @@ const input = (a: BuildChild, b: BuildChild | null): BuildInput => ({
 	range: { start: 0, level: 1 },
 	children: [a, b],
 });
-
-const model = (answers: string[]) => {
-	const calls: string[] = [];
-	return {
-		calls,
-		model: async (_system: string, task: string) => {
-			calls.push(task);
-			const answer = answers.shift();
-			if (answer === undefined) throw new Error("No answer left");
-			return answer;
-		},
-	};
-};
 
 describe("prompts", () => {
 	it("renders a child as the model reads it", () => {
@@ -88,15 +73,6 @@ describe("prompts", () => {
 				ts_to: "2026-11-02",
 			}),
 		).toBe("#2 2026-11-01..02\nscope root");
-	});
-
-	it("fills the merge task text with the target and the words", () => {
-		const task = mergeTask(512, record(0, "a"), record(1, "b"));
-		expect(task).toContain("at most 512 characters (about 85 words)");
-		expect(task).not.toContain("---");
-		expect(task).toContain(
-			"<input>\n#0 2026-11-01\na\n#1 2026-11-02\nb\n</input>",
-		);
 	});
 
 	it("asks one batch call for each input block", () => {
@@ -152,85 +128,6 @@ describe("prompts", () => {
 		expect(task).toContain("[project:a] 2026-11-01..02\nalpha");
 		expect(task).toContain("[project:b] 2026-11-03..04\nbeta");
 		expect(task).toContain('<input id="#0-1">');
-	});
-});
-
-describe("mergeLine", () => {
-	it("copies one non-empty child without a model call", async () => {
-		const line = await mergeLine(
-			input(record(2, "only note"), null),
-			async () => {
-				throw new Error("The model must not run");
-			},
-		);
-		expect(line).toEqual({
-			ok: true,
-			summary: "only note",
-			chars: 9,
-			truncated: false,
-			ts_from: "2026-11-03",
-			ts_to: "2026-11-03",
-		});
-	});
-
-	it("accepts a short answer with no retry", async () => {
-		const stub = model(["short answer"]);
-		const line = await mergeLine(
-			input(record(0, "a long body"), record(1, "b long body")),
-			stub.model,
-		);
-		expect(stub.calls).toHaveLength(1);
-		expect(line).toMatchObject({
-			ok: true,
-			summary: "short answer",
-			truncated: false,
-		});
-	});
-
-	it("retries an over-long answer with 0.75 of the target", async () => {
-		const stub = model(["x".repeat(700), "short answer"]);
-		const line = await mergeLine(
-			input(record(0, "a".repeat(300)), record(1, "b".repeat(300))),
-			stub.model,
-		);
-		expect(stub.calls).toHaveLength(2);
-		expect(stub.calls[1]).toContain("at most 384 characters");
-		expect(stub.calls[0]).toContain("at most 512 characters");
-		expect(line).toMatchObject({ ok: true, summary: "short answer" });
-	});
-
-	it("takes the shortest attempt and cuts it at a word boundary", async () => {
-		const long = `${"word ".repeat(140)}end`;
-		const stub = model([long, `${long} much longer still`, long]);
-		const line = await mergeLine(
-			input(record(0, "a".repeat(400)), record(1, "b".repeat(400))),
-			stub.model,
-		);
-		expect(stub.calls).toHaveLength(3);
-		if (!line.ok) throw new Error("The line must build");
-		expect(line.truncated).toBe(true);
-		expect(line.chars).toBeLessThanOrEqual(640);
-		expect(line.summary.endsWith("word")).toBe(true);
-	});
-
-	it("leaves the node dirty when no answer is shorter than its source", async () => {
-		const stub = model(["x".repeat(700), "y".repeat(700), "z".repeat(700)]);
-		const line = await mergeLine(
-			input(record(0, "a".repeat(300)), record(1, "b".repeat(300))),
-			stub.model,
-		);
-		expect(stub.calls).toHaveLength(3);
-		expect(line).toEqual({ ok: false, reason: "not_shorter" });
-	});
-
-	it("fails with no answer when each call breaks", async () => {
-		const line = await mergeLine(
-			input(record(0, "body a"), record(1, "body b")),
-			async () => {
-				throw new Error("provider down");
-			},
-		);
-		expect(line).toEqual({ ok: false, reason: "no_answer" });
 	});
 });
 

@@ -2,10 +2,9 @@
  * #region moduleContract
  * @purpose Give both console shells one set of unstyled React controls that emit the class names of
  * the standalone stylesheet.
- * @scope The button, the icon button, the text input, the text area, the select, the checkbox, the
- * field, the filter bar, the panel, the key-value block, the table, the meter, the dialog, the
- * status line, the chip, and the empty state. NOT: the transport, the address, the state, and the
- * stylesheet.
+ * @scope The button, the text input, the text area, the select, the checkbox, the field, the filter
+ * bar, the panel, the key-value block, the table, the meter, the dialog, the status line, and the
+ * chip. NOT: the transport, the address, the state, and the stylesheet.
  * @invariants A primitive writes its text into a text node and never into markup.
  * @invariants A primitive holds no style, no transport, and no address. The shell supplies the
  * stylesheet.
@@ -85,40 +84,6 @@ export function Button({
 	);
 }
 // #endregion COMPONENT_Button
-
-// #region COMPONENT_IconButton
-/**
- * @purpose Give one icon-only button with its accessible name.
- * @invariants The name goes into the attribute `aria-label`.
- */
-export interface IconButtonProps {
-	readonly path: string;
-	readonly label: string;
-	readonly onClick?: () => void;
-	readonly className?: string;
-	readonly disabled?: boolean;
-}
-
-export function IconButton({
-	path,
-	label,
-	onClick,
-	className = "",
-	disabled = false,
-}: IconButtonProps): JSX.Element {
-	return (
-		<button
-			type="button"
-			className={`btn ${className}`.trim()}
-			aria-label={label}
-			onClick={onClick}
-			disabled={disabled}
-		>
-			<Icon path={path} />
-		</button>
-	);
-}
-// #endregion COMPONENT_IconButton
 
 // #region COMPONENT_TextInput
 /**
@@ -488,20 +453,6 @@ export function Chip({ label, value, warn = false }: ChipProps): JSX.Element {
 	);
 }
 // #endregion COMPONENT_Chip
-
-// #region COMPONENT_EmptyState
-/**
- * @purpose State that a list holds no item.
- * @invariants The text arrives through props.
- */
-export interface EmptyStateProps {
-	readonly text: string;
-}
-
-export function EmptyState({ text }: EmptyStateProps): JSX.Element {
-	return <p className="muted">{text}</p>;
-}
-// #endregion COMPONENT_EmptyState
 
 // #region COMPONENT_StatusLine
 /**

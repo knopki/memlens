@@ -18,7 +18,6 @@ await build({
 	platform: "node",
 	format: "esm",
 	target: "node24",
-	sourcemap: true,
 	banner: { js: "#!/usr/bin/env node" },
 });
 

@@ -309,42 +309,6 @@ export function dueRecords(
 }
 // #endregion FUNC_dueRecords
 
-/** One page of the records that come due next, with the count of the whole list. */
-export interface UpcomingPage {
-	readonly records: readonly DueRecord[];
-	readonly total: number;
-}
-
-// #region FUNC_upcomingRecords
-/**
- * @purpose List the records that come due next, so the review screen stays useful before a due time.
- * @invariants A record is upcoming when its review time is after now. A null review value stays out.
- * The limit caps the records, and the total counts each record of the kind before the cap.
- * Order by the review value, then the scope, then the position.
- */
-export function upcomingRecords(
-	source: ReadSource | View,
-	scopes: readonly ScopeKey[] | null,
-	now: IsoTime,
-	limit: number,
-	kind: NoteKind | null = null,
-): UpcomingPage {
-	const next = reviewList(
-		source,
-		scopes,
-		(row) => row.review_at !== null && row.review_at > now,
-		kind,
-	);
-	debug("Review upcoming listed", {
-		event: "upcoming",
-		count: next.length,
-		limit,
-		kind,
-	});
-	return { records: next.slice(0, limit), total: next.length };
-}
-// #endregion FUNC_upcomingRecords
-
 /** One scope line of the scope list. */
 export interface ScopeLine {
 	readonly key: ScopeKey;

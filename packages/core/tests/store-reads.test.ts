@@ -3,7 +3,7 @@
  * @modulecontract
  * @purpose Prove the search with its filters and the read models against the real store engine.
  * @scope The prefix match, the find filters, the hit order, the hidden row, the tie order, the trigram
- *   fallback, the due list, and the directions block.
+ *   fallback, the due list and its count, and the directions block.
  * @invariants Each test reads rows that the test wrote by raw SQL, except the move test, which
  *   writes through the note API.
  * @invariants The file pins the zone to Europe/Moscow before the search tests.
@@ -20,6 +20,7 @@ import { amend, note } from "../src/store/notes.js";
 import {
 	byAddress,
 	byId,
+	countDueReviews,
 	directionsData,
 	dueReviews,
 	liveCounts,
@@ -406,7 +407,7 @@ describe("trigram", () => {
 
 // #region FUNC_test_reads
 /**
- * @purpose Prove the note reads, the counts, the slot order, and the node order.
+ * @purpose Prove the note reads, the due count, the counts, the slot order, and the node order.
  */
 describe("reads", () => {
 	it("reads a note by address and by id", () => {
@@ -459,6 +460,45 @@ describe("reads", () => {
 		assert.deepEqual(
 			capped.map((note) => note.id),
 			["d5"],
+		);
+	});
+
+	it("counts the due live rows of the given scopes", () => {
+		const store = newStore();
+		addNote(store, { id: "c1", pos: 0, body: "one", review_at: T1 });
+		addNote(store, {
+			id: "c2",
+			pos: 1,
+			scope: "p:y",
+			body: "two",
+			review_at: T3,
+		});
+		addNote(store, { id: "c3", pos: 2, body: "three", review_at: null });
+		addNote(store, {
+			id: "c4",
+			pos: 3,
+			scope: "p:z",
+			state: "hidden",
+			body: "four",
+			review_at: T0,
+		});
+		addNote(store, {
+			id: "c5",
+			pos: 4,
+			scope: "p:y",
+			state: "deleted",
+			body: "five",
+			review_at: T0,
+		});
+		addNote(store, { id: "c6", pos: 5, body: "six", review_at: NOW });
+		assert.equal(countDueReviews(store, null, NOW), 2);
+		assert.equal(countDueReviews(store, ["p:x" as ScopeKey], NOW), 2);
+		assert.equal(countDueReviews(store, ["p:y" as ScopeKey], NOW), 0);
+		assert.equal(countDueReviews(store, ["p:z" as ScopeKey], NOW), 0);
+		assert.equal(countDueReviews(store, [], NOW), 0);
+		assert.equal(
+			countDueReviews(store, null, NOW),
+			dueReviews(store, NOW).length,
 		);
 	});
 

@@ -16,7 +16,7 @@ import { debuglog } from "node:util";
 import type { ScopeKey } from "@memlens/core";
 import {
 	check,
-	dueRecords,
+	countDueReviews,
 	type JournalRow,
 	journalRows,
 	liveCounts,
@@ -95,7 +95,7 @@ export async function statusCommand(
 			rev,
 			scopes: counts.size,
 			live: liveTotal(counts),
-			due: dueRecords(runtime.store, runtime.scopes, nowIso()).length,
+			due: countDueReviews(runtime.store, runtime.scopes, nowIso()),
 		};
 		debug("Status answered", { event: "status", rev });
 		return input.json

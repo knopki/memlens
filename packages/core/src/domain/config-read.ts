@@ -141,6 +141,13 @@ export function readProfiles(value: unknown): Record<string, ProfileConfig> {
 }
 // #endregion FUNC_readProfiles
 
+// #region FUNC_defaultProfile
+/** @purpose Supply the defaults of an absent profile. */
+export function defaultProfile(): ProfileConfig {
+	return { scopes: ["*"], budget: { ...DEFAULT_BUDGET } };
+}
+// #endregion FUNC_defaultProfile
+
 function readProfile(value: unknown, where: string): ProfileConfig {
 	const record = expectRecord(value, where);
 	expectKeys(record, ["scopes", "budget", "subagents"], where);
@@ -152,7 +159,7 @@ function readProfile(value: unknown, where: string): ProfileConfig {
 		throw new MemlensError("Data", `${where}.scopes is not a list of globs`);
 	}
 	const profile: ProfileConfig = {
-		scopes: (record.scopes as Glob[] | undefined) ?? ["*"],
+		scopes: (record.scopes as Glob[] | undefined) ?? defaultProfile().scopes,
 		budget: readFullBudget(record.budget, `${where}.budget`),
 	};
 	if (record.subagents !== undefined) {

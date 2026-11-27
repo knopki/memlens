@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Build one summary line from one pair of children, so the reader can tell which threads live below.
- * @scope The merge prompt and its batch form, the line attempts, the copy and join rules, the batch
+ * @scope The merge prompt and its batch form, the copy and join rules, the batch
  * answer, and the shrink check.
  *  NOT: the triggers, the timers, the model service, and the store locks.
  * @invariants A line holds at most 640 characters, and a cut text takes the truncated flag.
@@ -94,12 +94,6 @@ export const NODE_TARGET = 512;
 /** The summary limit of a merge, in characters. One line of the view holds this many at most. */
 export const NODE_LIMIT = LINE_LIMIT;
 
-/** The greatest attempt count of one merge. */
-export const NODE_ATTEMPTS = 3;
-
-/** A retry asks for this share of the previous target. */
-export const RETRY_FACTOR = 0.75;
-
 /** One completion call. The host binds the provider, the model, and the effort setting. */
 export type MergeModel = (system: string, task: string) => Promise<string>;
 
@@ -154,27 +148,6 @@ const textOf = (child: BuildChild): string =>
 /** The non-null children of an input, in order. */
 const live = (input: BuildInput): readonly BuildChild[] =>
 	input.children.filter((child): child is BuildChild => child !== null);
-
-// #region FUNC_mergeTask
-/**
- * @purpose Send the merge task text with the target of the asked line.
- * @invariants The task holds one or two children and no other input.
- * @invariants The task names the map rule, because the task comes last in the call.
- */
-export function mergeTask(
-	target: number,
-	a: BuildChild,
-	b?: BuildChild,
-): string {
-	const instruction = b
-		? "Merge these two adjacent lines"
-		: "Summarize this line";
-	return `${instruction} into one line of at most ${target} characters (about ${Math.round(target / 6)} words). Write a map of it, not a join of its sentences.
-<input>
-${childLine(a)}${b ? `\n${childLine(b)}` : ""}
-</input>`;
-}
-// #endregion FUNC_mergeTask
 
 // #region FUNC_batchTask
 /**
@@ -337,75 +310,6 @@ export function answerLine(input: BuildInput, text: string): LineBuild {
 	};
 }
 // #endregion FUNC_answerLine
-
-async function callModel(
-	model: MergeModel,
-	target: number,
-	children: readonly BuildChild[],
-): Promise<string> {
-	const pair = [children[0], children[1]] as const;
-	const first = pair[0];
-	const second = pair[1];
-	if (!first) return "";
-	try {
-		const answer = (
-			await model(MERGE_SYSTEM, mergeTask(target, first, second))
-		).trim();
-		debug("Merge answered", { target, chars: answer.length });
-		return answer;
-	} catch (error) {
-		debug("Merge failed", { target, error: String(error) });
-		return "";
-	}
-}
-
-// #region FUNC_mergeLine
-/**
- * @purpose Build one line from a ready input, with retries and the shrink check.
- * @invariants The model writes the summary from the copied children only.
- * One non-empty child without a longform copies. A model answer of at most 640
- * characters that is shorter than its source is accepted with no retry. Each retry asks for 0.75
- * times the previous target. Three attempts at most, and the shortest answer wins. A line above
- * the limit cuts at a word boundary and takes truncated. An answer never shorter than its source
- * fails with not_shorter, and the node stays dirty.
- */
-export async function mergeLine(
-	input: BuildInput,
-	model: MergeModel,
-): Promise<LineBuild> {
-	const children = live(input);
-	if (
-		children.length < 2 &&
-		(!children[0] || children[0].kind === "node" || !children[0].preview)
-	) {
-		const line = copyBuild(input);
-		debug("Line copied", {
-			start: input.range.start,
-			level: input.range.level,
-			chars: line.chars,
-		});
-		return line;
-	}
-	const source = children.reduce((sum, child) => sum + textOf(child).length, 0);
-	let target = NODE_TARGET;
-	let shortest = "";
-	for (let attempt = 0; attempt < NODE_ATTEMPTS; attempt += 1) {
-		const answer = await callModel(model, target, children);
-		if (answer && (!shortest || answer.length < shortest.length))
-			shortest = answer;
-		if (answer && answer.length <= NODE_LIMIT && answer.length < source) break;
-		target = Math.round(target * RETRY_FACTOR);
-	}
-	const line = finalizeLine(input, shortest);
-	debug("Line built", {
-		start: input.range.start,
-		level: input.range.level,
-		ok: line.ok,
-		chars: line.ok ? line.chars : 0,
-	});
-	return line;
-}
-// #endregion FUNC_mergeLine
 
 // #region FUNC_parseBatchAnswer
 /**

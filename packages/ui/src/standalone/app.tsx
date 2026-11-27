@@ -3,13 +3,14 @@
  * @purpose Draw the page of the standalone console, so the shared component layer reaches a human
  * through one shell with the header, the rail, the screen, and the status line.
  * @scope The chrome, the heading, the seven navigation keys, the theme attribute, the page text,
- * the browser history listener, the dialog, and the status line. NOT: the screens, the store, the
- * transport, and the stylesheet.
+ * the browser history listener, the failed read with its retry, the dialog, and the status line.
+ * NOT: the screens, the store, the transport, and the stylesheet.
  * @invariants The shell writes no markup that the screens already write.
  * @invariants The body shows the screen only when the model is the payload of that screen, so a load
  *   shows no stale screen data.
  * @invariants The shell emits the class names of the stylesheet of the standalone host.
- * @invariants A page without a model shows the status line only, as the DOM console did.
+ * @invariants A page without a model shows the failure or the status line only, as the DOM console
+ *   did.
  * @invariants The tree screen and the search screen hold the inspector. The shell adds no second
  * inspector.
  * @usecases
@@ -64,8 +65,8 @@ export interface AppProps {
 /**
  * @purpose Draw the chrome and the current screen from the state of one console.
  * @invariants The theme attribute and the page text follow the state.
- * @invariants The number keys open the seven screens, unless a dialog is open or a field holds the
- * focus.
+ * @invariants The number keys open the seven screens, unless a dialog is open, a field holds the
+ *   focus, or a modifier is held. A held modifier leaves the key to the browser.
  */
 export function App({ api }: AppProps): JSX.Element {
 	const state = useSyncExternalStore(
@@ -92,6 +93,7 @@ export function App({ api }: AppProps): JSX.Element {
 
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent): void => {
+			if (event.ctrlKey || event.metaKey || event.altKey) return;
 			const next = SCREENS[Number(event.key) - 1];
 			if (next === undefined || api.state.dialog) return;
 			const tag = document.activeElement?.tagName ?? "";
@@ -119,7 +121,16 @@ export function App({ api }: AppProps): JSX.Element {
 			error={state.status.error}
 		/>
 	);
-	if (!model) return status;
+	const failure = state.loadError ? (
+		<Failure api={api} text={state.loadError} />
+	) : null;
+	if (!model)
+		return (
+			<>
+				{failure}
+				{status}
+			</>
+		);
 	const index = SCREENS.indexOf(state.screen);
 	const title =
 		state.screen === "tree"
@@ -137,7 +148,7 @@ export function App({ api }: AppProps): JSX.Element {
 						{model.screen === state.screen ? (
 							<Screen api={api} />
 						) : (
-							<p className="muted">{api.t("loading")}</p>
+							(failure ?? <p className="muted">{api.t("loading")}</p>)
 						)}
 					</main>
 				</div>
@@ -149,6 +160,31 @@ export function App({ api }: AppProps): JSX.Element {
 	);
 }
 // #endregion COMPONENT_App
+
+// #region COMPONENT_Failure
+/**
+ * @purpose State the text of one failed screen read and offer its retry.
+ * @invariants The retry reads the view of the current screen again.
+ */
+interface FailureProps {
+	readonly api: ConsoleApi;
+	readonly text: string;
+}
+
+function Failure({ api, text }: FailureProps): JSX.Element {
+	return (
+		<div className="failure">
+			<p>{text}</p>
+			<Button
+				text={api.t("retry")}
+				onClick={() => {
+					void api.call.reload();
+				}}
+			/>
+		</div>
+	);
+}
+// #endregion COMPONENT_Failure
 
 interface HeaderProps {
 	readonly api: ConsoleApi;

@@ -3,8 +3,8 @@
  * @vitest-environment happy-dom
  * @purpose Hold the shell to the browser wiring that a server render cannot show: a click, a pick,
  * a key, and a typed field reach the controller, and the page redraws from the new state.
- * @scope The rail, the header pickers, the number keys, the theme attribute, the record form, and
- *   the inspector actions.
+ * @scope The rail, the header pickers, the number keys, the failed read and its retry, the theme,
+ * the record form, and the inspector actions.
  * @invariants Each test mounts the real shell on a real controller with a fake port.
  * @invariants Each test sends DOM events as a browser sends them, and no state goes in by hand.
  * @dependencies USES: React, the shell, the controller harness of the model tests, and happy-dom.
@@ -150,10 +150,14 @@ async function type(
 /**
  * @purpose Press one number key on one element, as a browser sends the keydown.
  */
-async function key(target: EventTarget, text: string): Promise<void> {
+async function key(
+	target: EventTarget,
+	text: string,
+	init: KeyboardEventInit = {},
+): Promise<void> {
 	await act(async () => {
 		target.dispatchEvent(
-			new KeyboardEvent("keydown", { key: text, bubbles: true }),
+			new KeyboardEvent("keydown", { key: text, bubbles: true, ...init }),
 		);
 	});
 }
@@ -292,6 +296,45 @@ describe("standalone interaction", () => {
 
 		expect(h.state().screen).toBe("catalog");
 		expect(headingOf(container)).toBe(messages("en").nav2);
+	});
+
+	it("leaves a number key with a held modifier to the browser", async () => {
+		const h = harness({}, { model: viewOf() });
+		const container = await mount(h);
+
+		await key(document, "3", { ctrlKey: true });
+
+		expect(h.state().screen).toBe("overview");
+		expect(headingOf(container)).toBe(messages("en").nav0);
+	});
+
+	it("states a failed screen read and retries it", async () => {
+		let index = 0;
+		const h = harness(
+			{
+				view: async (fields) => {
+					if (index++ === 0) throw new Error("The host is closed.");
+					return viewOf(fields.profile || "default", "project:alpha", {
+						screen: fields.screen ?? "overview",
+					});
+				},
+			},
+			{ model: viewOf() },
+		);
+		const container = await mount(h);
+
+		await click(container, "aside nav button:nth-child(4)");
+
+		expect(h.state().loadError).toBe("The host is closed.");
+		expect(need(container, ".failure p").textContent).toBe(
+			"The host is closed.",
+		);
+		expect(need(container, ".failure button").textContent).toBe("Try again");
+
+		await click(container, ".failure button");
+
+		expect(h.state().loadError).toBe("");
+		expect(headingOf(container)).toBe(messages("en").nav3);
 	});
 
 	it("keeps the screen when a picker holds the focus", async () => {

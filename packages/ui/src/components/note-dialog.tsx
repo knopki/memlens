@@ -19,12 +19,12 @@ import type { NoteKind } from "@memlens/core";
 import { NOTE_KINDS } from "@memlens/core/view";
 import type { JSX } from "react";
 import { useState } from "react";
+import { kindName } from "../format.js";
 import type {
 	ConsoleApi,
 	DialogPayload,
 	DialogState,
 } from "../model/console.js";
-import { kindName } from "../model/format.js";
 import {
 	Button,
 	Dialog,

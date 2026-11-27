@@ -99,8 +99,6 @@ export {
 	MERGE_SYSTEM,
 	MERGE_SYSTEM_BATCH,
 	type MergeModel,
-	mergeLine,
-	mergeTask,
 	NODE_TARGET,
 	parseBatchAnswer,
 } from "./domain/merge-line.js";
@@ -183,6 +181,7 @@ export {
 export {
 	byAddress,
 	byId,
+	countDueReviews,
 	type DirectionLine,
 	directionsData,
 	dueReviews,

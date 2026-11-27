@@ -14,8 +14,8 @@
 import type { DueRecord, NoteKind } from "@memlens/core";
 import { dayOf, NOTE_KINDS } from "@memlens/core/view";
 import { type JSX, useSyncExternalStore } from "react";
+import { kindName } from "../../format.js";
 import type { ConsoleApi } from "../../model/console.js";
-import { kindName } from "../../model/format.js";
 import { RecordActions } from "../inspector.js";
 import {
 	Button,

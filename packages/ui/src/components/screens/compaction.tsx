@@ -13,7 +13,7 @@
 
 import type { JSX } from "react";
 import { useState } from "react";
-import { renderRange } from "../../model/format.js";
+import { renderRange } from "../../format.js";
 import { Button, Field, Panel, TextArea } from "../primitives.js";
 import type { ScreenProps } from "../screen-props.js";
 

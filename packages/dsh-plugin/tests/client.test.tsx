@@ -4,8 +4,8 @@
  *   broken screen registry, and a lost Remote, so the page and the tab draw inside the harness
  *   page.
  * @scope The panel row, the page registration, the tab registration, the locale dictionaries and
- *   their fallback, the two console ports, the Remote mount, the bodies, the screen registry, and
- *   the stylesheet rules.
+ *   their fallback, the two console ports, the Remote mount, the bodies, the failed read of each
+ *   body, the screen registry, and the stylesheet rules.
  * NOT: the host service and the built artifact.
  * @invariants Each test renders from a fake namespace or a fake console API. No host call leaves the
  * test.
@@ -745,6 +745,23 @@ describe("tab body", () => {
 		);
 		expect(markup).not.toContain('class="ml-scopelist"');
 	});
+
+	it("states a failed read with a retry in place of the loading text", () => {
+		seeded.sessionApi = apiOf(
+			stateOf({ model: undefined, loadError: "The host is closed." }),
+		);
+		try {
+			const markup = renderToStaticMarkup(
+				<MemoryView sessionId="session-1" t={english} title="Memory" />,
+			);
+			expect(markup).toContain('class="failure"');
+			expect(markup).toContain("The host is closed.");
+			expect(markup).toContain(">Try again</button>");
+			expect(markup).not.toContain(english("loading"));
+		} finally {
+			seeded.sessionApi = undefined;
+		}
+	});
 });
 
 describe("page body", () => {
@@ -772,6 +789,36 @@ describe("page body", () => {
 		);
 		expect(markup).not.toContain('class="ml-field ml-scope-field"');
 	});
+
+	it("states a failed read with a retry in place of the loading text", () => {
+		seeded.api = apiOf(
+			stateOf({ model: undefined, loadError: "The host is closed." }),
+		);
+		try {
+			const markup = renderToStaticMarkup(
+				<MemoryPage t={english} title="Memory" />,
+			);
+			expect(markup).toContain('class="failure"');
+			expect(markup).toContain("The host is closed.");
+			expect(markup).toContain(">Try again</button>");
+			expect(markup).not.toContain(english("loading"));
+		} finally {
+			seeded.api = undefined;
+		}
+	});
+
+	it("keeps the loading text for a screen that the model does not hold", () => {
+		seeded.api = apiOf(stateOf({ screen: "search" }));
+		try {
+			const markup = renderToStaticMarkup(
+				<MemoryPage t={english} title="Memory" />,
+			);
+			expect(markup).toContain(english("loading"));
+			expect(markup).not.toContain('class="failure"');
+		} finally {
+			seeded.api = undefined;
+		}
+	});
 });
 
 // The scope menu of the page, read from the rendered page.
@@ -781,8 +828,11 @@ describe("page body", () => {
 // page, not the source of the page.
 
 // #region VAR_seededConsole
-/** The console that the seeded factory gives the page. */
-const seeded = vi.hoisted(() => ({ api: undefined as ConsoleApi | undefined }));
+/** The console that the seeded factories give the page and the tab. */
+const seeded = vi.hoisted(() => ({
+	api: undefined as ConsoleApi | undefined,
+	sessionApi: undefined as ConsoleApi | undefined,
+}));
 // #endregion VAR_seededConsole
 
 vi.mock("../src/client/console.js", async (importOriginal) => {
@@ -792,6 +842,8 @@ vi.mock("../src/client/console.js", async (importOriginal) => {
 		...actual,
 		createProfileConsole: (t: Translate) =>
 			seeded.api ?? actual.createProfileConsole(t),
+		createSessionConsole: (sessionId: string, t: Translate) =>
+			seeded.sessionApi ?? actual.createSessionConsole(sessionId, t),
 	};
 });
 

@@ -2,8 +2,8 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Answer each memory read from the rows of one store, so no read scans the log.
- * @scope Note targets and supersede links, due reviews, live counts, scope notes, nodes, the directions data,
- *   and the journal rows.
+ * @scope Note targets and supersede links, due reviews and their count, live counts, scope notes, nodes,
+ *   the directions data, and the journal rows.
  * @invariants The note reads give a row in any state. A hidden row is evidence, not content loss.
  * @invariants Each read uses one statement on the store handle. No read opens a long transaction.
  * @keywords read, note, node, due, review, count, scope, directions, journal, rest
@@ -111,6 +111,9 @@ export function supersedesOf(store: Store, id: Ulid): readonly Ulid[] {
 }
 // #endregion FUNC_supersedesOf
 
+/** The row test of a due review, so the list and the count cannot drift apart. */
+const DUE_WHERE = "state = 'live' AND review_at IS NOT NULL AND review_at <= ?";
+
 // #region FUNC_dueReviews
 /**
  * @purpose List the live notes whose review time has come, so a review needs no scan.
@@ -126,8 +129,7 @@ export function dueReviews(
 	const rows = store
 		.handle()
 		.prepare(
-			`SELECT ${NOTE_COLUMNS} FROM notes
-			WHERE state = 'live' AND review_at IS NOT NULL AND review_at <= ?
+			`SELECT ${NOTE_COLUMNS} FROM notes WHERE ${DUE_WHERE}
 			ORDER BY review_at, scope, pos
 			LIMIT ?`,
 		)
@@ -140,6 +142,37 @@ export function dueReviews(
 	return rows.map(noteFromRow);
 }
 // #endregion FUNC_dueReviews
+
+// #region FUNC_countDueReviews
+/**
+ * @purpose Count the live notes whose review time has come, so the status needs no list.
+ * @invariants A note with no review time is never due. A review time equal to the given time is due.
+ * A null scope list counts each scope of the store. An empty list counts nothing.
+ * @returns The count of the due notes of the given scopes.
+ */
+export function countDueReviews(
+	store: Store,
+	scopes: readonly ScopeKey[] | null,
+	now: IsoTime,
+): number {
+	if (scopes !== null && scopes.length === 0) return 0;
+	const narrow =
+		scopes === null
+			? ""
+			: ` AND scope IN (${scopes.map(() => "?").join(", ")})`;
+	const row = store
+		.handle()
+		.prepare(`SELECT COUNT(*) AS total FROM notes WHERE ${DUE_WHERE}${narrow}`)
+		.get(now, ...(scopes ?? []));
+	const total = Number(row?.total ?? 0);
+	debug("Due reviews counted", {
+		event: "count_due",
+		scopes: scopes?.length ?? "all",
+		count: total,
+	});
+	return total;
+}
+// #endregion FUNC_countDueReviews
 
 // #region FUNC_liveCounts
 /**
