@@ -34,9 +34,10 @@ import {
 	redact,
 	review,
 	reviewTx,
+	scopeAction,
 } from "../store/notes.js";
 import { accept, dismiss, pending } from "../store/proposals.js";
-import { scopeNotes, supersedesOf } from "../store/reads.js";
+import { supersedesOf } from "../store/reads.js";
 import { search } from "../store/search.js";
 import type { Store } from "../store/store.js";
 import type { IndexHit, Note, NoteState, Proposal } from "../store/types.js";
@@ -299,7 +300,10 @@ function acceptedSupersede(proposal: Proposal, payload: unknown): NoteInput {
 }
 
 // #region FUNC_applyScopeAction
-/** @purpose Hide or erase each note of one scope after one confirmation. */
+/**
+ * @purpose Hide or erase each note of one scope after one confirmation.
+ * @invariants The whole set changes in one store transaction, so a failure changes no row.
+ */
 function applyScopeAction(
 	host: ConsoleHost,
 	scope: ScopeKey,
@@ -311,20 +315,14 @@ function applyScopeAction(
 			"NotAllowed",
 			"The scope action needs confirmation.",
 		);
-	const rows = scopeNotes(host.store, scope).filter((row) =>
-		action === "scope-delete" ? row.state !== "deleted" : row.state === "live",
+	const rows = scopeAction(
+		host.store,
+		scope,
+		action === "scope-delete" ? "redact" : "hide",
+		"ui scope action",
 	);
-	for (const row of rows) {
-		if (action === "scope-delete")
-			redact(host.store, row.id, "ui scope action");
-		else hide(host.store, row.id, "ui scope action");
-	}
-	debug("Scope action applied", {
-		event: "scope-action",
-		action,
-		rows: rows.length,
-	});
-	return { changed: rows.length };
+	debug("Scope action applied", { event: "scope-action", action, rows });
+	return { changed: rows };
 }
 // #endregion FUNC_applyScopeAction
 
