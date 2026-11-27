@@ -16,7 +16,6 @@
  * #endregion moduleContract
  */
 
-import { readFileSync } from "node:fs";
 import { debuglog } from "node:util";
 import type { BuildChild, BuildInput, ScopeKey } from "@memlens/core";
 import {
@@ -39,6 +38,7 @@ import {
 	DRY_RUN,
 	openCommandRuntime,
 	type Run,
+	readInputText,
 	reply,
 	SCOPE,
 	STORE,
@@ -406,8 +406,9 @@ export async function applyAnswers(
  * Apply one answer file as node rows.
  *
  * @purpose Write the answers of a job into the store, so the tree holds the built nodes.
- * @invariants Each answer names one aligned range with "#a-b: text". A rejected answer counts and
- *   stays for the next job.
+ * @invariants Each answer names one aligned range with "#a-b: text". The command refuses one
+ *   answer file larger than 256 MB before the read. A rejected answer counts and stays for the
+ *   next job.
  */
 async function compactAnswer(
 	input: CompactInput,
@@ -482,12 +483,7 @@ export function parseAnswers(text: string): readonly Answer[] {
 // #region FUNC_parseAnswerFile
 /** Read one answer file and check the form of each line. */
 function parseAnswerFile(path: string): readonly Answer[] {
-	let text: string;
-	try {
-		text = readFileSync(path, "utf8");
-	} catch {
-		throw new MemlensError("Data", `The file ${path} does not read.`);
-	}
+	const text = readInputText(path);
 	try {
 		return parseAnswers(text);
 	} catch (error) {

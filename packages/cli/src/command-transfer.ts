@@ -15,7 +15,7 @@
  * #endregion moduleContract
  */
 
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { debuglog } from "node:util";
 import type { ScopeKey } from "@memlens/core";
@@ -34,6 +34,7 @@ import {
 	oneOf,
 	openCommandRuntime,
 	type Run,
+	readInputText,
 	reply,
 	SCOPE,
 	STORE,
@@ -165,24 +166,8 @@ export async function importCommand(
 }
 // #endregion FUNC_importCommand
 
-/** The greatest size of one input file, in bytes. The import reads no larger file. */
-const MAX_BYTES = 256 * 1024 * 1024;
-
 function readLines(path: string): readonly string[] {
-	let text: string;
-	try {
-		const { size } = statSync(path);
-		if (size > MAX_BYTES)
-			throw new MemlensError(
-				"Data",
-				`The file ${path} is larger than ${MAX_BYTES} bytes.`,
-			);
-		text = readFileSync(path, "utf8");
-	} catch (cause) {
-		if (cause instanceof MemlensError) throw cause;
-		throw new MemlensError("Data", `The file ${path} does not read.`);
-	}
-	return text
+	return readInputText(path)
 		.split("\n")
 		.filter((line) => line.trim() !== "")
 		.map((line) => {
