@@ -393,7 +393,7 @@ describe("trigram", () => {
 		assert.ok((store.meta("fts_tokenizer") ?? "").includes("trigram"));
 		addNote(store, { id: "n1", pos: 0, body: "東京の会議" });
 		indexNote(store, "n1", "東京の会議");
-		const hits = search(store, "東京", null, 10);
+		const hits = search(store, { query: "東京", limit: 10 }, NOW);
 		assert.deepEqual(
 			hits.map((hit) => hit.id),
 			["n1"],
