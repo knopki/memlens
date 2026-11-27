@@ -15,7 +15,7 @@
  * #endregion moduleContract
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { debuglog } from "node:util";
 import type { ScopeKey } from "@memlens/core";
@@ -136,9 +136,9 @@ function encodeStem(scope: ScopeKey): string {
  * Import notes from one JSONL file.
  *
  * @purpose Join the notes of one file into the store by id, so a user moves or merges a store.
- * @invariants The import joins by id and applies the erasure evidence of both sides. The flag
- *   --dry-run validates and counts the change and writes nothing. The flag --as rewrites the scope
- *   of each imported note.
+ * @invariants The import joins by id and applies the erasure evidence of both sides. The import
+ *   refuses one input file larger than 256 MB before the read. The flag --dry-run validates and
+ *   counts the change and writes nothing. The flag --as rewrites the scope of each imported note.
  */
 export async function importCommand(
 	input: { in: string; as?: string; dryRun?: boolean; store?: string },
@@ -165,11 +165,21 @@ export async function importCommand(
 }
 // #endregion FUNC_importCommand
 
+/** The greatest size of one input file, in bytes. The import reads no larger file. */
+const MAX_BYTES = 256 * 1024 * 1024;
+
 function readLines(path: string): readonly string[] {
 	let text: string;
 	try {
+		const { size } = statSync(path);
+		if (size > MAX_BYTES)
+			throw new MemlensError(
+				"Data",
+				`The file ${path} is larger than ${MAX_BYTES} bytes.`,
+			);
 		text = readFileSync(path, "utf8");
-	} catch {
+	} catch (cause) {
+		if (cause instanceof MemlensError) throw cause;
 		throw new MemlensError("Data", `The file ${path} does not read.`);
 	}
 	return text
