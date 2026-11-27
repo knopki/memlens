@@ -53,6 +53,8 @@ export function Search({ api }: ScreenProps): JSX.Element {
 /**
  * @purpose Hold the filter drafts of the search screen.
  * @invariants The drafts start from the state. The submit step writes the seven filters to the API.
+ * @invariants After a submit, the limit draft takes the limit of the state, so the field shows
+ *   the limit that the search used. A draft that changed during the search stays.
  * @invariants The kind buttons toggle one kind each, so the search takes any set of kinds.
  */
 function SearchScreen({ api }: ScreenProps): JSX.Element {
@@ -67,15 +69,23 @@ function SearchScreen({ api }: ScreenProps): JSX.Element {
 	const [limit, setLimit] = useState(state.limit);
 	const [scope, setScope] = useState(state.searchScope ?? model?.scope ?? "");
 	const submit = (): void => {
-		void api.call.search({
-			query,
-			kinds,
-			since,
-			until,
-			due,
-			limit,
-			searchScope: scope,
-		});
+		const sent = limit;
+		void api.call
+			.search({
+				query,
+				kinds,
+				since,
+				until,
+				due,
+				limit,
+				searchScope: scope,
+			})
+			.then(() => {
+				// The controller can give the limit another value, for example the cap of the search.
+				// The field then shows the limit that the search used. A newer draft stays.
+				const used = api.state.limit;
+				setLimit((draft) => (draft === sent ? used : draft));
+			});
 	};
 	const toggle = (kind: NoteKind): void => {
 		setKinds(
