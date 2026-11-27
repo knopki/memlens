@@ -721,8 +721,9 @@ describe("the slot plan of one import", () => {
 		]);
 	});
 
-	it("gives the row-by-row write on random rows", () => {
-		for (let seed = 1; seed <= 25; seed++) {
+	it.each(Array.from({ length: 25 }, (_, index) => index + 1))(
+		"gives the row-by-row write on random rows (seed %i)",
+		(seed) => {
 			const rand = mulberry32(seed);
 			const scenario = randomCase(rand, seed);
 			const planned = makeStore();
@@ -734,8 +735,8 @@ describe("the slot plan of one import", () => {
 			const referenceResult = referenceImport(reference, file);
 			assert.deepEqual(plannedResult, referenceResult, `seed ${seed}`);
 			assert.deepEqual(dump(planned), dump(reference), `seed ${seed}`);
-		}
-	});
+		},
+	);
 });
 // #endregion FUNC_test_slotPlan
 
@@ -791,39 +792,46 @@ function seedRows(
 		"INSERT INTO fts (rowid, body, longform) VALUES (?, ?, ?)",
 	);
 	const rowid = db.prepare("SELECT n FROM notes WHERE id = ?");
-	for (const [scope, group] of scoped)
-		group.forEach((fixture, rank) => {
-			const state = fixture.state ?? "live";
-			const cleared = fixture.cleared ?? false;
-			const longform = fixture.longform ?? null;
-			insert.run(
-				fixture.id,
-				scope,
-				gappy ? rank * 2 : rank,
-				state,
-				cleared ? 1 : 0,
-				fixture.kind ?? "note",
-				fixture.body ?? "",
-				longform,
-				JSON.stringify(fixture.refs ?? []),
-				fixture.superseded_by ?? null,
-				fixture.ts,
-				fixture.created_at ?? fixture.ts,
-				fixture.modified_at ?? fixture.ts,
-				fixture.review_at ?? null,
-				fixture.reviewed_at ?? null,
-				fixture.session ?? "",
-				fixture.turn ?? "",
-				fixture.preset ?? "",
-				fixture.v,
-				fixture.v_content ?? fixture.v,
-				fixture.v_review ?? null,
-			);
-			if (state === "live" && !cleared) {
-				const row = rowid.get(fixture.id);
-				index.run(Number(row?.n ?? 0), fixture.body ?? "", longform);
-			}
-		});
+	db.exec("BEGIN");
+	try {
+		for (const [scope, group] of scoped)
+			group.forEach((fixture, rank) => {
+				const state = fixture.state ?? "live";
+				const cleared = fixture.cleared ?? false;
+				const longform = fixture.longform ?? null;
+				insert.run(
+					fixture.id,
+					scope,
+					gappy ? rank * 2 : rank,
+					state,
+					cleared ? 1 : 0,
+					fixture.kind ?? "note",
+					fixture.body ?? "",
+					longform,
+					JSON.stringify(fixture.refs ?? []),
+					fixture.superseded_by ?? null,
+					fixture.ts,
+					fixture.created_at ?? fixture.ts,
+					fixture.modified_at ?? fixture.ts,
+					fixture.review_at ?? null,
+					fixture.reviewed_at ?? null,
+					fixture.session ?? "",
+					fixture.turn ?? "",
+					fixture.preset ?? "",
+					fixture.v,
+					fixture.v_content ?? fixture.v,
+					fixture.v_review ?? null,
+				);
+				if (state === "live" && !cleared) {
+					const row = rowid.get(fixture.id);
+					index.run(Number(row?.n ?? 0), fixture.body ?? "", longform);
+				}
+			});
+		db.exec("COMMIT");
+	} catch (error) {
+		db.exec("ROLLBACK");
+		throw error;
+	}
 }
 // #endregion FUNC_test_seedRows
 
