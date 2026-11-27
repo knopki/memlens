@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
+	buildInput,
 	candidates,
 	childOf,
 	publishJoin,
@@ -66,6 +67,22 @@ describe("store build", () => {
 		});
 		expect(publishJoin(store, "p:x", 1, 0, read).ok).toBe(true);
 		expect(candidates(store, "p:x")).toEqual([]);
+	});
+	it("reads one build input of a range and null for an empty range", () => {
+		const store = open();
+		add(store, "first", 1);
+		add(store, "second", 2);
+		const current = buildInput(store, "p:x", { start: 0, level: 1 });
+		if (!current) throw new Error("The range is empty.");
+		const round = readRound(store, "p:x").find(
+			(entry) => entry.range.level === 1 && entry.range.start === 0,
+		);
+		expect(current).toEqual(round);
+		expect(current.input.children.map((child) => child?.body)).toEqual([
+			"first",
+			"second",
+		]);
+		expect(buildInput(store, "p:x", { start: 2, level: 1 })).toBeNull();
 	});
 	it("rejects stale keys without a clock or node write", () => {
 		const store = open();

@@ -151,6 +151,7 @@ export {
 } from "./scope-context.js";
 
 export {
+	buildInput,
 	candidates,
 	childOf,
 	publishJoin,
