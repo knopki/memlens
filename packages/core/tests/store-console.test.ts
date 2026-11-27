@@ -213,6 +213,20 @@ function expectSameMaintenance(store: Store, scope: ScopeKey): void {
 	});
 }
 
+it("reads an existing blank note without a longform", () => {
+	const store = newStore();
+	const scope: ScopeKey = "project:a";
+	addRaw(store, scope, 0, TIME);
+	store.handle().prepare("UPDATE notes SET body = '' WHERE pos = 0").run();
+	addNote(store, scope, 1, "visible memory");
+	expectSameLines(store, scope);
+	expectSameChildren(store, scope);
+	expect(new ConsoleReader(store.handle(), scope).top()).toMatchObject({
+		kind: "temporary",
+		text: "visible memory",
+	});
+});
+
 it("gives the frontier, the top line, and the children of clean nodes", () => {
 	const store = newStore();
 	const scope: ScopeKey = "project:a";

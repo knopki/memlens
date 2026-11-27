@@ -38,6 +38,7 @@ import {
 	pending,
 	type ResolvedConfig,
 	redact,
+	scopeNotes,
 	sliceOf,
 	textOfLine,
 	topLineOf,
@@ -272,6 +273,15 @@ function names(subject: Subject): string[] {
 }
 
 describe("memory tools of one agent", () => {
+	it.each(["", " \t\n\r "])("rejects a blank note body %j", async (body) => {
+		const agent = subject("main", "all");
+		await expect(call(agent, "memory_note", { body })).rejects.toThrow(
+			"The note body is empty.",
+		);
+		expect(scopeNotes(host.store, "user:notes")).toEqual([]);
+		expect(pending(host.store)).toEqual([]);
+	});
+
 	it("gives the main agent six tools", () => {
 		const main = subject("main", "all");
 

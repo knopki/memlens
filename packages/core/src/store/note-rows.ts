@@ -205,7 +205,7 @@ export function checkedScope(raw: string): ScopeKey {
 // #endregion FUNC_checkedScope
 
 // #region FUNC_splitForWrite
-/** @purpose Normalize one body and move its overflow into the longform. */
+/** @purpose Reject an empty body, normalize its text, and move its overflow into the longform. */
 export function splitForWrite(
 	raw: string,
 	existing: string | null,
@@ -213,7 +213,9 @@ export function splitForWrite(
 	body: string;
 	longform: string | null;
 } {
-	return splitBody(normalizeBody(raw), existing);
+	const body = normalizeBody(raw);
+	if (!body) throw new MemlensError("Usage", "The note body is empty.");
+	return splitBody(body, existing);
 }
 // #endregion FUNC_splitForWrite
 

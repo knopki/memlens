@@ -119,6 +119,35 @@ function slots(store: Store, scope: ScopeKey): readonly number[] {
 		.map((item) => Number(item.pos));
 }
 
+describe("body validation", () => {
+	it.each(["", " \t\n\r "])(
+		"rejects a blank body %j without changes",
+		(body) => {
+			const { store } = fresh();
+			const revision = store.rev();
+			assert.throws(
+				() => note(store, { ...BASE, body, longform: "document" }),
+				{
+					code: "Usage",
+					message: "The note body is empty.",
+				},
+			);
+			assert.equal(store.rev(), revision);
+			assert.equal(count(store, "SELECT count(*) AS c FROM notes"), 0);
+
+			const id = idOf(note(store, { ...BASE, body: "original" }));
+			const before = row(store, id);
+			const savedRevision = store.rev();
+			assert.throws(() => amend(store, { id, body }), {
+				code: "Usage",
+				message: "The note body is empty.",
+			});
+			assert.deepEqual(row(store, id), before);
+			assert.equal(store.rev(), savedRevision);
+		},
+	);
+});
+
 // #region FUNC_test_dedup
 /**
  * @purpose Prove that a repeated note returns the duplicate reason and changes no row.

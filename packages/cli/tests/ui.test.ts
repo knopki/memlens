@@ -67,6 +67,47 @@ async function fixture(allowDelete = false, scopes = '["*"]', base?: string) {
 // #endregion FUNC_fixture
 
 describe("console", () => {
+	it.each([undefined, "", " \t\n\r "])(
+		"rejects a blank note body %j",
+		async (body) => {
+			const { get, post } = await fixture();
+			const response = await post({
+				action: "note",
+				body,
+				longform: "document",
+			});
+			expect(response.status).toBe(400);
+			expect(await response.text()).toContain("The note body is empty.");
+			expect((await get()).scopes).toEqual([
+				{ key: "user:notes", total: 0, live: 0, hidden: 0, deleted: 0 },
+			]);
+		},
+	);
+
+	it("reads the view and catalog with an existing blank note", async () => {
+		const { root, env, get, post } = await fixture();
+		await post({ action: "note", body: "visible memory" });
+		const runtime = await openRuntime({ storeFlag: join(root, "store"), env });
+		try {
+			runtime.store
+				.handle()
+				.prepare(
+					`INSERT INTO notes
+				(id, scope, pos, state, kind, body, refs, ts, created_at, modified_at, v, v_content)
+				VALUES ('legacy-empty', 'user:notes', 1, 'live', 'note', '', '[]',
+				'2026-01-01', '2026-01-01', '2026-01-01', 'legacy', 'legacy')`,
+				)
+				.run();
+		} finally {
+			await runtime.close();
+		}
+		expect((await get("/api/view?scope=user:notes")).text).toContain(
+			"visible memory",
+		);
+		const lines = await get("/api/catalog?start=0&level=1");
+		expect(lines[0].text).toContain("visible memory");
+	});
+
 	it("opens the view on the scope of the newest note", async () => {
 		const { get, post } = await fixture(true);
 		expect(
@@ -253,6 +294,26 @@ describe("console", () => {
 		await post({ action: "note", body: "beta memory", scope: "user:other" });
 		const hits = await get("/api/search?query=memory&limit=5000");
 		expect(hits).toHaveLength(2);
+	});
+
+	it("rejects approval of a blank note proposal without closing it", async () => {
+		const { root, env, get, post } = await fixture();
+		const runtime = await openRuntime({ storeFlag: join(root, "store"), env });
+		try {
+			propose(runtime.store, {
+				scope: "user:notes",
+				op: "note",
+				payload: { body: " \t\n ", kind: "note" },
+			});
+		} finally {
+			await runtime.close();
+		}
+		const proposal = (await get("/api/view?screen=proposals")).proposals[0];
+		expect((await post({ action: "accept", target: proposal.id })).status).toBe(
+			400,
+		);
+		expect((await get("/api/view?screen=proposals")).proposals).toHaveLength(1);
+		expect((await get()).scopes[0].total).toBe(0);
 	});
 
 	it("publishes proposal approval and dismissal together", async () => {
