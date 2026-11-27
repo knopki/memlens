@@ -4,7 +4,7 @@
  * @purpose Keep one database open and publish each change as one transaction.
  * @scope The transaction gate, the clock tick, the meta access, the journal writer, and the checkpoints.
  * @invariants One function opens a write transaction, so the store has one lock owner.
- * @invariants Only the lock acquisition waits and repeats. The work of a transaction runs once.
+ * @invariants Each transaction starts with one BEGIN attempt. SQLite waits for a lock within its busy timeout.
  * @invariants A commit that reports no success reports no value.
  * @invariants The wait of a lock blocks the event loop, so only another process can release the lock.
  * @invariants The truncating checkpoint is best effort. A busy or failed result is a state, not an error.
@@ -28,7 +28,7 @@ const debug = debuglog("memlens:store");
  * @purpose Hold one database handle and own every write transaction of the store.
  * @invariants Reads use the same handle with one statement or a short deferred transaction.
  * @invariants Close is idempotent, and every other call rejects after close.
- * @invariants A lock wait repeats the lock acquisition only, never the change of the caller.
+ * @invariants A failed BEGIN reports a Data error for a lock. The call runs no work and does not repeat BEGIN.
  */
 export class Store {
 	private readonly db: DatabaseSync;

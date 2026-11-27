@@ -10,8 +10,8 @@
  * @invariants Schema changes and their version updates commit in one transaction.
  * @invariants The pragma busy_timeout waits for a lock inside the engine, and the wait stays within one
  *   second, so a caller resumes fast.
- * @invariants A lock that the engine reports at once repeats within the same one-second deadline.
- * @invariants A retry repeats the lock acquisition only. The work of a transaction runs once.
+ * @invariants BEGIN runs once. A lock error stops the call with a Data error before the work starts.
+ * @invariants Only the WAL mode change repeats after a lock error, within a one-second deadline.
  * @invariants The open builds the index with the tokenizer of the language key when the stored
  *   tokenizer differs, so a language change needs no command.
  * @keywords schema, open, pragma, database, migration, version
@@ -249,7 +249,7 @@ function empty(db: DatabaseSync): boolean {
 
 // #region FUNC_isLockError
 /**
- * @purpose Name the two transient lock results of the engine, so only those wait for a later attempt.
+ * @purpose Identify the two lock results of the engine for store errors and WAL mode retries.
  * @invariants The check reads the numeric result of the engine. SQLITE_BUSY is 5, and SQLITE_LOCKED is 6.
  */
 function isLockError(error: unknown): boolean {
@@ -268,7 +268,7 @@ function pause(ms: number): void {
 // #region FUNC_beginTransaction
 /**
  * @purpose Start one transaction, and name a lock of another process as one store error.
- * @invariants The pragma busy_timeout waits inside the engine. One attempt then keeps the wait short.
+ * @invariants The pragma busy_timeout controls the wait inside the engine. The call attempts BEGIN once.
  * @invariants A failed BEGIN starts no transaction, so the caller repeats no work.
  * @invariants The wait blocks the thread. Only another process can release the lock during it.
  * @throws MemlensError when the attempt meets a lock.
@@ -291,7 +291,7 @@ export function beginTransaction(
 /**
  * @purpose Run one unit of schema work in one transaction, so a failure leaves no change.
  * @invariants The caller runs no other transaction for the same work.
- * @invariants Only the lock acquisition repeats. The work and the commit run once.
+ * @invariants The call attempts BEGIN once. The work and the commit run once after BEGIN succeeds.
  */
 function transaction(db: DatabaseSync, work: () => void): void {
 	beginTransaction(db, "IMMEDIATE");
