@@ -15,7 +15,7 @@
  *  - A short flag has one meaning in each command.
  * @usecases
  *  - Open: command => gives its io => gets one runtime and closes it
- * @dependencies USES API: @memlens/core, commander; READS: the input files that the commands name
+ * @dependencies USES API: @memlens/core, commander
  * @keywords command, io, flag, scope, runtime, answer, json, input file
  * #endregion moduleContract
  */
@@ -122,8 +122,6 @@ const MAX_INPUT_BYTES = 256 * 1024 * 1024;
 /**
  * @purpose Read one input file whole after the size check, so one oversized file cannot exhaust
  *   the memory before a command rejects it.
- * @invariants One file larger than the limit gives one Data error before the read. One file that
- *   does not read gives one Data error.
  */
 export function readInputText(path: string): string {
 	let text: string;
