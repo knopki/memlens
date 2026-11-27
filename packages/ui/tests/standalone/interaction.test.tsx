@@ -12,14 +12,20 @@
  * #endregion moduleContract
  */
 
-import type { SliceLine } from "@memlens/core";
+import type { IndexHit, SliceLine } from "@memlens/core";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { fill, messages } from "../../src/i18n.js";
 import type { ConsoleApi, Translate } from "../../src/model/console.js";
 import { App } from "../../src/standalone/app.js";
-import { entryOf, type Harness, harness, viewOf } from "../model/helpers.js";
+import {
+	deferred,
+	entryOf,
+	type Harness,
+	harness,
+	viewOf,
+} from "../model/helpers.js";
 
 (
 	globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -153,6 +159,28 @@ async function key(target: EventTarget, text: string): Promise<void> {
 }
 // #endregion FUNC_key
 
+// #region FUNC_settle
+/**
+ * @purpose Let one submitted action end, so a test reads the page after the answer.
+ */
+async function settle(): Promise<void> {
+	await act(async () => {
+		await new Promise<void>((resolve) => {
+			setTimeout(resolve, 0);
+		});
+	});
+}
+// #endregion FUNC_settle
+
+// #region FUNC_limitField
+/**
+ * @purpose Give the limit field of the search screen as an input, so a test reads its value.
+ */
+function limitField(container: ParentNode): HTMLInputElement {
+	return need(container, '.filters input[type="number"]') as HTMLInputElement;
+}
+// #endregion FUNC_limitField
+
 // #region FUNC_headingOf
 /**
  * @purpose Give the heading of the live screen.
@@ -225,6 +253,35 @@ describe("standalone interaction", () => {
 		expect(h.state().query).toBe("words");
 		expect(h.state().searchScope).toBeNull();
 		expect(document.activeElement).toBe(box);
+	});
+
+	it("shows the limit of the state in the limit field after a submit", async () => {
+		const h = harness({}, { model: viewOf() });
+		const container = await mount(h);
+		await click(container, "aside nav button:nth-child(4)");
+		await type(container, ".searchbar input", "words");
+		await type(container, '.filters input[type="number"]', "100000");
+		await key(need(container, ".searchbar input"), "Enter");
+		await settle();
+
+		expect(h.state().limit).toBe("50");
+		expect(limitField(container).value).toBe("50");
+	});
+
+	it("keeps a limit draft that changes during the search", async () => {
+		const gate = deferred<readonly IndexHit[]>();
+		const h = harness({ search: () => gate.promise }, { model: viewOf() });
+		const container = await mount(h);
+		await click(container, "aside nav button:nth-child(4)");
+		await type(container, ".searchbar input", "words");
+		await type(container, '.filters input[type="number"]', "100000");
+		await key(need(container, ".searchbar input"), "Enter");
+		await type(container, '.filters input[type="number"]', "20");
+		gate.resolve([]);
+		await settle();
+
+		expect(h.state().limit).toBe("50");
+		expect(limitField(container).value).toBe("20");
 	});
 
 	it("opens the screen of a number key", async () => {
