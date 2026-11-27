@@ -7,7 +7,7 @@
  * #endregion moduleContract
  */
 
-import type { BuildInput } from "@memlens/core";
+import type { BuildInput, IndexHit } from "@memlens/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConsoleRuntime, OpenedTarget } from "../../src/model/console.js";
 import { DEFAULT_ROUTE } from "../../src/route.js";
@@ -511,6 +511,41 @@ describe("console controller search", () => {
 		await h.call.restore({ ...base, screen: "search" });
 		await h.call.restore({ ...base, kinds: ["task"] });
 		expect(callsOf(h, "search")).toHaveLength(2);
+	});
+
+	it("keeps the hits of the newest search", async () => {
+		const older = deferred<readonly IndexHit[]>();
+		const newer = deferred<readonly IndexHit[]>();
+		let index = 0;
+		const h = harness({
+			search: () => (index++ === 0 ? older.promise : newer.promise),
+		});
+		const hit = (pos: number): IndexHit => ({
+			addr: `project:alpha#${pos}`,
+			scope: "project:alpha",
+			pos,
+			id: `01JAZ5S0V0S9Z3H7Y8F4W6Q2P${pos}`,
+			ts: "2026-11-01T10:00:00Z",
+			kind: "fact",
+			body: "note",
+			longformChars: 0,
+			review_at: null,
+		});
+		const filters = {
+			kinds: [] as string[],
+			since: "",
+			until: "",
+			due: false,
+			limit: "10",
+			searchScope: null as string | null,
+		};
+		const first = h.call.search({ ...filters, query: "a" });
+		const second = h.call.search({ ...filters, query: "b" });
+		newer.resolve([hit(2)]);
+		await second;
+		older.resolve([hit(1)]);
+		await first;
+		expect(h.state().hits).toEqual([hit(2)]);
 	});
 });
 
