@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
 	candidates,
+	childOf,
 	publishJoin,
 	publishNode,
 	readBuild,
@@ -101,6 +102,54 @@ describe("store build", () => {
 		expect(publishJoin(store, "p:x", 2, 0, parent)).toEqual({
 			ok: false,
 			reason: "input_changed",
+		});
+	});
+	it("gives each half its own date span", () => {
+		const store = open();
+		for (const day of [1, 2, 5, 6]) add(store, `note ${day}`, day);
+		for (const start of [0, 2]) {
+			const read = readBuild(store, "p:x", 1, start);
+			if (!read.ok) throw new Error("empty");
+			publishJoin(store, "p:x", 1, start, read);
+		}
+		const parent = readBuild(store, "p:x", 2, 0);
+		if (!parent.ok) throw new Error("empty");
+		expect(parent).toMatchObject({
+			tsFrom: "2026-01-01T00:00:00.000Z",
+			tsTo: "2026-01-06T00:00:00.000Z",
+			aFrom: "2026-01-01T00:00:00.000Z",
+			aTo: "2026-01-02T00:00:00.000Z",
+			bFrom: "2026-01-05T00:00:00.000Z",
+			bTo: "2026-01-06T00:00:00.000Z",
+		});
+		expect(childOf(parent, { start: 0, level: 2 }, 0)).toMatchObject({
+			kind: "node",
+			range: { start: 0, level: 1 },
+			ts_from: "2026-01-01T00:00:00.000Z",
+			ts_to: "2026-01-02T00:00:00.000Z",
+		});
+		expect(childOf(parent, { start: 0, level: 2 }, 2)).toMatchObject({
+			kind: "node",
+			range: { start: 2, level: 1 },
+			ts_from: "2026-01-05T00:00:00.000Z",
+			ts_to: "2026-01-06T00:00:00.000Z",
+		});
+	});
+	it("gives each record its own date", () => {
+		const store = open();
+		add(store, "first", 1);
+		add(store, "second", 2);
+		const read = readBuild(store, "p:x", 1, 0);
+		if (!read.ok) throw new Error("empty");
+		expect(childOf(read, { start: 0, level: 1 }, 0)).toMatchObject({
+			kind: "record",
+			ts: "2026-01-01T00:00:00.000Z",
+			preview: "",
+		});
+		expect(childOf(read, { start: 0, level: 1 }, 1)).toMatchObject({
+			kind: "record",
+			pos: 1,
+			ts: "2026-01-02T00:00:00.000Z",
 		});
 	});
 	it("uses null keys for hidden halves and refuses long joins", () => {

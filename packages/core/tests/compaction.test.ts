@@ -425,6 +425,25 @@ describe("compactionPass", () => {
 			summary: "note 0; note 1",
 		});
 	});
+	it("gives each child of a merge its own date span", async () => {
+		const store = open();
+		for (const index of [0, 1, 4, 5])
+			add(store, `${"long body ".repeat(30)}${index}`, index);
+		expect(
+			await compactionPass(store, "p:x", async () => {
+				throw new Error("unexpected model");
+			}),
+		).toMatchObject({ built: 2, calls: 0 });
+		const tasks: string[] = [];
+		const result = await compactionPass(store, "p:x", async (_system, task) => {
+			tasks.push(task);
+			return "#0-3: summary";
+		});
+		expect(result).toMatchObject({ built: 1, calls: 1 });
+		expect(tasks[0]).toContain("#0-1 2026-01-01..02");
+		expect(tasks[0]).toContain("#2-3 2026-01-05..06");
+		expect(tasks[0]).not.toContain("#0-1 2026-01-01..06");
+	});
 	it("sends complete longforms to the batch model, including a single child", async () => {
 		for (const count of [1, 2]) {
 			const store = open();

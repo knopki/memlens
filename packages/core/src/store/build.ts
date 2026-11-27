@@ -2,7 +2,7 @@
  * #region moduleContract
  * @modulecontract
  * @purpose Build summary cache rows from consistent child snapshots.
- * @scope Candidate ranges, build reads, joins, and conditional publication.
+ * @scope Candidate ranges, build reads, child rows, joins, and conditional publication.
  * @invariants A model call runs outside the store transaction.
  * #endregion moduleContract
  */
@@ -10,7 +10,7 @@
 import { debuglog } from "node:util";
 import { due } from "../domain/tree.js";
 import type { ScopeKey } from "../types/primitives.js";
-import type { Range } from "../types/tree.js";
+import type { BuildChild, Range } from "../types/tree.js";
 import type { Store } from "./store.js";
 import {
 	candidatesOf,
@@ -35,6 +35,15 @@ export type BuildRead = {
 	/** The full longform of a leaf half. */
 	readonly aPreview: string | null;
 	readonly bPreview: string | null;
+
+	/** The live date span of the left half. An empty half gives empty dates. */
+	readonly aFrom: string;
+	readonly aTo: string;
+
+	/** The live date span of the right half. An empty half gives empty dates. */
+	readonly bFrom: string;
+	readonly bTo: string;
+
 	readonly tsFrom: string;
 	readonly tsTo: string;
 	readonly fits: boolean;
@@ -70,7 +79,7 @@ function half(view: View, level: number, start: number): Half {
 // #endregion FUNC_half
 
 // #region FUNC_snapshot
-/** @purpose Capture the current children and the dates of their live leaves. */
+/** @purpose Capture the current children and the live dates of the range and of each half. */
 function snapshot(view: View, level: number, start: number): BuildRead | null {
 	const live = view.notes.filter(
 		(n) => n.state === "live" && n.pos >= start && n.pos < start + 2 ** level,
@@ -79,9 +88,17 @@ function snapshot(view: View, level: number, start: number): BuildRead | null {
 	const last = live[live.length - 1];
 	if (!first || !last || level < 1) return null;
 	const width = 2 ** (level - 1);
+	const spanOf = (from: number): { from: string; to: string } => {
+		const halfLive = live.filter((n) => n.pos >= from && n.pos < from + width);
+		const halfFirst = halfLive[0];
+		const halfLast = halfLive[halfLive.length - 1];
+		return { from: halfFirst?.ts ?? "", to: halfLast?.ts ?? "" };
+	};
 	const a = half(view, level - 1, start);
 	const b = half(view, level - 1, start + width);
 	if (!a || !b) return null;
+	const aSpan = spanOf(start);
+	const bSpan = spanOf(start + width);
 	return {
 		ok: true,
 		aKey: a.key,
@@ -90,6 +107,10 @@ function snapshot(view: View, level: number, start: number): BuildRead | null {
 		bText: b.text,
 		aPreview: a.preview,
 		bPreview: b.preview,
+		aFrom: aSpan.from,
+		aTo: aSpan.to,
+		bFrom: bSpan.from,
+		bTo: bSpan.to,
 		tsFrom: first.ts,
 		tsTo: last.ts,
 		fits: !a.preview && !b.preview && joinText(a.text ?? "", b.text ?? "").fits,
@@ -112,6 +133,41 @@ export function readBuild(
 	return result ?? { ok: false, reason: "empty" };
 }
 // #endregion FUNC_readBuild
+
+// #region FUNC_childOf
+/**
+ * @purpose Build one child of a read at one half start, so each host reads the same child row.
+ * @invariants A half without text gives null. A record takes the first live date of its half. A
+ * node takes the date span of its half, never the span of the whole range.
+ */
+export function childOf(
+	read: BuildRead,
+	range: Range,
+	start: number,
+): BuildChild | null {
+	const left = start === range.start;
+	const text = left ? read.aText : read.bText;
+	const key = left ? read.aKey : read.bKey;
+	if (text === null) return null;
+	if (range.level === 1)
+		return {
+			kind: "record",
+			id: key ?? "",
+			pos: start,
+			body: text,
+			preview: (left ? read.aPreview : read.bPreview) ?? "",
+			ts: left ? read.aFrom : read.bFrom,
+		};
+	return {
+		kind: "node",
+		id: key ?? "",
+		range: { start, level: range.level - 1 },
+		summary: text,
+		ts_from: left ? read.aFrom : read.bFrom,
+		ts_to: left ? read.aTo : read.bTo,
+	};
+}
+// #endregion FUNC_childOf
 
 // #region FUNC_publishNode
 /** @purpose Publish a summary only when both captured child keys still match. */
