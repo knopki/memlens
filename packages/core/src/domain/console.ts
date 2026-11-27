@@ -25,7 +25,7 @@ import { renderAddress } from "./address-form.js";
 import type { ResolvedConfig } from "./config-types.js";
 import { renderContext } from "./context.js";
 import type { DueRecord } from "./reads.js";
-import { validateScopeKey } from "./scope.js";
+import { concreteScopeKey, validateScopeKey } from "./scope.js";
 import { nowIso } from "./time.js";
 
 const debug = debuglog("memlens:console");
@@ -87,10 +87,7 @@ function scopePanels(
 	const keys = visibleScopes(config.profile.scopes, [
 		...new Set([
 			...rows.filter((row) => row.live > 0).map((row) => row.key),
-			...config.profile.scopes.filter(
-				(glob): glob is ScopeKey =>
-					!glob.includes("*") && validateScopeKey(glob),
-			),
+			...config.profile.scopes.filter(concreteScopeKey),
 			scope,
 		]),
 	]);

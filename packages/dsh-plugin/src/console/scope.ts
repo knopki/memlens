@@ -20,10 +20,10 @@ import type { Agent } from "@deepseek-ai/dsh-agent";
 import {
 	allowedScope,
 	type ConsoleHost,
+	concreteScopeKey,
 	type Fields,
 	newestScope,
 	type ScopeKey,
-	validateScopeKey,
 } from "@memlens/core";
 import type { AgentMemory } from "../service.js";
 import { listedInProfile, visibleScopeList } from "../tools/shared.js";
@@ -81,11 +81,7 @@ export function requestScope(
 	const fresh =
 		newest && visible.length > 0 ? newestScope(memory.store, visible) : null;
 	const first =
-		visible[0] ??
-		memory.config.profile.scopes.find(
-			(key): key is ScopeKey => validateScopeKey(key) && !key.includes("*"),
-		) ??
-		active;
+		visible[0] ?? memory.config.profile.scopes.find(concreteScopeKey) ?? active;
 	const scope = fresh ?? (listedInProfile(memory, active) ? active : first);
 	debug("Scope resolved", {
 		event: "scope",

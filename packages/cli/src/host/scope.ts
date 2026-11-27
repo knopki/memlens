@@ -17,11 +17,11 @@
 
 import {
 	allowedScope,
+	concreteScopeKey,
 	type Fields,
 	newestScope,
 	type ScopeKey,
 	text,
-	validateScopeKey,
 } from "@memlens/core";
 import { cliActiveScope, profileLists, type Runtime } from "../runtime.js";
 import { type HostOptions, hostOf } from "./http.js";
@@ -33,7 +33,8 @@ import { type HostOptions, hostOf } from "./http.js";
  * @purpose Give each request one listed scope, so the handlers share the default rule.
  * @invariants A requested scope wins. With no request, the scope of the newest live note applies,
  *   else the active scope of the directory applies when the profile lists it, and the first visible
- *   scope applies otherwise.
+ *   scope applies otherwise. The config fallback takes no scope pattern, so the answer names one
+ *   concrete scope.
  */
 export function resolveScope(
 	runtime: Runtime,
@@ -46,7 +47,7 @@ export function resolveScope(
 	const fallback = cliActiveScope(runtime.base, options.cwd ?? process.cwd());
 	const first =
 		visible[0] ??
-		runtime.config.profile.scopes.find(validateScopeKey) ??
+		runtime.config.profile.scopes.find(concreteScopeKey) ??
 		fallback;
 	return allowedScope(
 		hostOf(runtime),

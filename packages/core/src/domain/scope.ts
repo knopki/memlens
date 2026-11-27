@@ -15,7 +15,8 @@
  *    brackets. The case and the script stay as given.
  *  - Normalization composes NFC and lowercases the kind. Validation checks the supplied key
  *    without normalization.
- * @keywords scope, key, validate, normalize, sanitize, segment
+ *  - The concrete key test rejects a scope pattern, so a fallback names one scope only.
+ * @keywords scope, key, validate, normalize, sanitize, segment, concrete
  * #endregion moduleContract
  */
 
@@ -99,6 +100,13 @@ export function validateScopeKey(key: string): key is ScopeKey {
 	return result;
 }
 // #endregion FUNC_validateScopeKey
+
+// #region FUNC_concreteScopeKey
+/** @purpose Tell one concrete scope key from a profile pattern, so no fallback answers a pattern. */
+export function concreteScopeKey(key: string): key is ScopeKey {
+	return !key.includes("*") && validateScopeKey(key);
+}
+// #endregion FUNC_concreteScopeKey
 
 // #region FUNC_isCatalogKey
 /**
