@@ -128,11 +128,12 @@ const inputs = {
 	search: z.strictObject({
 		session: z.string().optional(),
 		profile: z.string().optional(),
-		scope: z.string().optional(),
-		q: z.string().optional(),
 		query: z.string().optional(),
-		kind: anyKind.optional(),
+		scopes: z.string().optional(),
+		kinds: z.string().optional(),
 		since: z.string().optional(),
+		until: z.string().optional(),
+		due: z.string().optional(),
 		limit: z.string().optional(),
 	}),
 	open: z.strictObject({

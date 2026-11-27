@@ -70,14 +70,16 @@ describe("console HTTP port", () => {
 		const port = createHttpPort("/api");
 		await port.search({
 			profile: "p",
-			scope: "",
 			query: "two words",
-			kind: "",
+			scopes: "",
+			kinds: "task,fact",
 			since: "",
+			until: "",
+			due: "",
 			limit: "10",
 		});
 		expect(fetch).toHaveBeenCalledWith(
-			"/api/search?profile=p&scope=&query=two+words&kind=&since=&limit=10",
+			"/api/search?profile=p&query=two+words&scopes=&kinds=task%2Cfact&since=&until=&due=&limit=10",
 			{ cache: "no-store" },
 		);
 	});

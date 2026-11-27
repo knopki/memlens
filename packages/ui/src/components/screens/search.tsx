@@ -1,14 +1,14 @@
 /**
  * #region moduleContract
- * @purpose Find notes by words in the selected scope or in every visible scope, and open one hit.
- * @scope The words, the three filters, the hit count, the hit rows, the highlight, and the
+ * @purpose Find notes by words or by filters, and open one hit.
+ * @scope The words, the six filters, the hit count, the hit rows, the highlight, and the
  * inspector. NOT: the search call, the transport, and the address.
  * @invariants The filter drafts start from the search filters of the API state, so a restored
  * address shows its own values.
  * @invariants A hit body goes into text nodes. The words of the query mark the matches.
  * @invariants A hit address splits into the scope prefix and the position, so the column cuts the
  * prefix and keeps the position.
- * @keywords search, find, hit, filter, highlight, scope, react
+ * @keywords search, find, hit, filter, kind, due, highlight, scope, react
  * #endregion moduleContract
  */
 
@@ -35,8 +35,10 @@ function signatureOf(state: ConsoleState): string {
 	return JSON.stringify([
 		state.scope,
 		state.query,
-		state.kind,
+		state.kinds,
 		state.since,
+		state.until,
+		state.due,
 		state.limit,
 		state.searchScope,
 	]);
@@ -62,20 +64,37 @@ export function Search({ api }: ScreenProps): JSX.Element {
 // #region COMPONENT_SearchScreen
 /**
  * @purpose Hold the filter drafts of the search screen.
- * @invariants The drafts start from the state. The submit step writes the five filters to the API.
- * @invariants An empty word list shows the search hint of the API and runs no search.
+ * @invariants The drafts start from the state. The submit step writes the seven filters to the API.
+ * @invariants The kind buttons toggle one kind each, so the search takes any set of kinds.
  */
 function SearchScreen({ api }: ScreenProps): JSX.Element {
 	const state = api.state;
 	const model = state.model;
 	const t = api.t;
 	const [query, setQuery] = useState(state.query);
-	const [kind, setKind] = useState<NoteKind | "">(state.kind);
+	const [kinds, setKinds] = useState<readonly NoteKind[]>(state.kinds);
 	const [since, setSince] = useState(state.since);
+	const [until, setUntil] = useState(state.until);
+	const [due, setDue] = useState(state.due);
 	const [limit, setLimit] = useState(state.limit);
 	const [scope, setScope] = useState(state.searchScope ?? model?.scope ?? "");
 	const submit = (): void => {
-		void api.call.search({ query, kind, since, limit, searchScope: scope });
+		void api.call.search({
+			query,
+			kinds,
+			since,
+			until,
+			due,
+			limit,
+			searchScope: scope,
+		});
+	};
+	const toggle = (kind: NoteKind): void => {
+		setKinds(
+			kinds.includes(kind)
+				? kinds.filter((item) => item !== kind)
+				: [...kinds, kind],
+		);
 	};
 	const scopeOptions = [
 		{ value: "", label: t("allScopes") },
@@ -83,10 +102,6 @@ function SearchScreen({ api }: ScreenProps): JSX.Element {
 			value: item.key,
 			label: item.key,
 		})),
-	];
-	const kindOptions = [
-		{ value: "", label: t("allKinds") },
-		...NOTE_KINDS.map((item) => ({ value: item, label: kindName(t, item) })),
 	];
 	return (
 		<>
@@ -121,17 +136,39 @@ function SearchScreen({ api }: ScreenProps): JSX.Element {
 					{
 						label: t("kindLabel"),
 						control: (
-							<Select
-								value={kind}
-								options={kindOptions}
-								onChange={(value) => setKind(value as NoteKind | "")}
-							/>
+							<div className="kinds">
+								{NOTE_KINDS.map((kind) => (
+									<Button
+										key={kind}
+										text={kindName(t, kind)}
+										className={kinds.includes(kind) ? "on" : ""}
+										pressed={kinds.includes(kind)}
+										onClick={() => toggle(kind)}
+									/>
+								))}
+							</div>
 						),
 					},
 					{
 						label: t("since"),
 						control: (
 							<TextInput type="date" value={since} onChange={setSince} />
+						),
+					},
+					{
+						label: t("until"),
+						control: (
+							<TextInput type="date" value={until} onChange={setUntil} />
+						),
+					},
+					{
+						label: t("dueOnly"),
+						control: (
+							<input
+								type="checkbox"
+								checked={due}
+								onChange={(event) => setDue(event.target.checked)}
+							/>
 						),
 					},
 					{

@@ -2,7 +2,7 @@
  * #region moduleContract
  * @purpose Hold the address of the console to its closed sets, so a hand-edited address cannot
  * break a screen.
- * @scope The read and the write of the ten address fields of the route module.
+ * @scope The read and the write of the twelve address fields of the route module.
  * #endregion moduleContract
  */
 
@@ -16,8 +16,10 @@ const full: Route = {
 	target: "project:alpha#12",
 	query: "deploy words",
 	searchScope: "team:beta",
-	kind: "task",
+	kinds: ["task", "fact"],
 	since: "2026-11-01",
+	until: "2026-11-30",
+	due: true,
 	limit: "25",
 	reviewKind: "decision",
 };
@@ -42,13 +44,21 @@ describe("console address", () => {
 
 	it("gives the default of a field with a value outside its set", () => {
 		const route = readRoute(
-			"screen=nope&kind=bogus&rkind=bogus&since=11.11.2026&limit=999",
+			"screen=nope&kinds=bogus&rkind=bogus&since=11.11.2026&until=1.1.2026&due=maybe&limit=999",
 		);
 		expect(route.screen).toBe("overview");
-		expect(route.kind).toBe("");
+		expect(route.kinds).toEqual([]);
 		expect(route.reviewKind).toBe("");
 		expect(route.since).toBe("");
+		expect(route.until).toBe("");
+		expect(route.due).toBe(false);
 		expect(route.limit).toBe("10");
+		// A value outside the kinds is dropped, and the other values stay.
+		expect(readRoute("kinds=task,bogus,fact&due=1").kinds).toEqual([
+			"task",
+			"fact",
+		]);
+		expect(readRoute("due=1").due).toBe(true);
 	});
 
 	it("gives the default of each field on an empty address", () => {

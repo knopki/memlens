@@ -187,6 +187,30 @@ describe("standalone interaction", () => {
 		expect(headingOf(container)).toBe(messages("en").nav3);
 	});
 
+	it("sends the filters of the search form for an empty query", async () => {
+		const h = harness({}, { model: viewOf() });
+		const container = await mount(h);
+		await click(container, "aside nav button:nth-child(4)");
+
+		// The kind buttons are in the order of the store: fact is the third, and task is the fifth.
+		await click(container, ".kinds button:nth-child(3)");
+		await click(container, ".kinds button:nth-child(5)");
+		await pick(container, ".filters label:nth-of-type(4) input", "2026-11-30");
+		await click(container, '.filters input[type="checkbox"]');
+		await key(need(container, ".searchbar input"), "Enter");
+
+		expect(h.calls.find((call) => call.method === "search")?.fields).toEqual({
+			profile: "default",
+			query: "",
+			scopes: "project:alpha",
+			kinds: "fact,task",
+			since: "",
+			until: "2026-11-30",
+			due: "1",
+			limit: "10",
+		});
+	});
+
 	it("opens the screen of a number key", async () => {
 		const h = harness({}, { model: viewOf() });
 		const container = await mount(h);

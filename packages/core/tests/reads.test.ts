@@ -1,10 +1,10 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Verify the read answers of find filters, open, review, and the scope list.
- * @scope The pure filters over hit lists, and the store reads over rows written by raw SQL.
+ * @purpose Verify the read answers of open, review, and the scope list.
+ * @scope The store reads over rows written by raw SQL.
  * @invariants The file pins the zone to Europe/Moscow before the import.
- * @keywords test, read, find, open, review, scope, store
+ * @keywords test, read, open, review, scope, store
  * #endregion moduleContract
  */
 
@@ -15,9 +15,6 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { dayOf } from "../src/domain/day.js";
 import {
 	dueRecords,
-	FIND_DEFAULT_LIMIT,
-	FIND_MAX_PER_SCOPE,
-	filterHits,
 	LONGFORM_ALL,
 	LONGFORM_HEAD,
 	openNote,
@@ -29,7 +26,6 @@ import { byAddress } from "../src/store/reads.js";
 import { Store } from "../src/store/store.js";
 import { loadView } from "../src/store/view.js";
 import type { ScopeKey } from "../src/types/primitives.js";
-import type { IndexHit } from "../src/types/store.js";
 
 vi.hoisted(() => {
 	process.env.TZ = "Europe/Moscow";
@@ -115,100 +111,6 @@ function addNode(
 
 const leafKey = (scope: string, pos: number): string =>
 	`v-${scope}-${pos}|live`;
-
-const hit = (over: Partial<IndexHit>): IndexHit => ({
-	addr: `x:a#${over.pos ?? 0}`,
-	scope: "x:a",
-	pos: 0,
-	id: `id-${over.pos ?? 0}`,
-	ts: "2026-11-01T00:00:00.000Z",
-	kind: "note",
-	body: "body",
-	longformChars: 0,
-	review_at: null,
-	...over,
-});
-
-describe("filterHits", () => {
-	it("keeps the order, applies the default limit, and caps each scope", () => {
-		const hits: IndexHit[] = [];
-		for (let pos = 0; pos < 60; pos += 1)
-			hits.push(hit({ pos, id: `a${pos}`, scope: "x:a" }));
-		for (let pos = 0; pos < 20; pos += 1)
-			hits.push(hit({ pos, id: `b${pos}`, scope: "x:b" }));
-		const capped = filterHits(hits, { limit: 100 }, "2026-11-10");
-		expect(capped).toHaveLength(50 + 20);
-		expect(capped.filter((item) => item.scope === "x:a").length).toBe(
-			FIND_MAX_PER_SCOPE,
-		);
-		const filtered = filterHits(hits, {}, "2026-11-10");
-		expect(filtered).toHaveLength(FIND_DEFAULT_LIMIT);
-		expect(filtered.every((item) => item.id.startsWith("a"))).toBe(true);
-		expect(filterHits(hits, { limit: 0 }, "2026-11-10")).toEqual([]);
-		expect(filterHits(hits, { limit: -5 }, "2026-11-10")).toEqual([]);
-	});
-
-	it("applies the scope, kind, date, and due filters", () => {
-		const hits = [
-			hit({ pos: 0, scope: "x:a", ts: "2026-11-01T12:00:00.000Z" }),
-			hit({
-				pos: 1,
-				scope: "x:b",
-				ts: "2026-11-02T12:00:00.000Z",
-				kind: "fact",
-			}),
-			hit({
-				pos: 2,
-				scope: "x:a",
-				ts: "2026-11-03T12:00:00.000Z",
-				review_at: "2026-11-02",
-			}),
-		];
-		expect(
-			filterHits(hits, { scopes: ["x:a"] }, "2026-11-10").map(
-				(item) => item.pos,
-			),
-		).toEqual([0, 2]);
-		expect(
-			filterHits(hits, { kinds: ["fact"] }, "2026-11-10").map(
-				(item) => item.pos,
-			),
-		).toEqual([1]);
-		expect(
-			filterHits(hits, { since: "2026-11-02" }, "2026-11-10").map(
-				(item) => item.pos,
-			),
-		).toEqual([1, 2]);
-		expect(
-			filterHits(hits, { until: "2026-11-02" }, "2026-11-10").map(
-				(item) => item.pos,
-			),
-		).toEqual([0, 1]);
-		expect(
-			filterHits(hits, { due: true }, "2026-11-10").map((item) => item.pos),
-		).toEqual([2]);
-	});
-
-	it("compares a date-only bound with the day of the zone of the process", () => {
-		const hits = [
-			hit({ pos: 0, ts: "2026-11-02T21:30:00.000Z" }),
-			hit({ pos: 1, ts: "2026-11-03T12:00:00.000Z" }),
-			hit({ pos: 2, ts: "2026-11-03T20:59:00.000Z" }),
-			hit({ pos: 3, ts: "2026-11-03T21:00:00.000Z" }),
-		];
-		// The day 2026-11-03 in Moscow starts at 21:00 in UTC of the day before.
-		const day = { since: "2026-11-03", until: "2026-11-03" };
-
-		expect(filterHits(hits, day, "2026-11-10").map((item) => item.pos)).toEqual(
-			[0, 1, 2],
-		);
-		expect(
-			filterHits(hits, { since: "2026-11-03T12:00" }, "2026-11-10").map(
-				(item) => item.pos,
-			),
-		).toEqual([1, 2, 3]);
-	});
-});
 
 describe("openNote", () => {
 	const longform = "x".repeat(LONGFORM_ALL + 100);

@@ -24,7 +24,6 @@ import type {
 } from "@memlens/core";
 import {
 	dayOf,
-	filterHits,
 	loadRangeView,
 	MemlensError,
 	normalizeScopeKey,
@@ -43,6 +42,7 @@ import {
 	countFlag,
 	flagValue,
 	isJson,
+	kindList,
 	openCommandRuntime,
 	print,
 	scopeList,
@@ -59,32 +59,27 @@ const debug = debuglog("memlens:commands");
 
 // #region FUNC_findCommand
 /**
- * Find the records with matching words.
+ * Find the records with matching words, or the newest records.
  *
  * @purpose Answer a search from the terminal, so a user finds a note without the slice.
- * @invariants The filters --scope, --since, --until, --due, and --limit apply after the search.
+ * @invariants The filters --scope, --kind, --since, --until, --due, and --limit cut the rows before
+ * the limit.
  */
 export async function findCommand(
 	args: ParsedArgs,
 	io: CommandIo,
 ): Promise<string> {
 	const scopes = scopeList(args.flags);
+	const kinds = kindList(args.flags);
 	const limit = countFlag(args.flags, "limit", 10);
 	const runtime = await openCommandRuntime(args, io);
 	try {
-		const hits = scopes.length
-			? (
-					await Promise.all(
-						scopes.map((scope) =>
-							search(runtime.store, args.positional[0] ?? "", scope, 50),
-						),
-					)
-				).flat()
-			: await search(runtime.store, args.positional[0] ?? "", null, 50);
-		const kept = filterHits(
-			hits,
+		const hits = search(
+			runtime.store,
 			{
+				query: args.positional[0] ?? "",
 				scopes: scopes.length === 0 ? null : scopes,
+				kinds: kinds.length === 0 ? null : kinds,
 				since: flagValue(args.flags, "since"),
 				until: flagValue(args.flags, "until"),
 				due: args.flags.due === true,
@@ -92,8 +87,8 @@ export async function findCommand(
 			},
 			nowIso(),
 		);
-		debug("Find answered", { event: "find", hits: kept.length });
-		return isJson(args.flags) ? print(kept) : kept.map(renderHit).join("\n");
+		debug("Find answered", { event: "find", hits: hits.length });
+		return isJson(args.flags) ? print(hits) : hits.map(renderHit).join("\n");
 	} finally {
 		await runtime.close();
 	}

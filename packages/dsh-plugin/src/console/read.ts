@@ -50,10 +50,9 @@ export async function viewAnswer(request: ConsoleRequest): Promise<
 // #endregion FUNC_viewAnswer
 
 // #region FUNC_searchAnswer
-/** @purpose Answer one search with the field names of the Remote contract. */
+/** @purpose Answer one search with the fields of one find filter. */
 export function searchAnswer(request: ConsoleRequest): readonly IndexHit[] {
-	const { memory, scope } = request;
-	return consoleSearch(hostOf(memory), alias(request.fields), scope);
+	return consoleSearch(hostOf(request.memory), alias(request.fields));
 }
 // #endregion FUNC_searchAnswer
 
@@ -81,8 +80,6 @@ export async function catalogAnswer(
 /** @purpose Map the field names of the Remote contract to the shared names. */
 function alias(fields: Fields): Fields {
 	const next = { ...fields };
-	if (next.query === undefined && typeof next.q === "string")
-		next.query = next.q;
 	if (next.level === undefined && typeof next.budget === "string")
 		next.level = next.budget;
 	return next;

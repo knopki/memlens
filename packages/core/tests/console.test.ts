@@ -758,12 +758,57 @@ describe("selective SQL", () => {
 		const hits = consoleSearch(
 			{ store, config: config(), scopes: ["project:a"] },
 			{ query: "needle", limit: "5" },
-			"project:a",
 		);
 		expect(hits.map((hit) => hit.body)).toEqual(["needle here"]);
 		expect(watch.sql.filter((sql) => /select \*/i.test(sql))).toEqual([]);
 		const reads = watch.sql.filter((sql) => /FROM (notes|fts)/.test(sql));
 		expect(reads.length).toBeGreaterThan(0);
 		expect(reads.every((sql) => /LIMIT/i.test(sql))).toBe(true);
+	});
+
+	it("takes the fields of one find filter", () => {
+		const store = newStore();
+		addNote(store, {
+			pos: 0,
+			kind: "task",
+			body: "task one",
+			ts: "2026-11-01T12:00:00.000Z",
+		});
+		addNote(store, {
+			pos: 1,
+			kind: "task",
+			body: "task two",
+			ts: "2026-11-05T12:00:00.000Z",
+		});
+		addNote(store, {
+			pos: 2,
+			body: "fact one",
+			ts: "2026-11-06T12:00:00.000Z",
+		});
+		const host = {
+			store,
+			config: config(),
+			scopes: ["project:a", "project:b"],
+		};
+		const bodies = (fields: Record<string, string>) =>
+			consoleSearch(host, fields).map((hit) => hit.body);
+		// An absent field imposes no limit, and a day bound covers that whole day.
+		expect(bodies({})).toEqual(["fact one", "task two", "task one"]);
+		expect(bodies({ scopes: "project:b" })).toEqual([]);
+		expect(bodies({ kinds: "task,fact", until: "2026-11-05" })).toEqual([
+			"task two",
+			"task one",
+		]);
+		expect(bodies({ kinds: "task", limit: "1" })).toEqual(["task two"]);
+		expect(bodies({ due: "1" })).toEqual([]);
+		expect(() => consoleSearch(host, { scopes: "person:x" })).toThrow(
+			/outside this profile/,
+		);
+		expect(() => consoleSearch(host, { kinds: "task,urgent" })).toThrow(
+			/kind is unknown/,
+		);
+		expect(() => consoleSearch(host, { limit: "five" })).toThrow(
+			/whole number/,
+		);
 	});
 });

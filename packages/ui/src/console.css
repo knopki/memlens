@@ -389,6 +389,20 @@
 	color: var(--ml-filter-text);
 	font-size: 12.5px;
 }
+.ml-console .filters input[type="checkbox"] {
+	padding: 0;
+	border: none;
+}
+.ml-console .filters .kinds {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+.ml-console .filters .kinds .btn.on {
+	border-color: var(--ml-accent);
+	background: var(--ml-active-bg);
+	color: var(--ml-accent);
+}
 .ml-console .hit {
 	grid-template-columns: minmax(0, 176px) 92px minmax(0, 1fr) 84px;
 	font-family: inherit;

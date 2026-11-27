@@ -1,26 +1,54 @@
 /**
  * #region moduleContract
  * @modulecontract
- * @purpose Find the live notes that match a query, so each caller reads one index with one grammar.
- * @scope The match expression, the FTS query, the literal fallback scan, and the hit order.
- * @invariants A hidden, deleted, or cleared row gives no hit.
- * @invariants No log holds the query text or a note text.
+ * @purpose Find the live notes that match one find filter, so each caller reads one index with one grammar.
+ * @scope
+ *  - The find filter, the match expression, the FTS query, the literal fallback scan, and the hit order.
+ *  - NOT: The scope check of a caller, and the tool schemas.
+ * @invariants
+ *  - A hidden, deleted, or cleared row gives no hit.
+ *  - Each filter cuts the rows before the limit.
+ *  - No log holds the query text or a note text.
  * @dependencies USES API: node:sqlite
- * @keywords search, fts5, match, prefix, exclusion, trigram, literal, scan, rank, hit
+ * @keywords search, find, filter, fts5, match, prefix, exclusion, trigram, literal, scan, rank, hit
  * #endregion moduleContract
  */
 
 import type { DatabaseSync } from "node:sqlite";
 import { debuglog } from "node:util";
 import { renderAddress } from "../domain/address-form.js";
-import type { NoteKind, ScopeKey } from "../types/primitives.js";
+import type { IsoTime, NoteKind, ScopeKey } from "../types/primitives.js";
 import type { Store } from "./store.js";
 import type { IndexHit } from "./types.js";
 
 const debug = debuglog("memlens:search");
 
+/** The filters of one find. A null or absent field imposes no limit. */
+export interface FindFilter {
+	readonly query?: string | null;
+	readonly scopes?: readonly ScopeKey[] | null;
+	readonly since?: string | null;
+	readonly until?: string | null;
+	readonly kinds?: readonly NoteKind[] | null;
+	readonly due?: boolean;
+	readonly limit?: number;
+}
+
+/** The default limit of a find. */
+export const FIND_DEFAULT_LIMIT = 10;
+
 /** The note columns of one hit. */
-const HIT_COLUMNS = "id, scope, pos, ts, kind, body, longform, review_at";
+const HIT_COLUMNS =
+	"n.id, n.scope, n.pos, n.ts, n.kind, n.body, n.longform, n.review_at";
+
+/** The WHERE tail of the filters, with the values of its placeholders. */
+interface SqlTail {
+	readonly clause: string;
+	readonly args: readonly (string | number)[];
+
+	/** The count of the named scopes. A zero count means each scope. */
+	readonly scopes: number;
+}
 
 /** The parts of one query. */
 interface Query {
@@ -133,31 +161,104 @@ function hitsFromRows(
 }
 // #endregion FUNC_hitsFromRows
 
+// #region FUNC_dayBounds
+/**
+ * @purpose Give the UTC start and the exclusive UTC end of one day in the zone of the process.
+ * @invariants A text that is not a day, or a day that the calendar of the zone does not hold, gives null.
+ */
+function dayBounds(day: string): { start: string; end: string } | null {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+	if (match === null) return null;
+	const year = Number(match[1]);
+	const month = Number(match[2]);
+	const date = Number(match[3]);
+	const start = new Date(year, month - 1, date);
+	if (
+		start.getFullYear() !== year ||
+		start.getMonth() !== month - 1 ||
+		start.getDate() !== date
+	)
+		return null;
+	return {
+		start: start.toISOString(),
+		end: new Date(year, month - 1, date + 1).toISOString(),
+	};
+}
+// #endregion FUNC_dayBounds
+
+// #region FUNC_filterSql
+/**
+ * @purpose Give the filter tail of each query path, so each filter cuts the rows before the limit.
+ * @invariants A null or empty list imposes no limit.
+ * @invariants A day bound covers that whole day in the zone of the process. Another bound compares
+ * the text prefix of the time.
+ * @invariants A due row has a review time of now or earlier.
+ */
+function filterSql(filter: FindFilter, now: IsoTime): SqlTail {
+	const clause: string[] = [];
+	const args: (string | number)[] = [];
+	const list = (column: string, values: readonly string[]) => {
+		if (values.length === 0) return;
+		clause.push(`${column} IN (${values.map(() => "?").join(", ")})`);
+		args.push(...values);
+	};
+	const scopes = filter.scopes ?? [];
+	list("n.scope", scopes);
+	list("n.kind", filter.kinds ?? []);
+	const since = filter.since ?? "";
+	const until = filter.until ?? "";
+	const start = dayBounds(since);
+	const end = dayBounds(until);
+	if (since.length > 0) {
+		clause.push(start === null ? "substr(n.ts, 1, ?) >= ?" : "n.ts >= ?");
+		args.push(...(start === null ? [since.length, since] : [start.start]));
+	}
+	if (until.length > 0) {
+		clause.push(end === null ? "substr(n.ts, 1, ?) <= ?" : "n.ts < ?");
+		args.push(...(end === null ? [until.length, until] : [end.end]));
+	}
+	if (filter.due === true) {
+		clause.push(
+			"n.review_at IS NOT NULL AND n.review_at <> '' AND n.review_at <= ?",
+		);
+		args.push(now);
+	}
+	return {
+		clause: clause.map((item) => ` AND ${item}`).join(""),
+		args,
+		scopes: scopes.length,
+	};
+}
+// #endregion FUNC_filterSql
+
 // #region FUNC_search
 /**
- * @purpose Give the hits of one query, so the tools and the CLI share one answer.
- * @invariants Apply the scope filter in SQL. Order by rank, then the newest ts, then scope, then id.
- * @invariants An empty query lists each live row in the ts order. An exclusion-only query gives no hit.
+ * @purpose Give the hits of one find, so the tools, the CLI, and the console share one answer.
+ * @invariants Each filter cuts the rows before the limit. The order is by rank, then the newest ts,
+ * then scope, then id.
+ * @invariants An empty query lists each matching live row in the ts order. An exclusion-only query
+ * gives no hit.
  * @invariants A trigram index with a short positive word uses a bounded literal containment scan.
- * @returns The hits, at most the given limit.
+ * @invariants A negative limit gives no hit. The default limit is 10.
+ * @returns The hits, at most the limit.
  */
 export function search(
 	store: Store,
-	query: string,
-	scope: ScopeKey | null,
-	limit: number,
+	filter: FindFilter,
+	now: IsoTime,
 ): readonly IndexHit[] {
 	const db = store.handle();
-	const cap = Math.max(0, limit);
-	const parsed = parseQuery(query);
-	if (parsed.empty) return searchAll(db, scope, cap);
+	const limit = Math.max(0, filter.limit ?? FIND_DEFAULT_LIMIT);
+	const tail = filterSql(filter, now);
+	const parsed = parseQuery(filter.query ?? "");
+	if (parsed.empty) return searchAll(db, tail, limit);
 	if (parsed.expr === null) {
 		debug("Search refused", {
 			event: "search",
 			path: "none",
 			hits: 0,
-			scope,
-			limit: cap,
+			scopes: tail.scopes,
+			limit,
 			excluded: parsed.excluded,
 		});
 		return [];
@@ -165,8 +266,8 @@ export function search(
 	const tokenizer = store.meta("fts_tokenizer") ?? "";
 	const word = literalWord(tokenizer, parsed.positive);
 	return word !== null
-		? literalScan(db, word, scope, cap)
-		: searchFts(db, parsed, scope, cap);
+		? literalScan(db, word, tail, limit)
+		: searchFts(db, parsed.expr, tail, limit);
 }
 // #endregion FUNC_search
 
@@ -174,24 +275,24 @@ export function search(
 /** @purpose List each live row in the ts order, so an empty query shows the newest notes. */
 function searchAll(
 	db: DatabaseSync,
-	scope: ScopeKey | null,
+	tail: SqlTail,
 	limit: number,
 ): readonly IndexHit[] {
 	const hits = hitsFromRows(
 		db
 			.prepare(
-				`SELECT ${HIT_COLUMNS} FROM notes
-				WHERE state = 'live' AND cleared = 0${scope === null ? "" : " AND scope = ?"}
-				ORDER BY ts DESC, scope, id
+				`SELECT ${HIT_COLUMNS} FROM notes n
+				WHERE n.state = 'live' AND n.cleared = 0${tail.clause}
+				ORDER BY n.ts DESC, n.scope, n.id
 				LIMIT ?`,
 			)
-			.all(...(scope === null ? [limit] : [scope, limit])),
+			.all(...tail.args, limit),
 	);
 	debug("Search listed", {
 		event: "search",
 		path: "all",
 		hits: hits.length,
-		scope,
+		scopes: tail.scopes,
 		limit,
 	});
 	return hits;
@@ -202,30 +303,27 @@ function searchAll(
 /** @purpose Match the query through the index and give the hits in rank order. */
 function searchFts(
 	db: DatabaseSync,
-	parsed: Query,
-	scope: ScopeKey | null,
+	expr: string,
+	tail: SqlTail,
 	limit: number,
 ): readonly IndexHit[] {
-	const expr = parsed.expr ?? "";
 	const hits = hitsFromRows(
 		db
 			.prepare(
-				`SELECT n.id, n.scope, n.pos, n.ts, n.kind, n.body, n.longform, n.review_at
+				`SELECT ${HIT_COLUMNS}
 				FROM fts JOIN notes n ON n.n = fts.rowid
-				WHERE fts MATCH ? AND n.state = 'live' AND n.cleared = 0${scope === null ? "" : " AND n.scope = ?"}
+				WHERE fts MATCH ? AND n.state = 'live' AND n.cleared = 0${tail.clause}
 				ORDER BY rank, n.ts DESC, n.scope, n.id
 				LIMIT ?`,
 			)
-			.all(...(scope === null ? [expr, limit] : [expr, scope, limit])),
+			.all(expr, ...tail.args, limit),
 	);
 	debug("Search matched", {
 		event: "search",
 		path: "fts",
 		hits: hits.length,
-		scope,
+		scopes: tail.scopes,
 		limit,
-		required: parsed.positive.length,
-		excluded: parsed.excluded,
 	});
 	return hits;
 }
@@ -235,35 +333,32 @@ function searchFts(
 /**
  * @purpose Find a short word without the index, so a zh or ja query still gives an answer.
  * @invariants The test is literal containment of the text. No tokenizer and no exclusion word applies.
- * @invariants The scan is bounded by the limit and applies the scope filter in SQL.
+ * @invariants The scan is bounded by the limit and applies each filter in SQL.
  * @invariants The LIKE pattern escapes the percent, the underscore, and the backslash.
  */
 function literalScan(
 	db: DatabaseSync,
 	word: string,
-	scope: ScopeKey | null,
+	tail: SqlTail,
 	limit: number,
 ): readonly IndexHit[] {
 	const pattern = likePattern(word);
-	const args: (string | number)[] = [pattern, pattern];
-	if (scope !== null) args.push(scope);
-	args.push(limit);
 	const hits = hitsFromRows(
 		db
 			.prepare(
-				`SELECT ${HIT_COLUMNS} FROM notes
-				WHERE state = 'live' AND cleared = 0
-					AND (body LIKE ? ESCAPE '\\' OR longform LIKE ? ESCAPE '\\')${scope === null ? "" : " AND scope = ?"}
-				ORDER BY ts DESC, scope, id
+				`SELECT ${HIT_COLUMNS} FROM notes n
+				WHERE n.state = 'live' AND n.cleared = 0
+					AND (n.body LIKE ? ESCAPE '\\' OR n.longform LIKE ? ESCAPE '\\')${tail.clause}
+				ORDER BY n.ts DESC, n.scope, n.id
 				LIMIT ?`,
 			)
-			.all(...args),
+			.all(pattern, pattern, ...tail.args, limit),
 	);
 	debug("Search scanned", {
 		event: "search",
 		path: "literal",
 		hits: hits.length,
-		scope,
+		scopes: tail.scopes,
 		limit,
 		wordChars: word.length,
 	});

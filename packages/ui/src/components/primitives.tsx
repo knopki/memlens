@@ -55,6 +55,9 @@ export interface ButtonProps {
 	readonly type?: "button" | "submit";
 	readonly disabled?: boolean;
 	readonly title?: string;
+
+	/** The pressed state of one toggle button. An absent value renders no attribute. */
+	readonly pressed?: boolean;
 }
 
 export function Button({
@@ -65,6 +68,7 @@ export function Button({
 	type = "button",
 	disabled = false,
 	title,
+	pressed,
 }: ButtonProps): JSX.Element {
 	return (
 		<button
@@ -73,6 +77,7 @@ export function Button({
 			onClick={onClick}
 			disabled={disabled}
 			title={title}
+			aria-pressed={pressed}
 		>
 			{text}
 			{children}

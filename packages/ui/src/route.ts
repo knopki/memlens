@@ -36,6 +36,7 @@ export type Screen = (typeof SCREENS)[number];
  * reads every visible scope. An empty text means that the field holds its default. The field `s`
  * holds `*` for every visible scope, a scope key for one scope, and no field for the selected
  * scope.
+ * @invariants The field `kinds` holds a comma-separated list of kinds, and the field `due` holds `1`.
  */
 export type Route = {
 	screen: Screen;
@@ -44,8 +45,14 @@ export type Route = {
 	target: string;
 	query: string;
 	searchScope: string | null;
-	kind: NoteKind | "";
+
+	/** The kinds of the search. */
+	kinds: readonly NoteKind[];
 	since: string;
+	until: string;
+
+	/** True when the search keeps only the notes that are due for review. */
+	due: boolean;
 	limit: string;
 	reviewKind: NoteKind | "";
 };
@@ -59,8 +66,10 @@ export const DEFAULT_ROUTE: Route = {
 	target: "",
 	query: "",
 	searchScope: null,
-	kind: "",
+	kinds: [],
 	since: "",
+	until: "",
+	due: false,
 	limit: "10",
 	reviewKind: "",
 };
@@ -68,8 +77,8 @@ export const DEFAULT_ROUTE: Route = {
 // #region FUNC_routeOf
 /**
  * @purpose Turn a place of the console into the query text of the page address.
- * @invariants Write the keys `screen`, `profile`, `scope`, `target`, `q`, `s`, `kind`, `since`,
- * `limit`, and `rkind`. Leave out a key that holds its default value.
+ * @invariants Write the keys `screen`, `profile`, `scope`, `target`, `q`, `s`, `kinds`, `since`,
+ * `until`, `due`, `limit`, and `rkind`. Leave out a key that holds its default value.
  */
 export function routeOf(route: Route): string {
 	const params = new URLSearchParams();
@@ -82,8 +91,10 @@ export function routeOf(route: Route): string {
 	put("target", route.target, "");
 	put("q", route.query, "");
 	put("s", route.searchScope === "" ? "*" : route.searchScope, "");
-	put("kind", route.kind, "");
+	put("kinds", route.kinds.join(","), "");
 	put("since", route.since, "");
+	put("until", route.until, "");
+	put("due", route.due ? "1" : "", "");
 	put("limit", route.limit, DEFAULT_ROUTE.limit);
 	put("rkind", route.reviewKind, "");
 	return params.toString();
@@ -96,6 +107,13 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const kindOf = (raw: string): NoteKind | "" =>
 	(NOTE_KINDS as readonly string[]).includes(raw) ? (raw as NoteKind) : "";
 
+/** Give each kind of one comma-separated text. A value outside the kinds is dropped. */
+const kindsOf = (raw: string): readonly NoteKind[] =>
+	raw.split(",").flatMap((item) => {
+		const kind = kindOf(item);
+		return kind === "" ? [] : [kind];
+	});
+
 // #region FUNC_readRoute
 /**
  * @purpose Turn the query text of the page address into a place of the console.
@@ -106,6 +124,7 @@ export function readRoute(search: string): Route {
 	const params = new URLSearchParams(search);
 	const scope = params.get("s") ?? "";
 	const since = params.get("since") ?? "";
+	const until = params.get("until") ?? "";
 	const limit = Number(params.get("limit") ?? "");
 	return {
 		screen:
@@ -116,8 +135,10 @@ export function readRoute(search: string): Route {
 		target: params.get("target") ?? "",
 		query: params.get("q") ?? "",
 		searchScope: scope === "" ? null : scope === "*" ? "" : scope,
-		kind: kindOf(params.get("kind") ?? ""),
+		kinds: kindsOf(params.get("kinds") ?? ""),
 		since: DATE.test(since) ? since : "",
+		until: DATE.test(until) ? until : "",
+		due: params.get("due") === "1",
 		limit:
 			Number.isInteger(limit) && limit > 0 && limit <= 50
 				? String(limit)

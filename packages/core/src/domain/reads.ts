@@ -3,19 +3,19 @@
  * @modulecontract
  * @purpose Answer each memory read from the store rows, without a log scan.
  * @scope
- *  - Find filters, the open of one note and of one range, the due review list, and the scope list.
- *  - NOT: the address grammar, the index storage, the locks, and the tool schemas.
+ *  - The open of one note and of one range, the due review list, and the scope list.
+ *  - NOT: the address grammar, the index storage, the locks, the tool schemas, and the find filters.
  * @invariants
  *  - Reads use the supplied rows through store/reads.ts and store/view.ts, with no log scan and
  *    no wait for a compaction.
- * @keywords find, filter, open, longform, range, review, due, scopes, reads, store
+ * @keywords open, longform, range, review, due, scopes, reads, store
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
 import { liveCounts, scopeNotes } from "../store/reads.js";
 import type { Store } from "../store/store.js";
-import type { IndexHit, Note } from "../store/types.js";
+import type { Note } from "../store/types.js";
 import {
 	loadView,
 	nodeAt,
@@ -46,22 +46,6 @@ export type OpenSubject = Pick<
 	| "modified_at"
 	| "refs"
 >;
-
-/** The filters of a find. Null or absent fields impose no limit. */
-export interface FindFilter {
-	readonly scopes?: readonly ScopeKey[] | null;
-	readonly since?: string | null;
-	readonly until?: string | null;
-	readonly kinds?: readonly NoteKind[] | null;
-	readonly due?: boolean;
-	readonly limit?: number;
-}
-
-/** The default limit of a find. */
-export const FIND_DEFAULT_LIMIT = 10;
-
-/** The greatest hit count of a find for each scope. */
-export const FIND_MAX_PER_SCOPE = 50;
 
 /** The character count of the head of a longform. */
 export const LONGFORM_HEAD = 2048;
@@ -105,51 +89,6 @@ export interface OpenChildren {
 	readonly kind: "children";
 	readonly children: readonly OpenLine[];
 }
-
-// #region FUNC_filterHits
-/**
- * @purpose Apply the find filters to complete hits, so the tools and the CLI share one answer.
- * @invariants Keep the hit order. Cap the hits at 50 for each scope, then apply the total limit.
- * A due hit has a review value of now or earlier. A negative limit gives no hit. The default limit is 10.
- * @invariants Since and until compare against the ts text, and a date-only bound covers that whole
- * day in the zone of the process.
- * @invariants A kind filter keeps the records of one kind.
- */
-export function filterHits(
-	hits: readonly IndexHit[],
-	filter: FindFilter,
-	now: IsoTime,
-): readonly IndexHit[] {
-	const scopes = filter.scopes ? new Set(filter.scopes) : null;
-	const kinds = filter.kinds ? new Set(filter.kinds) : null;
-	const limit = Math.max(0, filter.limit ?? FIND_DEFAULT_LIMIT);
-	const perScope = new Map<ScopeKey, number>();
-	// A bound of 10 characters is a day, so it compares the day of the zone and not the UTC text.
-	const boundOf = (ts: string, bound: string): string =>
-		bound.length === 10 ? dayOf(ts) : ts.slice(0, bound.length);
-	const result = hits.filter((hit) => {
-		if (scopes !== null && !scopes.has(hit.scope)) return false;
-		if (kinds !== null && !kinds.has(hit.kind)) return false;
-		if (filter.since && boundOf(hit.ts, filter.since) < filter.since)
-			return false;
-		if (filter.until && boundOf(hit.ts, filter.until) > filter.until)
-			return false;
-		if (filter.due && (hit.review_at === null || hit.review_at > now))
-			return false;
-		const seen = perScope.get(hit.scope) ?? 0;
-		if (seen >= FIND_MAX_PER_SCOPE) return false;
-		perScope.set(hit.scope, seen + 1);
-		return true;
-	});
-	debug("Find filtered", {
-		event: "find",
-		hits: hits.length,
-		kept: result.length,
-		limit,
-	});
-	return result.slice(0, limit);
-}
-// #endregion FUNC_filterHits
 
 // #region FUNC_openNote
 /**

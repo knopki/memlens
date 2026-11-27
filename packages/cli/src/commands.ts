@@ -17,7 +17,13 @@
  * #endregion moduleContract
  */
 
-import { MemlensError, normalizeScopeKey, type ScopeKey } from "@memlens/core";
+import {
+	MemlensError,
+	NOTE_KINDS,
+	type NoteKind,
+	normalizeScopeKey,
+	type ScopeKey,
+} from "@memlens/core";
 import type { ParsedArgs } from "./args.js";
 import { openRuntime, type Runtime } from "./runtime.js";
 
@@ -86,6 +92,20 @@ export function scopeList(flags: ParsedArgs["flags"]): ScopeKey[] {
 	);
 }
 // #endregion FUNC_scopeList
+
+// #region FUNC_kindList
+/**
+ * @purpose Read each --kind value in order, so a command shares one kind list.
+ * @invariants A value outside the kinds gives a Usage error.
+ */
+export function kindList(flags: ParsedArgs["flags"]): NoteKind[] {
+	return flagList(flags, "kind").map((raw) => {
+		if (!(NOTE_KINDS as readonly string[]).includes(raw))
+			throw new MemlensError("Usage", `The kind ${raw} is unknown.`);
+		return raw as NoteKind;
+	});
+}
+// #endregion FUNC_kindList
 
 // #region FUNC_isJson
 /** @purpose Tell a JSON answer from a text answer. */
