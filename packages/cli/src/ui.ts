@@ -25,8 +25,15 @@ import {
 } from "node:http";
 import { debuglog } from "node:util";
 import { MemlensError, text } from "@memlens/core";
-import type { ParsedArgs } from "./args.js";
-import { type CommandIo, countFlag, flagValue } from "./commands.js";
+import type { Command } from "commander";
+import {
+	type CommandIo,
+	command,
+	port as portNumber,
+	type Run,
+	reply,
+	STORE,
+} from "./commands.js";
 import { actionRoute } from "./host/action.js";
 import {
 	type Handler,
@@ -43,6 +50,22 @@ import { resolveScope } from "./host/scope.js";
 import { openRuntime } from "./runtime.js";
 
 const debug = debuglog("memlens:ui");
+
+// #region FUNC_commands
+/**
+ * @purpose Declare the signature and the flags of the command once, so the help comes from the
+ *   same place as the parse.
+ */
+export function commands(run: Run): Command[] {
+	return [
+		command("ui", "Start the console.")
+			.option("-p, --port <n>", "The port of the console.", portNumber, 7788)
+			.option("--allow-delete", "Let the console erase a note.")
+			.addOption(STORE)
+			.action((options) => reply(run, uiCommand(options, run.io))),
+	];
+}
+// #endregion FUNC_commands
 
 /** Each static asset of the console, with its content type. */
 const ASSETS: Readonly<Record<string, readonly [string, string]>> = {
@@ -100,18 +123,15 @@ export async function startUi(options: HostOptions) {
  * @invariants The port comes from --port and must be from 1 to 65535.
  */
 export async function uiCommand(
-	args: ParsedArgs,
+	input: { port: number; allowDelete?: boolean; store?: string },
 	io: CommandIo,
 ): Promise<string> {
-	const port = countFlag(args.flags, "port", 7788);
-	if (port < 1 || port > 65535)
-		throw new MemlensError("Usage", "The port must be between 1 and 65535.");
 	const host = await startUi({
-		storeFlag: flagValue(args.flags, "store"),
+		storeFlag: input.store ?? null,
 		env: io.env,
 		cwd: io.cwd,
-		port,
-		allowDelete: args.flags["allow-delete"] === true,
+		port: input.port,
+		allowDelete: input.allowDelete === true,
 	});
 	const stop = () => {
 		void host.close();

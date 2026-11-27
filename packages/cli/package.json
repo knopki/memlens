@@ -25,6 +25,7 @@
 		"@memlens/core": "workspace:*",
 		"@memlens/ui": "workspace:*",
 		"@types/node": "^22.20.1",
+		"commander": "15.1.0",
 		"esbuild": "^0.28.2",
 		"smol-toml": "^1.9.1",
 		"typescript": "^7.0.2",

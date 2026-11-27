@@ -7,32 +7,69 @@
  * @scope
  *  - The commands status, check, repair, and journal.
  *  - NOT: the repair rules of the store and the exit code mapping.
- * @dependencies USES API: @memlens/core; READS: the store directory
+ * @dependencies USES API: @memlens/core, commander; READS: the store directory
  * @keywords status, check, repair, journal, admin, cli
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
+import type { ScopeKey } from "@memlens/core";
 import {
 	check,
 	dueRecords,
 	type JournalRow,
 	journalRows,
 	liveCounts,
+	normalizeScopeKey,
 	nowIso,
 } from "@memlens/core";
-import type { ParsedArgs } from "./args.js";
+import type { Command } from "commander";
 import {
 	type CommandAnswer,
 	type CommandIo,
-	countFlag,
-	isJson,
+	command,
+	DRY_RUN,
+	JSON_FLAG,
+	limit,
 	openCommandRuntime,
 	print,
-	scopeList,
+	type Run,
+	reply,
+	SCOPE,
+	STORE,
 } from "./commands.js";
 
 const debug = debuglog("memlens:commands");
+
+// #region FUNC_commands
+/**
+ * @purpose Declare the signature and the flags of each administrative command once, so the help
+ *   comes from the same place as the parse.
+ */
+export function commands(run: Run): Command[] {
+	const io = run.io;
+	return [
+		command("status", "Summarize the store.")
+			.addOption(JSON_FLAG)
+			.addOption(STORE)
+			.action((options) => reply(run, statusCommand(options, io))),
+		command("check", "Test the store against its derived state.")
+			.addOption(JSON_FLAG)
+			.addOption(STORE)
+			.action((options) => reply(run, checkCommand(options, io))),
+		command("repair", "Apply the planned repairs of one store.")
+			.addOption(DRY_RUN)
+			.addOption(STORE)
+			.action((options) => reply(run, repairCommand(options, io))),
+		command("journal", "Print the journal of the store.")
+			.addOption(limit(20))
+			.addOption(SCOPE)
+			.addOption(JSON_FLAG)
+			.addOption(STORE)
+			.action((options) => reply(run, journalCommand(options, io))),
+	];
+}
+// #endregion FUNC_commands
 
 function liveTotal(counts: ReadonlyMap<string, number>): number {
 	return [...counts.values()].reduce((sum, count) => sum + count, 0);
@@ -46,10 +83,10 @@ function liveTotal(counts: ReadonlyMap<string, number>): number {
  *   glance.
  */
 export async function statusCommand(
-	args: ParsedArgs,
+	input: { json?: boolean; store?: string },
 	io: CommandIo,
 ): Promise<string> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const rev = runtime.store.rev();
 		const counts = liveCounts(runtime.store);
@@ -61,7 +98,7 @@ export async function statusCommand(
 			due: dueRecords(runtime.store, runtime.scopes, nowIso()).length,
 		};
 		debug("Status answered", { event: "status", rev });
-		return isJson(args.flags)
+		return input.json
 			? print(status)
 			: Object.entries(status)
 					.map(([key, value]) => `${key}: ${value}`)
@@ -81,10 +118,10 @@ export async function statusCommand(
  * @invariants A store with a finding answers with the exit code 1.
  */
 export async function checkCommand(
-	args: ParsedArgs,
+	input: { json?: boolean; store?: string },
 	io: CommandIo,
 ): Promise<CommandAnswer> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const findings = check(runtime.store, { dryRun: true });
 		const counts = liveCounts(runtime.store);
@@ -100,7 +137,7 @@ export async function checkCommand(
 			ok: report.ok,
 			findings: findings.length,
 		});
-		const text = isJson(args.flags)
+		const text = input.json
 			? print(report)
 			: [
 					`path: ${report.path}`,
@@ -125,12 +162,12 @@ export async function checkCommand(
  *   --dry-run lists the planned changes and writes nothing.
  */
 export async function repairCommand(
-	args: ParsedArgs,
+	input: { dryRun?: boolean; store?: string },
 	io: CommandIo,
 ): Promise<string> {
-	const runtime = await openCommandRuntime(args, io);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
-		const dryRun = args.flags["dry-run"] === true;
+		const dryRun = input.dryRun === true;
 		const changes = check(runtime.store, { dryRun });
 		debug("Repair done", { event: "repair", dryRun, changes: changes.length });
 		return changes.length ? changes.join("\n") : "nothing to repair";
@@ -147,21 +184,23 @@ export async function repairCommand(
  * @purpose Show the newest journal events, so a user audits each change of the memory.
  */
 export async function journalCommand(
-	args: ParsedArgs,
+	input: { limit: number; scope?: string; json?: boolean; store?: string },
 	io: CommandIo,
 ): Promise<string> {
-	const limit = countFlag(args.flags, "limit", 20);
-	const scope = scopeList(args.flags)[0];
-	const runtime = await openCommandRuntime(args, io);
+	const scope =
+		input.scope === undefined
+			? undefined
+			: (normalizeScopeKey(input.scope) as ScopeKey);
+	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const rows = journalRows(
 			runtime.store,
-			scope ? { limit, scope } : { limit },
+			scope === undefined
+				? { limit: input.limit }
+				: { limit: input.limit, scope },
 		);
-		debug("Journal answered", { event: "journal", rows: rows.length, limit });
-		return isJson(args.flags)
-			? print(rows)
-			: rows.map(renderJournalRow).join("\n");
+		debug("Journal answered", { event: "journal", rows: rows.length });
+		return input.json ? print(rows) : rows.map(renderJournalRow).join("\n");
 	} finally {
 		await runtime.close();
 	}
