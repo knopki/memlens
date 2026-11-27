@@ -3,12 +3,15 @@
  * @purpose Supply the display model of one console screen from selective store reads.
  * @scope Visible scopes, context, flat frontier lines, catalog, review, and maintenance counts.
  * @invariants Each answer holds only the requested screen data and the shared scope list.
+ * @invariants The due list and the candidate list keep at most CONSOLE_LIST_LIMIT rows. A total
+ * counts every row before its cap.
  * @keywords console, screen, frontier, catalog, review, selective
  * #endregion moduleContract
  */
 
 import { debuglog } from "node:util";
 import {
+	CONSOLE_LIST_LIMIT,
 	ConsoleReader,
 	reviewRows,
 	type ScopeCount,
@@ -55,6 +58,7 @@ export interface ConsoleModel {
 	readonly catalog?: readonly SliceLine[];
 	readonly catalogScopes?: readonly ScopeKey[];
 	readonly review?: readonly DueRecord[];
+	readonly reviewTotal?: number;
 	readonly reviewNext?: readonly DueRecord[];
 	readonly reviewNextTotal?: number;
 	readonly candidates?: readonly {
@@ -260,7 +264,7 @@ export function readConsoleCatalog(
 // #endregion FUNC_readConsoleCatalog
 
 // #region FUNC_readReview
-/** @purpose Read review rows and the next count without documents or summary rows. */
+/** @purpose Give the review screen bounded lists with addresses, so a large backlog costs no large read or render. */
 function readReview(
 	store: Store,
 	scope: ScopeKey,
@@ -275,6 +279,7 @@ function readReview(
 		}));
 	return {
 		review: list(rows.due),
+		reviewTotal: rows.dueTotal,
 		reviewNext: list(rows.next),
 		reviewNextTotal: rows.nextTotal,
 	};
@@ -282,7 +287,11 @@ function readReview(
 // #endregion FUNC_readReview
 
 // #region FUNC_maintenance
-/** @purpose Give build totals and counts by level without complete store rows. */
+/**
+ * @purpose Give build totals and counts by level without complete store rows.
+ * @invariants The candidate list keeps at most CONSOLE_LIST_LIMIT rows. The candidate total counts
+ *   every candidate.
+ */
 function maintenance(
 	store: Store,
 	config: ResolvedConfig,
@@ -291,6 +300,7 @@ function maintenance(
 	reader: (key: ScopeKey) => ConsoleReader,
 ): Partial<ConsoleModel> {
 	const candidates: NonNullable<ConsoleModel["candidates"]>[number][] = [];
+	let candidateTotal = 0;
 	const levels = new Map<
 		number,
 		{ level: number; nodes: number; dirty: number; candidates: number }
@@ -311,13 +321,17 @@ function maintenance(
 			total.candidates += row.candidates;
 			levels.set(row.level, total);
 		}
-		candidates.push(
-			...stats.candidates.map((range) => ({
-				scope: scope.key,
-				range,
-				ready: true,
-			})),
-		);
+		candidateTotal += stats.candidates.length;
+		if (candidates.length < CONSOLE_LIST_LIMIT)
+			candidates.push(
+				...stats.candidates
+					.slice(0, CONSOLE_LIST_LIMIT - candidates.length)
+					.map((range) => ({
+						scope: scope.key,
+						range,
+						ready: true,
+					})),
+			);
 	}
 	const directionCount = directionsData(
 		store,
@@ -329,7 +343,7 @@ function maintenance(
 		totals: {
 			records: scopes.reduce((sum, row) => sum + row.total, 0),
 			nodes,
-			candidates: candidates.length,
+			candidates: candidateTotal,
 		},
 		levels: [...levels.values()].sort((a, b) => a.level - b.level),
 		budgets: {

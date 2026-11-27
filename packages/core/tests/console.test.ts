@@ -26,6 +26,7 @@ import {
 	consoleSearch,
 } from "../src/domain/console-backend.js";
 import { hereLines } from "../src/domain/context.js";
+import { CONSOLE_LIST_LIMIT } from "../src/store/console.js";
 import { Store } from "../src/store/store.js";
 import { loadView, sliceOf } from "../src/store/view.js";
 import type { ScopeKey } from "../src/types/primitives.js";
@@ -483,10 +484,28 @@ describe("console screens", () => {
 			"review",
 		);
 		expect(tasks.review).toEqual([]);
+		expect(tasks.reviewTotal).toBe(0);
 		expect(tasks.reviewNext?.map((record) => record.body)).toEqual([
 			"task of project:a",
 		]);
 		expect(tasks.reviewNextTotal).toBe(1);
+	});
+
+	it("caps the due list and reports the total before the cap", async () => {
+		const store = newStore();
+		for (let pos = 0; pos < 60; pos += 1)
+			addNote(store, { pos, body: `due ${pos}`, review_at: "2026-11-01" });
+		const model = await readConsole(
+			store,
+			config(),
+			"project:a",
+			NOW,
+			null,
+			"review",
+		);
+		expect(model.review).toHaveLength(CONSOLE_LIST_LIMIT);
+		expect(model.review?.[0]?.body).toBe("due 0");
+		expect(model.reviewTotal).toBe(60);
 	});
 
 	it("gives the build totals and the counts by level", async () => {
@@ -525,6 +544,27 @@ describe("console screens", () => {
 			here: { used: 2, limit: 2 },
 			directions: { used: 1, limit: 1 },
 		});
+	});
+
+	it("caps the candidate list and reports the total before the cap", async () => {
+		const store = newStore();
+		for (let pos = 0; pos < 64; pos += 1)
+			addNote(store, { pos, body: `note ${pos}` });
+		const model = await readConsole(
+			store,
+			config(),
+			"project:a",
+			NOW,
+			null,
+			"maintenance",
+		);
+		expect(model.candidates).toHaveLength(CONSOLE_LIST_LIMIT);
+		expect(model.candidates?.[0]).toEqual({
+			scope: "project:a",
+			range: { start: 0, level: 1 },
+			ready: true,
+		});
+		expect(model.totals?.candidates).toBe(63);
 	});
 
 	it("gives the session text of the here block and the budgeted directions", async () => {

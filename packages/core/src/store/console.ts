@@ -3,6 +3,7 @@
  * @purpose Read display lines and build counts without complete note or node rows.
  * @scope Scope counts, review rows, frontier lines, range details, and maintenance counts.
  * Read document text only for a temporary line, within the line character limit.
+ * @invariants The due list keeps at most CONSOLE_LIST_LIMIT rows. Its total counts every due row.
  * @keywords console, selective, slice, range, counts
  * #endregion moduleContract
  */
@@ -52,6 +53,9 @@ export function scopeCounts(store: Store): readonly ScopeCount[] {
 }
 // #endregion FUNC_scopeCounts
 
+/** The greatest count of rows of one list of the console. */
+export const CONSOLE_LIST_LIMIT = 50;
+
 /** The note fields that a review list needs. */
 type ReviewRow = Pick<
 	Note,
@@ -59,7 +63,11 @@ type ReviewRow = Pick<
 >;
 
 // #region FUNC_reviewRows
-/** @purpose Read due notes and the next review dates without documents or summary rows. */
+/**
+ * @purpose Read due notes and the next review dates without documents or summary rows.
+ * @invariants The due list keeps at most CONSOLE_LIST_LIMIT rows. Each total counts every row of
+ * its list before the cap.
+ */
 export function reviewRows(
 	store: Store,
 	scope: ScopeKey,
@@ -67,6 +75,7 @@ export function reviewRows(
 	kind: NoteKind | null,
 ): {
 	readonly due: readonly ReviewRow[];
+	readonly dueTotal: number;
 	readonly next: readonly ReviewRow[];
 	readonly nextTotal: number;
 } {
@@ -81,21 +90,26 @@ export function reviewRows(
 				`SELECT scope, pos, ts, kind, body, review_at FROM notes WHERE ${where} AND review_at ${operator} ? ORDER BY review_at, pos ${limit}`,
 			)
 			.all(...args) as unknown as ReviewRow[];
-	const total = store
-		.handle()
-		.prepare(
-			`SELECT COUNT(*) AS total FROM notes WHERE ${where} AND review_at > ?`,
-		)
-		.get(...args);
+	const count = (operator: string): number =>
+		Number(
+			store
+				.handle()
+				.prepare(
+					`SELECT COUNT(*) AS total FROM notes WHERE ${where} AND review_at ${operator} ?`,
+				)
+				.get(...args)?.total ?? 0,
+		);
 	const result = {
-		due: list("<=", ""),
+		due: list("<=", `LIMIT ${CONSOLE_LIST_LIMIT}`),
+		dueTotal: count("<="),
 		next: list(">", "LIMIT 10"),
-		nextTotal: Number(total?.total ?? 0),
+		nextTotal: count(">"),
 	};
 	debug("Review rows read", {
 		scope,
 		kind,
 		due: result.due.length,
+		dueTotal: result.dueTotal,
 		next: result.next.length,
 		total: result.nextTotal,
 	});

@@ -94,6 +94,7 @@ describe("maintenance screen", () => {
 		expect(markup).toContain('class="tiles"');
 		expect(markup).toContain("width:40%");
 		expect(markup).toContain("4 / 10 lines");
+		expect(markup).toContain('<span class="r">1 / 1</span>');
 		expect(markup).toContain("project:alpha#0-1");
 		expect(markup).toContain("ready");
 		expect(markup).toContain("Nodes by level");
