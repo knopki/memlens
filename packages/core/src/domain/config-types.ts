@@ -152,12 +152,12 @@ export const NUDGE_TEXTS: Record<"tool_calls" | "turns", string> = {
 
 /** The default review period of each kind, in days. */
 export const DEFAULT_REVIEW_DAYS: ReviewConfig = {
-	decision: 365,
-	preference: 365,
-	fact: 180,
-	gotcha: 180,
+	decision: 90,
+	preference: 180,
+	fact: 30,
+	gotcha: 90,
 	task: 7,
-	note: 365,
+	note: 180,
 };
 
 /** The default budget of a profile that states no complete budget. */

@@ -138,12 +138,12 @@ maxCallsPerHour = 120
 
 # The review period of each note kind, in days.
 [review]
-decision = 365
-preference = 365
-fact = 180
-gotcha = 180
+decision = 90
+preference = 180
+fact = 30
+gotcha = 90
 task = 7
-note = 365
+note = 180
 ```
 
 ### The top keys
@@ -231,12 +231,12 @@ The `[review]` section holds the review period of each note kind, in days.
 
 | Kind        | Default |
 | ----------- | ------- |
-| `decision`  | `365`   |
-| `preference`| `365`   |
-| `fact`      | `180`   |
-| `gotcha`    | `180`   |
+| `decision`  | `90`    |
+| `preference`| `180`   |
+| `fact`      | `30`    |
+| `gotcha`    | `90`    |
 | `task`      | `7`     |
-| `note`      | `365`   |
+| `note`      | `180`   |
 
 ## The patch layer of the plugin
 
