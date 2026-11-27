@@ -21,6 +21,7 @@ import {
 	readdirSync,
 	readFileSync,
 	rmSync,
+	truncateSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1066,6 +1067,17 @@ describe("@memlens/cli commands", () => {
 		expect(again.out).toContain("imported 0 notes");
 		const found = await run(second, "find", "Move");
 		expect(found.out).toContain("project:acme/x#0");
+	});
+
+	it("refuses one input file larger than the byte limit before the read", async () => {
+		const test = makeEnv();
+		const input = join(test.home, "big.jsonl");
+		// One sparse file: its size crosses the limit, and it holds no data on the disk.
+		writeFileSync(input, "");
+		truncateSync(input, 256 * 1024 * 1024 + 1);
+		const answer = await run(test, "import", "--in", input);
+		expect(answer.code).toBe(1);
+		expect(answer.err).toContain("is larger than");
 	});
 
 	it("shows the resolved configuration", async () => {
