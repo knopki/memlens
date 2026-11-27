@@ -330,6 +330,33 @@ describe("migration", () => {
 		upgraded.close();
 	});
 
+	it("indexes the expiry of each open proposal on an old store", () => {
+		const path = storePath();
+		const db = openDatabase(path, "en", []);
+		addNote(db, 0, "kept fact");
+		// An old store holds the schema before this step, so it has no expiry index.
+		db.exec("DROP INDEX proposals_expiry");
+		db.close();
+
+		const upgraded = openDatabase(path, "en");
+		assert.equal(version(upgraded), String(SCHEMA_VERSION));
+		const index = upgraded
+			.prepare("SELECT sql FROM sqlite_master WHERE name = 'proposals_expiry'")
+			.get();
+		assert.match(
+			String(index?.sql ?? ""),
+			/ON proposals \(expires_at\) WHERE closed = 0/,
+		);
+		// The sweep check reads the index, not the table.
+		const plan = upgraded
+			.prepare(
+				"EXPLAIN QUERY PLAN SELECT id FROM proposals WHERE closed = 0 AND expires_at <= ? LIMIT 1",
+			)
+			.get("2026-01-01T00:00:00.000Z");
+		assert.match(String(plan?.detail ?? ""), /proposals_expiry/);
+		upgraded.close();
+	});
+
 	it("refuses a newer and a malformed version at open before the schema work", () => {
 		for (const stored of ["1", "99", "two", "missing"]) {
 			const path = storePath();

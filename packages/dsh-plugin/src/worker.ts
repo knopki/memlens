@@ -159,6 +159,8 @@ function completeLines(text: string): string {
  * @invariants A disposed worker starts no pass, answers no late model reply, and starts no timer.
  * @invariants An inputs update applies to the next pass. The rate window, the running pass, and the
  *  retry wait keep their state.
+ * @invariants The dirty count stays cached until the store change epoch moves, so a read-only call
+ *  loads no scope.
  */
 export class MemoryWorker {
 	private readonly rate: RateWindow;
@@ -220,7 +222,7 @@ export class MemoryWorker {
 	/**
 	 * @purpose Give the local compaction state to the console, so the tab states what the worker
 	 *   does now.
-	 * @invariants The read writes no field and starts no pass.
+	 * @invariants The read writes no store row and starts no pass.
 	 * @returns The local counts and the count of dirty merge ranges.
 	 */
 	status(): WorkerStatus {
@@ -300,12 +302,25 @@ export class MemoryWorker {
 	}
 	// #endregion METHOD_scheduleIdle
 
-	/** The count of dirty ranges over each live scope of the store. */
+	/** The store change epoch of the cached dirty count. Null means that no count is cached. */
+	private dirtyRev: string | null = null;
+
+	/** The cached count of dirty ranges of the epoch in `dirtyRev`. */
+	private dirty = 0;
+
+	/**
+	 * Count the dirty ranges over each live scope, cached by the store change epoch. A read-only
+	 * call costs one epoch read. A store change refreshes the cache once.
+	 */
 	private dirtyCount(): number {
+		const rev = this.store.rev();
+		if (rev === this.dirtyRev) return this.dirty;
 		let count = 0;
 		for (const scope of liveCounts(this.store).keys()) {
 			count += candidates(this.store, scope).length;
 		}
+		this.dirtyRev = rev;
+		this.dirty = count;
 		return count;
 	}
 

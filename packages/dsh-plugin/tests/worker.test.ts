@@ -705,6 +705,27 @@ describe("MemoryWorker", () => {
 		expect(worker.status().backoff).toBeGreaterThan(0);
 	});
 
+	it("serves the cached dirty count and refreshes it after a store change", () => {
+		const store = dirtyStore();
+		stores.push(store);
+		const root = new Context();
+		roots.push(root);
+		const llm = new StubLlm();
+		const worker = new MemoryWorker(root, store, inputs({ batch: 2 }), llm);
+		expect(worker.status().dirty).toBe(1);
+		// One more long note moves the store epoch, so the cached count cannot serve.
+		note(store, {
+			scope: "user:notes",
+			kind: "note",
+			body: `${"long body ".repeat(40)}third`,
+			session: "session-1",
+			turn: "turn-1",
+			preset: "default",
+			ts: "2026-01-03T00:00:00.000Z",
+		});
+		expect(worker.status().dirty).toBe(3);
+	});
+
 	it("keeps an armed retry when the idle time changes", async () => {
 		vi.useFakeTimers();
 		const store = dirtyStore();

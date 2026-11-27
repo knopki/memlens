@@ -34,7 +34,10 @@ const LOCK_PAUSE_MS = 25;
 const BASE_SCHEMA_VERSION = 2;
 
 /** Keep the base schema fixed. Add each later schema change to this list in order. */
-const MIGRATIONS: ReadonlyArray<(db: DatabaseSync) => void> = [widenKindCheck];
+const MIGRATIONS: ReadonlyArray<(db: DatabaseSync) => void> = [
+	widenKindCheck,
+	indexOpenProposalExpiry,
+];
 
 /** The schema version of this build. */
 export const SCHEMA_VERSION = BASE_SCHEMA_VERSION + MIGRATIONS.length;
@@ -57,6 +60,19 @@ function widenKindCheck(db: DatabaseSync): void {
 	`);
 }
 // #endregion FUNC_widenKindCheck
+
+// #region FUNC_indexOpenProposalExpiry
+/**
+ * @purpose Index the expiry of each open proposal, so one sweep check reads one row without a scan.
+ * @invariants The index covers the open rows only, so a closed row adds no index entry.
+ */
+function indexOpenProposalExpiry(db: DatabaseSync): void {
+	db.exec(`
+		CREATE INDEX IF NOT EXISTS proposals_expiry
+			ON proposals (expires_at) WHERE closed = 0;
+	`);
+}
+// #endregion FUNC_indexOpenProposalExpiry
 
 /** The tokenizer of each language that the default does not serve. Only zh and ja use trigram. */
 const TOKENIZERS: Record<string, string> = {
@@ -129,6 +145,8 @@ const SCHEMA_SQL = `
 			closed     INTEGER NOT NULL DEFAULT 0,
 			CHECK (closed = 0 OR payload = '')
 		) WITHOUT ROWID;
+		CREATE INDEX IF NOT EXISTS proposals_expiry ON proposals (expires_at)
+			WHERE closed = 0;
 		CREATE TABLE IF NOT EXISTS journal (
 			seq    INTEGER PRIMARY KEY AUTOINCREMENT,
 			at     TEXT NOT NULL,
