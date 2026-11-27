@@ -26,7 +26,6 @@ import {
 	ftsRowOf,
 	ftsSet,
 	INSERT_ROW,
-	openSlot,
 	type RawNote,
 	requireNote,
 	requireRow,
@@ -34,6 +33,7 @@ import {
 	splitForWrite,
 	toNote,
 } from "./note-rows.js";
+import { insertSlot } from "./slots.js";
 import type { Store, Tx } from "./store.js";
 import type { Note, WriteResult } from "./types.js";
 
@@ -121,7 +121,7 @@ export function noteTx(tx: Tx, input: NoteInput): Note {
 	if (rowById(tx.db, id) !== undefined)
 		throw new MemlensError("Data", "A note id already exists.");
 	const targets = targetsOf(tx.db, supersedes, scope);
-	const pos = openSlot(tx.db, scope, ts, id);
+	const pos = insertSlot(tx.db, scope, ts, id);
 	const row = insertNoteRow(tx, {
 		id,
 		scope,
@@ -331,7 +331,7 @@ export function amendTx(tx: Tx, input: AmendInput): Note {
 	});
 	let pos = old.pos;
 	if (moved) {
-		pos = openSlot(tx.db, scope, old.ts, old.id);
+		pos = insertSlot(tx.db, scope, old.ts, old.id);
 		deleteCovering(tx.db, old.scope, old.pos);
 		deleteShifted(tx.db, scope, pos);
 	} else {
@@ -381,7 +381,7 @@ export function move(
 			}
 			if (tx !== undefined) {
 				const id = String(row.id);
-				const pos = openSlot(db, dst, String(row.ts), id);
+				const pos = insertSlot(db, dst, String(row.ts), id);
 				deleteCovering(db, src, Number(row.pos));
 				db.prepare(
 					"UPDATE notes SET scope = ?, pos = ?, modified_at = ?, v = ?, v_content = ? WHERE id = ?",
