@@ -23,11 +23,11 @@ export const LONGFORM_LIMIT = 16_384;
 
 // #region FUNC_normalizeBody
 /**
- * @purpose Trim the ends of the body and collapse runs of spaces to one space.
- * @invariants The result has no leading or trailing whitespace. Each run of spaces or tabs becomes one space.
+ * @purpose Trim the ends of the body and collapse runs of whitespace to one space.
+ * @invariants The result has no leading or trailing whitespace. Each run of whitespace becomes one space.
  */
 export function normalizeBody(raw: string): string {
-	const result = raw.replace(/[ \t]+/g, " ").trim();
+	const result = raw.replace(/\s+/g, " ").trim();
 	debug("Body normalized", {
 		event: "normalize",
 		originalLength: raw.length,
