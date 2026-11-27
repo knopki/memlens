@@ -124,8 +124,8 @@ interface Plan {
 	/** Each note whose current slot must go free before the writes. */
 	readonly vacate: Set<string>;
 
-	/** The lowest slot that an insert opened, per scope. */
-	readonly minInsert: Map<ScopeKey, number>;
+	/** The lowest slot that one change touched, per scope. */
+	readonly minChanged: Map<ScopeKey, number>;
 
 	/** The counts of the import. */
 	readonly result: MutableResult;
@@ -300,7 +300,9 @@ function applyRows(
  * @invariants An absent row takes its key rank in the model of its scope.
  * @invariants A winning scope change takes the row out of the source model and opens its destination
  *  rank.
- * @invariants A stored row that wins the content channel keeps its slot, also under a new key.
+ * @invariants A stored row that wins the content channel keeps its slot under a new key while that
+ *  key passes no other note.
+ * @invariants A new key that passes another note takes the rank of that key in the model of its scope.
  */
 function planRows(
 	tx: Tx,
@@ -313,7 +315,7 @@ function planRows(
 		merges: [],
 		shifts: [],
 		vacate: new Set(),
-		minInsert: new Map(),
+		minChanged: new Map(),
 		result: {
 			applied: 0,
 			merged: 0,
@@ -344,7 +346,14 @@ function planRows(
 			vacated = modelOf(tx.db, plan.models, local.scope).remove(local.id).pos;
 			planInsert(tx.db, plan, merged.scope, merged.ts, merged.id);
 		} else if (merged.ts !== local.ts) {
-			modelOf(tx.db, plan.models, local.scope).rekey(local.id, merged.ts);
+			const move = modelOf(tx.db, plan.models, local.scope).rekey(
+				local.id,
+				merged.ts,
+			);
+			if (move !== null) {
+				vacated = move.from;
+				planFrom(plan, merged.scope, Math.min(move.from, move.to));
+			}
 		}
 		plan.merges.push({ local, merged, pos: local.pos, vacated });
 		plan.result.merged += 1;
@@ -362,7 +371,7 @@ function planRows(
 // #endregion FUNC_planRows
 
 // #region FUNC_planInsert
-/** @purpose Open the slot of one new key in the model, and track the lowest open slot per scope. */
+/** @purpose Open the slot of one new key in the model, and track the lowest changed slot per scope. */
 function planInsert(
 	db: DatabaseSync,
 	plan: Plan,
@@ -371,11 +380,18 @@ function planInsert(
 	id: string,
 ): number {
 	const pos = modelOf(db, plan.models, scope).openSlot(ts, id);
-	const known = plan.minInsert.get(scope);
-	if (known === undefined || pos < known) plan.minInsert.set(scope, pos);
+	planFrom(plan, scope, pos);
 	return pos;
 }
 // #endregion FUNC_planInsert
+
+// #region FUNC_planFrom
+/** @purpose Keep the lowest slot that one change touched in one scope, so one range delete covers each change. */
+function planFrom(plan: Plan, scope: ScopeKey, pos: number): void {
+	const known = plan.minChanged.get(scope);
+	if (known === undefined || pos < known) plan.minChanged.set(scope, pos);
+}
+// #endregion FUNC_planFrom
 
 // #region FUNC_modelOf
 /** @purpose Give the slot model of one scope, and load it on the first touch. */
@@ -503,7 +519,7 @@ function applyPlan(db: DatabaseSync, sql: Statements, plan: Plan): void {
 	}
 	for (const shift of plan.shifts) sql.movePos.run(shift.pos, shift.id);
 	for (const [scope, model] of plan.models) {
-		const from = plan.minInsert.get(scope);
+		const from = plan.minChanged.get(scope);
 		if (from !== undefined) deleteRange(db, scope, from, model.maxPos() + 1);
 	}
 }

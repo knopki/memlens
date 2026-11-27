@@ -138,12 +138,38 @@ export class ScopeSlots {
 	// #endregion METHOD_remove
 
 	// #region METHOD_rekey
-	/** @purpose Move one note to a new key, and keep its slot. */
-	rekey(id: string, ts: string): void {
+	/**
+	 * @purpose Move one note to a new key. The note keeps its slot while no other note lies between
+	 *  the two keys.
+	 * @invariants A note that passes another note takes the rank of its new key, and each later slot
+	 *  moves one place up, as the SQL rank lookup gives.
+	 * @requires The model holds the note.
+	 * @returns The old slot and the new slot when the note moved, or null when it kept its slot.
+	 */
+	rekey(
+		id: string,
+		ts: string,
+	): { readonly from: number; readonly to: number } | null {
 		const entry = this.byId.get(id);
 		if (entry === undefined)
 			throw new Error(`The slot model holds no note ${id}.`);
+		const passed = this.entries.some(
+			(other) =>
+				other !== entry &&
+				keyBefore(other, ts, id) !== keyBefore(other, entry.ts, id),
+		);
+		if (!passed) {
+			entry.ts = ts;
+			debug("Slot model rekey", { event: "model_rekey", slot: entry.pos });
+			return null;
+		}
+		const from = entry.pos;
+		const rank = this.rankFor(ts, id);
+		for (const other of this.entries) if (other.pos >= rank) other.pos += 1;
+		entry.pos = rank;
 		entry.ts = ts;
+		debug("Slot model rekey", { event: "model_rekey", slot: rank, from });
+		return { from, to: rank };
 	}
 	// #endregion METHOD_rekey
 

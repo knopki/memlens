@@ -739,6 +739,87 @@ describe("the slot plan of one import", () => {
 		]);
 	});
 
+	it("moves a row to the tail when its content win gives it the newest key", () => {
+		const store = makeStore();
+		seedRows(store.handle(), [
+			{ id: "n1", ts: moment(1), v: version(1) },
+			{ id: "n2", ts: moment(2), v: version(2) },
+			{ id: "n3", ts: moment(3), v: version(3) },
+		]);
+		const result = importLines(
+			store,
+			fileOf([
+				{
+					id: "n1",
+					ts: moment(9),
+					body: "newest key",
+					v: version(5),
+					v_content: version(5),
+				},
+			]),
+		);
+		assert.equal(result.merged, 1);
+		assert.deepEqual(rowsOf(store), [
+			{ id: "n2", ts: moment(2), pos: 1 },
+			{ id: "n3", ts: moment(3), pos: 2 },
+			{ id: "n1", ts: moment(9), pos: 3 },
+		]);
+	});
+
+	it("moves a row to the front when its content win gives it the oldest key", () => {
+		const store = makeStore();
+		seedRows(store.handle(), [
+			{ id: "n1", ts: moment(1), v: version(1) },
+			{ id: "n2", ts: moment(4), v: version(2) },
+			{ id: "n3", ts: moment(6), v: version(3) },
+		]);
+		const result = importLines(
+			store,
+			fileOf([
+				{
+					id: "n3",
+					ts: moment(0),
+					body: "oldest key",
+					v: version(5),
+					v_content: version(5),
+				},
+			]),
+		);
+		assert.equal(result.merged, 1);
+		assert.deepEqual(rowsOf(store), [
+			{ id: "n3", ts: moment(0), pos: 0 },
+			{ id: "n1", ts: moment(1), pos: 1 },
+			{ id: "n2", ts: moment(4), pos: 2 },
+		]);
+	});
+
+	it("moves a row between its neighbors when its content win gives it a middle key", () => {
+		const store = makeStore();
+		seedRows(store.handle(), [
+			{ id: "n1", ts: moment(1), v: version(1) },
+			{ id: "n2", ts: moment(4), v: version(2) },
+			{ id: "n3", ts: moment(6), v: version(3) },
+		]);
+		const result = importLines(
+			store,
+			fileOf([
+				{
+					id: "n3",
+					ts: moment(2),
+					body: "middle key",
+					v: version(5),
+					v_content: version(5),
+				},
+			]),
+		);
+		assert.equal(result.merged, 1);
+		assert.deepEqual(rowsOf(store), [
+			{ id: "n1", ts: moment(1), pos: 0 },
+			{ id: "n3", ts: moment(2), pos: 1 },
+			{ id: "n2", ts: moment(4), pos: 2 },
+		]);
+	});
+
 	it.each(Array.from({ length: 25 }, (_, index) => index + 1))(
 		"gives the row-by-row write on random rows (seed %i)",
 		(seed) => {
@@ -893,7 +974,7 @@ function rowsOf(
 
 // #region FUNC_test_referenceImport
 /**
- * @purpose Replay the row-by-row write that the import used before the slot plan.
+ * @purpose Replay the row-by-row write of one import as the reference, with the key rule of the plan.
  * @invariants The replay opens each slot with the SQL rank lookup and one SQL tail shift.
  * @returns The counts of the reference run.
  */
@@ -963,7 +1044,7 @@ function referenceImport(store: Store, file: string[]): ImportResult {
 			if (!decision.changed) continue;
 			const merged = decision.merged;
 			let pos = local.pos;
-			if (merged.scope !== local.scope)
+			if (merged.scope !== local.scope || keyPassed(db, local, merged.ts))
 				pos = insertSlot(db, merged.scope, merged.ts, merged.id);
 			update.run(
 				merged.scope,
@@ -998,6 +1079,27 @@ function referenceImport(store: Store, file: string[]): ImportResult {
 	}).value;
 }
 // #endregion FUNC_test_referenceImport
+
+// #region FUNC_test_keyPassed
+/**
+ * @purpose Report whether one stored note of the scope has a key between the old key and the new key of one row.
+ * @invariants The lookup reads the stored rows before the write, so the row itself is outside the two keys.
+ */
+function keyPassed(db: DatabaseSync, local: LocalRow, ts: string): boolean {
+	const low = local.ts < ts ? local.ts : ts;
+	const high = local.ts < ts ? ts : local.ts;
+	const row = db
+		.prepare(
+			`SELECT 1 FROM notes
+			 WHERE scope = ? AND id != ?
+			 AND (ts > ? OR (ts = ? AND id > ?))
+			 AND (ts < ? OR (ts = ? AND id < ?))
+			 LIMIT 1`,
+		)
+		.get(local.scope, local.id, low, low, local.id, high, high, local.id);
+	return row !== undefined;
+}
+// #endregion FUNC_test_keyPassed
 
 // #region FUNC_test_referenceLocal
 /** @purpose Read one local row for the reference, with the shape that the merge reads. */
