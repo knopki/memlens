@@ -10,7 +10,7 @@
 import type { BuildInput, IndexHit, NoteKind, ScopeKey } from "@memlens/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConsoleRuntime, OpenedTarget } from "../../src/model/console.js";
-import { DEFAULT_ROUTE } from "../../src/route.js";
+import { DEFAULT_ROUTE, routeOf } from "../../src/route.js";
 import type { View } from "../../src/types.js";
 import {
 	deferred,
@@ -497,12 +497,66 @@ describe("console controller search", () => {
 		expect(callsOf(h, "search")[0]?.fields).toEqual({
 			profile: "default",
 			query: "",
-			scopes: "",
+			scopes: "project:alpha",
 			kinds: "task,fact",
 			since: "",
 			until: "2026-11-30",
 			due: "1",
 			limit: "10",
+		});
+	});
+
+	it("sends the selected scope for a null search scope", async () => {
+		const h = harness({}, { model: viewOf() });
+		await h.call.search({
+			query: "words",
+			kinds: [],
+			since: "",
+			until: "",
+			due: false,
+			limit: "10",
+			searchScope: null,
+		});
+		expect(h.state().searchScope).toBeNull();
+		expect(callsOf(h, "search")[0]?.fields).toMatchObject({
+			scopes: "project:alpha",
+		});
+	});
+
+	it("keeps the scope null when it equals the scope of the model", async () => {
+		const h = harness({}, { model: viewOf() });
+		await h.call.search({
+			query: "words",
+			kinds: [],
+			since: "",
+			until: "",
+			due: false,
+			limit: "10",
+			searchScope: "project:alpha",
+		});
+		expect(h.state().searchScope).toBeNull();
+		expect(routeOf(h.writes.at(-1)?.route ?? DEFAULT_ROUTE)).not.toContain(
+			"s=",
+		);
+		expect(callsOf(h, "search")[0]?.fields).toMatchObject({
+			scopes: "project:alpha",
+		});
+	});
+
+	it("keeps an explicit scope that differs from the scope of the model", async () => {
+		const h = harness({}, { model: viewOf() });
+		await h.call.search({
+			query: "words",
+			kinds: [],
+			since: "",
+			until: "",
+			due: false,
+			limit: "10",
+			searchScope: "team:beta",
+		});
+		expect(h.state().searchScope).toBe("team:beta");
+		expect(callsOf(h, "search")[0]?.fields).toMatchObject({
+			scopes: "team:beta",
 		});
 	});
 

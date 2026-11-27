@@ -11,6 +11,8 @@
  * selection. A second action waits for the first action.
  * @invariants Each view read names the current screen, so a screen change reads its own payload.
  * @invariants A callback reports its error in the status line and does not reject.
+ * @invariants A search scope that equals the scope of the model stays null, so the address holds
+ * no redundant field.
  * @invariants The runtime watch reads the runtime method only, so a live read reloads no view. It
  * writes no busy flag and no status text, so it does not block or clear an action.
  * @invariants One running watch holds one timer. A stop clears the timer and drops each later
@@ -344,6 +346,8 @@ export function createConsoleController(
 	/**
 	 * @purpose Run the current search filters and keep the hits.
 	 * @invariants An answer of an older generation or of a newer search writes no hit.
+	 * @invariants A null search scope sends the selected scope of the console. An empty scope sends
+	 * each visible scope.
 	 */
 	async function find(step: Step): Promise<void> {
 		const token = get().generation;
@@ -351,7 +355,7 @@ export function createConsoleController(
 		const found = await port.search({
 			profile: get().profile,
 			query: get().query,
-			scopes: get().searchScope ?? "",
+			scopes: get().searchScope ?? get().scope,
 			kinds: get().kinds.join(","),
 			since: get().since,
 			until: get().until,
@@ -363,7 +367,7 @@ export function createConsoleController(
 		console.debug("Console search", {
 			event: "search",
 			hits: found.length,
-			scope: get().searchScope ?? "",
+			scope: get().searchScope ?? get().scope,
 			query: get().query,
 		});
 		enter(step);
@@ -760,7 +764,10 @@ export function createConsoleController(
 					until: filters.until,
 					due: filters.due,
 					limit,
-					searchScope: filters.searchScope,
+					searchScope:
+						filters.searchScope && filters.searchScope === get().model?.scope
+							? null
+							: filters.searchScope,
 				});
 				await find("push");
 			});
