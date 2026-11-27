@@ -36,8 +36,10 @@ export interface CommandIo {
 	readonly env: Record<string, string | undefined>;
 	readonly cwd: string;
 
-	/** Ask one question and return the answer of the user. False stops the command. */
-	confirm(question: string): Promise<boolean>;
+	/**
+	 * Ask one question. The answer is true or false, or null when the input closed before a line.
+	 */
+	confirm(question: string): Promise<boolean | null>;
 }
 
 /** One run of one command line: its input surface and the exit code of its answer. */

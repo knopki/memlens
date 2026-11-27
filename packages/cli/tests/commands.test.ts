@@ -8,7 +8,7 @@
  * @scope The write commands, the read commands, the transfer commands, and the policy errors.
  * NOT: the library logic, which the core tests cover.
  * @invariants Each test runs in its own temporary home. The tests inject the environment, the
- * working directory, and the confirmation answer.
+ * working directory, and the confirmation answer, or replace the standard input.
  * @keywords cli, test, command, note, find, export, import, policy
  * #endregion moduleContract
  */
@@ -27,6 +27,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { Readable } from "node:stream";
 import { NOTE_KINDS } from "@memlens/core";
 import { afterAll, describe, expect, it } from "vitest";
 import { main } from "../src/cli.js";
@@ -940,6 +941,50 @@ describe("@memlens/cli commands", () => {
 		const refused = await run(test, "redact", "user:private#0");
 		expect(refused.code).toBe(0);
 		expect(refused.out).toContain("cancelled");
+	});
+
+	it("gives the exit code 1 when the input closes without an answer", async () => {
+		const test = makeEnv();
+		await run(test, "note", "Keep me", "--scope", "user:private");
+		test.io = { ...test.io, confirm: async () => null };
+		const noAnswer = await run(test, "redact", "user:private#0");
+		expect(noAnswer.code).toBe(1);
+		expect(noAnswer.out).toContain("no answer");
+		const found = await run(test, "find", "Keep me");
+		expect(found.out).toContain("Keep me");
+	});
+
+	it("gives the exit code 1 when the standard input closes without an answer", async () => {
+		const test = makeEnv();
+		await run(test, "note", "Keep me", "--scope", "user:private");
+		const descriptor = Object.getOwnPropertyDescriptor(
+			process,
+			"stdin",
+		) as PropertyDescriptor;
+		Object.defineProperty(process, "stdin", {
+			value: new Readable({
+				read() {
+					this.push(null);
+				},
+			}),
+			configurable: true,
+			writable: true,
+		});
+		try {
+			const io = { env: test.io.env, cwd: test.io.cwd };
+			const noAnswer = await run(
+				{ home: test.home, io },
+				"redact",
+				"user:private#0",
+			);
+			expect(noAnswer.code).toBe(1);
+			expect(noAnswer.out).toContain("no answer");
+			expect(noAnswer.err).toContain("[y/N]");
+		} finally {
+			Object.defineProperty(process, "stdin", descriptor);
+		}
+		const found = await run(test, "find", "Keep me");
+		expect(found.out).toContain("Keep me");
 	});
 
 	it("gives NotAllowed and the exit code 3 for a target outside the profile", async () => {

@@ -43,6 +43,7 @@ import {
 import type { Command } from "commander";
 import {
 	addressList,
+	type CommandAnswer,
 	type CommandIo,
 	checkedScope,
 	command,
@@ -373,7 +374,7 @@ export async function redactCommand(
 		store?: string;
 	},
 	io: CommandIo,
-): Promise<string> {
+): Promise<string | CommandAnswer> {
 	const runtime = await openCommandRuntime(io, input.store);
 	try {
 		const { scope, record } = resolveRowTarget(
@@ -381,12 +382,21 @@ export async function redactCommand(
 			input.target,
 			input.scope ?? null,
 		);
-		const proceed =
-			input.yes === true ||
-			(await io.confirm(
-				`Redact ${scope}#${record.pos}? This erases the content for good.`,
-			));
-		if (!proceed) {
+		const answer =
+			input.yes === true
+				? true
+				: await io.confirm(
+						`Redact ${scope}#${record.pos}? This erases the content for good.`,
+					);
+		if (answer === null) {
+			debug("Redact without an answer", {
+				event: "redact",
+				scope,
+				pos: record.pos,
+			});
+			return { text: "no answer", code: 1 };
+		}
+		if (answer === false) {
 			debug("Redact cancelled", { event: "redact", scope, pos: record.pos });
 			return "cancelled";
 		}
