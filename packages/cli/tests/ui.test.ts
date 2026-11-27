@@ -6,6 +6,7 @@
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { connect, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { note, propose, scopeNotes } from "@memlens/core";
@@ -494,6 +495,47 @@ describe("console", () => {
 			(await post({ action: "note", body: "x".repeat(2 * 1024 * 1024) }))
 				.status,
 		).toBe(400);
+	});
+
+	it("refuses a write above the concurrent action limit", async () => {
+		const { host, post } = await fixture();
+		const port = Number(new URL(host.url).port);
+		const sockets: Socket[] = [];
+		cleanups.push(async () => {
+			for (const socket of sockets) socket.destroy();
+		});
+		const answer = (socket: Socket) =>
+			new Promise<number>((resolve, reject) => {
+				let text = "";
+				socket.on("data", (chunk: Buffer) => {
+					text += chunk.toString("latin1");
+					if (text.includes("\r\n\r\n")) resolve(Number(text.slice(9, 12)));
+				});
+				socket.on("error", reject);
+			});
+		const bodies = [0, 1, 2, 3].map((index) =>
+			JSON.stringify({
+				scope: "user:notes",
+				action: "note",
+				body: `slow ${index}`,
+			}),
+		);
+		const pending: Promise<number>[] = [];
+		for (const body of bodies) {
+			const socket = connect(port, "127.0.0.1");
+			sockets.push(socket);
+			pending.push(answer(socket));
+			socket.write(
+				`POST /api/action HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\nContent-Length: ${body.length}\r\n\r\n${body.slice(0, -2)}`,
+			);
+		}
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect((await post({ action: "note", body: "refused" })).status).toBe(429);
+		for (const [index, socket] of sockets.entries()) {
+			socket.write(bodies[index].slice(-2));
+			expect(await pending[index]).toBe(200);
+		}
+		expect((await post({ action: "note", body: "after" })).status).toBe(200);
 	});
 
 	it("rejects stale compaction answers after an amendment", async () => {

@@ -9,6 +9,8 @@
  *  - NOT: the read routes, the actions, and the scope rules of the host modules.
  * @invariants The console must never enable CORS.
  * @invariants Each request opens its selected profile and closes its store, including on failure.
+ * @invariants At most four action requests run at the same time. The console must refuse the excess
+ *   with status 429.
  * @usecases
  *  - Start: user => runs memlens ui => gets the console address
  * @dependencies USES API: @memlens/core
@@ -74,6 +76,9 @@ const ASSETS: Readonly<Record<string, readonly [string, string]>> = {
 	"/style.css": ["style.css", "text/css; charset=utf-8"],
 };
 
+/** The most action requests that one console runs at the same time. */
+const ACTION_LIMIT = 4;
+
 // #region FUNC_startUi
 /**
  * Start one standalone console.
@@ -85,8 +90,9 @@ export async function startUi(options: HostOptions) {
 	const port = options.port ?? 7788;
 	if (!Number.isInteger(port) || port < 0 || port > 65535)
 		throw new MemlensError("Usage", "The port must be between 0 and 65535.");
+	const state = { actions: 0 };
 	const server = createServer((request, response) => {
-		void route(request, response, options).catch((error: unknown) =>
+		void route(request, response, options, state).catch((error: unknown) =>
 			respondError(response, error),
 		);
 	});
@@ -148,11 +154,13 @@ export async function uiCommand(
  *
  * @purpose Send each request to one read route or the action route, so the host has one entry.
  * @invariants A foreign host or origin gives NotAllowed. A write needs the method POST.
+ * @invariants A write above the action limit gives 429, and the host reads none of its body.
  */
 async function route(
 	request: IncomingMessage,
 	response: ServerResponse,
 	options: HostOptions,
+	state: { actions: number },
 ): Promise<void> {
 	const url = requestUrl(request);
 	debug("Request start", {
@@ -170,31 +178,43 @@ async function route(
 		send(response, 405, { error: "The method is not allowed." });
 		return;
 	}
-	const fields =
-		request.method === "POST"
+	const action = request.method === "POST";
+	if (action && state.actions >= ACTION_LIMIT) {
+		debug("Action refused", { event: "busy", path: url.pathname });
+		send(response, 429, { error: "Too many actions run at the same time." });
+		return;
+	}
+	if (action) state.actions++;
+	try {
+		const fields = action
 			? await readBody(request)
 			: Object.fromEntries(url.searchParams);
-	const runtime = await openRuntime({
-		storeFlag: options.storeFlag,
-		profile: text(fields, "profile") || null,
-		env: options.env ?? process.env,
-	});
-	try {
-		const scope = resolveScope(runtime, fields, options);
-		const handler: Handler | undefined =
-			url.pathname === "/api/action" ? actionRoute : READ_ROUTES[url.pathname];
-		if (handler === undefined) {
-			send(response, 404, { error: "No such route." });
-			return;
-		}
-		send(response, 200, await handler(runtime, fields, scope, options));
-		debug("Request done", {
-			event: "response",
-			path: url.pathname,
-			status: 200,
+		const runtime = await openRuntime({
+			storeFlag: options.storeFlag,
+			profile: text(fields, "profile") || null,
+			env: options.env ?? process.env,
 		});
+		try {
+			const scope = resolveScope(runtime, fields, options);
+			const handler: Handler | undefined =
+				url.pathname === "/api/action"
+					? actionRoute
+					: READ_ROUTES[url.pathname];
+			if (handler === undefined) {
+				send(response, 404, { error: "No such route." });
+				return;
+			}
+			send(response, 200, await handler(runtime, fields, scope, options));
+			debug("Request done", {
+				event: "response",
+				path: url.pathname,
+				status: 200,
+			});
+		} finally {
+			await runtime.close();
+		}
 	} finally {
-		await runtime.close();
+		if (action) state.actions--;
 	}
 }
 // #endregion FUNC_route
