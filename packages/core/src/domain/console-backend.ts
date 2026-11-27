@@ -443,7 +443,8 @@ function listField(fields: Fields, key: string): string[] {
  * @purpose Answer one search over the named scopes or each visible scope.
  * @invariants The fields are the fields of one find filter. A comma separates the values of the
  * lists `scopes` and `kinds`.
- * @invariants A scope outside the profile gives NotAllowed. The limit must be a whole number from 0.
+ * @invariants A scope outside the profile gives NotAllowed. An empty visible scope list gives no hit.
+ * The limit must be a whole number from 0.
  */
 export function consoleSearch(
 	host: ConsoleHost,
@@ -453,6 +454,10 @@ export function consoleSearch(
 	if (!/^\d+$/.test(raw))
 		throw new MemlensError("Usage", "The limit must be a whole number from 0.");
 	const named = listField(fields, "scopes");
+	if (named.length === 0 && host.scopes.length === 0) {
+		debug("Search refused", { event: "search", hits: 0, scopes: 0 });
+		return [];
+	}
 	const answer = search(
 		host.store,
 		{

@@ -811,4 +811,11 @@ describe("selective SQL", () => {
 			/whole number/,
 		);
 	});
+
+	it("gives no hit when the profile holds no visible scope", () => {
+		const store = newStore();
+		addNote(store, { pos: 0, body: "foreign fact" });
+		const hits = consoleSearch({ store, config: config(), scopes: [] }, {});
+		expect(hits).toEqual([]);
+	});
 });
